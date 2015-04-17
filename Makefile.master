@@ -1,0 +1,28 @@
+PATHTOROOT = ../OpenFX/Support
+
+include $(PATHTOROOT)/Plugins/Makefile.master
+
+CXXFLAGS += -DOFX_EXTENSIONS_VEGAS -DOFX_EXTENSIONS_NUKE -DOFX_EXTENSIONS_TUTTLE -DOFX_EXTENSIONS_NATRON -I../SupportExt
+VPATH += ../SupportExt
+
+# Fontconfig
+FONTCONFIG_CXXFLAGS = `pkg-config --cflags freetype2 fontconfig`
+FONTCONFIG_LINKFLAGS = `pkg-config --libs freetype2 fontconfig`
+
+# ImageMagick
+IMAGICK_CXXFLAGS = `Magick++-config --cxxflags --cppflags`
+IMAGICK_LINKFLAGS = `Magick++-config --ldflags --libs`
+#IMAGICK_LINKFLAGS += -lgomp
+
+# GraphicsMagick
+GMAGICK_CXXFLAGS = `GraphicsMagick++-config --cxxflags --cppflags`
+GMAGICK_LINKFLAGS = `GraphicsMagick++-config --ldflags --libs`
+
+# OpenImageIO
+OIIO_HOME ?= /opt/Natron-2.0
+OIIO_CXXFLAGS = -I$(OIIO_HOME)/include
+OIIO_LINKFLAGS = -L$(OIIO_HOME)/lib -lOpenImageIO
+ifeq ($(OS),Linux)
+OIIO_LINKFLAGS += -Wl,-rpath,$(OIIO_HOME)/lib
+endif
+
