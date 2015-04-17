@@ -343,42 +343,58 @@ MagickTextPlugin::render(const OFX::RenderArguments &args)
 
     // Get font file from fontconfig
     std::string fontFile;
-    FcConfig* fc_conf = FcInitLoadConfigAndFonts();
-    FcPattern* fc_pat = FcPatternCreate();
-    FcObjectSet* fc_os = FcObjectSetBuild (FC_FAMILY, FC_STYLE, FC_LANG, FC_FILE, (char *) 0);
-    FcFontSet* fc_fs = FcFontList(fc_conf, fc_pat, fc_os);
-    for (int i=0; fc_fs && i < fc_fs->nfont; ++i) {
-        FcPattern* fc_font = fc_fs->fonts[i];
-        FcChar8 *fc_file,*fc_style,*fc_family;
-        if (FcPatternGetString(fc_font, FC_FILE, 0, &fc_file) == FcResultMatch &&
-                FcPatternGetString(fc_font, FC_FAMILY, 0, &fc_family) == FcResultMatch &&
-                FcPatternGetString(fc_font, FC_STYLE, 0, &fc_style) == FcResultMatch) {
-            std::string font_filename(reinterpret_cast<char*>(fc_file));
-            if (fontName==i) {
-               fontFile = font_filename;
-               break;
-            }
+    FcConfig* config = FcInitLoadConfigAndFonts();
+    FcPattern* pat = FcPatternCreate();
+    FcObjectSet* os = FcObjectSetBuild (FC_FAMILY, FC_STYLE, FC_LANG, FC_FILE, (char *) 0);
+    FcFontSet* fs = FcFontList(config, pat, os);
+    for (int i=0; fs && i < fs->nfont; ++i) {
+        FcPattern* font = fs->fonts[i];
+        FcChar8 *style, *family;
+        if (FcPatternGetString(font, FC_FAMILY, 0, &family) == FcResultMatch && FcPatternGetString(font, FC_STYLE, 0, &style) == FcResultMatch) {
+             std::string font_family(reinterpret_cast<char*>(family));
+             std::string font_style(reinterpret_cast<char*>(style));
+             std::string font_name;
+             font_name.append(font_family);
+             font_name.append("-");
+             font_name.append(font_style);
+             std::replace(font_name.begin(),font_name.end(),' ','-');
+             if (fontName==i) {
+                fontFile = font_name;
+                break;
+             }
         }
     }
-    if (fc_fs)
-        FcFontSetDestroy(fc_fs);
+    if (fs)
+        FcFontSetDestroy(fs);
 
-    // Magick
+    // Read
     int magickWidth = args.renderWindow.x2 - args.renderWindow.x1;
     int magickHeight = args.renderWindow.y2 - args.renderWindow.y1;
     int magickWidthStep = magickWidth*4;
     int magickSize = magickWidth*magickHeight*4;
     float* magickBlock;
     magickBlock = new float[magickSize];
-
-    // Read
     Magick::Image magickImage(magickWidth,magickHeight,"RGBA",Magick::FloatPixel,(float*)srcImg->getPixelData());
 
+    // Proc
+    magickImage.flip();
+    magickImage.font(fontFile);
+    //magickImage.fillColor(Magick::Color(r,g,b,MaxRGB));
+    magickImage.fillColor("red");
+    magickImage.fontPointsize(fontSize);
+    magickImage.annotate(text,Magick::CenterGravity);
 
-    // Write
-    magickImage.write(0,0,magickWidth,magickHeight,"RGBA",Magick::FloatPixel,magickBlock);
+    /*magickImage.draw(Magick::DrawableFont(fontFile));
+    magickImage.draw(Magick::DrawableStrokeColor("black"));
+    magickImage.draw(Magick::DrawableFillColor(Magick::Color(0, 0, 0, MaxRGB)));
+    magickImage.draw(Magick::DrawableTextUnderColor("white"));
+    magickImage.draw(Magick::DrawableText(x,y,text));*/
+
+
+    magickImage.flip();
 
     // Return
+    magickImage.write(0,0,magickWidth,magickHeight,"RGBA",Magick::FloatPixel,magickBlock);
     for(int y = args.renderWindow.y1; y < (args.renderWindow.y1 + magickHeight); y++) {
         OfxRGBAColourF *dstPix = (OfxRGBAColourF *)dstImg->getPixelAddress(args.renderWindow.x1, y);
         float *srcPix = (float*)(magickBlock + y * magickWidthStep + args.renderWindow.x1);
@@ -643,24 +659,26 @@ void MagickTextPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc
         param->setHint(kParamFontNameHint);
 
         // Get all fonts from fontconfig
-        FcConfig* fc_conf = FcInitLoadConfigAndFonts();
-        FcPattern* fc_pat = FcPatternCreate();
-        FcObjectSet* fc_os = FcObjectSetBuild (FC_FAMILY, FC_STYLE, FC_LANG, FC_FILE, (char *) 0);
-        FcFontSet* fc_fs = FcFontList(fc_conf, fc_pat, fc_os);
-        for (int i=0; fc_fs && i < fc_fs->nfont; ++i) {
-            FcPattern* fc_font = fc_fs->fonts[i];
-            FcChar8 *fc_file,*fc_style,*fc_family;
-            if (FcPatternGetString(fc_font, FC_FILE, 0, &fc_file) == FcResultMatch &&
-                    FcPatternGetString(fc_font, FC_FAMILY, 0, &fc_family) == FcResultMatch &&
-                    FcPatternGetString(fc_font, FC_STYLE, 0, &fc_style) == FcResultMatch) {
-                 std::string font_name(reinterpret_cast<char*>(fc_family));
-                 std::ostringstream font_stream;
-                 font_stream << font_name << i;
-                 param->appendOption(font_stream.str());
+        FcConfig* config = FcInitLoadConfigAndFonts();
+        FcPattern* pat = FcPatternCreate();
+        FcObjectSet* os = FcObjectSetBuild (FC_FAMILY, FC_STYLE, FC_LANG, FC_FILE, (char *) 0);
+        FcFontSet* fs = FcFontList(config, pat, os);
+        for (int i=0; fs && i < fs->nfont; ++i) {
+            FcPattern* font = fs->fonts[i];
+            FcChar8 *style, *family;
+            if (FcPatternGetString(font, FC_FAMILY, 0, &family) == FcResultMatch && FcPatternGetString(font, FC_STYLE, 0, &style) == FcResultMatch) {
+                 std::string font_family(reinterpret_cast<char*>(family));
+                 std::string font_style(reinterpret_cast<char*>(style));
+                 std::string font_name;
+                 font_name.append(font_family);
+                 font_name.append("-");
+                 font_name.append(font_style);
+                 std::replace(font_name.begin(),font_name.end(),' ','-');
+                 param->appendOption(font_name);
             }
         }
-        if (fc_fs)
-            FcFontSetDestroy(fc_fs);
+        if (fs)
+            FcFontSetDestroy(fs);
 
         param->setAnimates(true);
         page->addChild(*param);
