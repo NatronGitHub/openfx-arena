@@ -68,15 +68,9 @@
 #define kPluginVersionMajor 1 // Incrementing this number means that you have broken backwards compatibility of the plug-in.
 #define kPluginVersionMinor 0 // Increment this when you have fixed a bug or made it faster.
 
-#ifdef DEBUG
-#define kSupportsTiles 1
-#pragma message WARN("TextOIIO: tiles support is buggy - enabled in DEBUG mode")
-#else
-#define kSupportsTiles 0
-#pragma message WARN("TextOIIO: tiles support is buggy - disabled in  RELEASE mode")
-#endif
+#define kSupportsTiles 0 // ???
 
-#define kSupportsMultiResolution 1
+#define kSupportsMultiResolution 1 // ???
 #define kSupportsRenderScale 1
 #define kRenderThreadSafety eRenderInstanceSafe
 
@@ -153,6 +147,7 @@ MagickTextPlugin::MagickTextPlugin(OfxImageEffectHandle handle)
 , srcClip_(0)
 {
     Magick::InitializeMagick("");
+
     dstClip_ = fetchClip(kOfxImageEffectOutputClipName);
     assert(dstClip_ && (dstClip_->getPixelComponents() == OFX::ePixelComponentRGBA || dstClip_->getPixelComponents() == OFX::ePixelComponentRGB));
     srcClip_ = fetchClip(kOfxImageEffectSimpleSourceClipName);
@@ -368,12 +363,45 @@ MagickTextPlugin::render(const OFX::RenderArguments &args)
     if (fc_fs)
         FcFontSetDestroy(fc_fs);
 
+    // Magick
+    int magickWidth = args.renderWindow.x2 - args.renderWindow.x1;
+    int magickHeight = args.renderWindow.y2 - args.renderWindow.y1;
+    int magickWidthStep = magickWidth*4;
+    int magickSize = magickWidth*magickHeight*4;
+    float* magickBlock;
+    magickBlock = new float[magickSize];
+
+    // Read
+    Magick::Image magickImage(magickWidth,magickHeight,"RGBA",Magick::FloatPixel,(float*)srcImg->getPixelData());
+
+
+    // Write
+    magickImage.write(0,0,magickWidth,magickHeight,"RGBA",Magick::FloatPixel,magickBlock);
+
+    // Return
+    for(int y = args.renderWindow.y1; y < (args.renderWindow.y1 + magickHeight); y++) {
+        OfxRGBAColourF *dstPix = (OfxRGBAColourF *)dstImg->getPixelAddress(args.renderWindow.x1, y);
+        float *srcPix = (float*)(magickBlock + y * magickWidthStep + args.renderWindow.x1);
+        for(int x = args.renderWindow.x1; x < (args.renderWindow.x1 + magickWidth); x++) {
+            dstPix->r = srcPix[0];
+            dstPix->g = srcPix[1];
+            dstPix->b = srcPix[2];
+            dstPix->a = srcPix[3];
+            dstPix++;
+            srcPix+=4;
+        }
+    }
+    free(magickBlock);
+
+/*
     // allocate temporary image
     int pixelBytes = pixelComponentCount * getComponentBytes(bitDepth);
     int tmpRowBytes = (args.renderWindow.x2-args.renderWindow.x1) * pixelBytes;
     size_t memSize = (args.renderWindow.y2-args.renderWindow.y1) * tmpRowBytes;
     OFX::ImageMemory mem(memSize,this);
     float *tmpPixelData = (float*)mem.lock();
+
+
     const bool flipit = true;
     OIIO::ImageSpec tmpSpec = imageSpecFromOFXImage(srcImg.get() ? srcRod : args.renderWindow, args.renderWindow, pixelComponents, bitDepth);
     assert(tmpSpec.width == args.renderWindow.x2 - args.renderWindow.x1);
@@ -451,6 +479,7 @@ MagickTextPlugin::render(const OFX::RenderArguments &args)
     // TODO: answer questions:
     // - can we support tiling?
     // - can we support multiresolution by just scaling the coordinates and the font size?
+*/
 }
 
 bool
@@ -651,7 +680,6 @@ ImageEffect* MagickTextPluginFactory::createInstance(OfxImageEffectHandle handle
 {
     return new MagickTextPlugin(handle);
 }
-
 
 void getMagickTextPluginID(OFX::PluginFactoryArray &ids)
 {
