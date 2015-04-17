@@ -54,6 +54,7 @@
 #include "ofxsMacros.h"
 #include <OpenImageIO/imageio.h>
 #include <fontconfig/fontconfig.h>
+#include <Magick++.h>
 
 #define OPENIMAGEIO_THREAD_H
 #include <OpenImageIO/imagebuf.h>
@@ -79,38 +80,29 @@
 #define kSupportsRenderScale 1
 #define kRenderThreadSafety eRenderInstanceSafe
 
-
 #define kParamPosition "position"
 #define kParamPositionLabel "Position"
-#define kParamPositionHint \
-"The position where starts the baseline of the first character."
+#define kParamPositionHint "The position where starts the baseline of the first character."
 
 #define kParamInteractive "interactive"
 #define kParamInteractiveLabel "Interactive"
-#define kParamInteractiveHint \
-"When checked the image will be rendered whenever moving the overlay interact instead of when releasing the mouse button."
-
+#define kParamInteractiveHint "When checked the image will be rendered whenever moving the overlay interact instead of when releasing the mouse button."
 
 #define kParamText "text"
 #define kParamTextLabel "Text"
-#define kParamTextHint \
-"The text that will be drawn on the image"
+#define kParamTextHint "The text that will be drawn on the image"
 
 #define kParamFontSize "fontSize"
 #define kParamFontSizeLabel "Size"
-#define kParamFontSizeHint \
-"The height of the characters to render in pixels"
+#define kParamFontSizeHint "The height of the characters to render in pixels"
 
 #define kParamFontName "fontName"
 #define kParamFontNameLabel "Font"
-#define kParamFontNameHint \
-"The name of the font to be used. Defaults to some reasonable system font."
+#define kParamFontNameHint "The name of the font to be used. Defaults to some reasonable system font."
 
 #define kParamTextColor "textColor"
 #define kParamTextColorLabel "Color"
-#define kParamTextColorHint \
-"The color of the text to render"
-
+#define kParamTextColorHint "The color of the text to render"
 
 using namespace OFX;
 
@@ -160,6 +152,7 @@ MagickTextPlugin::MagickTextPlugin(OfxImageEffectHandle handle)
 , dstClip_(0)
 , srcClip_(0)
 {
+    Magick::InitializeMagick("");
     dstClip_ = fetchClip(kOfxImageEffectOutputClipName);
     assert(dstClip_ && (dstClip_->getPixelComponents() == OFX::ePixelComponentRGBA || dstClip_->getPixelComponents() == OFX::ePixelComponentRGB));
     srcClip_ = fetchClip(kOfxImageEffectSimpleSourceClipName);
@@ -228,7 +221,6 @@ imageSpecFromOFXImage(const OfxRectI &rod, const OfxRectI &bounds, OFX::PixelCom
     spec.alpha_channel = alpha_channel;
     return spec;
 }
-
 
 /* Override the render */
 void

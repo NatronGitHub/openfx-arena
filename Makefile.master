@@ -10,13 +10,9 @@ FONTCONFIG_CXXFLAGS = `pkg-config --cflags freetype2 fontconfig`
 FONTCONFIG_LINKFLAGS = `pkg-config --libs freetype2 fontconfig`
 
 # ImageMagick
-IMAGICK_CXXFLAGS = `Magick++-config --cxxflags --cppflags`
-IMAGICK_LINKFLAGS = `Magick++-config --ldflags --libs`
-#IMAGICK_LINKFLAGS += -lgomp
-
-# GraphicsMagick
-GMAGICK_CXXFLAGS = `GraphicsMagick++-config --cxxflags --cppflags`
-GMAGICK_LINKFLAGS = `GraphicsMagick++-config --ldflags --libs`
+MAGICK_CXXFLAGS = `Magick++-config --cxxflags --cppflags`
+MAGICK_LINKFLAGS = `Magick++-config --ldflags --libs`
+#MAGICK_LINKFLAGS += -lgomp
 
 # OpenImageIO
 OIIO_HOME ?= /opt/Natron-2.0
