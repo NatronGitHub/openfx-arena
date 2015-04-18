@@ -57,6 +57,8 @@
 #include <Magick++.h>
 #include <sstream>
 
+#define CLAMP(value, min, max) (((value) >(max)) ? (max) : (((value) <(min)) ? (min) : (value)))
+
 #define OPENIMAGEIO_THREAD_H
 #include <OpenImageIO/imagebuf.h>
 #include <OpenImageIO/imagebufalgo.h>
@@ -380,7 +382,6 @@ MagickTextPlugin::render(const OFX::RenderArguments &args)
     // Proc
     //magickImage.flip();
     magickImage.font(fontFile);
-    magickImage.fillColor("red");
     magickImage.fontPointsize(fontSize);
 
     std::string textX;
@@ -393,10 +394,36 @@ MagickTextPlugin::render(const OFX::RenderArguments &args)
     convertY << y;
     textY = convertY.str();
 
-    std::string textPos = textX+"x"+textY;
-    std::cout << textPos << "\n";
-    magickImage.annotate(text,Magick::Geometry(textPos),Magick::CenterGravity);
+    int rB = ((uint8_t)(255.0f *CLAMP(r, 0.0, 1.0)));
+    std::string textR;
+    std::ostringstream convertR;
+    convertR << rB;
+    textR = convertR.str();
 
+    int gB = ((uint8_t)(255.0f *CLAMP(g, 0.0, 1.0)));
+    std::string textG;
+    std::ostringstream convertG;
+    convertG << gB;
+    textG = convertG.str();
+
+    int bB = ((uint8_t)(255.0f *CLAMP(b, 0.0, 1.0)));
+    std::string textB;
+    std::ostringstream convertB;
+    convertB << bB;
+    textB = convertB.str();
+
+    std::string textA;
+    std::ostringstream convertA;
+    convertA << a;
+    textA = convertA.str();
+
+    std::string textRGBA = "rgba("+textR+","+textG+","+textB+","+textA+")";
+    std::string textPos = textX+"x"+textY;
+
+    magickImage.fillColor(textRGBA);
+    magickImage.annotate(text,Magick::Geometry(textPos),Magick::CenterGravity); // TODO! position is brokenish
+
+    std::cout << textPos << textRGBA << "\n";
 /*
     std::list<Magick::Drawable> text_draw_list;
         text_draw_list.push_back(Magick::DrawableFont(fontFile));
