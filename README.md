@@ -5,10 +5,13 @@ A set of visual effect plugins for OpenFX compatible applications.
 
 Plugins
 =======
+
  * **Swirl**
    * Swirl image
+ * **Modulate**
+   * Change Hue, Saturation and brightness on image [OpenCL support]
  * **Text**
-   * Add text to image [WIP]
+   * Add text to image [WIP #3 #4]
 
 Build
 =====
@@ -25,28 +28,13 @@ yum install ImageMagick-c++-devel freetype-devel fontconfig-devel
 apt-get install libmagick++-dev libfreetype6-dev libfontconfig1-dev
 ```
 
-**Build ImageMagick from source:** (optional)
-```
-CFLAGS="-pipe -O2 -fomit-frame-pointer -fPIC -msse -msse2 -msse3 -mmmx -m3dnow -march=core2" CXXFLAGS="-pipe -O2 -fomit-frame-pointer -fPIC -msse -msse2 -msse3 -mmmx -m3dnow -march=core2" ./configure --with-magick-plus-plus=yes --with-quantum-depth=16 --prefix=$IM --without-dps --without-djvu --without-fftw --without-fpx --without-gslib --without-gvc --without-jbig --without-jpeg --without-lcms --without-lcms2 --without-openjp2 --without-lqr --without-lzma --without-openexr --without-pango --without-png --without-rsvg --without-tiff --without-webp --without-xml --without-zlib --without-bzlib --enable-static --disable-shared ---enable-hdri --with-freetype --with-fontconfig
-```
-If you want OpenCL support (headers/libs must be installed):
-```
---enable-opencl --with-x
-```
-
-**Build and install OpenFX Arena:**
+**Build and install:**
 ```
 git clone https://github.com/olear/openfx-arena
 cd openfx-arena
 git submodule update -i
 make DEBUGFLAG=-O3
 cp -a Plugin/*-release/Arena.ofx.bundle /usr/OFX/Plugins/
-```
-
-**Build RPM from git:**
-```
-wget https://raw.githubusercontent.com/olear/openfx-arena/master/openfx-arena.spec
-rpmbuild -bb openfx-arena.spec
 ```
 
 License

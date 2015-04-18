@@ -46,17 +46,13 @@ make %{?_smp_mflags} install
 
 %build
 cd %{_builddir}/openfx-arena-%{version}
-# find custom magick
 export PKG_CONFIG_PATH=%{_builddir}/im/lib/pkgconfig
 export PATH=%{_builddir}/im/bin:$PATH
-# build
 make DEBUGFLAG=-O3
 
 %install
 cd %{_builddir}/openfx-arena-%{version}
 mkdir -p %{buildroot}/usr/OFX/Plugins %{buildroot}/%{_docdir}/%{name}-%{version}
-#mv %{_builddir}/im/lib*/*.so Plugin/*-release/*.ofx.bundle/Contents/Linux*/
-#strip -s Plugin/*-release/*.ofx.bundle/Contents/*/*
 mkdir Libraries
 cp -a %{_builddir}/im/lib*/libMagick++-6.Q16HDRI.so.6.0.0 Libraries/
 cp -a %{_builddir}/im/lib*/libMagickCore-6.Q16HDRI.so.2.0.0 Libraries/
@@ -68,6 +64,9 @@ strip -s Libraries/*
 mv Libraries Plugin/*-release/*.ofx.bundle/
 mv Plugin/*-release/*.ofx.bundle %{buildroot}/usr/OFX/Plugins/
 cp CHANGELOG LICENSE README.md %{buildroot}/%{_docdir}/%{name}-%{version}/
+cp %{_builddir}/OpenCL/CL/LICENSE %{buildroot}/%{_docdir}/%{name}-%{version}/LICENSE.OpenCL
+cp %{_builddir}/im/share/doc/ImageMagick-6/LICENSE %{buildroot}/%{_docdir}/%{name}-%{version}/LICENSE.ImageMagick
+cp OpenFX/Support/LICENSE %{buildroot}/%{_docdir}/%{name}-%{version}/LICENSE.OpenFX
 
 %clean
 %{__rm} -rf %{buildroot}
