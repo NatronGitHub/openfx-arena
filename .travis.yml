@@ -1,0 +1,13 @@
+language: cpp
+
+compiler:
+  - gcc
+  - clang
+
+install:
+  - sudo apt-get update
+  - sudo apt-get install libmagick++-dev libfreetype6-dev libfontconfig1-dev
+
+script:
+  - git submodule update -i
+  - make
