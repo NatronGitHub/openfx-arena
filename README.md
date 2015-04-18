@@ -1,4 +1,4 @@
-OpenFX Arena [![Build Status](https://travis-ci.org/olear/openfx-arena.svg)](https://travis-ci.org/olear/openfx-arena)
+OpenFX Arena [![Build Status](https://travis-ci.org/olear/openfx-arena.svg)](https://travis-ci.org/olear/openfx-arena) [![GitHub issues](https://img.shields.io/github/issues/olear/openfx-arena.svg)](https://github.com/olear/openfx-arena/issues)
 ============
 
 A set of visual effect plugins for OpenFX compatible applications.
@@ -25,17 +25,14 @@ yum install ImageMagick-c++-devel freetype-devel fontconfig-devel
 apt-get install libmagick++-dev libfreetype6-dev libfontconfig1-dev
 ```
 
-**Build ImageMagick from source: (optional)**
+**Build ImageMagick from source:** (optional)
 ```
-CFLAGS="-pipe -O2 -fomit-frame-pointer -fPIC -msse -msse2 -msse3 -mmmx -m3dnow -march=core2" CXXFLAGS="-pipe -O2 -fomit-frame-pointer -fPIC -msse -msse2 -msse3 -mmmx -m3dnow -march=core2" ./configure --with-magick-plus-plus=yes --with-quantum-depth=16 --prefix=$IM --without-dps --without-djvu --without-fftw --without-fpx --without-gslib --without-gvc --without-jbig --without-jpeg --without-lcms --without-lcms2 --without-openjp2 --without-lqr --without-lzma --without-openexr --without-pango --without-png --without-rsvg --without-tiff --without-webp --without-xml --without-zlib --without-bzlib --enable-static --disable-shared --with-x --enable-hdri --with-freetype --with-fontconfig
+CFLAGS="-pipe -O2 -fomit-frame-pointer -fPIC -msse -msse2 -msse3 -mmmx -m3dnow -march=core2" CXXFLAGS="-pipe -O2 -fomit-frame-pointer -fPIC -msse -msse2 -msse3 -mmmx -m3dnow -march=core2" ./configure --with-magick-plus-plus=yes --with-quantum-depth=16 --prefix=$IM --without-dps --without-djvu --without-fftw --without-fpx --without-gslib --without-gvc --without-jbig --without-jpeg --without-lcms --without-lcms2 --without-openjp2 --without-lqr --without-lzma --without-openexr --without-pango --without-png --without-rsvg --without-tiff --without-webp --without-xml --without-zlib --without-bzlib --enable-static --disable-shared ---enable-hdri --with-freetype --with-fontconfig
 ```
-OpenCL support:
-
-Download and install OpenCL headers and libs, then add :
+If you want OpenCL support (headers/libs must be installed):
 ```
---enable-opencl
+--enable-opencl --with-x
 ```
-at the end of the configure.
 
 **Build and install OpenFX Arena:**
 ```
@@ -45,13 +42,6 @@ git submodule update -i
 make DEBUGFLAG=-O3
 cp -a Plugin/*-release/Arena.ofx.bundle /usr/OFX/Plugins/
 ```
-
-Third-party
-===========
-
-Building third-party from source:
-
-**ImageMagick**
 
 License
 =======
