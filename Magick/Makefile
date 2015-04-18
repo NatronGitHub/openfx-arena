@@ -1,6 +1,7 @@
 PLUGINOBJECTS = \
 	MagickText.o \
 	MagickSwirl.o \
+	MagickModulate.o \
 	PluginRegistration.o \
 
 PLUGINNAME = Magick
@@ -10,6 +11,8 @@ net.fxarena.openfx.MagickText.png \
 net.fxarena.openfx.MagickText.svg \
 net.fxarena.openfx.MagickSwirl.png \
 net.fxarena.openfx.MagickSwirl.svg \
+net.fxarena.openfx.MagickModulate.png \
+net.fxarena.openfx.MagickModulate.svg \
 
 include ../Makefile.master
 

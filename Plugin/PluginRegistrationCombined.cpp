@@ -1,6 +1,7 @@
 #include "ofxsImageEffect.h"
 #include "MagickText.h"
 #include "MagickSwirl.h"
+#include "MagickModulate.h"
 
 namespace OFX
 {
@@ -10,6 +11,7 @@ namespace OFX
         {
             getMagickTextPluginID(ids);
             getMagickSwirlPluginID(ids);
+		getMagickModulatePluginID(ids);
         }
     }
 }
