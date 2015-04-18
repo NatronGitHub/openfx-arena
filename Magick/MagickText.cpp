@@ -55,6 +55,7 @@
 #include <OpenImageIO/imageio.h>
 #include <fontconfig/fontconfig.h>
 #include <Magick++.h>
+#include <sstream>
 
 #define OPENIMAGEIO_THREAD_H
 #include <OpenImageIO/imagebuf.h>
@@ -377,21 +378,37 @@ MagickTextPlugin::render(const OFX::RenderArguments &args)
     Magick::Image magickImage(magickWidth,magickHeight,"RGBA",Magick::FloatPixel,(float*)srcImg->getPixelData());
 
     // Proc
-    magickImage.flip();
+    //magickImage.flip();
     magickImage.font(fontFile);
-    //magickImage.fillColor(Magick::Color(r,g,b,MaxRGB));
     magickImage.fillColor("red");
     magickImage.fontPointsize(fontSize);
-    magickImage.annotate(text,Magick::CenterGravity);
 
-    /*magickImage.draw(Magick::DrawableFont(fontFile));
-    magickImage.draw(Magick::DrawableStrokeColor("black"));
-    magickImage.draw(Magick::DrawableFillColor(Magick::Color(0, 0, 0, MaxRGB)));
-    magickImage.draw(Magick::DrawableTextUnderColor("white"));
-    magickImage.draw(Magick::DrawableText(x,y,text));*/
+    std::string textX;
+    std::ostringstream convertX;
+    convertX << x;
+    textX = convertX.str();
+
+    std::string textY;
+    std::ostringstream convertY;
+    convertY << y;
+    textY = convertY.str();
+
+    std::string textPos = textX+"x"+textY;
+    std::cout << textPos << "\n";
+    magickImage.annotate(text,Magick::Geometry(textPos),Magick::CenterGravity);
+
+/*
+    std::list<Magick::Drawable> text_draw_list;
+        text_draw_list.push_back(Magick::DrawableFont(fontFile));
+        text_draw_list.push_back(Magick::DrawableText(101, 50, "text to write on the canvas"));
+        text_draw_list.push_back(Magick::DrawableStrokeColor(Magick::Color("black")));
+        text_draw_list.push_back(Magick::DrawableFillColor(Magick::Color(0, 0, 0, MaxRGB)));
+
+        magickImage.draw(text_draw_list);*/
 
 
-    magickImage.flip();
+
+    //magickImage.flip();
 
     // Return
     magickImage.write(0,0,magickWidth,magickHeight,"RGBA",Magick::FloatPixel,magickBlock);
