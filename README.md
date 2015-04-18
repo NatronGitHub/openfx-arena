@@ -15,7 +15,9 @@ Plugins
  * **Implode**
    * Implodes image
  * **Edge**
-   * Edge effects (WIP)
+   * Edge effect (WIP)
+ * **MotionBlur**
+   * MotionBlur effect (WIP)
  * **Text**
    * Add text to image (WIP)
 

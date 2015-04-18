@@ -5,6 +5,7 @@ PLUGINOBJECTS = \
 	MagickMirror.o \
 	MagickImplode.o \
 	MagickEdge.o \
+	MagickMotionBlur.o \
 	PluginRegistration.o \
 
 PLUGINNAME = Magick
@@ -22,6 +23,8 @@ net.fxarena.openfx.MagickImplode.png \
 net.fxarena.openfx.MagickImplode.svg \
 net.fxarena.openfx.MagickEdge.png \
 net.fxarena.openfx.MagickEdge.svg \
+net.fxarena.openfx.MagickMotionBlur.png \
+net.fxarena.openfx.MagickMotionBlur.svg \
 
 include ../Makefile.master
 

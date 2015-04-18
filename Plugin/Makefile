@@ -5,6 +5,7 @@ PLUGINOBJECTS = \
 	MagickMirror.o \
 	MagickImplode.o \
 	MagickEdge.o \
+	MagickMotionBlur.o \
 	ofxsOGLTextRenderer.o \
 	ofxsOGLFontData.o \
 	ofxsGenerator.o \
@@ -26,6 +27,8 @@ RESOURCES = \
 ../Magick/net.fxarena.openfx.MagickImplode.svg \
 ../Magick/net.fxarena.openfx.MagickEdge.png \
 ../Magick/net.fxarena.openfx.MagickEdge.svg \
+../Magick/net.fxarena.openfx.MagickMotionBlur.png \
+../Magick/net.fxarena.openfx.MagickMotionBlur.svg \
 
 VPATH += \
 ../Magick \

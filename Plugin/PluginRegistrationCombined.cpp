@@ -5,6 +5,7 @@
 #include "MagickMirror.h"
 #include "MagickImplode.h"
 #include "MagickEdge.h"
+#include "MagickMotionBlur.h"
 
 namespace OFX
 {
@@ -18,6 +19,7 @@ namespace OFX
             getMagickMirrorPluginID(ids);
             getMagickImplodePluginID(ids);
             getMagickEdgePluginID(ids);
+            getMagickMotionBlurPluginID(ids);
         }
     }
 }
