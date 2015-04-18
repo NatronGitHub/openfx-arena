@@ -1,5 +1,6 @@
 PLUGINOBJECTS = \
 	MagickText.o \
+	MagickSwirl.o \
 	ofxsOGLTextRenderer.o \
 	ofxsOGLFontData.o \
 	ofxsGenerator.o \
@@ -12,6 +13,8 @@ PLUGINNAME = Test
 RESOURCES = \
 ../Magick/net.fxarena.openfx.MagickText.png \
 ../Magick/net.fxarena.openfx.MagickText.svg \
+../Magick/net.fxarena.openfx.MagickSwirl.png \
+../Magick/net.fxarena.openfx.MagickSwirl.svg \
 
 VPATH += \
 ../Magick \

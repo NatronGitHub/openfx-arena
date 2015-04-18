@@ -1,5 +1,6 @@
 #include "ofxsImageEffect.h"
 #include "MagickText.h"
+#include "MagickSwirl.h"
 
 namespace OFX 
 {
@@ -8,6 +9,7 @@ namespace OFX
     void getPluginIDs(OFX::PluginFactoryArray &ids)
     {
         getMagickTextPluginID(ids);
+        getMagickSwirlPluginID(ids);
     }
   }
 }
