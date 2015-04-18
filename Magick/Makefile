@@ -4,6 +4,7 @@ PLUGINOBJECTS = \
 	MagickModulate.o \
 	MagickMirror.o \
 	MagickImplode.o \
+	MagickEdge.o \
 	PluginRegistration.o \
 
 PLUGINNAME = Magick
@@ -19,6 +20,8 @@ net.fxarena.openfx.MagickMirror.png \
 net.fxarena.openfx.MagickMirror.svg \
 net.fxarena.openfx.MagickImplode.png \
 net.fxarena.openfx.MagickImplode.svg \
+net.fxarena.openfx.MagickEdge.png \
+net.fxarena.openfx.MagickEdge.svg \
 
 include ../Makefile.master
 

@@ -4,6 +4,7 @@
 #include "MagickModulate.h"
 #include "MagickMirror.h"
 #include "MagickImplode.h"
+#include "MagickEdge.h"
 
 namespace OFX
 {
@@ -16,6 +17,7 @@ namespace OFX
             getMagickModulatePluginID(ids);
             getMagickMirrorPluginID(ids);
             getMagickImplodePluginID(ids);
+            getMagickEdgePluginID(ids);
         }
     }
 }

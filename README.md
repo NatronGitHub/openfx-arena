@@ -14,6 +14,8 @@ Plugins
    * Mirrors image
  * **Implode**
    * Implodes image
+ * **Edge**
+   * Edge effects (WIP)
  * **Text**
    * Add text to image (WIP)
 
