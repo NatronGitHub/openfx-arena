@@ -12,8 +12,10 @@ Plugins
    * Change Hue, Saturation and brightness on image (OpenCL support)
  * **Mirror**
    * Mirrors image
+ * **Implode**
+   * Implodes image
  * **Text**
-   * Add text to image (WIP #3 #4)
+   * Add text to image (WIP)
 
 Build
 =====
