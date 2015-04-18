@@ -2,6 +2,7 @@
 #include "MagickText.h"
 #include "MagickSwirl.h"
 #include "MagickModulate.h"
+#include "MagickMirror.h"
 
 namespace OFX 
 {
@@ -11,7 +12,8 @@ namespace OFX
     {
         getMagickTextPluginID(ids);
         getMagickSwirlPluginID(ids);
-	getMagickModulatePlugin(ids);
+        getMagickModulatePluginID(ids);
+        getMagickMirrorPluginID(ids);
     }
   }
 }
