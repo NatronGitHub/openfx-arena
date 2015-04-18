@@ -16,6 +16,9 @@ Build
 Requires FreeType, FontConfig and ImageMagick installed prior to build.
 
 ```
+git clone https://github.com/olear/openfx-arena
+cd openfx-arena
+git submodule update -i
 make DEBUGFLAG=-O3
 cp -a Plugin/*-release/Arena.ofx.bundle /usr/OFX/Plugins/
 ```
