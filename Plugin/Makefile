@@ -7,9 +7,8 @@ PLUGINOBJECTS = \
 	ofxsRectangleInteract.o \
 	PluginRegistrationCombined.o
 
-PLUGINNAME = Test
+PLUGINNAME = Arena
 
-# ls */*png */*svg|sed -e 's!^!../!' -e 's!$! \\!'|sort
 RESOURCES = \
 ../Magick/net.fxarena.openfx.MagickText.png \
 ../Magick/net.fxarena.openfx.MagickText.svg \
@@ -23,5 +22,5 @@ include ../Makefile.master
 
 CXXFLAGS += -I../Magick
 
-CXXFLAGS  += $(OIIO_CXXFLAGS) $(FONTCONFIG_CXXFLAGS) $(MAGICK_CXXFLAGS)
-LINKFLAGS += $(OIIO_LINKFLAGS)  $(FONTCONFIG_LINKFLAGS) $(MAGICK_LINKFLAGS)
+CXXFLAGS  += $(FONTCONFIG_CXXFLAGS) $(MAGICK_CXXFLAGS)
+LINKFLAGS += $(FONTCONFIG_LINKFLAGS) $(MAGICK_LINKFLAGS)

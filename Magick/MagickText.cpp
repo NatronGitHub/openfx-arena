@@ -49,27 +49,22 @@
 #include "ofxsCopier.h"
 #include "ofxsPositionInteract.h"
 
-#include "IOUtility.h"
 #include "ofxNatron.h"
 #include "ofxsMacros.h"
-#include <OpenImageIO/imageio.h>
 #include <fontconfig/fontconfig.h>
 #include <Magick++.h>
 #include <sstream>
+#include <iostream>
 
 #define CLAMP(value, min, max) (((value) >(max)) ? (max) : (((value) <(min)) ? (min) : (value)))
-
-#define OPENIMAGEIO_THREAD_H
-#include <OpenImageIO/imagebuf.h>
-#include <OpenImageIO/imagebufalgo.h>
 
 #define kPluginName "MagickText"
 #define kPluginGrouping "Draw"
 #define kPluginDescription  "Use ImageMagick to write text on images."
 
 #define kPluginIdentifier "net.fxarena.openfx.MagickText"
-#define kPluginVersionMajor 1 // Incrementing this number means that you have broken backwards compatibility of the plug-in.
-#define kPluginVersionMinor 0 // Increment this when you have fixed a bug or made it faster.
+#define kPluginVersionMajor 0 // Incrementing this number means that you have broken backwards compatibility of the plug-in.
+#define kPluginVersionMinor 1 // Increment this when you have fixed a bug or made it faster.
 
 #define kSupportsTiles 0 // ???
 
@@ -168,7 +163,7 @@ MagickTextPlugin::~MagickTextPlugin()
 {
 }
 
-static OIIO::ImageSpec
+/*static OIIO::ImageSpec
 imageSpecFromOFXImage(const OfxRectI &rod, const OfxRectI &bounds, OFX::PixelComponentEnum pixelComponents, OFX::BitDepthEnum bitDepth)
 {
     OIIO::TypeDesc format;
@@ -218,7 +213,7 @@ imageSpecFromOFXImage(const OfxRectI &rod, const OfxRectI &bounds, OFX::PixelCom
     spec.nchannels = nchannels;
     spec.alpha_channel = alpha_channel;
     return spec;
-}
+}*/
 
 /* Override the render */
 void
@@ -285,7 +280,7 @@ MagickTextPlugin::render(const OFX::RenderArguments &args)
         //throw std::runtime_error("render window outside of image bounds");
     }
 
-    OfxRectI srcRod;
+    /*OfxRectI srcRod;
     OfxRectI srcBounds;
     OFX::PixelComponentEnum pixelComponents = ePixelComponentNone;
     int pixelComponentCount = 0;
@@ -326,7 +321,7 @@ MagickTextPlugin::render(const OFX::RenderArguments &args)
             assert(srcRod.y1 == dstRod.y1);
             assert(srcRod.y2 == dstRod.y2); // crashes on Natron if kSupportsMultiResolution=0
         }
-    }
+    }*/
 
     double x, y;
     position_->getValueAtTime(args.time, x, y);
