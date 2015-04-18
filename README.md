@@ -43,6 +43,12 @@ make DEBUGFLAG=-O3
 cp -a Plugin/*-release/Arena.ofx.bundle /usr/OFX/Plugins/
 ```
 
+**Build RPM from git:**
+```
+wget https://raw.githubusercontent.com/olear/openfx-arena/master/openfx-arena.spec
+rpmbuild -bb openfx-arena.spec
+```
+
 License
 =======
 ```
