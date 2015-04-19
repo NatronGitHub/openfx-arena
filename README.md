@@ -16,12 +16,12 @@ Plugins
    * Implodes image
  * **Tile**
    * Tile image
+ * **Text**
+   * Add text to image
  * **Edge**
    * Edge effect (WIP)
  * **MotionBlur**
    * MotionBlur effect (WIP) ([OpenCL](http://www.imagemagick.org/script/opencl.php))
- * **Text**
-   * Add text to image (WIP)
 
 Build
 =====
