@@ -60,7 +60,7 @@
 
 #define kPluginName "MagickText"
 #define kPluginGrouping "Draw"
-#define kPluginDescription  "Use ImageMagick to write text on images."
+#define kPluginDescription  "Write text on images."
 
 #define kPluginIdentifier "net.fxarena.openfx.MagickText"
 #define kPluginVersionMajor 0 // Incrementing this number means that you have broken backwards compatibility of the plug-in.
@@ -374,63 +374,42 @@ MagickTextPlugin::render(const OFX::RenderArguments &args)
     magickBlock = new float[magickSize];
     Magick::Image magickImage(magickWidth,magickHeight,"RGBA",Magick::FloatPixel,(float*)srcImg->getPixelData());
 
-    // Proc
-    //magickImage.flip();
-    magickImage.font(fontFile);
+    // set font size
     magickImage.fontPointsize(fontSize);
 
-    std::string textX;
-    std::ostringstream convertX;
-    convertX << x;
-    textX = convertX.str();
+    // Convert colors to int
+    int rI = ((uint8_t)(255.0f *CLAMP(r, 0.0, 1.0)));
+    int gI = ((uint8_t)(255.0f *CLAMP(g, 0.0, 1.0)));
+    int bI = ((uint8_t)(255.0f *CLAMP(b, 0.0, 1.0)));
 
-    std::string textY;
-    std::ostringstream convertY;
-    convertY << y;
-    textY = convertY.str();
+    std::ostringstream rgba;
+    rgba << "rgba(" << rI <<"," << gI << "," << bI << "," << a << ")";
+    std::string textRGBA = rgba.str();
 
-    int rB = ((uint8_t)(255.0f *CLAMP(r, 0.0, 1.0)));
-    std::string textR;
-    std::ostringstream convertR;
-    convertR << rB;
-    textR = convertR.str();
+    // Flip image
+    magickImage.flip();
 
-    int gB = ((uint8_t)(255.0f *CLAMP(g, 0.0, 1.0)));
-    std::string textG;
-    std::ostringstream convertG;
-    convertG << gB;
-    textG = convertG.str();
+    // Position x y
+    OfxRectI rod,bounds;
+    rod = srcImg->getRegionOfDefinition();
+    bounds = srcImg->getBounds();
 
-    int bB = ((uint8_t)(255.0f *CLAMP(b, 0.0, 1.0)));
-    std::string textB;
-    std::ostringstream convertB;
-    convertB << bB;
-    textB = convertB.str();
+    int ytext = y*args.renderScale.y;
+    int xtext = x*args.renderScale.x;
+    int tmp_y = rod.y2 - bounds.y2;
+    int tmp_height = bounds.y2 - bounds.y1;
+    ytext = tmp_y + ((tmp_y+tmp_height-1) - ytext);
 
-    std::string textA;
-    std::ostringstream convertA;
-    convertA << a;
-    textA = convertA.str();
-
-    std::string textRGBA = "rgba("+textR+","+textG+","+textB+","+textA+")";
-    std::string textPos = textX+"x"+textY;
-
-    magickImage.fillColor(textRGBA);
-    magickImage.annotate(text,Magick::Geometry(textPos),Magick::CenterGravity); // TODO! position is brokenish
-
-    std::cout << textPos << textRGBA << "\n";
-/*
+    // Draw text
     std::list<Magick::Drawable> text_draw_list;
-        text_draw_list.push_back(Magick::DrawableFont(fontFile));
-        text_draw_list.push_back(Magick::DrawableText(101, 50, "text to write on the canvas"));
-        text_draw_list.push_back(Magick::DrawableStrokeColor(Magick::Color("black")));
-        text_draw_list.push_back(Magick::DrawableFillColor(Magick::Color(0, 0, 0, MaxRGB)));
+    text_draw_list.push_back(Magick::DrawableFont(fontFile));
+    text_draw_list.push_back(Magick::DrawableText(xtext, ytext, text));
+    //text_draw_list.push_back(Magick::DrawableStrokeColor(Magick::Color("black"))); // TODO + outline
+    text_draw_list.push_back(Magick::DrawableFillColor(textRGBA));
+    magickImage.draw(text_draw_list);
 
-        magickImage.draw(text_draw_list);*/
-
-
-
-    //magickImage.flip();
+    // Flip image
+    magickImage.flip();
 
     // Return
     magickImage.write(0,0,magickWidth,magickHeight,"RGBA",Magick::FloatPixel,magickBlock);
@@ -447,94 +426,6 @@ MagickTextPlugin::render(const OFX::RenderArguments &args)
         }
     }
     free(magickBlock);
-
-/*
-    // allocate temporary image
-    int pixelBytes = pixelComponentCount * getComponentBytes(bitDepth);
-    int tmpRowBytes = (args.renderWindow.x2-args.renderWindow.x1) * pixelBytes;
-    size_t memSize = (args.renderWindow.y2-args.renderWindow.y1) * tmpRowBytes;
-    OFX::ImageMemory mem(memSize,this);
-    float *tmpPixelData = (float*)mem.lock();
-
-
-    const bool flipit = true;
-    OIIO::ImageSpec tmpSpec = imageSpecFromOFXImage(srcImg.get() ? srcRod : args.renderWindow, args.renderWindow, pixelComponents, bitDepth);
-    assert(tmpSpec.width == args.renderWindow.x2 - args.renderWindow.x1);
-    assert(tmpSpec.width == args.renderWindow.x2 - args.renderWindow.x1);
-    assert(tmpSpec.height == args.renderWindow.y2 - args.renderWindow.y1);
-    OIIO::ROI srcRoi(tmpSpec.x, tmpSpec.x + tmpSpec.width, tmpSpec.y, tmpSpec.y+tmpSpec.height);
-    int ytext = int(y*args.renderScale.y);
-    if (flipit) {
-        // from the OIIO 1.5 release notes:
-        // Fixes, minor enhancements, and performance improvements:
-        // * ImageBufAlgo:
-        //   * flip(), flop(), flipflop() have been rewritten to work more
-        //     sensibly for cropped images. In particular, the transformation now
-        //     happens with respect to the display (full) window, rather than
-        //     simply flipping or flopping within the data window. (1.5.2)
-#if OIIO_VERSION >= 10502
-        // the transformation happens with respect to the display (full) window
-        tmpSpec.y = ((tmpSpec.full_y+tmpSpec.full_height-1) - tmpSpec.y) - (tmpSpec.height-1);
-        tmpSpec.full_y = 0;
-        ytext = (tmpSpec.full_y+tmpSpec.full_height-1) - ytext;
-#else
-        // only the data window is flipped
-        ytext = tmpSpec.y + ((tmpSpec.y+tmpSpec.height-1) - ytext);
-#endif
-    }
-    assert(tmpSpec.width == args.renderWindow.x2 - args.renderWindow.x1);
-    assert(tmpSpec.height == args.renderWindow.y2 - args.renderWindow.y1);
-    OIIO::ImageBuf tmpBuf("tmp", tmpSpec, tmpPixelData);
-
-    // do we have to flip the image?
-    if (!srcImg.get()) {
-        OIIO::ImageBufAlgo::zero(tmpBuf);
-    } else {
-        if (flipit) {
-            bool ok = OIIO::ImageBufAlgo::flip(tmpBuf, *srcBuf, srcRoi);
-            if (!ok) {
-                setPersistentMessage(OFX::Message::eMessageError, "", tmpBuf.geterror().c_str());
-                throwSuiteStatusException(kOfxStatFailed);
-            }
-        } else {
-            // copy the renderWindow from src to a temp buffer
-            tmpBuf.copy_pixels(*srcBuf);
-        }
-    }
-
-    // render text in the temp buffer
-    {
-        bool ok = OIIO::ImageBufAlgo::render_text(tmpBuf, int(x*args.renderScale.x), ytext, text, int(fontSize*args.renderScale.y), fontFile, textColor);
-        if (!ok) {
-            setPersistentMessage(OFX::Message::eMessageError, "", tmpBuf.geterror().c_str());
-            //throwSuiteStatusException(kOfxStatFailed);
-        }
-    }
-    OIIO::ImageSpec dstSpec = imageSpecFromOFXImage(dstRod, dstBounds, pixelComponents, bitDepth);
-    OIIO::ImageBuf dstBuf("dst", dstSpec, dstImg->getPixelData());
-    
-    OIIO::ROI tmpRoi(tmpSpec.x, tmpSpec.x + tmpSpec.width, tmpSpec.y, tmpSpec.y+tmpSpec.height);
-    // do we have to flip the image?
-    if (flipit) {
-        bool ok = OIIO::ImageBufAlgo::flip(dstBuf, tmpBuf, tmpRoi);
-        if (!ok) {
-            setPersistentMessage(OFX::Message::eMessageError, "", tmpBuf.geterror().c_str());
-            throwSuiteStatusException(kOfxStatFailed);
-        }
-    } else {
-        // copy the temp buffer to dstImg
-        //dstBuf.copy_pixels(tmpBuf); // erases everything out of tmpBuf!
-        bool ok = OIIO::ImageBufAlgo::paste(dstBuf, args.renderWindow.x1, srcRod.y2 - args.renderWindow.y2, 0, 0, tmpBuf, tmpRoi);
-        if (!ok) {
-            setPersistentMessage(OFX::Message::eMessageError, "", tmpBuf.geterror().c_str());
-            throwSuiteStatusException(kOfxStatFailed);
-        }
-    }
-
-    // TODO: answer questions:
-    // - can we support tiling?
-    // - can we support multiresolution by just scaling the coordinates and the font size?
-*/
 }
 
 bool
