@@ -6,6 +6,7 @@ PLUGINOBJECTS = \
 	MagickImplode.o \
 	MagickEdge.o \
 	MagickMotionBlur.o \
+	MagickTile.o \
 	PluginRegistration.o \
 
 PLUGINNAME = Magick
@@ -25,8 +26,10 @@ net.fxarena.openfx.MagickEdge.png \
 net.fxarena.openfx.MagickEdge.svg \
 net.fxarena.openfx.MagickMotionBlur.png \
 net.fxarena.openfx.MagickMotionBlur.svg \
+net.fxarena.openfx.MagickTile.png \
+net.fxarena.openfx.MagickTile.svg \
 
 include ../Makefile.master
 
 CXXFLAGS += $(FONTCONFIG_CXXFLAGS) $(MAGICK_CXXFLAGS)
-LINKFLAGS += $(FONTCONFIG_CXXFLAGS) $(MAGICK_LINKFLAGS)
+LINKFLAGS += $(FONTCONFIG_LINKFLAGS) $(MAGICK_LINKFLAGS)

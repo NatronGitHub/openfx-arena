@@ -14,6 +14,8 @@ Plugins
    * Mirrors image
  * **Implode**
    * Implodes image
+ * **Tile**
+   * Tile image
  * **Edge**
    * Edge effect (WIP)
  * **MotionBlur**
