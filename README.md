@@ -26,19 +26,19 @@ Plugins
 Build
 =====
 
-Requires FreeType, FontConfig and ImageMagick (Q16 6.5+) installed prior to build.
+Requires FreeType, FontConfig and ImageMagick C++ (Q16 6.5+) installed prior to build.
 
-**RHEL/Fedora:**
+**RHEL/Fedora**
 ```
 yum install ImageMagick-c++-devel freetype-devel fontconfig-devel
 ```
 
-**Debian/Ubuntu:**
+**Debian/Ubuntu**
 ```
 apt-get install libmagick++-dev libfreetype6-dev libfontconfig1-dev
 ```
 
-**Build and install:**
+**Build and install**
 ```
 git clone https://github.com/olear/openfx-arena
 cd openfx-arena
@@ -46,6 +46,8 @@ git submodule update -i
 make DEBUGFLAG=-O3
 cp -a Plugin/*-release/Arena.ofx.bundle /usr/OFX/Plugins/
 ```
+
+Remove DEBUGFLAG=-O3 to build in debug mode. 
 
 License
 =======
