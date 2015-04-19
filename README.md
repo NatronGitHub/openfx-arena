@@ -26,7 +26,7 @@ Plugins
 Build
 =====
 
-Requires FreeType, FontConfig and ImageMagick installed prior to build.
+Requires FreeType, FontConfig and ImageMagick (Q16 6.5+) installed prior to build.
 
 **RHEL/Fedora:**
 ```
