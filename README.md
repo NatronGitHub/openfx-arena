@@ -9,7 +9,7 @@ Plugins
  * **Swirl**
    * Swirl image
  * **Modulate**
-   * Change Hue, Saturation and brightness on image (OpenCL support)
+   * Change Hue, Saturation and brightness on image  ([OpenCL](http://www.imagemagick.org/script/opencl.php))
  * **Mirror**
    * Mirrors image
  * **Implode**
@@ -19,33 +19,35 @@ Plugins
  * **Edge**
    * Edge effect (WIP)
  * **MotionBlur**
-   * MotionBlur effect (WIP)
+   * MotionBlur effect (WIP) ([OpenCL](http://www.imagemagick.org/script/opencl.php))
  * **Text**
    * Add text to image (WIP)
 
 Build
 =====
 
-Requires FreeType, FontConfig and ImageMagick installed prior to build.
+Requires FreeType, Fontconfig and ImageMagick C++ (Q16 6.5+) installed prior to build.
 
-**RHEL/Fedora:**
+**RHEL/Fedora**
 ```
 yum install ImageMagick-c++-devel freetype-devel fontconfig-devel
 ```
 
-**Debian/Ubuntu:**
+**Debian/Ubuntu**
 ```
 apt-get install libmagick++-dev libfreetype6-dev libfontconfig1-dev
 ```
 
-**Build and install:**
+**Build and install**
 ```
 git clone https://github.com/olear/openfx-arena
 cd openfx-arena
 git submodule update -i
 make DEBUGFLAG=-O3
-cp -a Plugin/*-release/Arena.ofx.bundle /usr/OFX/Plugins/
+cp -a Plugin/*-*-*/Arena.ofx.bundle /usr/OFX/Plugins/
 ```
+
+Remove DEBUGFLAG=-O3 to build in debug mode. 
 
 License
 =======
