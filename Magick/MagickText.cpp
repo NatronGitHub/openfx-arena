@@ -119,6 +119,9 @@
 #define kParamStrokeHint "Adjust stroke width for decoration and outline"
 #define kParamStrokeDefault 1
 
+#define kClipTex "Texture"
+
+
 using namespace OFX;
 
 class MagickTextPlugin : public OFX::ImageEffect
@@ -154,6 +157,7 @@ private:
     // do not need to delete these, the ImageEffect is managing them for us
     OFX::Clip *dstClip_;
     OFX::Clip *srcClip_;
+    OFX::Clip *texClip_;
 
     OFX::Double2DParam *position_;
     OFX::StringParam *text_;
@@ -171,6 +175,7 @@ MagickTextPlugin::MagickTextPlugin(OfxImageEffectHandle handle)
 : OFX::ImageEffect(handle)
 , dstClip_(0)
 , srcClip_(0)
+, texClip_(0)
 {
     Magick::InitializeMagick("");
 
@@ -178,6 +183,8 @@ MagickTextPlugin::MagickTextPlugin(OfxImageEffectHandle handle)
     assert(dstClip_ && (dstClip_->getPixelComponents() == OFX::ePixelComponentRGBA || dstClip_->getPixelComponents() == OFX::ePixelComponentRGB));
     srcClip_ = fetchClip(kOfxImageEffectSimpleSourceClipName);
     assert(srcClip_ && (srcClip_->getPixelComponents() == OFX::ePixelComponentRGBA || srcClip_->getPixelComponents() == OFX::ePixelComponentRGB));
+    texClip_ = fetchClip(kClipTex);
+    assert(texClip_ && (texClip_->getPixelComponents() == OFX::ePixelComponentRGBA || texClip_->getPixelComponents() == OFX::ePixelComponentRGB));
 
     position_ = fetchDouble2DParam(kParamPosition);
     text_ = fetchStringParam(kParamText);
@@ -197,8 +204,7 @@ MagickTextPlugin::~MagickTextPlugin()
 }
 
 /* Override the render */
-void
-MagickTextPlugin::render(const OFX::RenderArguments &args)
+void MagickTextPlugin::render(const OFX::RenderArguments &args)
 {
     if (!kSupportsRenderScale && (args.renderScale.x != 1. || args.renderScale.y != 1.)) {
         OFX::throwSuiteStatusException(kOfxStatFailed);
@@ -260,6 +266,14 @@ MagickTextPlugin::render(const OFX::RenderArguments &args)
         return;
         //throw std::runtime_error("render window outside of image bounds");
     }
+
+    std::auto_ptr<OFX::Image> texImg(texClip_->fetchImage(args.time));
+    bool use_tex = false;
+    if (texImg.get())
+        use_tex;
+
+    if (use_tex)
+        std::cout << "tex" << "\n";
 
     // Get params
     double x, y;
@@ -494,9 +508,9 @@ void MagickTextPluginFactory::describe(OFX::ImageEffectDescriptor &desc)
     desc.addSupportedContext(eContextGenerator);
 
     // add supported pixel depths
-    desc.addSupportedBitDepth(eBitDepthUByte);
+    /*desc.addSupportedBitDepth(eBitDepthUByte);
     desc.addSupportedBitDepth(eBitDepthUShort);
-    desc.addSupportedBitDepth(eBitDepthHalf);
+    desc.addSupportedBitDepth(eBitDepthHalf);*/
     desc.addSupportedBitDepth(eBitDepthFloat);
 
     desc.setSupportsTiles(kSupportsTiles); // may be switched to true later?
@@ -524,6 +538,14 @@ void MagickTextPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc
     dstClip->addSupportedComponent(ePixelComponentRGBA);
     dstClip->addSupportedComponent(ePixelComponentRGB);
     dstClip->setSupportsTiles(kSupportsTiles);
+
+    ClipDescriptor *texClip = desc.defineClip(kClipTex);
+    texClip->addSupportedComponent(ePixelComponentRGBA);
+    texClip->addSupportedComponent(ePixelComponentRGB);
+    texClip->addSupportedComponent(ePixelComponentAlpha);
+    texClip->setTemporalClipAccess(false);
+    texClip->setSupportsTiles(kSupportsTiles);
+    texClip->setOptional(true);
 
     // make some pages and to things in
     PageParamDescriptor *page = desc.definePageParam("Text");
