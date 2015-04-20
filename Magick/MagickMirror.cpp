@@ -60,6 +60,8 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #define kParamMirrorLabel "Region"
 #define kParamMirrorHint "Mirror image"
 
+#define REGION_FLIP "Flip"
+#define REGION_FLOP "Flop"
 #define REGION_NORTH "North"
 #define REGION_SOUTH "South"
 #define REGION_EAST "East"
@@ -212,70 +214,77 @@ MagickMirrorPlugin::render(const OFX::RenderArguments &args)
         image1.backgroundColor("none");
         switch(mirror) {
         case 0: // North
-          image1.flip();
-          image1.crop(Magick::Geometry(magickWidth,mirrorHeight,0,0));
-          break;
+              image1.flip();
+              image1.crop(Magick::Geometry(magickWidth,mirrorHeight,0,0));
+              break;
         case 1: // South
-          magickImage.flip();
-          image1.crop(Magick::Geometry(magickWidth,mirrorHeight,0,0));
-          break;
+              magickImage.flip();
+              image1.crop(Magick::Geometry(magickWidth,mirrorHeight,0,0));
+              break;
         case 2: // East
-          image1.flop();
-          image1.crop(Magick::Geometry(mirrorWidth,magickHeight,0,0));
-          break;
+              image1.flop();
+              image1.crop(Magick::Geometry(mirrorWidth,magickHeight,0,0));
+              break;
         case 3: // West
-          magickImage.flop();
-          image1.crop(Magick::Geometry(mirrorWidth,magickHeight,0,0));
-          break;
+            magickImage.flop();
+            image1.crop(Magick::Geometry(mirrorWidth,magickHeight,0,0));
+              break;
         case 4: // NorthWest
-          image1.crop(Magick::Geometry(mirrorWidth,mirrorHeight,0,mirrorHeight));
-          image2 = image1;
-          image2.flop();
-          image3 = image2;
-          image3.flip();
-          image4 = image3;
-          image4.flop();
-          break;
+            image1.crop(Magick::Geometry(mirrorWidth,mirrorHeight,0,mirrorHeight));
+            image2 = image1;
+            image2.flop();
+            image3 = image2;
+            image3.flip();
+            image4 = image3;
+            image4.flop();
+            break;
         case 5: // NorthEast
-          image1.crop(Magick::Geometry(mirrorWidth,mirrorHeight,mirrorWidth,mirrorHeight));
-          image1.flop();
-          image2 = image1;
-          image2.flop();
-          image3 = image2;
-          image3.flip();
-          image4 = image3;
-          image4.flop();
-          break;
+            image1.crop(Magick::Geometry(mirrorWidth,mirrorHeight,mirrorWidth,mirrorHeight));
+            image1.flop();
+            image2 = image1;
+            image2.flop();
+            image3 = image2;
+            image3.flip();
+            image4 = image3;
+            image4.flop();
+            break;
         case 6: // SouthWest
-          image1.crop(Magick::Geometry(mirrorWidth,mirrorHeight,0,0));
-          image1.flip();
-          image2 = image1;
-          image2.flop();
-          image3 = image2;
-          image3.flip();
-          image4 = image3;
-          image4.flop();
-          break;
+            image1.crop(Magick::Geometry(mirrorWidth,mirrorHeight,0,0));
+            image1.flip();
+            image2 = image1;
+            image2.flop();
+            image3 = image2;
+            image3.flip();
+            image4 = image3;
+            image4.flop();
+            break;
         case 7: // SouthEast
-          image1.crop(Magick::Geometry(mirrorWidth,mirrorHeight,mirrorWidth,0));
-          image1.flop();
-          image1.flip();
-          image2 = image1;
-          image2.flop();
-          image3 = image2;
-          image3.flip();
-          image4 = image3;
-          image4.flop();
-          break;
+            image1.crop(Magick::Geometry(mirrorWidth,mirrorHeight,mirrorWidth,0));
+            image1.flop();
+            image1.flip();
+            image2 = image1;
+            image2.flop();
+            image3 = image2;
+            image3.flip();
+            image4 = image3;
+            image4.flop();
+            break;
+        case 8:
+            magickImage.flip();
+            break;
+        case 9:
+            magickImage.flop();
+            break;
         }
         if (mirror==4||mirror==5||mirror==6||mirror==7) {
-          magickImage.composite(image1,0,mirrorHeight,Magick::OverCompositeOp);
-          magickImage.composite(image2,mirrorWidth,mirrorHeight,Magick::OverCompositeOp);
-          magickImage.composite(image3,mirrorWidth,0,Magick::OverCompositeOp);
-          magickImage.composite(image4,0,0,Magick::OverCompositeOp);
+            magickImage.composite(image1,0,mirrorHeight,Magick::OverCompositeOp);
+            magickImage.composite(image2,mirrorWidth,mirrorHeight,Magick::OverCompositeOp);
+            magickImage.composite(image3,mirrorWidth,0,Magick::OverCompositeOp);
+            magickImage.composite(image4,0,0,Magick::OverCompositeOp);
         }
         else {
-          magickImage.composite(image1,0,0,Magick::OverCompositeOp);
+            if (mirror!=8&&mirror!=9)
+                magickImage.composite(image1,0,0,Magick::OverCompositeOp);
         }
 
         // Write to buffer
@@ -390,6 +399,8 @@ void MagickMirrorPluginFactory::describeInContext(OFX::ImageEffectDescriptor &de
         param->appendOption(REGION_NORTHEAST);
         param->appendOption(REGION_SOUTHWEST);
         param->appendOption(REGION_SOUTHEAST);
+        param->appendOption(REGION_FLIP);
+        param->appendOption(REGION_FLOP);
         param->setAnimates(true);
         page->addChild(*param);
     }
