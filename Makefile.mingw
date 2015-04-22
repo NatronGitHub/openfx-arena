@@ -1,0 +1,118 @@
+ifeq ($(CONFIG), debug)
+  DEBUGFLAG = -g -DDEBUG -Wall -Wextra
+  DEBUGNAME = debug
+endif
+ifeq ($(CONFIG), release)
+  DEBUGFLAG = -O3 -DNDEBUG
+  DEBUGNAME = release
+endif
+
+ifeq ($(BIT),64)
+  BITS = 64
+else
+  BITS = 32
+endif
+OS := $(shell uname -s)
+DEBUGFLAG ?= -g
+DEBUGNAME ?= debug
+ifeq ($(DEBUGFLAG),-O3)
+  DEBUGNAME = release
+endif
+
+OBJECTPATH = $(OS)-$(BITS)-$(DEBUGNAME)
+
+$(PATHTOROOT)/Library/$(OBJECTPATH)/%.o : $(PATHTOROOT)/Library/%.cpp
+	mkdir -p $(PATHTOROOT)/Library/$(OBJECTPATH)
+	$(CXX) -c $(CXXFLAGS) $< -o $@
+
+$(OBJECTPATH)/%.o : %.cpp
+	mkdir -p $(OBJECTPATH)
+	$(CXX) -c $(CXXFLAGS) $< -o $@
+
+SUPPORTOBJECTS = $(PATHTOROOT)/Library/$(OBJECTPATH)/ofxsMultiThread.o \
+		 $(PATHTOROOT)/Library/$(OBJECTPATH)/ofxsInteract.o \
+		 $(PATHTOROOT)/Library/$(OBJECTPATH)/ofxsProperty.o \
+		 $(PATHTOROOT)/Library/$(OBJECTPATH)/ofxsLog.o \
+		 $(PATHTOROOT)/Library/$(OBJECTPATH)/ofxsCore.o \
+		 $(PATHTOROOT)/Library/$(OBJECTPATH)/ofxsPropertyValidation.o \
+		 $(PATHTOROOT)/Library/$(OBJECTPATH)/ofxsImageEffect.o \
+		 $(PATHTOROOT)/Library/$(OBJECTPATH)/ofxsParams.o 
+
+
+all: $(OBJECTPATH)/$(PLUGINNAME).ofx.bundle
+
+  ifeq ($(MINGW),1)
+    LINKFLAGS = -shared -fvisibility=hidden -Xlinker --version-script=$(PATHTOROOT)/include/linuxSymbols -lopengl32 
+    ARCH = Win32
+    BITSFLAG = -m32
+    ifeq ($(BITS), 64)
+      BITSFLAG = -m64
+      ARCH = Win64
+    endif
+    LINKFLAGS := $(LINKFLAGS) $(BITSFLAG)
+  endif
+  ifeq ($(OS),Linux)
+    # use $ORIGIN to link to bundled libraries first, see http://itee.uq.edu.au/~daniel/using_origin/
+    LINKFLAGS = -shared -fvisibility=hidden -Xlinker --version-script=$(PATHTOROOT)/include/linuxSymbols -lGL -Wl,-rpath,'$$ORIGIN'/../../Libraries
+    ARCH = Linux-x86
+    BITSFLAG = -m32
+    ifeq ($(BITS), 64)
+      BITSFLAG = -m64
+      ARCH = Linux-x86-64
+    endif
+    LINKFLAGS := $(LINKFLAGS) $(BITSFLAG)
+  endif
+  ifeq ($(OS),FreeBSD)
+    LINKFLAGS = -L/usr/local/lib -shared -fvisibility=hidden -Xlinker --version-script=$(PATHTOROOT)/include/linuxSymbols -lGL -Wl,-rpath,'$$ORIGIN'/../../Libraries
+    ARCH= FreeBSD-x86
+    BITSFLAG = -m32
+    ifeq ($(BITS), 64)
+      BITSFLAG = -m64
+      ARCH = FreeBSD-x86-64
+    endif
+    LINKFLAGS := $(LINKFLAGS) $(BITSFLAG)
+  endif 
+  ifeq ($(OS),Darwin) 
+    ifeq ($(BITS), Universal)
+      # Universal 32/64 is useful only on OSX 10.4 (i386/ppc), 10.5 (i386/ppc) and 10.6 (i386/x86_64).
+      # OSX 10.6 (Snow Leopard) or later, build for i386/x86_64
+      MACOSX := 10.6
+      MACOSXSDK := 10.6
+      ARCHFLAGS=-arch i386 -arch x86_64
+      ifeq ($(shell uname -r | sed 's/^\(.*\)\..*\..*/\1/'), 8)
+        # OSX 10.4 (Tiger)
+        MACOSX := 10.4
+        MACOSXSDK := 10.4u
+        ARCHFLAGS=-arch i386 -arch ppc
+      endif
+      ifeq ($(shell uname -r | sed 's/^\(.*\)\..*\..*/\1/'), 9)
+        # OSX 10.5 (Leopard)
+        MACOSX := 10.5
+        MACOSXSDK := 10.5
+        ARCHFLAGS=-arch i386 -arch ppc
+      endif
+      BITSFLAG = -isysroot /Developer/SDKs/MacOSX$(MACOSX).sdk $(ARCHFLAGS) -mmacosx-version-min=$(MACOSX)
+    endif
+    LINKFLAGS = $(BITSFLAG) -bundle -fvisibility=hidden -exported_symbols_list $(PATHTOROOT)/include/osxSymbols -framework OpenGL -Wl,-rpath,@loader_path/../Frameworks -Wl,-rpath,@loader_path/../Libraries
+    ARCH = MacOS
+  endif
+
+  CXXFLAGS := $(DEBUGFLAG)  -I$(PATHTOROOT)/../include -I$(PATHTOROOT)/include -I$(PATHTOROOT)/Plugins/include $(BITSFLAG) -fPIC -fvisibility=hidden $(CXXFLAGS_ADD)
+
+$(OBJECTPATH)/$(PLUGINNAME).ofx: $(addprefix $(OBJECTPATH)/,$(PLUGINOBJECTS)) $(SUPPORTOBJECTS)
+	mkdir -p $(OBJECTPATH)/
+	$(CXX) $^ $(LINKFLAGS) $(LDFLAGS_ADD) -o $@
+
+$(OBJECTPATH)/$(PLUGINNAME).ofx.bundle: $(OBJECTPATH)/$(PLUGINNAME).ofx
+	mkdir -p  $@/Contents/$(ARCH)
+	cp  $^  $@/Contents/$(ARCH)
+	cp  Info.plist  $@/Contents/
+	if [ -n "$(RESOURCES)" ]; then mkdir -p $@/Contents/Resources; cp $(RESOURCES)  $@/Contents/Resources; fi
+	if [ $(DEBUGNAME) = "release" -a $(ARCH) = "MacOS" ]; then bash $(PATHTOROOT)/include/osxDeploy.sh $@ $(PLUGINNAME).ofx; fi
+
+clean :
+	rm -rf $(SUPPORTOBJECTS) $(OBJECTPATH)/ $(PATHTOROOT)/Library/$(OBJECTPATH)/ 
+
+release :
+	make DEBUGFLAG=-O3
+
