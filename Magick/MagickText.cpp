@@ -116,7 +116,7 @@
 
 #define kParamStroke "stroke"
 #define kParamStrokeLabel "Stroke Width"
-#define kParamStrokeHint "Adjust stroke width for decoration and outline"
+#define kParamStrokeHint "Adjust stroke width for outline"
 #define kParamStrokeDefault 1
 
 //#define kClipTex "Texture"
