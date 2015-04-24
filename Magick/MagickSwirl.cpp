@@ -42,7 +42,7 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include "ofxsMacros.h"
 #include <Magick++.h>
 
-#define kPluginName "MagickSwirl"
+#define kPluginName "Swirl"
 #define kPluginGrouping "Filter"
 #define kPluginDescription  "Swirl image."
 

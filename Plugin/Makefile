@@ -1,11 +1,8 @@
 PLUGINOBJECTS = \
 	MagickText.o \
 	MagickSwirl.o \
-	MagickModulate.o \
 	MagickMirror.o \
 	MagickImplode.o \
-	MagickEdge.o \
-	MagickMotionBlur.o \
 	MagickTile.o \
 	ofxsOGLTextRenderer.o \
 	ofxsOGLFontData.o \
@@ -20,16 +17,10 @@ RESOURCES = \
 ../Magick/net.fxarena.openfx.MagickText.svg \
 ../Magick/net.fxarena.openfx.MagickSwirl.png \
 ../Magick/net.fxarena.openfx.MagickSwirl.svg \
-../Magick/net.fxarena.openfx.MagickModulate.png \
-../Magick/net.fxarena.openfx.MagickModulate.svg \
 ../Magick/net.fxarena.openfx.MagickMirror.png \
 ../Magick/net.fxarena.openfx.MagickMirror.svg \
 ../Magick/net.fxarena.openfx.MagickImplode.png \
 ../Magick/net.fxarena.openfx.MagickImplode.svg \
-../Magick/net.fxarena.openfx.MagickEdge.png \
-../Magick/net.fxarena.openfx.MagickEdge.svg \
-../Magick/net.fxarena.openfx.MagickMotionBlur.png \
-../Magick/net.fxarena.openfx.MagickMotionBlur.svg \
 ../Magick/net.fxarena.openfx.MagickTile.png \
 ../Magick/net.fxarena.openfx.MagickTile.svg \
 

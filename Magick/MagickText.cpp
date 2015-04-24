@@ -58,13 +58,13 @@
 
 #define CLAMP(value, min, max) (((value) >(max)) ? (max) : (((value) <(min)) ? (min) : (value)))
 
-#define kPluginName "MagickText"
+#define kPluginName "Text"
 #define kPluginGrouping "Draw"
 #define kPluginDescription  "Write text on images."
 
 #define kPluginIdentifier "net.fxarena.openfx.MagickText"
-#define kPluginVersionMajor 0 // Incrementing this number means that you have broken backwards compatibility of the plug-in.
-#define kPluginVersionMinor 1 // Increment this when you have fixed a bug or made it faster.
+#define kPluginVersionMajor 1 // Incrementing this number means that you have broken backwards compatibility of the plug-in.
+#define kPluginVersionMinor 0 // Increment this when you have fixed a bug or made it faster.
 
 #define kSupportsTiles 0 // ???
 

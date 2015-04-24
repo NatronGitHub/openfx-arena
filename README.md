@@ -3,26 +3,10 @@ OpenFX Arena [![Build Status](https://travis-ci.org/olear/openfx-arena.svg)](htt
 
 A set of visual effect plugins for OpenFX compatible applications.
 
-Plugins
-=======
-
- * **Swirl**
-   * Swirl image
- * **Modulate**
-   * Adjust Hue/Saturation/Brightness on image
- * **Mirror**
-   * Mirrors image
- * **Implode**
-   * Implodes image
- * **Tile**
-   * Tile image
- * **Text**
-   * Add text to image
-
 Build
 =====
 
-Requires Fontconfig and Magick C++ (ImageMagick-Q16 6.5+ or GraphicsMagick-Q16 1.3+) installed prior to build.
+Requires Fontconfig and Magick C++ (ImageMagick-Q16 6.5+) installed prior to build.
 
 **RHEL/Fedora**
 ```

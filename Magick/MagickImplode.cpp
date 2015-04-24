@@ -42,7 +42,7 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include "ofxsMacros.h"
 #include <Magick++.h>
 
-#define kPluginName "MagickImplode"
+#define kPluginName "Implode"
 #define kPluginGrouping "Filter"
 #define kPluginDescription  "Implode image."
 

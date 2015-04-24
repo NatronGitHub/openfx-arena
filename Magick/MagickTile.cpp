@@ -43,8 +43,8 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include <Magick++.h>
 #include <sstream>
 
-#define kPluginName "MagickTile"
-#define kPluginGrouping "Filter"
+#define kPluginName "Tile"
+#define kPluginGrouping "Transform"
 #define kPluginDescription  "Tile image."
 
 #define kPluginIdentifier "net.fxarena.openfx.MagickTile"

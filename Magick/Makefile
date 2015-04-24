@@ -1,12 +1,13 @@
 PLUGINOBJECTS = \
 	MagickText.o \
 	MagickSwirl.o \
-	MagickModulate.o \
 	MagickMirror.o \
 	MagickImplode.o \
-	MagickEdge.o \
-	MagickMotionBlur.o \
 	MagickTile.o \
+        ofxsOGLTextRenderer.o \
+        ofxsOGLFontData.o \
+        ofxsGenerator.o \
+        ofxsRectangleInteract.o \
 	PluginRegistration.o \
 
 PLUGINNAME = Magick
@@ -16,16 +17,10 @@ net.fxarena.openfx.MagickText.png \
 net.fxarena.openfx.MagickText.svg \
 net.fxarena.openfx.MagickSwirl.png \
 net.fxarena.openfx.MagickSwirl.svg \
-net.fxarena.openfx.MagickModulate.png \
-net.fxarena.openfx.MagickModulate.svg \
 net.fxarena.openfx.MagickMirror.png \
 net.fxarena.openfx.MagickMirror.svg \
 net.fxarena.openfx.MagickImplode.png \
 net.fxarena.openfx.MagickImplode.svg \
-net.fxarena.openfx.MagickEdge.png \
-net.fxarena.openfx.MagickEdge.svg \
-net.fxarena.openfx.MagickMotionBlur.png \
-net.fxarena.openfx.MagickMotionBlur.svg \
 net.fxarena.openfx.MagickTile.png \
 net.fxarena.openfx.MagickTile.svg \
 

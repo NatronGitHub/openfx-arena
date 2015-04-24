@@ -42,8 +42,8 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include "ofxsMacros.h"
 #include <Magick++.h>
 
-#define kPluginName "MagickMirror"
-#define kPluginGrouping "Filter"
+#define kPluginName "Mirror"
+#define kPluginGrouping "Transform"
 #define kPluginDescription  "Mirror image."
 
 #define kPluginIdentifier "net.fxarena.openfx.MagickMirror"
