@@ -32,7 +32,7 @@ else
   endif
 endif
 ifeq ($(STATIC),1)
-  MAGICK_LINKFLAGS += -lgomp -lm
+  MAGICK_LINKFLAGS += -lgomp -lm -lpthread
   ifeq ($(MINGW),1)
     MAGICK_LINKFLAGS += -lgdi32
   endif
