@@ -4,11 +4,7 @@ PLUGINOBJECTS = \
 	MagickMirror.o \
 	MagickImplode.o \
 	MagickTile.o \
-	ofxsOGLTextRenderer.o \
-	ofxsOGLFontData.o \
-	ofxsGenerator.o \
-	ofxsRectangleInteract.o \
-	PluginRegistrationCombined.o
+        PluginRegistrationCombined.o \
 
 PLUGINNAME = Arena
 
