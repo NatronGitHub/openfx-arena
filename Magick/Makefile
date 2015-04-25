@@ -4,10 +4,7 @@ PLUGINOBJECTS = \
 	MagickMirror.o \
 	MagickImplode.o \
 	MagickTile.o \
-        ofxsOGLTextRenderer.o \
-        ofxsOGLFontData.o \
-        ofxsGenerator.o \
-        ofxsRectangleInteract.o \
+        MagickFX.o \
 	PluginRegistration.o \
 
 PLUGINNAME = Magick
@@ -23,6 +20,8 @@ net.fxarena.openfx.MagickImplode.png \
 net.fxarena.openfx.MagickImplode.svg \
 net.fxarena.openfx.MagickTile.png \
 net.fxarena.openfx.MagickTile.svg \
+net.fxarena.openfx.MagickFX.png \
+net.fxarena.openfx.MagickFX.svg \
 
 include ../Makefile.master
 

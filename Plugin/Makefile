@@ -4,11 +4,8 @@ PLUGINOBJECTS = \
 	MagickMirror.o \
 	MagickImplode.o \
 	MagickTile.o \
-	ofxsOGLTextRenderer.o \
-	ofxsOGLFontData.o \
-	ofxsGenerator.o \
-	ofxsRectangleInteract.o \
-	PluginRegistrationCombined.o
+        MagickFX.o \
+        PluginRegistrationCombined.o \
 
 PLUGINNAME = Arena
 
@@ -23,6 +20,8 @@ RESOURCES = \
 ../Magick/net.fxarena.openfx.MagickImplode.svg \
 ../Magick/net.fxarena.openfx.MagickTile.png \
 ../Magick/net.fxarena.openfx.MagickTile.svg \
+../Magick/net.fxarena.openfx.MagickFX.png \
+../Magick/net.fxarena.openfx.MagickFX.svg \
 
 VPATH += \
 ../Magick \
