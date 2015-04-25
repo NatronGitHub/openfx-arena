@@ -5,6 +5,7 @@ PNG=1.2.52
 ARENA=0.2.1
 PREFIX=$CWD/tmp
 JOBS=4
+OS=$(uname -o)
 
 if [ -z "$ARCH" ]; then
   case "$( uname -m )" in
@@ -22,7 +23,14 @@ else
   BF="-pipe -O2 -fomit-frame-pointer"
 fi
 
-PKG=Arena.ofx.bundle-$ARENA-Linux-x86-release-$BIT
+if [ "$OS" == "GNU/Linux" ]; then
+  PKGOS=Linux
+fi
+if [ "$OS" == "FreeBSD" ]; then
+  PKGOS=FreeBSD
+fi
+
+PKG=Arena.ofx.bundle-$ARENA-$PKGOS-x86-release-$BIT
 
 export PKG_CONFIG_PATH=$PREFIX/lib/pkgconfig
 export LD_LIBRARY_PATH=$PREFIX/lib:$LD_LIBRARY_PATH
@@ -65,8 +73,8 @@ cp CHANGELOG LICENSE README.md $CWD/$PKG/ || exit 1
 cp $PREFIX/share/doc/ImageMagick-6/LICENSE $CWD/$PKG/LICENSE.ImageMagick || exit 1
 cp OpenFX/Support/LICENSE $CWD/$PKG/LICENSE.OpenFX || exit 1
 cp $PREFIX/LICENSE.png $CWD/$PKG/ || exit 1
-strip -s Plugin/Linux-$BIT-release/Arena.ofx.bundle/Contents/Linux-x86-$BIT/Arena.ofx || exit 1
-mv Plugin/Linux-64-release/Arena.ofx.bundle $CWD/$PKG/ || exit 1
+strip -s Plugin/$PKGOS-$BIT-release/Arena.ofx.bundle/Contents/$PKGOS-x86-$BIT/Arena.ofx || exit 1
+mv Plugin/$PKGOS-$BIT-release/Arena.ofx.bundle $CWD/$PKG/ || exit 1
 tar cvvzf $PKG.tgz $PKG || exit 1
 
 echo "DONE!!!"
