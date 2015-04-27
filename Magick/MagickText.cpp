@@ -55,6 +55,7 @@
 #include <Magick++.h>
 #include <sstream>
 #include <iostream>
+#include <stdint.h>
 
 #define CLAMP(value, min, max) (((value) >(max)) ? (max) : (((value) <(min)) ? (min) : (value)))
 
