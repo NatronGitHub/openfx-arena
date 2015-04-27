@@ -4,7 +4,10 @@ PLUGINOBJECTS = \
 	MagickMirror.o \
 	MagickImplode.o \
 	MagickTile.o \
-        MagickFX.o \
+	MagickFX.o \
+	ofxsOGLTextRenderer.o \
+	ofxsOGLFontData.o \
+	ofxsRectangleInteract.o \
 	PluginRegistration.o \
 
 PLUGINNAME = Magick

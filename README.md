@@ -23,6 +23,27 @@ apt-get install libmagick++-dev libfontconfig1-dev
 pkg install ImageMagick fontconfig
 ```
 
+**Windows/MinGW**
+
+Download:
+  * https://fxarena.net/~olear/misc/mingw64.7z
+  * https://fxarena.net/~olear/misc/MSYS-20111123.zip
+  * https://fxarena.net/~olear/misc/local.7z
+  * 
+  
+Extract mingw64.7z and MSYS.zip to C:, then exctract local.7z to C:/msys/
+
+Start MSYS from C:/msys/msys.bat.
+
+Run post install
+```
+sh /postinstall/pi.sh
+```
+
+ * Type "y" to continue with the post install
+ * Type "y" to say that MinGW is installed
+ * Enter "c:/mingw64" as the MinGW installation location
+
 **Download**
 ```
 git clone https://github.com/olear/openfx-arena
@@ -30,14 +51,28 @@ cd openfx-arena
 git submodule update -i
 ```
 
-**Make**
+**Make on Linux/BSD**
 ```
 make CONFIG=release
 ```
 
-**Install**
+**Make on Windows/MinGW**
+```
+export PATH=/usr/local/bin:$PATH
+export LD_LIBRARY_PATH=/usr/local/lib:$LD_LIBRARY_PATH
+export PKG_CONFIG_PATH=/usr/local/lib/pkgconfig
+
+make STATIC=1 MINGW=1 BIT=64 CONFIG=release
+```
+
+**Install on Linux/BSD**
 ```
 cp -a Plugin/*-*-*/Arena.ofx.bundle /usr/OFX/Plugins/
+```
+
+**Install on Windows**
+```
+cp -a Plugin/*-*-*/Arena.ofx.bundle "/c/Program Files/Common Files/OFX/Plugins/"
 ```
 
 License

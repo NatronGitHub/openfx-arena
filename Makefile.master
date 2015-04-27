@@ -14,7 +14,7 @@ FONTCONFIG_CXXFLAGS = `pkg-config --cflags freetype2 fontconfig`
 FONTCONFIG_LINKFLAGS = `pkg-config --libs freetype2 fontconfig`
 ifeq ($(STATIC),1)
   ifeq ($(MINGW),1)
-    FONTCONFIG_LINKFLAGS += -lexpat -lpng -lz
+    FONTCONFIG_LINKFLAGS += -lfontconfig -lfreetype -lexpat -lpng -lz
   endif
 endif
 
@@ -35,7 +35,7 @@ endif
 ifeq ($(STATIC),1)
   MAGICK_LINKFLAGS += -lgomp -lm -lpthread
   ifeq ($(MINGW),1)
-    MAGICK_LINKFLAGS += -lgdi32
+    MAGICK_LINKFLAGS += -lgdi32 -lfontconfig -lfreetype -lexpat -lpng -lz
   endif
 endif
 
