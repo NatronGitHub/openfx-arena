@@ -17,7 +17,7 @@ Download
 ```
 git clone https://github.com/olear/openfx-arena
 cd openfx-arena
-git submodule update -i
+git submodule update -i --recursive
 ```
 
 Or download from the releases page.
