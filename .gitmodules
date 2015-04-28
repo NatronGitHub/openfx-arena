@@ -6,4 +6,4 @@
 	url = https://github.com/devernay/openfx-supportext.git
 [submodule "GMIC/gmic"]
 	path = GMIC/gmic
-	url = http://git.code.sf.net/p/gmic/minimal
+	url = http://git.code.sf.net/p/gmic/full
