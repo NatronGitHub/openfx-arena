@@ -43,5 +43,5 @@ ifeq ($(STATIC),1)
 endif
 
 # Gmic
-GMIC_CXXFLAGS = -Dgmic_gimp -Dcimg_display=0 -Dgmic_build -Igmic/src -Dcimg_use_zlib -Dcimg_use_fftw3 -Dcimg_use_png
+GMIC_CXXFLAGS = -I. -ICImg -Dgmic_gimp -Dcimg_display=0 -Dgmic_build -Igmic/src -Dcimg_use_zlib -Dcimg_use_fftw3 -Dcimg_use_png
 GMIC_LINKFLAGS = -lz -lfftw3 -lpng
