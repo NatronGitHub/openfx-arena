@@ -2,7 +2,7 @@
 CWD=$(pwd)
 MAGICK=6.8.9-7
 PNG=1.2.52
-ARENA=0.2.1
+ARENA=0.3.1
 PREFIX=$CWD/tmp
 JOBS=4
 OS=$(uname -o)

@@ -35,10 +35,6 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 #include "MagickMirror.h"
 #include <iostream>
-#include "ofxsProcessing.H"
-#include "ofxsCopier.h"
-#include "ofxsPositionInteract.h"
-#include "ofxNatron.h"
 #include "ofxsMacros.h"
 #include <Magick++.h>
 
@@ -50,9 +46,8 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #define kPluginVersionMajor 1
 #define kPluginVersionMinor 0
 
-#define kSupportsTiles 0 // ???
-
-#define kSupportsMultiResolution 1 // ???
+#define kSupportsTiles 0
+#define kSupportsMultiResolution 0
 #define kSupportsRenderScale 1
 #define kRenderThreadSafety eRenderInstanceSafe
 
@@ -76,25 +71,9 @@ using namespace OFX;
 class MagickMirrorPlugin : public OFX::ImageEffect
 {
 public:
-
     MagickMirrorPlugin(OfxImageEffectHandle handle);
-
     virtual ~MagickMirrorPlugin();
-
-    /* Override the render */
     virtual void render(const OFX::RenderArguments &args) OVERRIDE FINAL;
-
-    /* override is identity */
-    virtual bool isIdentity(const OFX::IsIdentityArguments &args, OFX::Clip * &identityClip, double &identityTime) OVERRIDE FINAL;
-
-    /* override changedParam */
-    virtual void changedParam(const OFX::InstanceChangedArgs &args, const std::string &paramName) OVERRIDE FINAL;
-
-    /* override changed clip */
-    //virtual void changedClip(const OFX::InstanceChangedArgs &args, const std::string &clipName) OVERRIDE FINAL;
-
-    // override the rod call
-    virtual bool getRegionOfDefinition(const OFX::RegionOfDefinitionArguments &args, OfxRectD &rod) OVERRIDE FINAL;
 
 private:
     // do not need to delete these, the ImageEffect is managing them for us
@@ -202,7 +181,7 @@ MagickMirrorPlugin::render(const OFX::RenderArguments &args)
     magickBlock = new float[magickSize];
     Magick::Image magickImage(magickWidth,magickHeight,"RGBA",Magick::FloatPixel,(float*)srcImg->getPixelData());
 
-    try {
+    //try {
         // Mirror image
         int mirrorWidth = magickWidth/2;
         int mirrorHeight = magickHeight/2;
@@ -289,10 +268,10 @@ MagickMirrorPlugin::render(const OFX::RenderArguments &args)
 
         // Write to buffer
         magickImage.write(0,0,magickWidth,magickHeight,"RGBA",Magick::FloatPixel,magickBlock);
-    }
+    /*}
     catch(Magick::Error &error_) {
         std::cout << "Magick error" << error_.what() << "\n";
-    }
+    }*/
 
     // Return image
     for(int y = args.renderWindow.y1; y < (args.renderWindow.y1 + magickHeight); y++) {
@@ -308,41 +287,6 @@ MagickMirrorPlugin::render(const OFX::RenderArguments &args)
         }
     }
     free(magickBlock);
-}
-
-bool MagickMirrorPlugin::isIdentity(const OFX::IsIdentityArguments &args, OFX::Clip * &identityClip, double &/*identityTime*/)
-{
-    if (!kSupportsRenderScale && (args.renderScale.x != 1. || args.renderScale.y != 1.)) {
-        OFX::throwSuiteStatusException(kOfxStatFailed);
-        return false;
-    }
-    return true;
-}
-
-void
-MagickMirrorPlugin::changedParam(const OFX::InstanceChangedArgs &args, const std::string &/*paramName*/)
-{
-    if (!kSupportsRenderScale && (args.renderScale.x != 1. || args.renderScale.y != 1.)) {
-        OFX::throwSuiteStatusException(kOfxStatFailed);
-        return;
-    }
-    clearPersistentMessage();
-}
-
-bool
-MagickMirrorPlugin::getRegionOfDefinition(const OFX::RegionOfDefinitionArguments &args, OfxRectD &rod)
-{
-    if (!kSupportsRenderScale && (args.renderScale.x != 1. || args.renderScale.y != 1.)) {
-        OFX::throwSuiteStatusException(kOfxStatFailed);
-        return false;
-    }
-    if (srcClip_ && srcClip_->isConnected())
-        rod = srcClip_->getRegionOfDefinition(args.time);
-    else {
-        rod.x1 = rod.y1 = kOfxFlagInfiniteMin;
-        rod.x2 = rod.y2 = kOfxFlagInfiniteMax;
-    }
-    return true;
 }
 
 mDeclarePluginFactory(MagickMirrorPluginFactory, {}, {});
