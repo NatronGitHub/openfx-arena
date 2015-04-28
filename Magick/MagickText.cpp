@@ -130,7 +130,7 @@ public:
     virtual void render(const OFX::RenderArguments &args) OVERRIDE FINAL;
 
     /* override is identity */
-    virtual bool isIdentity(const OFX::IsIdentityArguments &args, OFX::Clip * &identityClip, double &identityTime) OVERRIDE FINAL;
+    //virtual bool isIdentity(const OFX::IsIdentityArguments &args, OFX::Clip * &identityClip, double &identityTime) OVERRIDE FINAL;
 
     /* override changedParam */
     virtual void changedParam(const OFX::InstanceChangedArgs &args, const std::string &paramName) OVERRIDE FINAL;
@@ -144,7 +144,7 @@ private:
 private:
     // do not need to delete these, the ImageEffect is managing them for us
     OFX::Clip *dstClip_;
-    OFX::Clip *srcClip_;
+   // OFX::Clip *srcClip_;
     //OFX::Clip *texClip_;
 
     OFX::Double2DParam *position_;
@@ -162,15 +162,15 @@ private:
 MagickTextPlugin::MagickTextPlugin(OfxImageEffectHandle handle)
 : OFX::ImageEffect(handle)
 , dstClip_(0)
-, srcClip_(0)
+/*, srcClip_(0)*/
 /*, texClip_(0)*/
 {
     Magick::InitializeMagick("");
 
     dstClip_ = fetchClip(kOfxImageEffectOutputClipName);
     assert(dstClip_ && (dstClip_->getPixelComponents() == OFX::ePixelComponentRGBA || dstClip_->getPixelComponents() == OFX::ePixelComponentRGB));
-    srcClip_ = fetchClip(kOfxImageEffectSimpleSourceClipName);
-    assert(srcClip_ && (srcClip_->getPixelComponents() == OFX::ePixelComponentRGBA || srcClip_->getPixelComponents() == OFX::ePixelComponentRGB));
+    //srcClip_ = fetchClip(kOfxImageEffectSimpleSourceClipName);
+    //assert(srcClip_ && (srcClip_->getPixelComponents() == OFX::ePixelComponentRGBA || srcClip_->getPixelComponents() == OFX::ePixelComponentRGB));
     //texClip_ = fetchClip(kClipTex);
     //assert(texClip_ && (texClip_->getPixelComponents() == OFX::ePixelComponentRGBA || texClip_->getPixelComponents() == OFX::ePixelComponentRGB));
 
@@ -199,7 +199,7 @@ void MagickTextPlugin::render(const OFX::RenderArguments &args)
         return;
     }
 
-    if (!srcClip_) {
+    /*if (!srcClip_) {
         OFX::throwSuiteStatusException(kOfxStatFailed);
         return;
     }
@@ -213,7 +213,7 @@ void MagickTextPlugin::render(const OFX::RenderArguments &args)
             OFX::throwSuiteStatusException(kOfxStatFailed);
             return;
         }
-    }
+    }*/
 
     if (!dstClip_) {
         OFX::throwSuiteStatusException(kOfxStatFailed);
@@ -234,14 +234,14 @@ void MagickTextPlugin::render(const OFX::RenderArguments &args)
     }
 
     OFX::BitDepthEnum dstBitDepth = dstImg->getPixelDepth();
-    if (dstBitDepth != OFX::eBitDepthFloat || (srcImg.get() && dstBitDepth != srcImg->getPixelDepth())) {
+    if (dstBitDepth != OFX::eBitDepthFloat /*|| (srcImg.get() && dstBitDepth != srcImg->getPixelDepth())*/) {
         OFX::throwSuiteStatusException(kOfxStatErrFormat);
         return;
     }
 
     OFX::PixelComponentEnum dstComponents  = dstImg->getPixelComponents();
-    if ((dstComponents != OFX::ePixelComponentRGBA && dstComponents != OFX::ePixelComponentRGB && dstComponents != OFX::ePixelComponentAlpha) ||
-        (srcImg.get() && (dstComponents != srcImg->getPixelComponents()))) {
+    if ((dstComponents != OFX::ePixelComponentRGBA && dstComponents != OFX::ePixelComponentRGB && dstComponents != OFX::ePixelComponentAlpha) /*||
+        (srcImg.get() && (dstComponents != srcImg->getPixelComponents()))*/) {
         OFX::throwSuiteStatusException(kOfxStatErrFormat);
         return;
     }
@@ -319,14 +319,21 @@ void MagickTextPlugin::render(const OFX::RenderArguments &args)
     if (fs)
         FcFontSetDestroy(fs);
 
-    // Read
+    // setup
     int magickWidth = args.renderWindow.x2 - args.renderWindow.x1;
     int magickHeight = args.renderWindow.y2 - args.renderWindow.y1;
     int magickWidthStep = magickWidth*4;
     int magickSize = magickWidth*magickHeight*4;
     float* magickBlock;
     magickBlock = new float[magickSize];
-    Magick::Image magickImage(magickWidth,magickHeight,"RGBA",Magick::FloatPixel,(float*)srcImg->getPixelData());
+
+    // Generate empty image
+    Magick::Image magickImage(Magick::Geometry(magickWidth,magickHeight),Magick::Color("rgba(0,0,0,0)"));
+    magickImage.depth(32);
+
+    // Read image
+    //Magick::Image magickImage;
+    //magickImage.read(magickWidth,magickHeight,"RGBA",Magick::FloatPixel,(float*)srcImg->getPixelData());
 
     // Set font size
     magickImage.fontPointsize(fontSize);
@@ -345,20 +352,17 @@ void MagickTextPlugin::render(const OFX::RenderArguments &args)
     std::ostringstream rgba;
     rgba << "rgba(" << rI <<"," << gI << "," << bI << "," << a << ")";
     std::string textRGBA = rgba.str();
-
     std::ostringstream rgba_s;
     rgba_s << "rgba(" << r_sI <<"," << g_sI << "," << b_sI << "," << a_s << ")";
     std::string strokeRGBA = rgba_s.str();
 
     // Flip image
-    //if (!use_tex)
-        magickImage.flip();
+    magickImage.flip();
 
     // Position x y
     OfxRectI rod,bounds;
-    rod = srcImg->getRegionOfDefinition();
-    bounds = srcImg->getBounds();
-
+    rod = dstImg->getRegionOfDefinition();
+    bounds = dstImg->getBounds();
     int ytext = y*args.renderScale.y;
     int xtext = x*args.renderScale.x;
     int tmp_y = rod.y2 - bounds.y2;
@@ -369,11 +373,9 @@ void MagickTextPlugin::render(const OFX::RenderArguments &args)
     std::list<Magick::Drawable> text_draw_list;
     text_draw_list.push_back(Magick::DrawableFont(fontFile));
     text_draw_list.push_back(Magick::DrawableText(xtext, ytext, text));
-    //if (use_fill)
-        text_draw_list.push_back(Magick::DrawableFillColor(textRGBA));
+    text_draw_list.push_back(Magick::DrawableFillColor(textRGBA));
     if (use_stroke)
         text_draw_list.push_back(Magick::DrawableStrokeColor(strokeRGBA));
-
 
     // Text decoration
     if (fontDecor>0) {
@@ -394,28 +396,10 @@ void MagickTextPlugin::render(const OFX::RenderArguments &args)
     }
 
     // Draw
-    //if (!use_tex)
-        magickImage.draw(text_draw_list);
-    //else {
-        /*Magick::Image texImage(magickWidth,magickHeight,"RGBA",Magick::FloatPixel,(float*)texImg->getPixelData());
-        Magick::Image drawImage;
-        drawImage.flip();
-        std::ostringstream drawSizeS;
-        drawSizeS << magickWidth << "x" << magickHeight;
-        std::string drawSize = drawSizeS.str();
-        drawImage.size(drawSize);
-        drawImage.magick("RGBA");
-        Magick::Color backgroundColor("rgba(0,0,0,0)");
-        drawImage.backgroundColor(backgroundColor);
-        drawImage.draw(text_draw_list);
-        drawImage.flip();
-        drawImage.composite(texImage,0,0,Magick::OverCompositeOp);
-        magickImage.composite(drawImage,0,0,Magick::OverCompositeOp);*/
-    //}
+    magickImage.draw(text_draw_list);
 
     // Flip image
-    //if (!use_tex)
-        magickImage.flip();
+    magickImage.flip();
 
     // Return
     magickImage.write(0,0,magickWidth,magickHeight,"RGBA",Magick::FloatPixel,magickBlock);
@@ -434,8 +418,8 @@ void MagickTextPlugin::render(const OFX::RenderArguments &args)
     free(magickBlock);
 }
 
-bool MagickTextPlugin::isIdentity(const OFX::IsIdentityArguments &args, OFX::Clip * &identityClip, double &/*identityTime*/)
-{
+//bool MagickTextPlugin::isIdentity(const OFX::IsIdentityArguments &args, OFX::Clip * &identityClip, double &/*identityTime*/)
+/*{
     if (!kSupportsRenderScale && (args.renderScale.x != 1. || args.renderScale.y != 1.)) {
         OFX::throwSuiteStatusException(kOfxStatFailed);
         return false;
@@ -463,7 +447,7 @@ bool MagickTextPlugin::isIdentity(const OFX::IsIdentityArguments &args, OFX::Cli
     }
 
     return false;
-}
+}*/
 
 void MagickTextPlugin::changedParam(const OFX::InstanceChangedArgs &args, const std::string &/*paramName*/)
 {
@@ -481,12 +465,12 @@ bool MagickTextPlugin::getRegionOfDefinition(const OFX::RegionOfDefinitionArgume
         OFX::throwSuiteStatusException(kOfxStatFailed);
         return false;
     }
-    if (srcClip_ && srcClip_->isConnected()) {
+    /*if (srcClip_ && srcClip_->isConnected()) {
         rod = srcClip_->getRegionOfDefinition(args.time);
-    } else {
+    } else {*/
         rod.x1 = rod.y1 = kOfxFlagInfiniteMin;
         rod.x2 = rod.y2 = kOfxFlagInfiniteMax;
-    }
+    //}
     return true;
 }
 
@@ -509,7 +493,7 @@ void MagickTextPluginFactory::describe(OFX::ImageEffectDescriptor &desc)
 
     // add the supported contexts
     desc.addSupportedContext(eContextGeneral);
-    desc.addSupportedContext(eContextFilter);
+    //desc.addSupportedContext(eContextFilter);
     desc.addSupportedContext(eContextGenerator);
 
     // add supported pixel depths
@@ -529,12 +513,12 @@ void MagickTextPluginFactory::describe(OFX::ImageEffectDescriptor &desc)
 void MagickTextPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, ContextEnum /*context*/)
 {   
     // create the mandated source clip
-    ClipDescriptor *srcClip = desc.defineClip(kOfxImageEffectSimpleSourceClipName);
+    /*ClipDescriptor *srcClip = desc.defineClip(kOfxImageEffectSimpleSourceClipName);
     srcClip->addSupportedComponent(ePixelComponentRGBA);
     srcClip->addSupportedComponent(ePixelComponentRGB);
     srcClip->setTemporalClipAccess(false);
     srcClip->setSupportsTiles(kSupportsTiles);
-    srcClip->setIsMask(false);
+    srcClip->setIsMask(false);*/
 
     // create the mandated output clip
     ClipDescriptor *dstClip = desc.defineClip(kOfxImageEffectOutputClipName);
