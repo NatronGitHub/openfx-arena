@@ -44,12 +44,7 @@
 */
 
 #include "MagickText.h"
-
-#include "ofxsProcessing.H"
-#include "ofxsCopier.h"
 #include "ofxsPositionInteract.h"
-
-#include "ofxNatron.h"
 #include "ofxsMacros.h"
 #include <fontconfig/fontconfig.h>
 #include <Magick++.h>
@@ -64,12 +59,11 @@
 #define kPluginDescription  "Write text on images."
 
 #define kPluginIdentifier "net.fxarena.openfx.MagickText"
-#define kPluginVersionMajor 1 // Incrementing this number means that you have broken backwards compatibility of the plug-in.
-#define kPluginVersionMinor 0 // Increment this when you have fixed a bug or made it faster.
+#define kPluginVersionMajor 1
+#define kPluginVersionMinor 0
 
-#define kSupportsTiles 0 // ???
-
-#define kSupportsMultiResolution 1 // ???
+#define kSupportsTiles 0
+#define kSupportsMultiResolution 0
 #define kSupportsRenderScale 1
 #define kRenderThreadSafety eRenderInstanceSafe
 
@@ -141,14 +135,8 @@ public:
     /* override changedParam */
     virtual void changedParam(const OFX::InstanceChangedArgs &args, const std::string &paramName) OVERRIDE FINAL;
 
-    /* override changed clip */
-    //virtual void changedClip(const OFX::InstanceChangedArgs &args, const std::string &clipName) OVERRIDE FINAL;
-
     // override the rod call
     virtual bool getRegionOfDefinition(const OFX::RegionOfDefinitionArguments &args, OfxRectD &rod) OVERRIDE FINAL;
-
-    // override the roi call
-    //virtual void getRegionsOfInterest(const OFX::RegionsOfInterestArguments &args, OFX::RegionOfInterestSetter &rois) OVERRIDE FINAL;
 
 private:
 
@@ -530,8 +518,8 @@ void MagickTextPluginFactory::describe(OFX::ImageEffectDescriptor &desc)
     desc.addSupportedBitDepth(eBitDepthHalf);*/
     desc.addSupportedBitDepth(eBitDepthFloat);
 
-    desc.setSupportsTiles(kSupportsTiles); // may be switched to true later?
-    desc.setSupportsMultiResolution(kSupportsMultiResolution); // may be switch to true later? don't forget to reduce font size too
+    desc.setSupportsTiles(kSupportsTiles);
+    desc.setSupportsMultiResolution(kSupportsMultiResolution);
     desc.setRenderThreadSafety(kRenderThreadSafety);
 
     desc.setOverlayInteractDescriptor(new PositionOverlayDescriptor<PositionInteractParam>);
@@ -539,9 +527,7 @@ void MagickTextPluginFactory::describe(OFX::ImageEffectDescriptor &desc)
 
 /** @brief The describe in context function, passed a plugin descriptor and a context */
 void MagickTextPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, ContextEnum /*context*/)
-{
-    //gHostIsNatron = (OFX::getImageEffectHostDescription()->hostName == kNatronOfxHostName);
-    
+{   
     // create the mandated source clip
     ClipDescriptor *srcClip = desc.defineClip(kOfxImageEffectSimpleSourceClipName);
     srcClip->addSupportedComponent(ePixelComponentRGBA);
@@ -594,7 +580,6 @@ void MagickTextPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc
             param->setIsSecret(true);
         }
     }
-    
     {
         StringParamDescriptor* param = desc.defineStringParam(kParamText);
         param->setLabel(kParamTextLabel);
