@@ -6,8 +6,12 @@ A set of visual effect plugins for OpenFX compatible applications.
 Compatibility
 =============
 
- * Nuke
+Made for Natron but will probably work on others.
+
+We try to be compatible with the following OFX hosts:
+
  * Natron
+ * Nuke
  * Vegas
 
 Tested on Linux and Windows. See the issues page for known compatibility issues.
@@ -18,7 +22,7 @@ Download
 ```
 git clone https://github.com/olear/openfx-arena
 cd openfx-arena
-git submodule update -i --recursive
+git submodule update -i
 ```
 
 Or download from the releases page.
@@ -26,21 +30,21 @@ Or download from the releases page.
 Build
 =====
 
-Requires Fontconfig and Magick C++ (Q16-HDRI with fontconfig and freetype support, version 6.9.1 minimum) installed prior to build.
+Requires MagickCore and Magick++ (Q16-HDRI with fontconfig and freetype support, version 6.9.1 minimum) installed prior to build.
 
 **RHEL/Fedora**
 ```
-yum install ImageMagick-c++-devel fontconfig-devel
+yum install ImageMagick-c++-devel ImageMagick-devel
 ```
 
 **Debian/Ubuntu**
 ```
-apt-get install libmagick++-dev libfontconfig1-dev
+apt-get install libmagick++-dev libmagickcore-dev 
 ```
 
 **FreeBSD**
 ```
-pkg install ImageMagick fontconfig
+pkg install ImageMagick
 ```
 
 **Windows**

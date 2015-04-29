@@ -2,7 +2,7 @@
 CWD=$(pwd)
 MAGICK=6.9.1-2
 PNG=1.2.52
-ARENA=0.3.1
+ARENA=0.4
 if [ -z "$PREFIX" ]; then
   PREFIX=$CWD/tmp
 fi
