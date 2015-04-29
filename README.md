@@ -3,10 +3,30 @@ OpenFX Arena [![Build Status](https://travis-ci.org/olear/openfx-arena.svg)](htt
 
 A set of visual effect plugins for OpenFX compatible applications.
 
+Compatibility
+=============
+
+ * Nuke
+ * Natron
+ * Vegas
+
+Tested on Linux and Windows. See the issues page for known compatibility issues.
+
+Download
+========
+
+```
+git clone https://github.com/olear/openfx-arena
+cd openfx-arena
+git submodule update -i --recursive
+```
+
+Or download from the releases page.
+
 Build
 =====
 
-Requires Fontconfig and Magick C++ (ImageMagick-Q16 6.5+) installed prior to build.
+Requires Fontconfig and Magick C++ (Q16-HDRI, 6.8+ recommended) installed prior to build.
 
 **RHEL/Fedora**
 ```
@@ -23,15 +43,14 @@ apt-get install libmagick++-dev libfontconfig1-dev
 pkg install ImageMagick fontconfig
 ```
 
-**Windows/MinGW**
+**Windows**
 
-Download:
   * https://fxarena.net/~olear/misc/mingw64.7z
   * https://fxarena.net/~olear/misc/MSYS-20111123.zip
   * https://fxarena.net/~olear/misc/local.7z
   * 
   
-Extract mingw64.7z and MSYS.zip to C:, then exctract local.7z to C:/msys/
+Extract mingw64.7z and MSYS.zip to C:, then extract local.7z to C:/msys/
 
 Start MSYS from C:/msys/msys.bat.
 
@@ -43,13 +62,6 @@ sh /postinstall/pi.sh
  * Type "y" to continue with the post install
  * Type "y" to say that MinGW is installed
  * Enter "c:/mingw64" as the MinGW installation location
-
-**Download**
-```
-git clone https://github.com/olear/openfx-arena
-cd openfx-arena
-git submodule update -i
-```
 
 **Make on Linux/BSD**
 ```

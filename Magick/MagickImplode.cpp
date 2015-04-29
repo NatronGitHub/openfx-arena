@@ -35,10 +35,6 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 #include "MagickImplode.h"
 #include <iostream>
-#include "ofxsProcessing.H"
-#include "ofxsCopier.h"
-#include "ofxsPositionInteract.h"
-#include "ofxNatron.h"
 #include "ofxsMacros.h"
 #include <Magick++.h>
 
@@ -50,9 +46,8 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #define kPluginVersionMajor 1
 #define kPluginVersionMinor 0
 
-#define kSupportsTiles 0 // ???
-
-#define kSupportsMultiResolution 1 // ???
+#define kSupportsTiles 0
+#define kSupportsMultiResolution 0
 #define kSupportsRenderScale 1
 #define kRenderThreadSafety eRenderInstanceSafe
 
@@ -68,23 +63,8 @@ class MagickImplodePlugin : public OFX::ImageEffect
 public:
 
     MagickImplodePlugin(OfxImageEffectHandle handle);
-
     virtual ~MagickImplodePlugin();
-
-    /* Override the render */
     virtual void render(const OFX::RenderArguments &args) OVERRIDE FINAL;
-
-    /* override is identity */
-    virtual bool isIdentity(const OFX::IsIdentityArguments &args, OFX::Clip * &identityClip, double &identityTime) OVERRIDE FINAL;
-
-    /* override changedParam */
-    virtual void changedParam(const OFX::InstanceChangedArgs &args, const std::string &paramName) OVERRIDE FINAL;
-
-    /* override changed clip */
-    //virtual void changedClip(const OFX::InstanceChangedArgs &args, const std::string &clipName) OVERRIDE FINAL;
-
-    // override the rod call
-    virtual bool getRegionOfDefinition(const OFX::RegionOfDefinitionArguments &args, OfxRectD &rod) OVERRIDE FINAL;
 
 private:
     // do not need to delete these, the ImageEffect is managing them for us
@@ -192,15 +172,11 @@ MagickImplodePlugin::render(const OFX::RenderArguments &args)
     magickBlock = new float[magickSize];
     Magick::Image magickImage(magickWidth,magickHeight,"RGBA",Magick::FloatPixel,(float*)srcImg->getPixelData());
 
-    try {
-        // Implode image
-        magickImage.implode(implode);
-        // Write to buffer
-        magickImage.write(0,0,magickWidth,magickHeight,"RGBA",Magick::FloatPixel,magickBlock);
-    }
-    catch(Magick::Error &error_) {
-        std::cout << "Magick error" << error_.what() << "\n";
-    }
+    // Implode image
+    magickImage.implode(implode);
+
+    // Write to buffer
+    magickImage.write(0,0,magickWidth,magickHeight,"RGBA",Magick::FloatPixel,magickBlock);
 
     // Return image
     for(int y = args.renderWindow.y1; y < (args.renderWindow.y1 + magickHeight); y++) {
@@ -216,41 +192,6 @@ MagickImplodePlugin::render(const OFX::RenderArguments &args)
         }
     }
     free(magickBlock);
-}
-
-bool MagickImplodePlugin::isIdentity(const OFX::IsIdentityArguments &args, OFX::Clip * &identityClip, double &/*identityTime*/)
-{
-    if (!kSupportsRenderScale && (args.renderScale.x != 1. || args.renderScale.y != 1.)) {
-        OFX::throwSuiteStatusException(kOfxStatFailed);
-        return false;
-    }
-    return true;
-}
-
-void
-MagickImplodePlugin::changedParam(const OFX::InstanceChangedArgs &args, const std::string &/*paramName*/)
-{
-    if (!kSupportsRenderScale && (args.renderScale.x != 1. || args.renderScale.y != 1.)) {
-        OFX::throwSuiteStatusException(kOfxStatFailed);
-        return;
-    }
-    clearPersistentMessage();
-}
-
-bool
-MagickImplodePlugin::getRegionOfDefinition(const OFX::RegionOfDefinitionArguments &args, OfxRectD &rod)
-{
-    if (!kSupportsRenderScale && (args.renderScale.x != 1. || args.renderScale.y != 1.)) {
-        OFX::throwSuiteStatusException(kOfxStatFailed);
-        return false;
-    }
-    if (srcClip_ && srcClip_->isConnected())
-        rod = srcClip_->getRegionOfDefinition(args.time);
-    else {
-        rod.x1 = rod.y1 = kOfxFlagInfiniteMin;
-        rod.x2 = rod.y2 = kOfxFlagInfiniteMax;
-    }
-    return true;
 }
 
 mDeclarePluginFactory(MagickImplodePluginFactory, {}, {});
@@ -283,7 +224,7 @@ void MagickImplodePluginFactory::describeInContext(OFX::ImageEffectDescriptor &d
     ClipDescriptor *srcClip = desc.defineClip(kOfxImageEffectSimpleSourceClipName);
     srcClip->addSupportedComponent(ePixelComponentRGBA);
     srcClip->addSupportedComponent(ePixelComponentRGB);
-    srcClip->setTemporalClipAccess(false);
+    //srcClip->setTemporalClipAccess(false);
     srcClip->setSupportsTiles(kSupportsTiles);
     srcClip->setIsMask(false);
 

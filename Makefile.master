@@ -32,12 +32,16 @@ else
     endif
   endif
 endif
+ifeq ($(MINGW),1)
+  MAGICK_LINKFLAGS += -lgdi32
+endif
 ifeq ($(STATIC),1)
   MAGICK_LINKFLAGS += -lgomp -lm -lpthread
   ifeq ($(MINGW),1)
-    MAGICK_LINKFLAGS += -lgdi32 -lfontconfig -lfreetype -lexpat -lpng -lz
+    MAGICK_LINKFLAGS += -lfontconfig -lfreetype -lexpat -lpng -lz
   endif
 endif
 
 # Gmic
-GMIC_CXXFLAGS = -Dgmic_gimp -Dcimg_display=0 -Dgmic_build -Igmic/src
+GMIC_CXXFLAGS = -I. -ICImg -Dgmic_gimp -Dcimg_display=0 -Dgmic_build -Igmic/src -Dcimg_use_zlib -Dcimg_use_fftw3 -Dcimg_use_png
+GMIC_LINKFLAGS = -lz -lfftw3 -lpng

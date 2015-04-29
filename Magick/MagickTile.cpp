@@ -35,10 +35,6 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 #include "MagickTile.h"
 #include <iostream>
-#include "ofxsProcessing.H"
-#include "ofxsCopier.h"
-#include "ofxsPositionInteract.h"
-#include "ofxNatron.h"
 #include "ofxsMacros.h"
 #include <Magick++.h>
 #include <sstream>
@@ -51,9 +47,8 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #define kPluginVersionMajor 1
 #define kPluginVersionMinor 0
 
-#define kSupportsTiles 0 // ???
-
-#define kSupportsMultiResolution 1 // ???
+#define kSupportsTiles 0
+#define kSupportsMultiResolution 0
 #define kSupportsRenderScale 1
 #define kRenderThreadSafety eRenderInstanceSafe
 
@@ -72,25 +67,9 @@ using namespace OFX;
 class MagickTilePlugin : public OFX::ImageEffect
 {
 public:
-
     MagickTilePlugin(OfxImageEffectHandle handle);
-
     virtual ~MagickTilePlugin();
-
-    /* Override the render */
     virtual void render(const OFX::RenderArguments &args) OVERRIDE FINAL;
-
-    /* override is identity */
-    virtual bool isIdentity(const OFX::IsIdentityArguments &args, OFX::Clip * &identityClip, double &identityTime) OVERRIDE FINAL;
-
-    /* override changedParam */
-    virtual void changedParam(const OFX::InstanceChangedArgs &args, const std::string &paramName) OVERRIDE FINAL;
-
-    /* override changed clip */
-    //virtual void changedClip(const OFX::InstanceChangedArgs &args, const std::string &clipName) OVERRIDE FINAL;
-
-    // override the rod call
-    virtual bool getRegionOfDefinition(const OFX::RegionOfDefinitionArguments &args, OfxRectD &rod) OVERRIDE FINAL;
 
 private:
     // do not need to delete these, the ImageEffect is managing them for us
@@ -215,7 +194,7 @@ void MagickTilePlugin::render(const OFX::RenderArguments &args)
     makeGrid << rows << "x" << cols;
     grid = makeGrid.str();
 
-    try {
+    //try {
         // Montage
         Magick::Color backgroundColor("rgba(0,0,0,0)");
         Magick::Montage montageSettings;
@@ -234,10 +213,10 @@ void MagickTilePlugin::render(const OFX::RenderArguments &args)
 
         // Write to buffer
         magickImage.write(0,0,magickWidth,magickHeight,"RGBA",Magick::FloatPixel,magickBlock);
-    }
+    /*}
     catch(Magick::Error &error_) {
         std::cout << "Magick error" << error_.what() << "\n";
-    }
+    }*/
 
     // Return image
     for(int y = args.renderWindow.y1; y < (args.renderWindow.y1 + magickHeight); y++) {
@@ -253,39 +232,6 @@ void MagickTilePlugin::render(const OFX::RenderArguments &args)
         }
     }
     free(magickBlock);
-}
-
-bool MagickTilePlugin::isIdentity(const OFX::IsIdentityArguments &args, OFX::Clip * &identityClip, double &/*identityTime*/)
-{
-    if (!kSupportsRenderScale && (args.renderScale.x != 1. || args.renderScale.y != 1.)) {
-        OFX::throwSuiteStatusException(kOfxStatFailed);
-        return false;
-    }
-    return true;
-}
-
-void MagickTilePlugin::changedParam(const OFX::InstanceChangedArgs &args, const std::string &/*paramName*/)
-{
-    if (!kSupportsRenderScale && (args.renderScale.x != 1. || args.renderScale.y != 1.)) {
-        OFX::throwSuiteStatusException(kOfxStatFailed);
-        return;
-    }
-    clearPersistentMessage();
-}
-
-bool MagickTilePlugin::getRegionOfDefinition(const OFX::RegionOfDefinitionArguments &args, OfxRectD &rod)
-{
-    if (!kSupportsRenderScale && (args.renderScale.x != 1. || args.renderScale.y != 1.)) {
-        OFX::throwSuiteStatusException(kOfxStatFailed);
-        return false;
-    }
-    if (srcClip_ && srcClip_->isConnected())
-        rod = srcClip_->getRegionOfDefinition(args.time);
-    else {
-        rod.x1 = rod.y1 = kOfxFlagInfiniteMin;
-        rod.x2 = rod.y2 = kOfxFlagInfiniteMax;
-    }
-    return true;
 }
 
 mDeclarePluginFactory(MagickTilePluginFactory, {}, {});

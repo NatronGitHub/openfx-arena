@@ -33,16 +33,17 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 */
 
-#include "MagickMirror.h"
+#include "GmicGeneric.h"
 #include <iostream>
 #include "ofxsMacros.h"
-#include <Magick++.h>
+#include <CImg.h>
+#include <gmic.h>
 
-#define kPluginName "Mirror"
-#define kPluginGrouping "Transform"
-#define kPluginDescription  "Mirror image."
+#define kPluginName "Gmic"
+#define kPluginGrouping "Filter"
+#define kPluginDescription  "G'MIC Generic"
 
-#define kPluginIdentifier "net.fxarena.openfx.MagickMirror"
+#define kPluginIdentifier "net.fxarena.openfx.GmicGeneric"
 #define kPluginVersionMajor 1
 #define kPluginVersionMinor 0
 
@@ -51,28 +52,18 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #define kSupportsRenderScale 1
 #define kRenderThreadSafety eRenderInstanceSafe
 
-#define kParamMirror "mirror"
-#define kParamMirrorLabel "Region"
-#define kParamMirrorHint "Mirror image"
-
-#define REGION_FLIP "Flip"
-#define REGION_FLOP "Flop"
-#define REGION_NORTH "North"
-#define REGION_SOUTH "South"
-#define REGION_EAST "East"
-#define REGION_WEST "West"
-#define REGION_NORTHWEST "NorthWest"
-#define REGION_NORTHEAST "NorthEast"
-#define REGION_SOUTHWEST "SouthWest"
-#define REGION_SOUTHEAST "SouthEast"
+#define kParamGmic "cmd"
+#define kParamGmicLabel "Command"
+#define kParamGmicHint "G'MIC command"
+#define kParamGmicDefault ""
 
 using namespace OFX;
 
-class MagickMirrorPlugin : public OFX::ImageEffect
+class GmicGenericPlugin : public OFX::ImageEffect
 {
 public:
-    MagickMirrorPlugin(OfxImageEffectHandle handle);
-    virtual ~MagickMirrorPlugin();
+    GmicGenericPlugin(OfxImageEffectHandle handle);
+    virtual ~GmicGenericPlugin();
     virtual void render(const OFX::RenderArguments &args) OVERRIDE FINAL;
 
 private:
@@ -80,33 +71,31 @@ private:
     OFX::Clip *dstClip_;
     OFX::Clip *srcClip_;
 
-    // Mirror param
-    OFX::ChoiceParam *mirror_;
+    // params
+    OFX::StringParam *gmic_;
 };
 
-MagickMirrorPlugin::MagickMirrorPlugin(OfxImageEffectHandle handle)
+GmicGenericPlugin::GmicGenericPlugin(OfxImageEffectHandle handle)
 : OFX::ImageEffect(handle)
 , dstClip_(0)
 , srcClip_(0)
 {
-    Magick::InitializeMagick("");
-
     dstClip_ = fetchClip(kOfxImageEffectOutputClipName);
     assert(dstClip_ && (dstClip_->getPixelComponents() == OFX::ePixelComponentRGBA || dstClip_->getPixelComponents() == OFX::ePixelComponentRGB));
     srcClip_ = fetchClip(kOfxImageEffectSimpleSourceClipName);
     assert(srcClip_ && (srcClip_->getPixelComponents() == OFX::ePixelComponentRGBA || srcClip_->getPixelComponents() == OFX::ePixelComponentRGB));
 
-    mirror_ = fetchChoiceParam(kParamMirror);
-    assert(mirror_);
+    gmic_ = fetchStringParam(kParamGmic);
+    assert(gmic_);
 }
 
-MagickMirrorPlugin::~MagickMirrorPlugin()
+GmicGenericPlugin::~GmicGenericPlugin()
 {
 }
 
 /* Override the render */
 void
-MagickMirrorPlugin::render(const OFX::RenderArguments &args)
+GmicGenericPlugin::render(const OFX::RenderArguments &args)
 {
     if (!kSupportsRenderScale && (args.renderScale.x != 1. || args.renderScale.y != 1.)) {
         OFX::throwSuiteStatusException(kOfxStatFailed);
@@ -168,116 +157,41 @@ MagickMirrorPlugin::render(const OFX::RenderArguments &args)
         return;
     }
 
-    // Get mirror param
-    int mirror;
-    mirror_->getValueAtTime(args.time, mirror);
+    // Get param
+    std::string gmic_cmd;
+    gmic_->getValueAtTime(args.time, gmic_cmd);
 
     // Read image
-    int magickWidth = args.renderWindow.x2 - args.renderWindow.x1;
-    int magickHeight = args.renderWindow.y2 - args.renderWindow.y1;
-    int magickWidthStep = magickWidth*4;
-    int magickSize = magickWidth*magickHeight*4;
-    float* magickBlock;
-    magickBlock = new float[magickSize];
-    Magick::Image magickImage(magickWidth,magickHeight,"RGBA",Magick::FloatPixel,(float*)srcImg->getPixelData());
+    int width = args.renderWindow.x2 - args.renderWindow.x1;
+    int height = args.renderWindow.y2 - args.renderWindow.y1;
+    int widthStep = width*4;
+    cimg_library::CImg<float> cimg((float*)srcImg->getPixelData(), width, height, 1, 4, true);
+    gmic_list<float> images;
+    gmic_list<char> images_names;
+    images.assign(1);
+    gmic_image<float> &image = images._data[0];
+    image = cimg;
 
-    //try {
-        // Mirror image
-        int mirrorWidth = magickWidth/2;
-        int mirrorHeight = magickHeight/2;
-        Magick::Image image1;
-        Magick::Image image2;
-        Magick::Image image3;
-        Magick::Image image4;
-        image1 = magickImage;
-        image1.backgroundColor("none");
-        switch(mirror) {
-        case 0: // North
-              image1.flip();
-              image1.crop(Magick::Geometry(magickWidth,mirrorHeight,0,0));
-              break;
-        case 1: // South
-              magickImage.flip();
-              image1.crop(Magick::Geometry(magickWidth,mirrorHeight,0,0));
-              break;
-        case 2: // East
-              image1.flop();
-              image1.crop(Magick::Geometry(mirrorWidth,magickHeight,0,0));
-              break;
-        case 3: // West
-            magickImage.flop();
-            image1.crop(Magick::Geometry(mirrorWidth,magickHeight,0,0));
-              break;
-        case 4: // NorthWest
-            image1.crop(Magick::Geometry(mirrorWidth,mirrorHeight,0,mirrorHeight));
-            image2 = image1;
-            image2.flop();
-            image3 = image2;
-            image3.flip();
-            image4 = image3;
-            image4.flop();
-            break;
-        case 5: // NorthEast
-            image1.crop(Magick::Geometry(mirrorWidth,mirrorHeight,mirrorWidth,mirrorHeight));
-            image1.flop();
-            image2 = image1;
-            image2.flop();
-            image3 = image2;
-            image3.flip();
-            image4 = image3;
-            image4.flop();
-            break;
-        case 6: // SouthWest
-            image1.crop(Magick::Geometry(mirrorWidth,mirrorHeight,0,0));
-            image1.flip();
-            image2 = image1;
-            image2.flop();
-            image3 = image2;
-            image3.flip();
-            image4 = image3;
-            image4.flop();
-            break;
-        case 7: // SouthEast
-            image1.crop(Magick::Geometry(mirrorWidth,mirrorHeight,mirrorWidth,0));
-            image1.flop();
-            image1.flip();
-            image2 = image1;
-            image2.flop();
-            image3 = image2;
-            image3.flip();
-            image4 = image3;
-            image4.flop();
-            break;
-        case 8:
-            magickImage.flip();
-            break;
-        case 9:
-            magickImage.flop();
-            break;
-        }
-        if (mirror==4||mirror==5||mirror==6||mirror==7) {
-            magickImage.composite(image1,0,mirrorHeight,Magick::OverCompositeOp);
-            magickImage.composite(image2,mirrorWidth,mirrorHeight,Magick::OverCompositeOp);
-            magickImage.composite(image3,mirrorWidth,0,Magick::OverCompositeOp);
-            magickImage.composite(image4,0,0,Magick::OverCompositeOp);
-        }
-        else {
-            if (mirror!=8&&mirror!=9)
-                magickImage.composite(image1,0,0,Magick::OverCompositeOp);
-        }
+      /*std::cout << "\nNumber of images in the list:" << images._width << "\n";
+      std::cout << "Width of first image:" << images._data[0]._width << "\n";
+      std::cout << "Height of first image:" << images._data[0]._height << "\n";
+      std::cout << "Address of first image buffer:" << *images._data[0]._data << "\n\n";*/
 
-        // Write to buffer
-        magickImage.write(0,0,magickWidth,magickHeight,"RGBA",Magick::FloatPixel,magickBlock);
-    /*}
-    catch(Magick::Error &error_) {
-        std::cout << "Magick error" << error_.what() << "\n";
-    }*/
+    gmic gmic_instance;
+    gmic_instance.run(gmic_cmd.c_str(),images,images_names);
+    //gmic_instance.run("-o /tmp/noda.png",images,images_names);
+
+      /*std::cout << "\nNumber of images in the list:" << images._width << "\n";
+      std::cout << "Width of first image:" << images._data[0]._width << "\n";
+      std::cout << "Height of first image:" << images._data[0]._height << "\n";
+      std::cout << "Address of first image buffer:" << *images._data[0]._data << "\n";*/
 
     // Return image
-    for(int y = args.renderWindow.y1; y < (args.renderWindow.y1 + magickHeight); y++) {
+    gmic_image<float> &output = images._data[0];
+    for(int y = args.renderWindow.y1; y < (args.renderWindow.y1 + height); y++) {
         OfxRGBAColourF *dstPix = (OfxRGBAColourF *)dstImg->getPixelAddress(args.renderWindow.x1, y);
-        float *srcPix = (float*)(magickBlock + y * magickWidthStep + args.renderWindow.x1);
-        for(int x = args.renderWindow.x1; x < (args.renderWindow.x1 + magickWidth); x++) {
+        float *srcPix = (float*)((float*)output + y * widthStep + args.renderWindow.x1);
+        for(int x = args.renderWindow.x1; x < (args.renderWindow.x1 + width); x++) {
             dstPix->r = srcPix[0];
             dstPix->g = srcPix[1];
             dstPix->b = srcPix[2];
@@ -286,13 +200,13 @@ MagickMirrorPlugin::render(const OFX::RenderArguments &args)
             srcPix+=4;
         }
     }
-    free(magickBlock);
+    images.assign(0U);
 }
 
-mDeclarePluginFactory(MagickMirrorPluginFactory, {}, {});
+mDeclarePluginFactory(GmicGenericPluginFactory, {}, {});
 
 /** @brief The basic describe function, passed a plugin descriptor */
-void MagickMirrorPluginFactory::describe(OFX::ImageEffectDescriptor &desc)
+void GmicGenericPluginFactory::describe(OFX::ImageEffectDescriptor &desc)
 {
     // basic labels
     desc.setLabel(kPluginName);
@@ -313,13 +227,13 @@ void MagickMirrorPluginFactory::describe(OFX::ImageEffectDescriptor &desc)
 }
 
 /** @brief The describe in context function, passed a plugin descriptor and a context */
-void MagickMirrorPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, ContextEnum /*context*/)
+void GmicGenericPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, ContextEnum /*context*/)
 {   
     // create the mandated source clip
     ClipDescriptor *srcClip = desc.defineClip(kOfxImageEffectSimpleSourceClipName);
     srcClip->addSupportedComponent(ePixelComponentRGBA);
     srcClip->addSupportedComponent(ePixelComponentRGB);
-    srcClip->setTemporalClipAccess(false);
+    //srcClip->setTemporalClipAccess(false);
     srcClip->setSupportsTiles(kSupportsTiles);
     srcClip->setIsMask(false);
 
@@ -330,34 +244,26 @@ void MagickMirrorPluginFactory::describeInContext(OFX::ImageEffectDescriptor &de
     dstClip->setSupportsTiles(kSupportsTiles);
 
     // make some pages
-    PageParamDescriptor *page = desc.definePageParam("Mirror");
+    PageParamDescriptor *page = desc.definePageParam("G'MIC");
     {
-        ChoiceParamDescriptor *param = desc.defineChoiceParam(kParamMirror);
-        param->setLabel(kParamMirrorLabel);
-        param->setHint(kParamMirrorHint);
-        param->appendOption(REGION_NORTH);
-        param->appendOption(REGION_SOUTH);
-        param->appendOption(REGION_EAST);
-        param->appendOption(REGION_WEST);
-        param->appendOption(REGION_NORTHWEST);
-        param->appendOption(REGION_NORTHEAST);
-        param->appendOption(REGION_SOUTHWEST);
-        param->appendOption(REGION_SOUTHEAST);
-        param->appendOption(REGION_FLIP);
-        param->appendOption(REGION_FLOP);
+        StringParamDescriptor* param = desc.defineStringParam(kParamGmic);
+        param->setLabel(kParamGmicLabel);
+        param->setHint(kParamGmicHint);
+        param->setStringType(eStringTypeMultiLine);
         param->setAnimates(true);
+        param->setDefault(kParamGmicDefault);
         page->addChild(*param);
     }
 }
 
 /** @brief The create instance function, the plugin must return an object derived from the \ref OFX::ImageEffect class */
-ImageEffect* MagickMirrorPluginFactory::createInstance(OfxImageEffectHandle handle, ContextEnum /*context*/)
+ImageEffect* GmicGenericPluginFactory::createInstance(OfxImageEffectHandle handle, ContextEnum /*context*/)
 {
-    return new MagickMirrorPlugin(handle);
+    return new GmicGenericPlugin(handle);
 }
 
-void getMagickMirrorPluginID(OFX::PluginFactoryArray &ids)
+void getGmicGenericPluginID(OFX::PluginFactoryArray &ids)
 {
-    static MagickMirrorPluginFactory p(kPluginIdentifier, kPluginVersionMajor, kPluginVersionMinor);
+    static GmicGenericPluginFactory p(kPluginIdentifier, kPluginVersionMajor, kPluginVersionMinor);
     ids.push_back(&p);
 }

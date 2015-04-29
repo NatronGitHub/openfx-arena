@@ -4,3 +4,9 @@
 [submodule "SupportExt"]
 	path = SupportExt
 	url = https://github.com/devernay/openfx-supportext.git
+[submodule "GMIC/gmic"]
+	path = GMIC/gmic
+	url = http://git.code.sf.net/p/gmic/full
+[submodule "GMIC/CImg"]
+	path = GMIC/CImg
+	url = http://git.code.sf.net/p/cimg/source
