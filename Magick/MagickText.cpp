@@ -55,7 +55,7 @@
 #define CLAMP(value, min, max) (((value) >(max)) ? (max) : (((value) <(min)) ? (min) : (value)))
 
 #define kPluginName "Text"
-#define kPluginGrouping "Draw"
+#define kPluginGrouping "Image"
 #define kPluginDescription  "Write text"
 
 #define kPluginIdentifier "net.fxarena.openfx.MagickText"
@@ -77,7 +77,7 @@
 
 #define kParamText "text"
 #define kParamTextLabel "Text"
-#define kParamTextHint "The text that will be drawn on the image"
+#define kParamTextHint "The text that will be drawn"
 
 #define kParamFontSize "fontSize"
 #define kParamFontSizeLabel "Size"
@@ -85,7 +85,7 @@
 
 #define kParamFontName "fontName"
 #define kParamFontNameLabel "Font"
-#define kParamFontNameHint "The name of the font to be used. If empty then you need to update your font cache (fc-cache)."
+#define kParamFontNameHint "The name of the font to be used. If empty then you need to update your font cache."
 
 #define kParamFontDecor "fontDecor"
 #define kParamFontDecorLabel "Decoration"
