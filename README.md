@@ -3,13 +3,14 @@ OpenFX Arena [![Build Status](https://travis-ci.org/olear/openfx-arena.svg)](htt
 
 A set of visual effect plugins for OpenFX compatible applications.
 
-
 Compatibility
 =============
 
  * Nuke
- * Natron #1
- * Vegas #15
+ * Natron
+ * Vegas
+
+Tested on Linux and Windows. See the issues page for known compatibility issues.
 
 Download
 ========

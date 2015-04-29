@@ -3,8 +3,12 @@ CWD=$(pwd)
 MAGICK=6.8.9-7
 PNG=1.2.52
 ARENA=0.3.1
-PREFIX=$CWD/tmp
-JOBS=4
+if [ -z "$PREFIX" ]; then
+  PREFIX=$CWD/tmp
+fi
+if [ -z "$JOBS" ]; then
+  JOBS=4
+fi
 OS=$(uname -o)
 
 if [ -z "$ARCH" ]; then
@@ -14,13 +18,13 @@ if [ -z "$ARCH" ]; then
   esac
 fi
 if [ "$ARCH" = "i686" ]; then
-  BF="-pipe -O2 -fomit-frame-pointer -march=i686 -mtune=i686"
+  BF="-m32 -pipe -O3 -fomit-frame-pointer -march=i686 -mtune=i686"
   BIT=32
 elif [ "$ARCH" = "x86_64" ]; then
-  BF="-pipe -O2 -fomit-frame-pointer -fPIC"
+  BF="-m64 -pipe -O3 -fomit-frame-pointer -fPIC"
   BIT=64
 else
-  BF="-pipe -O2 -fomit-frame-pointer"
+  BF="-pipe -O3 -fomit-frame-pointer"
 fi
 
 if [ "$OS" == "GNU/Linux" ]; then
@@ -28,6 +32,9 @@ if [ "$OS" == "GNU/Linux" ]; then
 fi
 if [ "$OS" == "FreeBSD" ]; then
   PKGOS=FreeBSD
+fi
+if [ "$OS" == "Msys" ]; then
+  PKGOS=Windows
 fi
 
 PKG=Arena.ofx.bundle-$ARENA-$PKGOS-x86-release-$BIT
@@ -56,6 +63,7 @@ if [ "$KEEP" != "1" ]; then
 CFLAGS="$BF" CXXFLAGS="$BF -fPIC" ./configure --prefix=$PREFIX --enable-static --disable-shared || exit 1
   make -j$JOBS install || exit 1
   cp LICENSE $PREFIX/LICENSE.png || exit 1
+
   cd $CWD || exit 1 
   tar xvf ImageMagick-$MAGICK.tar.bz2 || exit 1
   cd ImageMagick-$MAGICK || exit 1
