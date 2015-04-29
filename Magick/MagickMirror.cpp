@@ -159,6 +159,11 @@ MagickMirrorPlugin::render(const OFX::RenderArguments &args)
         OFX::throwSuiteStatusException(kOfxStatErrFormat);
         return;
     }
+    int channels = 0;
+    if (dstComponents != OFX::ePixelComponentRGB)
+        channels = 4;
+    else
+        channels = 3;
 
     // are we in the image bounds
     OfxRectI dstBounds = dstImg->getBounds();
@@ -172,14 +177,21 @@ MagickMirrorPlugin::render(const OFX::RenderArguments &args)
     int mirror;
     mirror_->getValueAtTime(args.time, mirror);
 
-    // Read image
+    // Setup image
     int magickWidth = args.renderWindow.x2 - args.renderWindow.x1;
     int magickHeight = args.renderWindow.y2 - args.renderWindow.y1;
-    int magickWidthStep = magickWidth*4;
-    int magickSize = magickWidth*magickHeight*4;
+    int magickWidthStep = magickWidth*channels;
+    int magickSize = magickWidth*magickHeight*channels;
     float* magickBlock;
     magickBlock = new float[magickSize];
-    Magick::Image magickImage(magickWidth,magickHeight,"RGBA",Magick::FloatPixel,(float*)srcImg->getPixelData());
+    std::string colorType;
+    if (channels==4)
+        colorType="RGBA";
+    else
+        colorType = "RGB";
+
+    // Read image
+    Magick::Image magickImage(magickWidth,magickHeight,colorType,Magick::FloatPixel,(float*)srcImg->getPixelData());
 
     //try {
         // Mirror image
@@ -267,25 +279,36 @@ MagickMirrorPlugin::render(const OFX::RenderArguments &args)
         }
 
         // Write to buffer
-        magickImage.write(0,0,magickWidth,magickHeight,"RGBA",Magick::FloatPixel,magickBlock);
-    /*}
-    catch(Magick::Error &error_) {
-        std::cout << "Magick error" << error_.what() << "\n";
-    }*/
+        magickImage.write(0,0,magickWidth,magickHeight,colorType,Magick::FloatPixel,magickBlock);
 
-    // Return image
-    for(int y = args.renderWindow.y1; y < (args.renderWindow.y1 + magickHeight); y++) {
-        OfxRGBAColourF *dstPix = (OfxRGBAColourF *)dstImg->getPixelAddress(args.renderWindow.x1, y);
-        float *srcPix = (float*)(magickBlock + y * magickWidthStep + args.renderWindow.x1);
-        for(int x = args.renderWindow.x1; x < (args.renderWindow.x1 + magickWidth); x++) {
-            dstPix->r = srcPix[0];
-            dstPix->g = srcPix[1];
-            dstPix->b = srcPix[2];
-            dstPix->a = srcPix[3];
-            dstPix++;
-            srcPix+=4;
+        // Return image
+        if (channels==4) { // RGBA
+            for(int y = args.renderWindow.y1; y < (args.renderWindow.y1 + magickHeight); y++) {
+                OfxRGBAColourF *dstPix = (OfxRGBAColourF *)dstImg->getPixelAddress(args.renderWindow.x1, y);
+                float *srcPix = (float*)(magickBlock + y * magickWidthStep + args.renderWindow.x1);
+                for(int x = args.renderWindow.x1; x < (args.renderWindow.x1 + magickWidth); x++) {
+                    dstPix->r = srcPix[0];
+                    dstPix->g = srcPix[1];
+                    dstPix->b = srcPix[2];
+                    dstPix->a = srcPix[3];
+                    dstPix++;
+                    srcPix+=4;
+                }
+            }
         }
-    }
+        else { // RGB
+            for(int y = args.renderWindow.y1; y < (args.renderWindow.y1 + magickHeight); y++) {
+                OfxRGBColourF *dstPix = (OfxRGBColourF *)dstImg->getPixelAddress(args.renderWindow.x1, y);
+                float *srcPix = (float*)(magickBlock + y * magickWidthStep + args.renderWindow.x1);
+                for(int x = args.renderWindow.x1; x < (args.renderWindow.x1 + magickWidth); x++) {
+                    dstPix->r = srcPix[0];
+                    dstPix->g = srcPix[1];
+                    dstPix->b = srcPix[2];
+                    dstPix++;
+                    srcPix+=3;
+                }
+            }
+        }
     free(magickBlock);
 }
 
