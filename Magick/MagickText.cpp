@@ -46,11 +46,11 @@
 #include "MagickText.h"
 #include "ofxsPositionInteract.h"
 #include "ofxsMacros.h"
-#include <fontconfig/fontconfig.h>
 #include <Magick++.h>
 #include <sstream>
 #include <iostream>
 #include <stdint.h>
+#include <magick/MagickCore.h>
 
 #define CLAMP(value, min, max) (((value) >(max)) ? (max) : (((value) <(min)) ? (min) : (value)))
 
@@ -132,7 +132,6 @@ private:
 private:
     // do not need to delete these, the ImageEffect is managing them for us
     OFX::Clip *dstClip_;
-
     OFX::Double2DParam *position_;
     OFX::StringParam *text_;
     OFX::IntParam *fontSize_;
@@ -149,6 +148,7 @@ MagickTextPlugin::MagickTextPlugin(OfxImageEffectHandle handle)
 , dstClip_(0)
 {
     Magick::InitializeMagick("");
+    MagickCore::MagickCoreGenesis( NULL, MagickCore::MagickTrue );
 
     dstClip_ = fetchClip(kOfxImageEffectOutputClipName);
     assert(dstClip_ && (dstClip_->getPixelComponents() == OFX::ePixelComponentRGBA || dstClip_->getPixelComponents() == OFX::ePixelComponentRGB));
@@ -248,29 +248,13 @@ void MagickTextPlugin::render(const OFX::RenderArguments &args)
 
     // Get font
     std::string fontFile;
-    FcConfig* config = FcInitLoadConfigAndFonts();
-    FcPattern* pat = FcPatternCreate();
-    FcObjectSet* os = FcObjectSetBuild (FC_FAMILY, FC_STYLE, FC_LANG, FC_FILE, (char *) 0);
-    FcFontSet* fs = FcFontList(config, pat, os);
-    for (int i=0; fs && i < fs->nfont; ++i) {
-        FcPattern* font = fs->fonts[i];
-        FcChar8 *style, *family;
-        if (FcPatternGetString(font, FC_FAMILY, 0, &family) == FcResultMatch && FcPatternGetString(font, FC_STYLE, 0, &style) == FcResultMatch) {
-             std::string font_family(reinterpret_cast<char*>(family));
-             std::string font_style(reinterpret_cast<char*>(style));
-             std::string font_name;
-             font_name.append(font_family);
-             font_name.append("-");
-             font_name.append(font_style);
-             std::replace(font_name.begin(),font_name.end(),' ','-');
-             if (fontName==i) {
-                fontFile = font_name;
-                break;
-             }
-        }
-    }
-    if (fs)
-        FcFontSetDestroy(fs);
+    char **fonts;
+    std::size_t fontList;
+    fonts=MagickCore::MagickQueryFonts("*",&fontList);
+    fontFile = fonts[fontName];
+
+    for (size_t i = 0; i < fontList; i++)
+        free(fonts[i]);
 
     // setup
     int magickWidth = args.renderWindow.x2 - args.renderWindow.x1;
@@ -484,27 +468,15 @@ void MagickTextPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc
         param->setLabel(kParamFontNameLabel);
         param->setHint(kParamFontNameHint);
 
-        // Get all fonts from fontconfig
-        FcConfig* config = FcInitLoadConfigAndFonts();
-        FcPattern* pat = FcPatternCreate();
-        FcObjectSet* os = FcObjectSetBuild (FC_FAMILY, FC_STYLE, FC_LANG, FC_FILE, (char *) 0);
-        FcFontSet* fs = FcFontList(config, pat, os);
-        for (int i=0; fs && i < fs->nfont; ++i) {
-            FcPattern* font = fs->fonts[i];
-            FcChar8 *style, *family;
-            if (FcPatternGetString(font, FC_FAMILY, 0, &family) == FcResultMatch && FcPatternGetString(font, FC_STYLE, 0, &style) == FcResultMatch) {
-                 std::string font_family(reinterpret_cast<char*>(family));
-                 std::string font_style(reinterpret_cast<char*>(style));
-                 std::string font_name;
-                 font_name.append(font_family);
-                 font_name.append("-");
-                 font_name.append(font_style);
-                 std::replace(font_name.begin(),font_name.end(),' ','-');
-                 param->appendOption(font_name);
-            }
-        }
-        if (fs)
-            FcFontSetDestroy(fs);
+        // Get all fonts
+        char **fonts;
+        std::size_t fontList;
+        fonts=MagickCore::MagickQueryFonts("*",&fontList);
+        for (size_t i=0;i<fontList;i++)
+          param->appendOption(fonts[i]);
+
+        for (size_t i = 0; i < fontList; i++)
+            free(fonts[i]);
 
         param->setAnimates(true);
         page->addChild(*param);
