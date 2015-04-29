@@ -26,7 +26,7 @@ Or download from the releases page.
 Build
 =====
 
-Requires Fontconfig and Magick C++ (Q16-HDRI, 6.8+ recommended) installed prior to build.
+Requires Fontconfig and Magick C++ (Q16-HDRI with fontconfig and freetype support, version 6.9.1 minimum) installed prior to build.
 
 **RHEL/Fedora**
 ```

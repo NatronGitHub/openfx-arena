@@ -282,7 +282,6 @@ void MagickTextPlugin::render(const OFX::RenderArguments &args)
 
     // Generate empty image
     Magick::Image magickImage(Magick::Geometry(magickWidth,magickHeight),Magick::Color("rgba(0,0,0,0)"));
-    magickImage.depth(32);
 
     // Set font size
     magickImage.fontPointsize(fontSize);

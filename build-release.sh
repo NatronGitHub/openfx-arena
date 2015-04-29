@@ -1,6 +1,6 @@
 #!/bin/sh
 CWD=$(pwd)
-MAGICK=6.8.9-7
+MAGICK=6.9.1-2
 PNG=1.2.52
 ARENA=0.3.1
 if [ -z "$PREFIX" ]; then
@@ -46,7 +46,7 @@ export PATH=$PREFIX/bin:$PATH
 if [ "$KEEP" != "1" ]; then
   rm -rf $PREFIX
   if [ ! -f $CWD/ImageMagick-$MAGICK.tar.bz2 ]; then
-    wget https://github.com/olear/openfx-magick/releases/download/0.1/ImageMagick-$MAGICK.tar.bz2 -O $CWD/ImageMagick-$MAGICK.tar.bz2 || exit 1
+    wget ftp://ftp.nluug.nl/pub/ImageMagick/ImageMagick-$MAGICK.tar.bz2 -O $CWD/ImageMagick-$MAGICK.tar.bz2 || exit 1
   fi
   if [ -d $CWD/ImageMagick-$MAGICK ]; then
     rm -rf $CWD/ImageMagick-$MAGICK || exit 1
