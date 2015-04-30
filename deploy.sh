@@ -7,11 +7,11 @@
 
 CWD=$(pwd)
 
-MAGICK=6.8.9-10 # higher is broken on mingw
-MAGICK_URL=ftp://ftp.sunet.se/pub/multimedia/graphics/ImageMagick/ImageMagick-$MAGICK.tar.gz
+MAGICK_WIN=6.8.9-10 # higher is broken on mingw
+MAGICK_UNIX=$MAGICK_WIN # use the same, no reason to upgrade
 
 ZLIB=1.2.8
-ZLIB_URL=http://prdownloads.sourceforge.net/libpng/zlib-${ZIB}.tar.gz?download
+ZLIB_URL=http://prdownloads.sourceforge.net/libpng/zlib-${ZLIB}.tar.gz?download
 
 PNG=1.2.52
 PNG_URL=http://prdownloads.sourceforge.net/libpng/libpng-${PNG}.tar.gz?download
@@ -27,7 +27,7 @@ FTYPE_URL=http://sourceforge.net/projects/freetype/files/freetype2/${FTYPE}/free
 
 ARENA=0.4
 TEXT=1.0
-PKGNAME=Text # Arena.ofx crashes against CImg.ofx (probably something stupid I forgot again), only enable MagickText
+PKGNAME=Text # only enable MagickText at the moment, the rest are a bit buggy yet
 
 if [ -z "$PREFIX" ]; then
   PREFIX=$CWD/tmp
@@ -75,11 +75,14 @@ fi
 
 # zlib
 if [ ! -f ${PREFIX}/lib/libz.a ] && [ "$OS" == "Msys" ]; then
-  if [ ! -d $CWD/3rdparty/zlib-$ZLIB.tar.gz ]; then
+  if [ ! -f $CWD/3rdparty/zlib-$ZLIB.tar.gz ]; then
     wget $ZLIB_URL -O $CWD/3rdparty/zlib-$ZLIB.tar.gz || exit 1
-    tar xvf $CWD/3rdparty/zlib-$ZIB.tar.gz -C $CWD/3rdparty/ || exit 1
+    tar xvf $CWD/3rdparty/zlib-$ZLIB.tar.gz -C $CWD/3rdparty/ || exit 1
   fi
   cd $CWD/3rdparty/zlib-$ZLIB || exit 1
+  if [ -f $CWD/3rdparty/Makefile.gcc ] && [ "$BIT" == "64" ]; then
+    cat $CWD/3rdparty/Makefile.gcc > win32/Makefile.gcc || exit 1
+  fi
   make distclean
   CFLAGS="-m${BIT} ${BF}" CXXFLAGS="-m${BIT} ${BF} -I${PREFIX}/include" CPPFLAGS="-I${PREFIX}/include -L${PREFIX}/lib" make -f win32/Makefile.gcc || exit 1
   cp libz.a ${PREFIX}/lib/
@@ -88,7 +91,7 @@ fi
 
 # libpng
 if [ ! -f ${PREFIX}/lib/libpng.a ]; then
-  if [ ! -d $CWD/3rdparty/libpng-$PNG.tar.gz ]; then
+  if [ ! -f $CWD/3rdparty/libpng-$PNG.tar.gz ]; then
     wget $PNG_URL -O $CWD/3rdparty/libpng-$PNG.tar.gz || exit 1
     tar xvf $CWD/3rdparty/libpng-$PNG.tar.gz -C $CWD/3rdparty/ || exit 1
   fi
@@ -100,7 +103,7 @@ fi
 
 # expat
 if [ ! -f ${PREFIX}/lib/libexpat.a ] && [ "$OS" == "Msys" ]; then
-  if [ ! -d $CWD/3rdparty/expat-$EXPAT.tar.gz ]; then
+  if [ ! -f $CWD/3rdparty/expat-$EXPAT.tar.gz ]; then
     wget $EXPAT_URL -O $CWD/3rdparty/expat-$EXPAT.tar.gz || exit 1
     tar xvf $CWD/3rdparty/expat-$EXPAT.tar.gz -C $CWD/3rdparty/ || exit 1
   fi
@@ -112,7 +115,7 @@ fi
 
 # freetype
 if [ ! -f ${PREFIX}/lib/libfreetype.a ] && [ "$OS" == "Msys" ]; then
-  if [ ! -d $CWD/3rdparty/freetype-$FTYPE.tar.gz ]; then
+  if [ ! -f $CWD/3rdparty/freetype-$FTYPE.tar.gz ]; then
     wget $FTYPE_URL -O $CWD/3rdparty/freetype-$FTYPE.tar.gz || exit 1
     tar xvf $CWD/3rdparty/freetype-$FTYPE.tar.gz -C $CWD/3rdparty/ || exit 1
   fi
@@ -124,7 +127,7 @@ fi
 
 # fontconfig
 if [ ! -f ${PREFIX}/lib/libfontconfig.a ] && [ "$OS" == "Msys" ]; then
-  if [ ! -d $CWD/3rdparty/fontconfig-$FCONFIG.tar.gz ]; then
+  if [ ! -f $CWD/3rdparty/fontconfig-$FCONFIG.tar.gz ]; then
     wget $FCONFIG_URL -O $CWD/3rdparty/fontconfig-$FCONFIG.tar.gz || exit 1
     tar xvf $CWD/3rdparty/fontconfig-$FCONFIG.tar.gz -C $CWD/3rdparty/ || exit 1
   fi
@@ -135,16 +138,19 @@ if [ ! -f ${PREFIX}/lib/libfontconfig.a ] && [ "$OS" == "Msys" ]; then
 fi
 
 # magick
+if [ "$OS" == "Msys" ]; then
+  MAGICK=$MAGICK_WIN
+else
+  MAGICK=$MAGICK_UNIX
+fi
+MAGICK_URL=ftp://ftp.sunet.se/pub/multimedia/graphics/ImageMagick/ImageMagick-$MAGICK.tar.gz
 if [ ! -f ${PREFIX}/lib/libMagick++-6.Q16HDRI.a ]; then
-  if [ ! -d $CWD/3rdparty/ImageMagick-$MAGICK.tar.gz ]; then
+  if [ ! -f $CWD/3rdparty/ImageMagick-$MAGICK.tar.gz ]; then
     wget $MAGICK_URL -O $CWD/3rdparty/ImageMagick-$MAGICK.tar.gz || exit 1
     tar xvf $CWD/3rdparty/ImageMagick-$MAGICK.tar.gz -C $CWD/3rdparty/ || exit 1
   fi
   cd $CWD/3rdparty/ImageMagick-$MAGICK || exit 1
-  # "backport" from 6.9.1-2
-  # prior versions will not produce smooth fonts on transparent rgba, this fixes the problem.
-  # why not just use 6.9.1-2? 6.9 is broken on mingw, needs way too many patches, and still wont work
-  # 6.8 builds clean, will backport fixes from newer versions if needed.
+  # fix smooth fonts
   cat $CWD/3rdparty/composite-private.h > magick/composite-private.h || exit 1
   make distclean
   CFLAGS="-m${BIT} ${BF}" CXXFLAGS="-m${BIT} ${BF} -I${PREFIX}/include" CPPFLAGS="-I${PREFIX}/include -L${PREFIX}/lib" ./configure --libdir=${PREFIX}/lib --prefix=${PREFIX} --disable-deprecated --with-magick-plus-plus=yes --with-quantum-depth=16 --without-dps --without-djvu --without-fftw --without-fpx --without-gslib --without-gvc --without-jbig --without-jpeg --without-lcms --without-lcms2 --without-openjp2 --without-lqr --without-lzma --without-openexr --without-pango --with-png --without-rsvg --without-tiff --without-webp --without-xml --with-zlib --without-bzlib --enable-static --disable-shared --enable-hdri --with-freetype --with-fontconfig --without-x --without-modules || exit 1
@@ -159,8 +165,8 @@ fi
 
 if [ "$OS" != "Msys" ]; then
   #probably add gmake for freebsd
-  make STATIC=1 CONFIG=release clean
-  make STATIC=1 CONFIG=release || exit 1
+  make STATIC=1 BITS=$BIT CONFIG=release clean
+  make STATIC=1 BITS=$BIT CONFIG=release || exit 1
 else
   make STATIC=1 MINGW=1 BIT=$BIT CONFIG=release clean
   make STATIC=1 MINGW=1 BIT=$BIT CONFIG=release || exit 1
@@ -189,11 +195,16 @@ if [ "$PKGNAME" != "Arena" ]; then
 else
   PKGSRC=Plugin
 fi
+if [ "$BIT" == "64" ]; then
+  PKGBIT=x86-$BIT
+else
+  PKGBIT=x86
+fi
 if [ "$OS" == "Msys" ]; then
   strip -s $PKGSRC/$(uname -s)-$BIT-release/$PKGNAME.ofx.bundle/Contents/Win$BIT/*
   mv $PKGSRC/$(uname -s)-$BIT-release/$PKGNAME.ofx.bundle $CWD/$PKG/ || exit 1
 else
-  strip -s $PKGSRC/$(uname -s)-$BIT-release/$PKGNAME.ofx.bundle/Contents/$PKGOS-x86-$BIT/$PKGNAME.ofx || exit 1
+  strip -s $PKGSRC/$(uname -s)-$BIT-release/$PKGNAME.ofx.bundle/Contents/$PKGOS-$PKGBIT/$PKGNAME.ofx || exit 1
   mv $PKGSRC/$(uname -s)-$BIT-release/$PKGNAME.ofx.bundle $CWD/$PKG/ || exit 1
 fi
 

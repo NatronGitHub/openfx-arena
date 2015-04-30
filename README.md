@@ -30,38 +30,41 @@ Or download from the releases page.
 Build
 =====
 
-Requires MagickCore and Magick++ (Q16-HDRI with fontconfig and freetype support, version 6.9.1-2 minimum) installed prior to build.
+Requires MagickCore and Magick++ (Q16-HDRI with fontconfig and freetype support, version 6.9.1-2 minimum) installed prior to build. Also see 'deploy.sh' for information.
 
-**RHEL/Fedora**
+**RHEL/CentOS/Fedora** (and compatible)
 ```
 yum install ImageMagick-c++-devel ImageMagick-devel
 ```
 
-**Debian/Ubuntu**
+**Debian/Ubuntu** (and compatible)
 ```
 apt-get install libmagick++-dev libmagickcore-dev 
 ```
 
-**FreeBSD**
+**FreeBSD** (and compatible)
 ```
 pkg install ImageMagick
 ```
 
-**Make on Linux/BSD**
+**Make on Linux/FreeBSD**
 ```
 make CONFIG=release
 ```
 
-**Make on Windows/MinGW**
-```
-export PATH=/usr/local/bin:$PATH
-export LD_LIBRARY_PATH=/usr/local/lib:$LD_LIBRARY_PATH
-export PKG_CONFIG_PATH=/usr/local/lib/pkgconfig
+If you only want the Text plugin, 'cd Text' before build.
 
+**Make on Windows**
+
+Download and install MinGW and MSYS, see 'deploy.sh' for recommended build options.
+
+```
 make STATIC=1 MINGW=1 BIT=64 CONFIG=release
 ```
 
-**Install on Linux/BSD**
+If you only want the Text plugin, 'cd Text' before build.
+
+**Install on Linux/FreeBSD**
 ```
 cp -a Plugin/*-*-*/Arena.ofx.bundle /usr/OFX/Plugins/
 ```
