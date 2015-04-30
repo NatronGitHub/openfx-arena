@@ -6,8 +6,12 @@ A set of visual effect plugins for OpenFX compatible applications.
 Compatibility
 =============
 
- * Nuke
+Made for Natron but will probably work on others.
+
+We try to be compatible with the following OFX hosts:
+
  * Natron
+ * Nuke
  * Vegas
 
 Tested on Linux and Windows. See the issues page for known compatibility issues.
@@ -18,7 +22,7 @@ Download
 ```
 git clone https://github.com/olear/openfx-arena
 cd openfx-arena
-git submodule update -i --recursive
+git submodule update -i
 ```
 
 Or download from the releases page.
@@ -26,42 +30,22 @@ Or download from the releases page.
 Build
 =====
 
-Requires Fontconfig and Magick C++ (Q16-HDRI, 6.8+ recommended) installed prior to build.
+Requires MagickCore and Magick++ (Q16-HDRI with fontconfig and freetype support, version 6.9.1-2 minimum) installed prior to build.
 
 **RHEL/Fedora**
 ```
-yum install ImageMagick-c++-devel fontconfig-devel
+yum install ImageMagick-c++-devel ImageMagick-devel
 ```
 
 **Debian/Ubuntu**
 ```
-apt-get install libmagick++-dev libfontconfig1-dev
+apt-get install libmagick++-dev libmagickcore-dev 
 ```
 
 **FreeBSD**
 ```
-pkg install ImageMagick fontconfig
+pkg install ImageMagick
 ```
-
-**Windows**
-
-  * https://fxarena.net/~olear/misc/mingw64.7z
-  * https://fxarena.net/~olear/misc/MSYS-20111123.zip
-  * https://fxarena.net/~olear/misc/local.7z
-  * 
-  
-Extract mingw64.7z and MSYS.zip to C:, then extract local.7z to C:/msys/
-
-Start MSYS from C:/msys/msys.bat.
-
-Run post install
-```
-sh /postinstall/pi.sh
-```
-
- * Type "y" to continue with the post install
- * Type "y" to say that MinGW is installed
- * Enter "c:/mingw64" as the MinGW installation location
 
 **Make on Linux/BSD**
 ```
