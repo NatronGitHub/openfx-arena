@@ -4,15 +4,27 @@
 # Works on Linux and Windows
 # FreeBSD and Mac is on the TODO
 #
-# TODO: download and extract depends
-#
-# 3rdparty/expat-2.1.0.tar.gz        3rdparty/freetype-2.4.11.tar.bz2      3rdparty/libpng-1.2.52.tar.gz
-# 3rdparty/fontconfig-2.10.2.tar.gz  3rdparty/ImageMagick-6.8.9-10.tar.gz  3rdparty/zlib-1.2.8.tar.gz
-#
 
 CWD=$(pwd)
 
 MAGICK=6.8.9-10 # higher is broken on mingw
+MAGICK_URL=ftp://ftp.sunet.se/pub/multimedia/graphics/ImageMagick/ImageMagick-$MAGICK.tar.gz
+
+ZLIB=1.2.8
+ZLIB_URL=http://prdownloads.sourceforge.net/libpng/zlib-${ZIB}.tar.gz?download
+
+PNG=1.2.52
+PNG_URL=http://prdownloads.sourceforge.net/libpng/libpng-${PNG}.tar.gz?download
+
+EXPAT=2.1.0
+EXPAT_URL=http://sourceforge.net/projects/expat/files/expat/${EXPAT}/expat-${EXPAT}.tar.gz/download
+
+FCONFIG=2.10.2
+FCONFIG_URL=http://www.freedesktop.org/software/fontconfig/release/fontconfig-${FCONFIG}.tar.gz
+
+FTYPE=2.4.11
+FTYPE_URL=http://sourceforge.net/projects/freetype/files/freetype2/${FTYPE}/freetype-${FTYPE}.tar.gz/download
+
 ARENA=0.4
 TEXT=1.0
 PKGNAME=Text # Arena.ofx crashes against CImg.ofx (probably something stupid I forgot again), only enable MagickText
@@ -63,16 +75,24 @@ fi
 
 # zlib
 if [ ! -f ${PREFIX}/lib/libz.a ] && [ "$OS" == "Msys" ]; then
-  cd $CWD/3rdparty/zlib-* || exit 1
+  if [ ! -d $CWD/3rdparty/zlib-$ZLIB.tar.gz ]; then
+    wget $ZLIB_URL -O $CWD/3rdparty/zlib-$ZLIB.tar.gz || exit 1
+    tar xvf $CWD/3rdparty/zlib-$ZIB.tar.gz -C $CWD/3rdparty/ || exit 1
+  fi
+  cd $CWD/3rdparty/zlib-$ZLIB || exit 1
   make distclean
   CFLAGS="-m${BIT} ${BF}" CXXFLAGS="-m${BIT} ${BF} -I${PREFIX}/include" CPPFLAGS="-I${PREFIX}/include -L${PREFIX}/lib" make -f win32/Makefile.gcc || exit 1
-  cp *.la libz.a ${PREFIX}/lib/
+  cp libz.a ${PREFIX}/lib/
   cp *.h ${PREFIX}/include/
 fi
 
 # libpng
 if [ ! -f ${PREFIX}/lib/libpng.a ]; then
-  cd $CWD/3rdparty/libpng-* || exit 1
+  if [ ! -d $CWD/3rdparty/libpng-$PNG.tar.gz ]; then
+    wget $PNG_URL -O $CWD/3rdparty/libpng-$PNG.tar.gz || exit 1
+    tar xvf $CWD/3rdparty/libpng-$PNG.tar.gz -C $CWD/3rdparty/ || exit 1
+  fi
+  cd $CWD/3rdparty/libpng-$PNG || exit 1
   make distclean
   CFLAGS="-m${BIT} ${BF}" CXXFLAGS="-m${BIT} ${BF} -I${PREFIX}/include" CPPFLAGS="-I${PREFIX}/include -L${PREFIX}/lib" ./configure --prefix=$PREFIX --enable-static --disable-shared || exit 1
   make -j$JOBS install || exit 1
@@ -80,15 +100,23 @@ fi
 
 # expat
 if [ ! -f ${PREFIX}/lib/libexpat.a ] && [ "$OS" == "Msys" ]; then
-  cd $CWD/3rdparty/expat-* || exit 1
+  if [ ! -d $CWD/3rdparty/expat-$EXPAT.tar.gz ]; then
+    wget $EXPAT_URL -O $CWD/3rdparty/expat-$EXPAT.tar.gz || exit 1
+    tar xvf $CWD/3rdparty/expat-$EXPAT.tar.gz -C $CWD/3rdparty/ || exit 1
+  fi
+  cd $CWD/3rdparty/expat-$EXPAT || exit 1
   make distclean
-  CFLAGS="-m${BIT} ${BF}" CXXFLAGS="-m${BIT} ${BF} -I${PREFIX}/include" CPPFLAGS="-I${PREFIX}/include -L${PREFIX}/lib" ./configure --libdir=${PREFIX}/lib --prefix=${PREFIX} --enable-static --disable-shared|| exit 1
+  CFLAGS="-m${BIT} ${BF}" CXXFLAGS="-m${BIT} ${BF} -I${PREFIX}/include" CPPFLAGS="-I${PREFIX}/include -L${PREFIX}/lib" ./configure --libdir=${PREFIX}/lib --prefix=${PREFIX} --enable-static --disable-shared || exit 1
   make -j$JOBS install || exit 1
 fi
 
 # freetype
 if [ ! -f ${PREFIX}/lib/libfreetype.a ] && [ "$OS" == "Msys" ]; then
-  cd $CWD/3rdparty/freetype-* || exit 1
+  if [ ! -d $CWD/3rdparty/freetype-$FTYPE.tar.gz ]; then
+    wget $FTYPE_URL -O $CWD/3rdparty/freetype-$FTYPE.tar.gz || exit 1
+    tar xvf $CWD/3rdparty/freetype-$FTYPE.tar.gz -C $CWD/3rdparty/ || exit 1
+  fi
+  cd $CWD/3rdparty/freetype-$FTYPE || exit 1
   make distclean
   CFLAGS="-m${BIT} ${BF}" CXXFLAGS="-m${BIT} ${BF} -I${PREFIX}/include" CPPFLAGS="-I${PREFIX}/include -L${PREFIX}/lib -lexpat -lz" ./configure --libdir=${PREFIX}/lib --prefix=${PREFIX} --enable-static --disable-shared || exit 1
   make -j$JOBS install || exit 1
@@ -96,7 +124,11 @@ fi
 
 # fontconfig
 if [ ! -f ${PREFIX}/lib/libfontconfig.a ] && [ "$OS" == "Msys" ]; then
-  cd $CWD/3rdparty/fontconfig-* || exit 1
+  if [ ! -d $CWD/3rdparty/fontconfig-$FCONFIG.tar.gz ]; then
+    wget $FCONFIG_URL -O $CWD/3rdparty/fontconfig-$FCONFIG.tar.gz || exit 1
+    tar xvf $CWD/3rdparty/fontconfig-$FCONFIG.tar.gz -C $CWD/3rdparty/ || exit 1
+  fi
+  cd $CWD/3rdparty/fontconfig-$FCONFIG || exit 1
   make distclean
   CFLAGS="-m${BIT} ${BF}" CXXFLAGS="-m${BIT} ${BF} -I${PREFIX}/include" CPPFLAGS="-I${PREFIX}/include -L${PREFIX}/lib -lfreetype -lexpat -lz" ./configure --bindir=${PREFIX} --libdir=${PREFIX}/lib --prefix=${PREFIX} --disable-docs --enable-static --disable-shared || exit 1
   make -j$JOBS install || exit 1
@@ -104,6 +136,10 @@ fi
 
 # magick
 if [ ! -f ${PREFIX}/lib/libMagick++-6.Q16HDRI.a ]; then
+  if [ ! -d $CWD/3rdparty/ImageMagick-$MAGICK.tar.gz ]; then
+    wget $MAGICK_URL -O $CWD/3rdparty/ImageMagick-$MAGICK.tar.gz || exit 1
+    tar xvf $CWD/3rdparty/ImageMagick-$MAGICK.tar.gz -C $CWD/3rdparty/ || exit 1
+  fi
   cd $CWD/3rdparty/ImageMagick-$MAGICK || exit 1
   # "backport" from 6.9.1-2
   # prior versions will not produce smooth fonts on transparent rgba, this fixes the problem.
