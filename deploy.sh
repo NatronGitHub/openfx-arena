@@ -6,6 +6,9 @@
 #
 # TODO: download and extract depends
 #
+# 3rdparty/expat-2.1.0.tar.gz        3rdparty/freetype-2.4.11.tar.bz2      3rdparty/libpng-1.2.52.tar.gz
+# 3rdparty/fontconfig-2.10.2.tar.gz  3rdparty/ImageMagick-6.8.9-10.tar.gz  3rdparty/zlib-1.2.8.tar.gz
+#
 
 CWD=$(pwd)
 
