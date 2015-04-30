@@ -10,7 +10,7 @@ CWD=$(pwd)
 MAGICK=6.8.9-10 # higher is broken on mingw
 ARENA=0.4
 TEXT=1.0
-PKGNAME=Text # Arena.ofx crashes against CImg.ofx, only enable MagickText
+PKGNAME=Text # Arena.ofx crashes against CImg.ofx (probably something stupid I forgot again), only enable MagickText
 
 if [ -z "$PREFIX" ]; then
   PREFIX=$CWD/tmp
@@ -59,7 +59,6 @@ fi
 # zlib
 if [ ! -f ${PREFIX}/lib/libz.a ] && [ "$OS" == "Msys" ]; then
   cd $CWD/3rdparty/zlib-* || exit 1
-  cat $CWD/3rdparty/Makefile.zlib > win32/Makefile.gcc || exit 1
   make distclean
   CFLAGS="-m${BIT} ${BF}" CXXFLAGS="-m${BIT} ${BF} -I${PREFIX}/include" CPPFLAGS="-I${PREFIX}/include -L${PREFIX}/lib" make -f win32/Makefile.gcc || exit 1
   cp *.la libz.a ${PREFIX}/lib/
