@@ -459,7 +459,7 @@ void MagickTextPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc
         IntParamDescriptor* param = desc.defineIntParam(kParamFontSize);
         param->setLabel(kParamFontSizeLabel);
         param->setHint(kParamFontSizeHint);
-        param->setDefault(16);
+        param->setDefault(32);
         param->setAnimates(true);
         page->addChild(*param);
     }
@@ -504,7 +504,7 @@ void MagickTextPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc
         BooleanParamDescriptor* param = desc.defineBooleanParam(kParamStrokeCheck);
         param->setLabel(kParamStrokeCheckLabel);
         param->setHint(kParamStrokeCheckHint);
-        param->setEvaluateOnChange(false);
+        param->setEvaluateOnChange(true);
         param->setDefault(kParamStrokeCheckDefault);
         page->addChild(*param);
     }
