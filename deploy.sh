@@ -4,6 +4,8 @@
 # Works on Linux and Windows
 # FreeBSD and Mac is on the TODO
 #
+# TODO: download and extract depends
+#
 
 CWD=$(pwd)
 
