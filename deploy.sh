@@ -77,6 +77,8 @@ fi
 if [ ! -f ${PREFIX}/lib/libz.a ] && [ "$OS" == "Msys" ]; then
   if [ ! -f $CWD/3rdparty/zlib-$ZLIB.tar.gz ]; then
     wget $ZLIB_URL -O $CWD/3rdparty/zlib-$ZLIB.tar.gz || exit 1
+  fi
+  if [ ! -d $CWD/3rdparty/zlib-$ZLIB ]; then
     tar xvf $CWD/3rdparty/zlib-$ZLIB.tar.gz -C $CWD/3rdparty/ || exit 1
   fi
   cd $CWD/3rdparty/zlib-$ZLIB || exit 1
@@ -93,6 +95,8 @@ fi
 if [ ! -f ${PREFIX}/lib/libpng.a ]; then
   if [ ! -f $CWD/3rdparty/libpng-$PNG.tar.gz ]; then
     wget $PNG_URL -O $CWD/3rdparty/libpng-$PNG.tar.gz || exit 1
+  fi
+  if [ ! -d $CWD/3rdparty/libpng-$PNG ]; then
     tar xvf $CWD/3rdparty/libpng-$PNG.tar.gz -C $CWD/3rdparty/ || exit 1
   fi
   cd $CWD/3rdparty/libpng-$PNG || exit 1
@@ -105,6 +109,8 @@ fi
 if [ ! -f ${PREFIX}/lib/libexpat.a ] && [ "$OS" == "Msys" ]; then
   if [ ! -f $CWD/3rdparty/expat-$EXPAT.tar.gz ]; then
     wget $EXPAT_URL -O $CWD/3rdparty/expat-$EXPAT.tar.gz || exit 1
+  fi
+  if [ ! -d $CWD/3rdparty/expat-$EXPAT ]; then
     tar xvf $CWD/3rdparty/expat-$EXPAT.tar.gz -C $CWD/3rdparty/ || exit 1
   fi
   cd $CWD/3rdparty/expat-$EXPAT || exit 1
@@ -117,6 +123,8 @@ fi
 if [ ! -f ${PREFIX}/lib/libfreetype.a ] && [ "$OS" == "Msys" ]; then
   if [ ! -f $CWD/3rdparty/freetype-$FTYPE.tar.gz ]; then
     wget $FTYPE_URL -O $CWD/3rdparty/freetype-$FTYPE.tar.gz || exit 1
+  fi
+  if [ ! -d $CWD/3rdparty/freetype-$FTYPE ]; then
     tar xvf $CWD/3rdparty/freetype-$FTYPE.tar.gz -C $CWD/3rdparty/ || exit 1
   fi
   cd $CWD/3rdparty/freetype-$FTYPE || exit 1
@@ -129,6 +137,8 @@ fi
 if [ ! -f ${PREFIX}/lib/libfontconfig.a ] && [ "$OS" == "Msys" ]; then
   if [ ! -f $CWD/3rdparty/fontconfig-$FCONFIG.tar.gz ]; then
     wget $FCONFIG_URL -O $CWD/3rdparty/fontconfig-$FCONFIG.tar.gz || exit 1
+  fi
+  if [ ! -d $CWD/3rdparty/fontconfig-$FCONFIG ]; then
     tar xvf $CWD/3rdparty/fontconfig-$FCONFIG.tar.gz -C $CWD/3rdparty/ || exit 1
   fi
   cd $CWD/3rdparty/fontconfig-$FCONFIG || exit 1
@@ -147,6 +157,8 @@ MAGICK_URL=ftp://ftp.sunet.se/pub/multimedia/graphics/ImageMagick/ImageMagick-$M
 if [ ! -f ${PREFIX}/lib/libMagick++-6.Q16HDRI.a ]; then
   if [ ! -f $CWD/3rdparty/ImageMagick-$MAGICK.tar.gz ]; then
     wget $MAGICK_URL -O $CWD/3rdparty/ImageMagick-$MAGICK.tar.gz || exit 1
+  fi
+  if [ ! -d $CWD/3rdparty/ImageMagick-$MAGICK ]; then
     tar xvf $CWD/3rdparty/ImageMagick-$MAGICK.tar.gz -C $CWD/3rdparty/ || exit 1
   fi
   cd $CWD/3rdparty/ImageMagick-$MAGICK || exit 1
