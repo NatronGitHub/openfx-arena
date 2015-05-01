@@ -6,15 +6,9 @@ A set of visual effect plugins for OpenFX compatible applications.
 Compatibility
 =============
 
-Made for Natron but will probably work on others.
+Made for Natron and Nuke, but will probably work on others.
 
-We try to be compatible with the following OFX hosts:
-
- * Natron
- * Nuke
- * Vegas
-
-Tested on Linux and Windows. See the issues page for known compatibility issues.
+See the issues page for known compatibility issues.
 
 Download
 ========
