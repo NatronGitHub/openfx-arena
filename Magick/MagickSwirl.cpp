@@ -54,7 +54,7 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #define kParamSwirl "swirl"
 #define kParamSwirlLabel "Swirl"
 #define kParamSwirlHint "Swirl image by degree"
-#define kParamSwirlDefault 90
+#define kParamSwirlDefault 0
 
 using namespace OFX;
 
@@ -171,13 +171,20 @@ MagickSwirlPlugin::render(const OFX::RenderArguments &args)
     double swirl;
     swirlDegree_->getValueAtTime(args.time, swirl);
 
+    // tmp debug
+    std::cout << "\n\y1: " << dstBounds.y1 << "\n";
+    std::cout << "y2: " << dstBounds.y2 << "\n";
+    std::cout << "x1: " << dstBounds.x1 << "\n";
+    std::cout << "x2: " << dstBounds.x2 << "\n\n";
+
     // Setup image
-    int magickWidth = args.renderWindow.x2 - args.renderWindow.x1;
-    int magickHeight = args.renderWindow.y2 - args.renderWindow.y1;
-    int magickWidthStep = magickWidth*channels;
-    int magickSize = magickWidth*magickHeight*channels;
-    float* magickBlock;
-    magickBlock = new float[magickSize];
+    int width = 0;
+    int height = 0;
+    int offsetX = 0;
+    int offsetY = 0;
+    width=dstBounds.x2-dstBounds.x1;
+    height=dstBounds.y2-dstBounds.y1;
+
     std::string colorType;
     if (channels==4)
         colorType="RGBA";
@@ -185,43 +192,72 @@ MagickSwirlPlugin::render(const OFX::RenderArguments &args)
         colorType = "RGB";
 
     // Read image
-    Magick::Image magickImage(magickWidth,magickHeight,colorType,Magick::FloatPixel,(float*)srcImg->getPixelData());
+    Magick::Image image(width,height,colorType,Magick::FloatPixel,(float*)srcImg->getPixelData());
+
+    // tmp debug
+    image.write("/tmp/debug.png");
+    std::cout << "input width: " << width << "(x2-x1) height: " << height << "(y2-y1)\n";
 
     // Swirl image
-    magickImage.swirl(swirl);
+    if (swirl!=0)
+        image.swirl(swirl);
 
-    // Write to buffer
-    magickImage.write(0,0,magickWidth,magickHeight,colorType,Magick::FloatPixel,magickBlock);
+    // adjust to RoD
+    if (dstBounds.x1<0) {
+        width = width-(dstBounds.x1*-1);
+        offsetX = dstBounds.x1*-1;
+    }
+    else if (dstBounds.x1>0) { // TODO!!!
+        //width = width+dstBounds.x1;
+        //offsetX = dstBounds.x1;
+    }
+
+    if(dstBounds.y1<0) {
+        height = height-(dstBounds.y1*-1);
+        offsetY = dstBounds.y1*-1;
+    }
+    else if (dstBounds.y1>0) { // TODO!!!
+        //height = height+dstBounds.y1;
+        //offsetY = dstBounds.y1;
+    }
+
+    // tmp debug
+    std::cout << "tmp width: " << width << " height: " << height << " offset: " << offsetX << "x" << offsetY << "\n";
 
     // Return image
+    int widthStep = width*channels;
+    int imageSize = width*height*channels;
+    float* block;
+    block = new float[imageSize];
+    image.write(offsetX,offsetY,width,height,colorType,Magick::FloatPixel,block);
     if (channels==4) { // RGBA
-        for(int y = args.renderWindow.y1; y < (args.renderWindow.y1 + magickHeight); y++) {
-            OfxRGBAColourF *dstPix = (OfxRGBAColourF *)dstImg->getPixelAddress(args.renderWindow.x1, y);
-            float *srcPix = (float*)(magickBlock + y * magickWidthStep + args.renderWindow.x1);
-            for(int x = args.renderWindow.x1; x < (args.renderWindow.x1 + magickWidth); x++) {
+        for(int y = 0; y<height; y++) {
+            OfxRGBAColourF *dstPix = (OfxRGBAColourF*)dstImg->getPixelAddress(0,y);
+            float *srcPix = (float*)(block+y*widthStep);
+            for(int x = 0; x<width; x++) {
                 dstPix->r = srcPix[0];
                 dstPix->g = srcPix[1];
                 dstPix->b = srcPix[2];
                 dstPix->a = srcPix[3];
                 dstPix++;
-                srcPix+=4;
+                srcPix+=channels;
             }
         }
     }
     else { // RGB
-        for(int y = args.renderWindow.y1; y < (args.renderWindow.y1 + magickHeight); y++) {
-            OfxRGBColourF *dstPix = (OfxRGBColourF *)dstImg->getPixelAddress(args.renderWindow.x1, y);
-            float *srcPix = (float*)(magickBlock + y * magickWidthStep + args.renderWindow.x1);
-            for(int x = args.renderWindow.x1; x < (args.renderWindow.x1 + magickWidth); x++) {
+        for(int y = 0; y<height; y++) {
+            OfxRGBColourF *dstPix = (OfxRGBColourF*)dstImg->getPixelAddress(0,y);
+            float *srcPix = (float*)(block+y*widthStep);
+            for(int x = 0; x<width; x++) {
                 dstPix->r = srcPix[0];
                 dstPix->g = srcPix[1];
                 dstPix->b = srcPix[2];
                 dstPix++;
-                srcPix+=3;
+                srcPix+=channels;
             }
         }
     }
-    free(magickBlock);
+    free(block);
 }
 
 mDeclarePluginFactory(MagickSwirlPluginFactory, {}, {});
@@ -237,11 +273,11 @@ void MagickSwirlPluginFactory::describe(OFX::ImageEffectDescriptor &desc)
     // add the supported contexts
     desc.addSupportedContext(eContextGeneral);
     desc.addSupportedContext(eContextFilter);
-    desc.addSupportedContext(eContextGenerator);
 
     // add supported pixel depths
     desc.addSupportedBitDepth(eBitDepthFloat);
 
+    // other
     desc.setSupportsTiles(kSupportsTiles);
     desc.setSupportsMultiResolution(kSupportsMultiResolution);
     desc.setRenderThreadSafety(kRenderThreadSafety);
@@ -254,7 +290,7 @@ void MagickSwirlPluginFactory::describeInContext(OFX::ImageEffectDescriptor &des
     ClipDescriptor *srcClip = desc.defineClip(kOfxImageEffectSimpleSourceClipName);
     srcClip->addSupportedComponent(ePixelComponentRGBA);
     srcClip->addSupportedComponent(ePixelComponentRGB);
-    srcClip->setTemporalClipAccess(false);
+    //srcClip->setTemporalClipAccess(false); // ???
     srcClip->setSupportsTiles(kSupportsTiles);
     srcClip->setIsMask(false);
 
@@ -265,7 +301,7 @@ void MagickSwirlPluginFactory::describeInContext(OFX::ImageEffectDescriptor &des
     dstClip->setSupportsTiles(kSupportsTiles);
 
     // make some pages
-    PageParamDescriptor *page = desc.definePageParam("Swirl");
+    PageParamDescriptor *page = desc.definePageParam(kParamSwirlLabel);
     {
         DoubleParamDescriptor *param = desc.defineDoubleParam(kParamSwirl);
         param->setLabel(kParamSwirlLabel);
