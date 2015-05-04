@@ -1,0 +1,3 @@
+*.tar*
+*-release
+*-debug
