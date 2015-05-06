@@ -34,7 +34,7 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 */
 
 #include "MagickTile.h"
-#include <iostream>
+
 #include "ofxsMacros.h"
 #include <Magick++.h>
 #include <sstream>
@@ -47,11 +47,6 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #define kPluginVersionMajor 1
 #define kPluginVersionMinor 0
 
-#define kSupportsTiles 0
-#define kSupportsMultiResolution 0
-#define kSupportsRenderScale 1
-#define kRenderThreadSafety eRenderInstanceSafe
-
 #define kParamRows "rows"
 #define kParamRowsLabel "Rows"
 #define kParamRowsHint "Rows in grid"
@@ -62,6 +57,11 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #define kParamColsHint "Columns in grid"
 #define kParamColsDefault 2
 
+#define kSupportsTiles 0
+#define kSupportsMultiResolution 1
+#define kSupportsRenderScale 1
+#define kRenderThreadSafety eRenderInstanceSafe
+
 using namespace OFX;
 
 class MagickTilePlugin : public OFX::ImageEffect
@@ -70,13 +70,10 @@ public:
     MagickTilePlugin(OfxImageEffectHandle handle);
     virtual ~MagickTilePlugin();
     virtual void render(const OFX::RenderArguments &args) OVERRIDE FINAL;
-
+    virtual bool getRegionOfDefinition(const OFX::RegionOfDefinitionArguments &args, OfxRectD &rod) OVERRIDE FINAL;
 private:
-    // do not need to delete these, the ImageEffect is managing them for us
     OFX::Clip *dstClip_;
     OFX::Clip *srcClip_;
-
-    // params
     OFX::IntParam *rows_;
     OFX::IntParam *cols_;
 };
@@ -87,7 +84,6 @@ MagickTilePlugin::MagickTilePlugin(OfxImageEffectHandle handle)
 , srcClip_(0)
 {
     Magick::InitializeMagick("");
-
     dstClip_ = fetchClip(kOfxImageEffectOutputClipName);
     assert(dstClip_ && (dstClip_->getPixelComponents() == OFX::ePixelComponentRGBA || dstClip_->getPixelComponents() == OFX::ePixelComponentRGB));
     srcClip_ = fetchClip(kOfxImageEffectSimpleSourceClipName);
@@ -102,7 +98,6 @@ MagickTilePlugin::~MagickTilePlugin()
 {
 }
 
-/* Override the render */
 void MagickTilePlugin::render(const OFX::RenderArguments &args)
 {
     if (!kSupportsRenderScale && (args.renderScale.x != 1. || args.renderScale.y != 1.)) {
@@ -116,7 +111,12 @@ void MagickTilePlugin::render(const OFX::RenderArguments &args)
     }
     assert(srcClip_);
     std::auto_ptr<const OFX::Image> srcImg(srcClip_->fetchImage(args.time));
+    OfxRectI srcRod,srcBounds;
+    OFX::BitDepthEnum bitDepth = eBitDepthNone;
     if (srcImg.get()) {
+        srcRod = srcImg->getRegionOfDefinition();
+        srcBounds = srcImg->getBounds();
+        bitDepth = srcImg->getPixelDepth();
         if (srcImg->getRenderScale().x != args.renderScale.x ||
             srcImg->getRenderScale().y != args.renderScale.y ||
             srcImg->getField() != args.fieldToRender) {
@@ -143,24 +143,34 @@ void MagickTilePlugin::render(const OFX::RenderArguments &args)
         OFX::throwSuiteStatusException(kOfxStatFailed);
         return;
     }
+    OfxRectI dstRod = dstImg->getRegionOfDefinition();
 
+    // get bit depth
     OFX::BitDepthEnum dstBitDepth = dstImg->getPixelDepth();
     if (dstBitDepth != OFX::eBitDepthFloat || (srcImg.get() && dstBitDepth != srcImg->getPixelDepth())) {
         OFX::throwSuiteStatusException(kOfxStatErrFormat);
         return;
     }
 
+    // get pixel component
     OFX::PixelComponentEnum dstComponents  = dstImg->getPixelComponents();
     if ((dstComponents != OFX::ePixelComponentRGBA && dstComponents != OFX::ePixelComponentRGB && dstComponents != OFX::ePixelComponentAlpha) ||
         (srcImg.get() && (dstComponents != srcImg->getPixelComponents()))) {
         OFX::throwSuiteStatusException(kOfxStatErrFormat);
         return;
     }
-    int channels = 0;
-    if (dstComponents != OFX::ePixelComponentRGB)
-        channels = 4;
-    else
-        channels = 3;
+    std::string channels;
+    switch (dstComponents) {
+    case ePixelComponentRGBA:
+        channels = "RGBA";
+        break;
+    case ePixelComponentRGB:
+        channels = "RGB";
+        break;
+    case ePixelComponentAlpha:
+        channels = "A";
+        break;
+    }
 
     // are we in the image bounds
     OfxRectI dstBounds = dstImg->getBounds();
@@ -170,28 +180,17 @@ void MagickTilePlugin::render(const OFX::RenderArguments &args)
         return;
     }
 
-    // Get params
+    // get param
     int rows,cols;
     rows_->getValueAtTime(args.time, rows);
     cols_->getValueAtTime(args.time, cols);
 
-    // Setup image
-    int magickWidth = args.renderWindow.x2 - args.renderWindow.x1;
-    int magickHeight = args.renderWindow.y2 - args.renderWindow.y1;
-    int magickWidthStep = magickWidth*channels;
-    int magickSize = magickWidth*magickHeight*channels;
-    float* magickBlock;
-    magickBlock = new float[magickSize];
-    std::string colorType;
-    if (channels==4)
-        colorType="RGBA";
-    else
-        colorType = "RGB";
+    // read image
+    Magick::Image image(srcRod.x2-srcRod.x1,srcRod.y2-srcRod.y1,channels,Magick::FloatPixel,(float*)srcImg->getPixelData());
 
-    // Read image
-    Magick::Image magickImage(magickWidth,magickHeight,colorType,Magick::FloatPixel,(float*)srcImg->getPixelData());
-
-    // Calc thumbs
+    // proc image
+    int magickWidth = srcRod.x2-srcRod.x1;
+    int magickHeight = srcRod.y2-srcRod.y1;
     int tileWidth = magickWidth/rows;
     int tileHeight = magickHeight/cols;
     int thumbs = rows*cols;
@@ -206,55 +205,49 @@ void MagickTilePlugin::render(const OFX::RenderArguments &args)
     makeGrid << rows << "x" << cols;
     grid = makeGrid.str();
 
-    //try {
-        // Montage
-        Magick::Color backgroundColor("rgba(0,0,0,0)");
-        Magick::Montage montageSettings;
-        montageSettings.shadow(false);
-        montageSettings.backgroundColor(backgroundColor);
-        montageSettings.geometry(thumb);
-        montageSettings.tile(grid);
+    Magick::Montage montageSettings;
+    montageSettings.shadow(false);
+    montageSettings.backgroundColor(Magick::Color("rgba(0,0,0,0)"));
+    montageSettings.geometry(thumb);
+    montageSettings.tile(grid);
 
-        std::list<Magick::Image> montagelist;
-        std::list<Magick::Image> imageList;
-        for(int y = 0; y < thumbs; y++)
-            imageList.push_back(magickImage);
+    std::list<Magick::Image> montagelist;
+    std::list<Magick::Image> imageList;
+    for(int y = 0; y < thumbs; y++)
+        imageList.push_back(image);
 
-        Magick::montageImages(&montagelist,imageList.begin(),imageList.end(),montageSettings);
-        Magick::appendImages(&magickImage,montagelist.begin(),montagelist.end());
+    Magick::montageImages(&montagelist,imageList.begin(),imageList.end(),montageSettings);
+    Magick::appendImages(&image,montagelist.begin(),montagelist.end());
 
-        // Write to buffer
-        magickImage.write(0,0,magickWidth,magickHeight,colorType,Magick::FloatPixel,magickBlock);
+    // check bit depth
+    switch (bitDepth) {
+    case OFX::eBitDepthUByte:
+        if (image.depth()>8)
+            image.depth(8);
+        break;
+    case OFX::eBitDepthUShort:
+        if (image.depth()>16)
+            image.depth(16);
+        break;
+    }
 
-        // Return image
-        if (channels==4) { // RGBA
-            for(int y = args.renderWindow.y1; y < (args.renderWindow.y1 + magickHeight); y++) {
-                OfxRGBAColourF *dstPix = (OfxRGBAColourF *)dstImg->getPixelAddress(args.renderWindow.x1, y);
-                float *srcPix = (float*)(magickBlock + y * magickWidthStep + args.renderWindow.x1);
-                for(int x = args.renderWindow.x1; x < (args.renderWindow.x1 + magickWidth); x++) {
-                    dstPix->r = srcPix[0];
-                    dstPix->g = srcPix[1];
-                    dstPix->b = srcPix[2];
-                    dstPix->a = srcPix[3];
-                    dstPix++;
-                    srcPix+=4;
-                }
-            }
-        }
-        else { // RGB
-            for(int y = args.renderWindow.y1; y < (args.renderWindow.y1 + magickHeight); y++) {
-                OfxRGBColourF *dstPix = (OfxRGBColourF *)dstImg->getPixelAddress(args.renderWindow.x1, y);
-                float *srcPix = (float*)(magickBlock + y * magickWidthStep + args.renderWindow.x1);
-                for(int x = args.renderWindow.x1; x < (args.renderWindow.x1 + magickWidth); x++) {
-                    dstPix->r = srcPix[0];
-                    dstPix->g = srcPix[1];
-                    dstPix->b = srcPix[2];
-                    dstPix++;
-                    srcPix+=3;
-                }
-            }
-        }
-    free(magickBlock);
+    // return image
+    image.write(0,0,dstRod.x2-dstRod.x1,dstRod.y2-dstRod.y1,channels,Magick::FloatPixel,(float*)dstImg->getPixelData());
+}
+
+bool MagickTilePlugin::getRegionOfDefinition(const OFX::RegionOfDefinitionArguments &args, OfxRectD &rod)
+{
+    if (!kSupportsRenderScale && (args.renderScale.x != 1. || args.renderScale.y != 1.)) {
+        OFX::throwSuiteStatusException(kOfxStatFailed);
+        return false;
+    }
+    if (srcClip_ && srcClip_->isConnected()) {
+        rod = srcClip_->getRegionOfDefinition(args.time);
+    } else {
+        rod.x1 = rod.y1 = kOfxFlagInfiniteMin;
+        rod.x2 = rod.y2 = kOfxFlagInfiniteMax;
+    }
+    return true;
 }
 
 mDeclarePluginFactory(MagickTilePluginFactory, {}, {});
@@ -270,9 +263,10 @@ void MagickTilePluginFactory::describe(OFX::ImageEffectDescriptor &desc)
     // add the supported contexts
     desc.addSupportedContext(eContextGeneral);
     desc.addSupportedContext(eContextFilter);
-    desc.addSupportedContext(eContextGenerator);
 
     // add supported pixel depths
+    //desc.addSupportedBitDepth(eBitDepthUByte); // not tested yet
+    //desc.addSupportedBitDepth(eBitDepthUShort); // not tested yet
     desc.addSupportedBitDepth(eBitDepthFloat);
 
     desc.setSupportsTiles(kSupportsTiles);
@@ -282,11 +276,12 @@ void MagickTilePluginFactory::describe(OFX::ImageEffectDescriptor &desc)
 
 /** @brief The describe in context function, passed a plugin descriptor and a context */
 void MagickTilePluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, ContextEnum /*context*/)
-{   
+{
     // create the mandated source clip
     ClipDescriptor *srcClip = desc.defineClip(kOfxImageEffectSimpleSourceClipName);
     srcClip->addSupportedComponent(ePixelComponentRGBA);
     srcClip->addSupportedComponent(ePixelComponentRGB);
+    //srcClip->addSupportedComponent(ePixelComponentAlpha); // should work, not tested
     srcClip->setTemporalClipAccess(false);
     srcClip->setSupportsTiles(kSupportsTiles);
     srcClip->setIsMask(false);
@@ -295,10 +290,11 @@ void MagickTilePluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc
     ClipDescriptor *dstClip = desc.defineClip(kOfxImageEffectOutputClipName);
     dstClip->addSupportedComponent(ePixelComponentRGBA);
     dstClip->addSupportedComponent(ePixelComponentRGB);
+    //dstClip->addSupportedComponent(ePixelComponentAlpha); // should work, not tested
     dstClip->setSupportsTiles(kSupportsTiles);
 
-    // make some pages
-    PageParamDescriptor *page = desc.definePageParam("Tile");
+    // make some pages and to things in
+    PageParamDescriptor *page = desc.definePageParam(kPluginName);
     {
         IntParamDescriptor *param = desc.defineIntParam(kParamRows);
         param->setLabel(kParamRowsLabel);
@@ -324,6 +320,7 @@ ImageEffect* MagickTilePluginFactory::createInstance(OfxImageEffectHandle handle
 {
     return new MagickTilePlugin(handle);
 }
+
 
 void getMagickTilePluginID(OFX::PluginFactoryArray &ids)
 {

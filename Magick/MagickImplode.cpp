@@ -34,44 +34,40 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 */
 
 #include "MagickImplode.h"
-#include <iostream>
+
 #include "ofxsMacros.h"
 #include <Magick++.h>
 
 #define kPluginName "Implode"
 #define kPluginGrouping "Filter"
-#define kPluginDescription  "Implode image."
+#define kPluginDescription "Implode image"
 
 #define kPluginIdentifier "net.fxarena.openfx.MagickImplode"
 #define kPluginVersionMajor 1
 #define kPluginVersionMinor 0
-
-#define kSupportsTiles 0
-#define kSupportsMultiResolution 0
-#define kSupportsRenderScale 1
-#define kRenderThreadSafety eRenderInstanceSafe
 
 #define kParamImplode "factor"
 #define kParamImplodeLabel "Factor"
 #define kParamImplodeHint "Implode image by factor"
 #define kParamImplodeDefault 0.5
 
+#define kSupportsTiles 0
+#define kSupportsMultiResolution 1
+#define kSupportsRenderScale 1
+#define kRenderThreadSafety eRenderInstanceSafe
+
 using namespace OFX;
 
 class MagickImplodePlugin : public OFX::ImageEffect
 {
 public:
-
     MagickImplodePlugin(OfxImageEffectHandle handle);
     virtual ~MagickImplodePlugin();
     virtual void render(const OFX::RenderArguments &args) OVERRIDE FINAL;
-
+    virtual bool getRegionOfDefinition(const OFX::RegionOfDefinitionArguments &args, OfxRectD &rod) OVERRIDE FINAL;
 private:
-    // do not need to delete these, the ImageEffect is managing them for us
     OFX::Clip *dstClip_;
     OFX::Clip *srcClip_;
-
-    // Set Implode param
     OFX::DoubleParam *implode_;
 };
 
@@ -81,7 +77,6 @@ MagickImplodePlugin::MagickImplodePlugin(OfxImageEffectHandle handle)
 , srcClip_(0)
 {
     Magick::InitializeMagick("");
-
     dstClip_ = fetchClip(kOfxImageEffectOutputClipName);
     assert(dstClip_ && (dstClip_->getPixelComponents() == OFX::ePixelComponentRGBA || dstClip_->getPixelComponents() == OFX::ePixelComponentRGB));
     srcClip_ = fetchClip(kOfxImageEffectSimpleSourceClipName);
@@ -95,9 +90,7 @@ MagickImplodePlugin::~MagickImplodePlugin()
 {
 }
 
-/* Override the render */
-void
-MagickImplodePlugin::render(const OFX::RenderArguments &args)
+void MagickImplodePlugin::render(const OFX::RenderArguments &args)
 {
     if (!kSupportsRenderScale && (args.renderScale.x != 1. || args.renderScale.y != 1.)) {
         OFX::throwSuiteStatusException(kOfxStatFailed);
@@ -110,7 +103,12 @@ MagickImplodePlugin::render(const OFX::RenderArguments &args)
     }
     assert(srcClip_);
     std::auto_ptr<const OFX::Image> srcImg(srcClip_->fetchImage(args.time));
+    OfxRectI srcRod,srcBounds;
+    OFX::BitDepthEnum bitDepth = eBitDepthNone;
     if (srcImg.get()) {
+        srcRod = srcImg->getRegionOfDefinition();
+        srcBounds = srcImg->getBounds();
+        bitDepth = srcImg->getPixelDepth();
         if (srcImg->getRenderScale().x != args.renderScale.x ||
             srcImg->getRenderScale().y != args.renderScale.y ||
             srcImg->getField() != args.fieldToRender) {
@@ -137,24 +135,34 @@ MagickImplodePlugin::render(const OFX::RenderArguments &args)
         OFX::throwSuiteStatusException(kOfxStatFailed);
         return;
     }
+    OfxRectI dstRod = dstImg->getRegionOfDefinition();
 
+    // get bit depth
     OFX::BitDepthEnum dstBitDepth = dstImg->getPixelDepth();
     if (dstBitDepth != OFX::eBitDepthFloat || (srcImg.get() && dstBitDepth != srcImg->getPixelDepth())) {
         OFX::throwSuiteStatusException(kOfxStatErrFormat);
         return;
     }
 
+    // get pixel component
     OFX::PixelComponentEnum dstComponents  = dstImg->getPixelComponents();
     if ((dstComponents != OFX::ePixelComponentRGBA && dstComponents != OFX::ePixelComponentRGB && dstComponents != OFX::ePixelComponentAlpha) ||
         (srcImg.get() && (dstComponents != srcImg->getPixelComponents()))) {
         OFX::throwSuiteStatusException(kOfxStatErrFormat);
         return;
     }
-    int channels = 0;
-    if (dstComponents != OFX::ePixelComponentRGB)
-        channels = 4;
-    else
-        channels = 3;
+    std::string channels;
+    switch (dstComponents) {
+    case ePixelComponentRGBA:
+        channels = "RGBA";
+        break;
+    case ePixelComponentRGB:
+        channels = "RGB";
+        break;
+    case ePixelComponentAlpha:
+        channels = "A";
+        break;
+    }
 
     // are we in the image bounds
     OfxRectI dstBounds = dstImg->getBounds();
@@ -164,61 +172,45 @@ MagickImplodePlugin::render(const OFX::RenderArguments &args)
         return;
     }
 
-    // Get params
+    // get param
     double implode;
     implode_->getValueAtTime(args.time, implode);
 
-    // Setup image
-    int magickWidth = args.renderWindow.x2 - args.renderWindow.x1;
-    int magickHeight = args.renderWindow.y2 - args.renderWindow.y1;
-    int magickWidthStep = magickWidth*channels;
-    int magickSize = magickWidth*magickHeight*channels;
-    float* magickBlock;
-    magickBlock = new float[magickSize];
-    std::string colorType;
-    if (channels==4)
-        colorType="RGBA";
-    else
-        colorType = "RGB";
+    // read image
+    Magick::Image image(srcRod.x2-srcRod.x1,srcRod.y2-srcRod.y1,channels,Magick::FloatPixel,(float*)srcImg->getPixelData());
 
-    // Read image
-    Magick::Image magickImage(magickWidth,magickHeight,colorType,Magick::FloatPixel,(float*)srcImg->getPixelData());
+    // proc image
+    image.implode(implode);
 
-    // Implode image
-    magickImage.implode(implode);
-
-    // Write to buffer
-    magickImage.write(0,0,magickWidth,magickHeight,colorType,Magick::FloatPixel,magickBlock);
-
-    // Return image
-    if (channels==4) { // RGBA
-        for(int y = args.renderWindow.y1; y < (args.renderWindow.y1 + magickHeight); y++) {
-            OfxRGBAColourF *dstPix = (OfxRGBAColourF *)dstImg->getPixelAddress(args.renderWindow.x1, y);
-            float *srcPix = (float*)(magickBlock + y * magickWidthStep + args.renderWindow.x1);
-            for(int x = args.renderWindow.x1; x < (args.renderWindow.x1 + magickWidth); x++) {
-                dstPix->r = srcPix[0];
-                dstPix->g = srcPix[1];
-                dstPix->b = srcPix[2];
-                dstPix->a = srcPix[3];
-                dstPix++;
-                srcPix+=4;
-            }
-        }
+    // check bit depth
+    switch (bitDepth) {
+    case OFX::eBitDepthUByte:
+        if (image.depth()>8)
+            image.depth(8);
+        break;
+    case OFX::eBitDepthUShort:
+        if (image.depth()>16)
+            image.depth(16);
+        break;
     }
-    else { // RGB
-        for(int y = args.renderWindow.y1; y < (args.renderWindow.y1 + magickHeight); y++) {
-            OfxRGBColourF *dstPix = (OfxRGBColourF *)dstImg->getPixelAddress(args.renderWindow.x1, y);
-            float *srcPix = (float*)(magickBlock + y * magickWidthStep + args.renderWindow.x1);
-            for(int x = args.renderWindow.x1; x < (args.renderWindow.x1 + magickWidth); x++) {
-                dstPix->r = srcPix[0];
-                dstPix->g = srcPix[1];
-                dstPix->b = srcPix[2];
-                dstPix++;
-                srcPix+=3;
-            }
-        }
+
+    // return image
+    image.write(0,0,dstRod.x2-dstRod.x1,dstRod.y2-dstRod.y1,channels,Magick::FloatPixel,(float*)dstImg->getPixelData());
+}
+
+bool MagickImplodePlugin::getRegionOfDefinition(const OFX::RegionOfDefinitionArguments &args, OfxRectD &rod)
+{
+    if (!kSupportsRenderScale && (args.renderScale.x != 1. || args.renderScale.y != 1.)) {
+        OFX::throwSuiteStatusException(kOfxStatFailed);
+        return false;
     }
-    free(magickBlock);
+    if (srcClip_ && srcClip_->isConnected()) {
+        rod = srcClip_->getRegionOfDefinition(args.time);
+    } else {
+        rod.x1 = rod.y1 = kOfxFlagInfiniteMin;
+        rod.x2 = rod.y2 = kOfxFlagInfiniteMax;
+    }
+    return true;
 }
 
 mDeclarePluginFactory(MagickImplodePluginFactory, {}, {});
@@ -234,9 +226,10 @@ void MagickImplodePluginFactory::describe(OFX::ImageEffectDescriptor &desc)
     // add the supported contexts
     desc.addSupportedContext(eContextGeneral);
     desc.addSupportedContext(eContextFilter);
-    desc.addSupportedContext(eContextGenerator);
 
     // add supported pixel depths
+    //desc.addSupportedBitDepth(eBitDepthUByte); // not tested yet
+    //desc.addSupportedBitDepth(eBitDepthUShort); // not tested yet
     desc.addSupportedBitDepth(eBitDepthFloat);
 
     desc.setSupportsTiles(kSupportsTiles);
@@ -246,12 +239,13 @@ void MagickImplodePluginFactory::describe(OFX::ImageEffectDescriptor &desc)
 
 /** @brief The describe in context function, passed a plugin descriptor and a context */
 void MagickImplodePluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, ContextEnum /*context*/)
-{   
+{
     // create the mandated source clip
     ClipDescriptor *srcClip = desc.defineClip(kOfxImageEffectSimpleSourceClipName);
     srcClip->addSupportedComponent(ePixelComponentRGBA);
     srcClip->addSupportedComponent(ePixelComponentRGB);
-    //srcClip->setTemporalClipAccess(false);
+    //srcClip->addSupportedComponent(ePixelComponentAlpha); // should work, not tested
+    srcClip->setTemporalClipAccess(false);
     srcClip->setSupportsTiles(kSupportsTiles);
     srcClip->setIsMask(false);
 
@@ -259,10 +253,11 @@ void MagickImplodePluginFactory::describeInContext(OFX::ImageEffectDescriptor &d
     ClipDescriptor *dstClip = desc.defineClip(kOfxImageEffectOutputClipName);
     dstClip->addSupportedComponent(ePixelComponentRGBA);
     dstClip->addSupportedComponent(ePixelComponentRGB);
+    //dstClip->addSupportedComponent(ePixelComponentAlpha); // should work, not tested
     dstClip->setSupportsTiles(kSupportsTiles);
 
-    // make some pages
-    PageParamDescriptor *page = desc.definePageParam("Implode");
+    // make some pages and to things in
+    PageParamDescriptor *page = desc.definePageParam(kPluginName);
     {
         DoubleParamDescriptor *param = desc.defineDoubleParam(kParamImplode);
         param->setLabel(kParamImplodeLabel);
@@ -279,6 +274,7 @@ ImageEffect* MagickImplodePluginFactory::createInstance(OfxImageEffectHandle han
 {
     return new MagickImplodePlugin(handle);
 }
+
 
 void getMagickImplodePluginID(OFX::PluginFactoryArray &ids)
 {

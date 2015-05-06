@@ -4,7 +4,6 @@ PLUGINOBJECTS = \
 	MagickMirror.o \
 	MagickImplode.o \
 	MagickTile.o \
-	MagickFX.o \
 	ofxsOGLTextRenderer.o \
 	ofxsOGLFontData.o \
 	ofxsRectangleInteract.o \
@@ -23,10 +22,8 @@ net.fxarena.openfx.MagickImplode.png \
 net.fxarena.openfx.MagickImplode.svg \
 net.fxarena.openfx.MagickTile.png \
 net.fxarena.openfx.MagickTile.svg \
-net.fxarena.openfx.MagickFX.png \
-net.fxarena.openfx.MagickFX.svg \
 
 include ../Makefile.master
 
-CXXFLAGS += $(FONTCONFIG_CXXFLAGS) $(MAGICK_CXXFLAGS)
-LINKFLAGS += $(FONTCONFIG_LINKFLAGS) $(MAGICK_LINKFLAGS)
+CXXFLAGS += $(MAGICK_CXXFLAGS)
+LINKFLAGS += $(MAGICK_LINKFLAGS)

@@ -34,7 +34,7 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 */
 
 #include "MagickMirror.h"
-#include <iostream>
+
 #include "ofxsMacros.h"
 #include <Magick++.h>
 
@@ -46,17 +46,10 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #define kPluginVersionMajor 1
 #define kPluginVersionMinor 0
 
-#define kSupportsTiles 0
-#define kSupportsMultiResolution 0
-#define kSupportsRenderScale 1
-#define kRenderThreadSafety eRenderInstanceSafe
-
 #define kParamMirror "mirror"
 #define kParamMirrorLabel "Region"
 #define kParamMirrorHint "Mirror image"
 
-#define REGION_FLIP "Flip"
-#define REGION_FLOP "Flop"
 #define REGION_NORTH "North"
 #define REGION_SOUTH "South"
 #define REGION_EAST "East"
@@ -65,6 +58,13 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #define REGION_NORTHEAST "NorthEast"
 #define REGION_SOUTHWEST "SouthWest"
 #define REGION_SOUTHEAST "SouthEast"
+#define REGION_FLIP "Flip"
+#define REGION_FLOP "Flop"
+
+#define kSupportsTiles 0
+#define kSupportsMultiResolution 1
+#define kSupportsRenderScale 1
+#define kRenderThreadSafety eRenderInstanceSafe
 
 using namespace OFX;
 
@@ -74,13 +74,10 @@ public:
     MagickMirrorPlugin(OfxImageEffectHandle handle);
     virtual ~MagickMirrorPlugin();
     virtual void render(const OFX::RenderArguments &args) OVERRIDE FINAL;
-
+    virtual bool getRegionOfDefinition(const OFX::RegionOfDefinitionArguments &args, OfxRectD &rod) OVERRIDE FINAL;
 private:
-    // do not need to delete these, the ImageEffect is managing them for us
     OFX::Clip *dstClip_;
     OFX::Clip *srcClip_;
-
-    // Mirror param
     OFX::ChoiceParam *mirror_;
 };
 
@@ -90,7 +87,6 @@ MagickMirrorPlugin::MagickMirrorPlugin(OfxImageEffectHandle handle)
 , srcClip_(0)
 {
     Magick::InitializeMagick("");
-
     dstClip_ = fetchClip(kOfxImageEffectOutputClipName);
     assert(dstClip_ && (dstClip_->getPixelComponents() == OFX::ePixelComponentRGBA || dstClip_->getPixelComponents() == OFX::ePixelComponentRGB));
     srcClip_ = fetchClip(kOfxImageEffectSimpleSourceClipName);
@@ -104,9 +100,7 @@ MagickMirrorPlugin::~MagickMirrorPlugin()
 {
 }
 
-/* Override the render */
-void
-MagickMirrorPlugin::render(const OFX::RenderArguments &args)
+void MagickMirrorPlugin::render(const OFX::RenderArguments &args)
 {
     if (!kSupportsRenderScale && (args.renderScale.x != 1. || args.renderScale.y != 1.)) {
         OFX::throwSuiteStatusException(kOfxStatFailed);
@@ -119,7 +113,12 @@ MagickMirrorPlugin::render(const OFX::RenderArguments &args)
     }
     assert(srcClip_);
     std::auto_ptr<const OFX::Image> srcImg(srcClip_->fetchImage(args.time));
+    OfxRectI srcRod,srcBounds;
+    OFX::BitDepthEnum bitDepth = eBitDepthNone;
     if (srcImg.get()) {
+        srcRod = srcImg->getRegionOfDefinition();
+        srcBounds = srcImg->getBounds();
+        bitDepth = srcImg->getPixelDepth();
         if (srcImg->getRenderScale().x != args.renderScale.x ||
             srcImg->getRenderScale().y != args.renderScale.y ||
             srcImg->getField() != args.fieldToRender) {
@@ -146,24 +145,34 @@ MagickMirrorPlugin::render(const OFX::RenderArguments &args)
         OFX::throwSuiteStatusException(kOfxStatFailed);
         return;
     }
+    OfxRectI dstRod = dstImg->getRegionOfDefinition();
 
+    // get bit depth
     OFX::BitDepthEnum dstBitDepth = dstImg->getPixelDepth();
     if (dstBitDepth != OFX::eBitDepthFloat || (srcImg.get() && dstBitDepth != srcImg->getPixelDepth())) {
         OFX::throwSuiteStatusException(kOfxStatErrFormat);
         return;
     }
 
+    // get pixel component
     OFX::PixelComponentEnum dstComponents  = dstImg->getPixelComponents();
     if ((dstComponents != OFX::ePixelComponentRGBA && dstComponents != OFX::ePixelComponentRGB && dstComponents != OFX::ePixelComponentAlpha) ||
         (srcImg.get() && (dstComponents != srcImg->getPixelComponents()))) {
         OFX::throwSuiteStatusException(kOfxStatErrFormat);
         return;
     }
-    int channels = 0;
-    if (dstComponents != OFX::ePixelComponentRGB)
-        channels = 4;
-    else
-        channels = 3;
+    std::string channels;
+    switch (dstComponents) {
+    case ePixelComponentRGBA:
+        channels = "RGBA";
+        break;
+    case ePixelComponentRGB:
+        channels = "RGB";
+        break;
+    case ePixelComponentAlpha:
+        channels = "A";
+        break;
+    }
 
     // are we in the image bounds
     OfxRectI dstBounds = dstImg->getBounds();
@@ -173,143 +182,128 @@ MagickMirrorPlugin::render(const OFX::RenderArguments &args)
         return;
     }
 
-    // Get mirror param
+    // get param
     int mirror;
     mirror_->getValueAtTime(args.time, mirror);
 
-    // Setup image
-    int magickWidth = args.renderWindow.x2 - args.renderWindow.x1;
-    int magickHeight = args.renderWindow.y2 - args.renderWindow.y1;
-    int magickWidthStep = magickWidth*channels;
-    int magickSize = magickWidth*magickHeight*channels;
-    float* magickBlock;
-    magickBlock = new float[magickSize];
-    std::string colorType;
-    if (channels==4)
-        colorType="RGBA";
-    else
-        colorType = "RGB";
+    // read image
+    Magick::Image image(srcRod.x2-srcRod.x1,srcRod.y2-srcRod.y1,channels,Magick::FloatPixel,(float*)srcImg->getPixelData());
 
-    // Read image
-    Magick::Image magickImage(magickWidth,magickHeight,colorType,Magick::FloatPixel,(float*)srcImg->getPixelData());
+    // proc image
+    int magickWidth = srcRod.x2-srcRod.x1;
+    int magickHeight = srcRod.y2-srcRod.y1;
+    int mirrorWidth = magickWidth/2;
+    int mirrorHeight = magickHeight/2;
+    Magick::Image image1;
+    Magick::Image image2;
+    Magick::Image image3;
+    Magick::Image image4;
+    image1 = image;
+    image1.backgroundColor("none");
+    switch(mirror) {
+    case 0: // North
+          image1.flip();
+          image1.crop(Magick::Geometry(magickWidth,mirrorHeight,0,0));
+          break;
+    case 1: // South
+          image.flip();
+          image1.crop(Magick::Geometry(magickWidth,mirrorHeight,0,0));
+          break;
+    case 2: // East
+          image1.flop();
+          image1.crop(Magick::Geometry(mirrorWidth,magickHeight,0,0));
+          break;
+    case 3: // West
+        image.flop();
+        image1.crop(Magick::Geometry(mirrorWidth,magickHeight,0,0));
+          break;
+    case 4: // NorthWest
+        image1.crop(Magick::Geometry(mirrorWidth,mirrorHeight,0,mirrorHeight));
+        image2 = image1;
+        image2.flop();
+        image3 = image2;
+        image3.flip();
+        image4 = image3;
+        image4.flop();
+        break;
+    case 5: // NorthEast
+        image1.crop(Magick::Geometry(mirrorWidth,mirrorHeight,mirrorWidth,mirrorHeight));
+        image1.flop();
+        image2 = image1;
+        image2.flop();
+        image3 = image2;
+        image3.flip();
+        image4 = image3;
+        image4.flop();
+        break;
+    case 6: // SouthWest
+        image1.crop(Magick::Geometry(mirrorWidth,mirrorHeight,0,0));
+        image1.flip();
+        image2 = image1;
+        image2.flop();
+        image3 = image2;
+        image3.flip();
+        image4 = image3;
+        image4.flop();
+        break;
+    case 7: // SouthEast
+        image1.crop(Magick::Geometry(mirrorWidth,mirrorHeight,mirrorWidth,0));
+        image1.flop();
+        image1.flip();
+        image2 = image1;
+        image2.flop();
+        image3 = image2;
+        image3.flip();
+        image4 = image3;
+        image4.flop();
+        break;
+    case 8: // Flip
+        image.flip();
+        break;
+    case 9: // Flop
+        image.flop();
+        break;
+    }
+    if (mirror==4||mirror==5||mirror==6||mirror==7) {
+        image.composite(image1,0,mirrorHeight,Magick::OverCompositeOp);
+        image.composite(image2,mirrorWidth,mirrorHeight,Magick::OverCompositeOp);
+        image.composite(image3,mirrorWidth,0,Magick::OverCompositeOp);
+        image.composite(image4,0,0,Magick::OverCompositeOp);
+    }
+    else {
+        if (mirror!=8&&mirror!=9)
+            image.composite(image1,0,0,Magick::OverCompositeOp);
+    }
 
-    //try {
-        // Mirror image
-        int mirrorWidth = magickWidth/2;
-        int mirrorHeight = magickHeight/2;
-        Magick::Image image1;
-        Magick::Image image2;
-        Magick::Image image3;
-        Magick::Image image4;
-        image1 = magickImage;
-        image1.backgroundColor("none");
-        switch(mirror) {
-        case 0: // North
-              image1.flip();
-              image1.crop(Magick::Geometry(magickWidth,mirrorHeight,0,0));
-              break;
-        case 1: // South
-              magickImage.flip();
-              image1.crop(Magick::Geometry(magickWidth,mirrorHeight,0,0));
-              break;
-        case 2: // East
-              image1.flop();
-              image1.crop(Magick::Geometry(mirrorWidth,magickHeight,0,0));
-              break;
-        case 3: // West
-            magickImage.flop();
-            image1.crop(Magick::Geometry(mirrorWidth,magickHeight,0,0));
-              break;
-        case 4: // NorthWest
-            image1.crop(Magick::Geometry(mirrorWidth,mirrorHeight,0,mirrorHeight));
-            image2 = image1;
-            image2.flop();
-            image3 = image2;
-            image3.flip();
-            image4 = image3;
-            image4.flop();
-            break;
-        case 5: // NorthEast
-            image1.crop(Magick::Geometry(mirrorWidth,mirrorHeight,mirrorWidth,mirrorHeight));
-            image1.flop();
-            image2 = image1;
-            image2.flop();
-            image3 = image2;
-            image3.flip();
-            image4 = image3;
-            image4.flop();
-            break;
-        case 6: // SouthWest
-            image1.crop(Magick::Geometry(mirrorWidth,mirrorHeight,0,0));
-            image1.flip();
-            image2 = image1;
-            image2.flop();
-            image3 = image2;
-            image3.flip();
-            image4 = image3;
-            image4.flop();
-            break;
-        case 7: // SouthEast
-            image1.crop(Magick::Geometry(mirrorWidth,mirrorHeight,mirrorWidth,0));
-            image1.flop();
-            image1.flip();
-            image2 = image1;
-            image2.flop();
-            image3 = image2;
-            image3.flip();
-            image4 = image3;
-            image4.flop();
-            break;
-        case 8:
-            magickImage.flip();
-            break;
-        case 9:
-            magickImage.flop();
-            break;
-        }
-        if (mirror==4||mirror==5||mirror==6||mirror==7) {
-            magickImage.composite(image1,0,mirrorHeight,Magick::OverCompositeOp);
-            magickImage.composite(image2,mirrorWidth,mirrorHeight,Magick::OverCompositeOp);
-            magickImage.composite(image3,mirrorWidth,0,Magick::OverCompositeOp);
-            magickImage.composite(image4,0,0,Magick::OverCompositeOp);
-        }
-        else {
-            if (mirror!=8&&mirror!=9)
-                magickImage.composite(image1,0,0,Magick::OverCompositeOp);
-        }
+    // check bit depth
+    switch (bitDepth) {
+    case OFX::eBitDepthUByte:
+        if (image.depth()>8)
+            image.depth(8);
+        break;
+    case OFX::eBitDepthUShort:
+        if (image.depth()>16)
+            image.depth(16);
+        break;
+    }
 
-        // Write to buffer
-        magickImage.write(0,0,magickWidth,magickHeight,colorType,Magick::FloatPixel,magickBlock);
+    // return image
+    image.write(0,0,dstRod.x2-dstRod.x1,dstRod.y2-dstRod.y1,channels,Magick::FloatPixel,(float*)dstImg->getPixelData());
+}
 
-        // Return image
-        if (channels==4) { // RGBA
-            for(int y = args.renderWindow.y1; y < (args.renderWindow.y1 + magickHeight); y++) {
-                OfxRGBAColourF *dstPix = (OfxRGBAColourF *)dstImg->getPixelAddress(args.renderWindow.x1, y);
-                float *srcPix = (float*)(magickBlock + y * magickWidthStep + args.renderWindow.x1);
-                for(int x = args.renderWindow.x1; x < (args.renderWindow.x1 + magickWidth); x++) {
-                    dstPix->r = srcPix[0];
-                    dstPix->g = srcPix[1];
-                    dstPix->b = srcPix[2];
-                    dstPix->a = srcPix[3];
-                    dstPix++;
-                    srcPix+=4;
-                }
-            }
-        }
-        else { // RGB
-            for(int y = args.renderWindow.y1; y < (args.renderWindow.y1 + magickHeight); y++) {
-                OfxRGBColourF *dstPix = (OfxRGBColourF *)dstImg->getPixelAddress(args.renderWindow.x1, y);
-                float *srcPix = (float*)(magickBlock + y * magickWidthStep + args.renderWindow.x1);
-                for(int x = args.renderWindow.x1; x < (args.renderWindow.x1 + magickWidth); x++) {
-                    dstPix->r = srcPix[0];
-                    dstPix->g = srcPix[1];
-                    dstPix->b = srcPix[2];
-                    dstPix++;
-                    srcPix+=3;
-                }
-            }
-        }
-    free(magickBlock);
+bool MagickMirrorPlugin::getRegionOfDefinition(const OFX::RegionOfDefinitionArguments &args, OfxRectD &rod)
+{
+    if (!kSupportsRenderScale && (args.renderScale.x != 1. || args.renderScale.y != 1.)) {
+        OFX::throwSuiteStatusException(kOfxStatFailed);
+        return false;
+    }
+    if (srcClip_ && srcClip_->isConnected()) {
+        rod = srcClip_->getRegionOfDefinition(args.time);
+    } else {
+        rod.x1 = rod.y1 = kOfxFlagInfiniteMin;
+        rod.x2 = rod.y2 = kOfxFlagInfiniteMax;
+    }
+    return true;
 }
 
 mDeclarePluginFactory(MagickMirrorPluginFactory, {}, {});
@@ -325,9 +319,10 @@ void MagickMirrorPluginFactory::describe(OFX::ImageEffectDescriptor &desc)
     // add the supported contexts
     desc.addSupportedContext(eContextGeneral);
     desc.addSupportedContext(eContextFilter);
-    desc.addSupportedContext(eContextGenerator);
 
     // add supported pixel depths
+    //desc.addSupportedBitDepth(eBitDepthUByte); // not tested yet
+    //desc.addSupportedBitDepth(eBitDepthUShort); // not tested yet
     desc.addSupportedBitDepth(eBitDepthFloat);
 
     desc.setSupportsTiles(kSupportsTiles);
@@ -337,11 +332,12 @@ void MagickMirrorPluginFactory::describe(OFX::ImageEffectDescriptor &desc)
 
 /** @brief The describe in context function, passed a plugin descriptor and a context */
 void MagickMirrorPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, ContextEnum /*context*/)
-{   
+{
     // create the mandated source clip
     ClipDescriptor *srcClip = desc.defineClip(kOfxImageEffectSimpleSourceClipName);
     srcClip->addSupportedComponent(ePixelComponentRGBA);
     srcClip->addSupportedComponent(ePixelComponentRGB);
+    //srcClip->addSupportedComponent(ePixelComponentAlpha); // should work, not tested
     srcClip->setTemporalClipAccess(false);
     srcClip->setSupportsTiles(kSupportsTiles);
     srcClip->setIsMask(false);
@@ -350,10 +346,11 @@ void MagickMirrorPluginFactory::describeInContext(OFX::ImageEffectDescriptor &de
     ClipDescriptor *dstClip = desc.defineClip(kOfxImageEffectOutputClipName);
     dstClip->addSupportedComponent(ePixelComponentRGBA);
     dstClip->addSupportedComponent(ePixelComponentRGB);
+    //dstClip->addSupportedComponent(ePixelComponentAlpha); // should work, not tested
     dstClip->setSupportsTiles(kSupportsTiles);
 
-    // make some pages
-    PageParamDescriptor *page = desc.definePageParam("Mirror");
+    // make some pages and to things in
+    PageParamDescriptor *page = desc.definePageParam(kPluginName);
     {
         ChoiceParamDescriptor *param = desc.defineChoiceParam(kParamMirror);
         param->setLabel(kParamMirrorLabel);
@@ -378,6 +375,7 @@ ImageEffect* MagickMirrorPluginFactory::createInstance(OfxImageEffectHandle hand
 {
     return new MagickMirrorPlugin(handle);
 }
+
 
 void getMagickMirrorPluginID(OFX::PluginFactoryArray &ids)
 {
