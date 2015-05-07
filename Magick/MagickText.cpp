@@ -301,8 +301,8 @@ void MagickTextPlugin::render(const OFX::RenderArguments &args)
     magickImage.flip();
 
     // Position x y
-    int ytext = y*args.renderScale.y;
-    int xtext = x*args.renderScale.x;
+    double ytext = y*args.renderScale.y;
+    double xtext = x*args.renderScale.x;
     int tmp_y = dstRod.y2 - dstBounds.y2;
     int tmp_height = dstBounds.y2 - dstBounds.y1;
     ytext = tmp_y + ((tmp_y+tmp_height-1) - ytext);

@@ -199,25 +199,25 @@ void MagickMirrorPlugin::render(const OFX::RenderArguments &args)
     Magick::Image image3;
     Magick::Image image4;
     image1 = image;
-    image1.backgroundColor("none");
+    //image1.backgroundColor("none");
     switch(mirror) {
-    case 0: // North
+    case 1: // North
           image1.flip();
           image1.crop(Magick::Geometry(magickWidth,mirrorHeight,0,0));
           break;
-    case 1: // South
+    case 2: // South
           image.flip();
           image1.crop(Magick::Geometry(magickWidth,mirrorHeight,0,0));
           break;
-    case 2: // East
+    case 3: // East
           image1.flop();
           image1.crop(Magick::Geometry(mirrorWidth,magickHeight,0,0));
           break;
-    case 3: // West
+    case 4: // West
         image.flop();
         image1.crop(Magick::Geometry(mirrorWidth,magickHeight,0,0));
           break;
-    case 4: // NorthWest
+    case 5: // NorthWest
         image1.crop(Magick::Geometry(mirrorWidth,mirrorHeight,0,mirrorHeight));
         image2 = image1;
         image2.flop();
@@ -226,7 +226,7 @@ void MagickMirrorPlugin::render(const OFX::RenderArguments &args)
         image4 = image3;
         image4.flop();
         break;
-    case 5: // NorthEast
+    case 6: // NorthEast
         image1.crop(Magick::Geometry(mirrorWidth,mirrorHeight,mirrorWidth,mirrorHeight));
         image1.flop();
         image2 = image1;
@@ -236,7 +236,7 @@ void MagickMirrorPlugin::render(const OFX::RenderArguments &args)
         image4 = image3;
         image4.flop();
         break;
-    case 6: // SouthWest
+    case 7: // SouthWest
         image1.crop(Magick::Geometry(mirrorWidth,mirrorHeight,0,0));
         image1.flip();
         image2 = image1;
@@ -246,7 +246,7 @@ void MagickMirrorPlugin::render(const OFX::RenderArguments &args)
         image4 = image3;
         image4.flop();
         break;
-    case 7: // SouthEast
+    case 8: // SouthEast
         image1.crop(Magick::Geometry(mirrorWidth,mirrorHeight,mirrorWidth,0));
         image1.flop();
         image1.flip();
@@ -257,21 +257,21 @@ void MagickMirrorPlugin::render(const OFX::RenderArguments &args)
         image4 = image3;
         image4.flop();
         break;
-    case 8: // Flip
+    case 9: // Flip
         image.flip();
         break;
-    case 9: // Flop
+    case 10: // Flop
         image.flop();
         break;
     }
-    if (mirror==4||mirror==5||mirror==6||mirror==7) {
+    if (mirror==5||mirror==6||mirror==7||mirror==8) {
         image.composite(image1,0,mirrorHeight,Magick::OverCompositeOp);
         image.composite(image2,mirrorWidth,mirrorHeight,Magick::OverCompositeOp);
         image.composite(image3,mirrorWidth,0,Magick::OverCompositeOp);
         image.composite(image4,0,0,Magick::OverCompositeOp);
     }
     else {
-        if (mirror!=8&&mirror!=9)
+        if (mirror==1||mirror==2||mirror==3||mirror==4)
             image.composite(image1,0,0,Magick::OverCompositeOp);
     }
 
@@ -355,6 +355,7 @@ void MagickMirrorPluginFactory::describeInContext(OFX::ImageEffectDescriptor &de
         ChoiceParamDescriptor *param = desc.defineChoiceParam(kParamMirror);
         param->setLabel(kParamMirrorLabel);
         param->setHint(kParamMirrorHint);
+	param->appendOption("None");
         param->appendOption(REGION_NORTH);
         param->appendOption(REGION_SOUTH);
         param->appendOption(REGION_EAST);

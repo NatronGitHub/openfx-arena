@@ -37,6 +37,7 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 #include "ofxsMacros.h"
 #include <Magick++.h>
+#include <magick/MagickCore.h>
 #include <sstream>
 
 #define kPluginName "Tile"
@@ -84,6 +85,7 @@ MagickTilePlugin::MagickTilePlugin(OfxImageEffectHandle handle)
 , srcClip_(0)
 {
     Magick::InitializeMagick("");
+    MagickCore::MagickCoreGenesis( NULL, MagickCore::MagickTrue );
     dstClip_ = fetchClip(kOfxImageEffectOutputClipName);
     assert(dstClip_ && (dstClip_->getPixelComponents() == OFX::ePixelComponentRGBA || dstClip_->getPixelComponents() == OFX::ePixelComponentRGB));
     srcClip_ = fetchClip(kOfxImageEffectSimpleSourceClipName);
@@ -207,6 +209,17 @@ void MagickTilePlugin::render(const OFX::RenderArguments &args)
 
     Magick::Montage montageSettings;
     montageSettings.shadow(false);
+
+	// avoid warn, set a default font
+    std::string fontFile;
+    char **fonts;
+    std::size_t fontList;
+    fonts=MagickCore::MagickQueryFonts("*",&fontList);
+    fontFile = fonts[0];
+    for (size_t i = 0; i < fontList; i++)
+        free(fonts[i]);
+    montageSettings.font(fontFile);
+
     montageSettings.backgroundColor(Magick::Color("rgba(0,0,0,0)"));
     montageSettings.geometry(thumb);
     montageSettings.tile(grid);
