@@ -12,9 +12,9 @@ modification, are permitted provided that the following conditions are met:
 * Redistributions of source code must retain the above copyright notice, this
   list of conditions and the following disclaimer.
 
-*  Neither the name of the {organization} nor the names of its
-   contributors may be used to endorse or promote products derived from
-   this software without specific prior written permission.
+* Neither the name of FxArena DA nor the names of its
+  contributors may be used to endorse or promote products derived from
+  this software without specific prior written permission.
 
 * Redistributions in binary form must reproduce the above copyright notice,
   this list of conditions and the following disclaimer in the documentation
@@ -33,7 +33,7 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 */
 
-#include "MagickTile.h"
+#include "Tile.h"
 
 #include "ofxsMacros.h"
 #include <Magick++.h>
@@ -44,7 +44,7 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #define kPluginGrouping "Transform"
 #define kPluginDescription  "Tile image."
 
-#define kPluginIdentifier "net.fxarena.openfx.MagickTile"
+#define kPluginIdentifier "net.fxarena.openfx.Tile"
 #define kPluginVersionMajor 1
 #define kPluginVersionMinor 0
 
@@ -65,11 +65,11 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 using namespace OFX;
 
-class MagickTilePlugin : public OFX::ImageEffect
+class TilePlugin : public OFX::ImageEffect
 {
 public:
-    MagickTilePlugin(OfxImageEffectHandle handle);
-    virtual ~MagickTilePlugin();
+    TilePlugin(OfxImageEffectHandle handle);
+    virtual ~TilePlugin();
     virtual void render(const OFX::RenderArguments &args) OVERRIDE FINAL;
     virtual bool getRegionOfDefinition(const OFX::RegionOfDefinitionArguments &args, OfxRectD &rod) OVERRIDE FINAL;
 private:
@@ -79,7 +79,7 @@ private:
     OFX::IntParam *cols_;
 };
 
-MagickTilePlugin::MagickTilePlugin(OfxImageEffectHandle handle)
+TilePlugin::TilePlugin(OfxImageEffectHandle handle)
 : OFX::ImageEffect(handle)
 , dstClip_(0)
 , srcClip_(0)
@@ -96,11 +96,11 @@ MagickTilePlugin::MagickTilePlugin(OfxImageEffectHandle handle)
     assert(rows_&&cols_);
 }
 
-MagickTilePlugin::~MagickTilePlugin()
+TilePlugin::~TilePlugin()
 {
 }
 
-void MagickTilePlugin::render(const OFX::RenderArguments &args)
+void TilePlugin::render(const OFX::RenderArguments &args)
 {
     if (!kSupportsRenderScale && (args.renderScale.x != 1. || args.renderScale.y != 1.)) {
         OFX::throwSuiteStatusException(kOfxStatFailed);
@@ -248,7 +248,7 @@ void MagickTilePlugin::render(const OFX::RenderArguments &args)
     image.write(0,0,dstRod.x2-dstRod.x1,dstRod.y2-dstRod.y1,channels,Magick::FloatPixel,(float*)dstImg->getPixelData());
 }
 
-bool MagickTilePlugin::getRegionOfDefinition(const OFX::RegionOfDefinitionArguments &args, OfxRectD &rod)
+bool TilePlugin::getRegionOfDefinition(const OFX::RegionOfDefinitionArguments &args, OfxRectD &rod)
 {
     if (!kSupportsRenderScale && (args.renderScale.x != 1. || args.renderScale.y != 1.)) {
         OFX::throwSuiteStatusException(kOfxStatFailed);
@@ -263,10 +263,10 @@ bool MagickTilePlugin::getRegionOfDefinition(const OFX::RegionOfDefinitionArgume
     return true;
 }
 
-mDeclarePluginFactory(MagickTilePluginFactory, {}, {});
+mDeclarePluginFactory(TilePluginFactory, {}, {});
 
 /** @brief The basic describe function, passed a plugin descriptor */
-void MagickTilePluginFactory::describe(OFX::ImageEffectDescriptor &desc)
+void TilePluginFactory::describe(OFX::ImageEffectDescriptor &desc)
 {
     // basic labels
     desc.setLabel(kPluginName);
@@ -288,7 +288,7 @@ void MagickTilePluginFactory::describe(OFX::ImageEffectDescriptor &desc)
 }
 
 /** @brief The describe in context function, passed a plugin descriptor and a context */
-void MagickTilePluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, ContextEnum /*context*/)
+void TilePluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, ContextEnum /*context*/)
 {
     // create the mandated source clip
     ClipDescriptor *srcClip = desc.defineClip(kOfxImageEffectSimpleSourceClipName);
@@ -329,14 +329,14 @@ void MagickTilePluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc
 }
 
 /** @brief The create instance function, the plugin must return an object derived from the \ref OFX::ImageEffect class */
-ImageEffect* MagickTilePluginFactory::createInstance(OfxImageEffectHandle handle, ContextEnum /*context*/)
+ImageEffect* TilePluginFactory::createInstance(OfxImageEffectHandle handle, ContextEnum /*context*/)
 {
-    return new MagickTilePlugin(handle);
+    return new TilePlugin(handle);
 }
 
 
-void getMagickTilePluginID(OFX::PluginFactoryArray &ids)
+void getTilePluginID(OFX::PluginFactoryArray &ids)
 {
-    static MagickTilePluginFactory p(kPluginIdentifier, kPluginVersionMajor, kPluginVersionMinor);
+    static TilePluginFactory p(kPluginIdentifier, kPluginVersionMajor, kPluginVersionMinor);
     ids.push_back(&p);
 }

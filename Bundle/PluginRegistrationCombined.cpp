@@ -1,9 +1,9 @@
 #include "ofxsImageEffect.h"
 #include "Text.h"
 #include "Swirl.h"
-#include "MagickMirror.h"
+#include "Mirror.h"
 #include "Implode.h"
-#include "MagickTile.h"
+#include "Tile.h"
 
 namespace OFX
 {
@@ -13,9 +13,9 @@ namespace OFX
         {
             getTextPluginID(ids);
             getSwirlPluginID(ids);
-            getMagickMirrorPluginID(ids);
+            getMirrorPluginID(ids);
             getImplodePluginID(ids);
-            getMagickTilePluginID(ids);
+            getTilePluginID(ids);
         }
     }
 }

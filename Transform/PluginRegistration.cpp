@@ -1,6 +1,6 @@
 #include "ofxsImageEffect.h"
-#include "MagickMirror.h"
-#include "MagickTile.h"
+#include "Mirror.h"
+#include "Tile.h"
 
 namespace OFX 
 {
@@ -8,8 +8,8 @@ namespace OFX
   {
     void getPluginIDs(OFX::PluginFactoryArray &ids)
     {
-        getMagickMirrorPluginID(ids);
-        getMagickTilePluginID(ids);
+        getMirrorPluginID(ids);
+        getTilePluginID(ids);
     }
   }
 }

@@ -1,9 +1,9 @@
 PLUGINOBJECTS = \
         Text.o \
-	MagickSwirl.o \
-	MagickMirror.o \
-	MagickImplode.o \
-	MagickTile.o \
+        Swirl.o \
+        Mirror.o \
+        Implode.o \
+        Tile.o \
 	ofxsOGLTextRenderer.o \
 	ofxsOGLFontData.o \
 	ofxsRectangleInteract.o \
@@ -16,21 +16,21 @@ RESOURCES = \
 ../Image/net.fxarena.openfx.Text.svg \
 ../Filter/net.fxarena.openfx.Swirl.png \
 ../Filter/net.fxarena.openfx.Swirl.svg \
-../Magick/net.fxarena.openfx.MagickMirror.png \
-../Magick/net.fxarena.openfx.MagickMirror.svg \
+../Transform/net.fxarena.openfx.Mirror.png \
+../Transform/net.fxarena.openfx.Mirror.svg \
 ../Filter/net.fxarena.openfx.Implode.png \
 ../Filter/net.fxarena.openfx.Implode.svg \
-../Magick/net.fxarena.openfx.MagickTile.png \
-../Magick/net.fxarena.openfx.MagickTile.svg \
+../Transform/net.fxarena.openfx.Tile.png \
+../Transform/net.fxarena.openfx.Tile.svg \
 
 VPATH += \
-../Magick \
+../Transform \
 ../Image \
 ../Filter \
 
 include ../Makefile.master
 
-CXXFLAGS += -I../Magick -I../Image -I../Filter
+CXXFLAGS += -I../Transform -I../Image -I../Filter
 
 CXXFLAGS  += $(MAGICK_CXXFLAGS)
 LINKFLAGS += $(MAGICK_LINKFLAGS)

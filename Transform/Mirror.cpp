@@ -12,9 +12,9 @@ modification, are permitted provided that the following conditions are met:
 * Redistributions of source code must retain the above copyright notice, this
   list of conditions and the following disclaimer.
 
-*  Neither the name of the {organization} nor the names of its
-   contributors may be used to endorse or promote products derived from
-   this software without specific prior written permission.
+* Neither the name of FxArena DA nor the names of its
+  contributors may be used to endorse or promote products derived from
+  this software without specific prior written permission.
 
 * Redistributions in binary form must reproduce the above copyright notice,
   this list of conditions and the following disclaimer in the documentation
@@ -33,7 +33,7 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 */
 
-#include "MagickMirror.h"
+#include "Mirror.h"
 
 #include "ofxsMacros.h"
 #include <Magick++.h>
@@ -42,7 +42,7 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #define kPluginGrouping "Transform"
 #define kPluginDescription  "Mirror image."
 
-#define kPluginIdentifier "net.fxarena.openfx.MagickMirror"
+#define kPluginIdentifier "net.fxarena.openfx.Mirror"
 #define kPluginVersionMajor 1
 #define kPluginVersionMinor 0
 
@@ -68,11 +68,11 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 using namespace OFX;
 
-class MagickMirrorPlugin : public OFX::ImageEffect
+class MirrorPlugin : public OFX::ImageEffect
 {
 public:
-    MagickMirrorPlugin(OfxImageEffectHandle handle);
-    virtual ~MagickMirrorPlugin();
+    MirrorPlugin(OfxImageEffectHandle handle);
+    virtual ~MirrorPlugin();
     virtual void render(const OFX::RenderArguments &args) OVERRIDE FINAL;
     virtual bool getRegionOfDefinition(const OFX::RegionOfDefinitionArguments &args, OfxRectD &rod) OVERRIDE FINAL;
 private:
@@ -81,7 +81,7 @@ private:
     OFX::ChoiceParam *mirror_;
 };
 
-MagickMirrorPlugin::MagickMirrorPlugin(OfxImageEffectHandle handle)
+MirrorPlugin::MirrorPlugin(OfxImageEffectHandle handle)
 : OFX::ImageEffect(handle)
 , dstClip_(0)
 , srcClip_(0)
@@ -96,11 +96,11 @@ MagickMirrorPlugin::MagickMirrorPlugin(OfxImageEffectHandle handle)
     assert(mirror_);
 }
 
-MagickMirrorPlugin::~MagickMirrorPlugin()
+MirrorPlugin::~MirrorPlugin()
 {
 }
 
-void MagickMirrorPlugin::render(const OFX::RenderArguments &args)
+void MirrorPlugin::render(const OFX::RenderArguments &args)
 {
     if (!kSupportsRenderScale && (args.renderScale.x != 1. || args.renderScale.y != 1.)) {
         OFX::throwSuiteStatusException(kOfxStatFailed);
@@ -291,7 +291,7 @@ void MagickMirrorPlugin::render(const OFX::RenderArguments &args)
     image.write(0,0,dstRod.x2-dstRod.x1,dstRod.y2-dstRod.y1,channels,Magick::FloatPixel,(float*)dstImg->getPixelData());
 }
 
-bool MagickMirrorPlugin::getRegionOfDefinition(const OFX::RegionOfDefinitionArguments &args, OfxRectD &rod)
+bool MirrorPlugin::getRegionOfDefinition(const OFX::RegionOfDefinitionArguments &args, OfxRectD &rod)
 {
     if (!kSupportsRenderScale && (args.renderScale.x != 1. || args.renderScale.y != 1.)) {
         OFX::throwSuiteStatusException(kOfxStatFailed);
@@ -306,10 +306,10 @@ bool MagickMirrorPlugin::getRegionOfDefinition(const OFX::RegionOfDefinitionArgu
     return true;
 }
 
-mDeclarePluginFactory(MagickMirrorPluginFactory, {}, {});
+mDeclarePluginFactory(MirrorPluginFactory, {}, {});
 
 /** @brief The basic describe function, passed a plugin descriptor */
-void MagickMirrorPluginFactory::describe(OFX::ImageEffectDescriptor &desc)
+void MirrorPluginFactory::describe(OFX::ImageEffectDescriptor &desc)
 {
     // basic labels
     desc.setLabel(kPluginName);
@@ -331,7 +331,7 @@ void MagickMirrorPluginFactory::describe(OFX::ImageEffectDescriptor &desc)
 }
 
 /** @brief The describe in context function, passed a plugin descriptor and a context */
-void MagickMirrorPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, ContextEnum /*context*/)
+void MirrorPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, ContextEnum /*context*/)
 {
     // create the mandated source clip
     ClipDescriptor *srcClip = desc.defineClip(kOfxImageEffectSimpleSourceClipName);
@@ -372,14 +372,14 @@ void MagickMirrorPluginFactory::describeInContext(OFX::ImageEffectDescriptor &de
 }
 
 /** @brief The create instance function, the plugin must return an object derived from the \ref OFX::ImageEffect class */
-ImageEffect* MagickMirrorPluginFactory::createInstance(OfxImageEffectHandle handle, ContextEnum /*context*/)
+ImageEffect* MirrorPluginFactory::createInstance(OfxImageEffectHandle handle, ContextEnum /*context*/)
 {
-    return new MagickMirrorPlugin(handle);
+    return new MirrorPlugin(handle);
 }
 
 
-void getMagickMirrorPluginID(OFX::PluginFactoryArray &ids)
+void getMirrorPluginID(OFX::PluginFactoryArray &ids)
 {
-    static MagickMirrorPluginFactory p(kPluginIdentifier, kPluginVersionMajor, kPluginVersionMinor);
+    static MirrorPluginFactory p(kPluginIdentifier, kPluginVersionMajor, kPluginVersionMinor);
     ids.push_back(&p);
 }
