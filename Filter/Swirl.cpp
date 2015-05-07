@@ -12,9 +12,9 @@ modification, are permitted provided that the following conditions are met:
 * Redistributions of source code must retain the above copyright notice, this
   list of conditions and the following disclaimer.
 
-*  Neither the name of the {organization} nor the names of its
-   contributors may be used to endorse or promote products derived from
-   this software without specific prior written permission.
+* Neither the name of FxArena DA nor the names of its
+  contributors may be used to endorse or promote products derived from
+  this software without specific prior written permission.
 
 * Redistributions in binary form must reproduce the above copyright notice,
   this list of conditions and the following disclaimer in the documentation
@@ -33,7 +33,7 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 */
 
-#include "MagickSwirl.h"
+#include "Swirl.h"
 
 #include "ofxsMacros.h"
 #include <Magick++.h>
@@ -42,7 +42,7 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #define kPluginGrouping "Filter"
 #define kPluginDescription  "Swirl image"
 
-#define kPluginIdentifier "net.fxarena.openfx.MagickSwirl"
+#define kPluginIdentifier "net.fxarena.openfx.Swirl"
 #define kPluginVersionMajor 1
 #define kPluginVersionMinor 0
 
@@ -58,11 +58,11 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 using namespace OFX;
 
-class MagickSwirlPlugin : public OFX::ImageEffect
+class SwirlPlugin : public OFX::ImageEffect
 {
 public:
-    MagickSwirlPlugin(OfxImageEffectHandle handle);
-    virtual ~MagickSwirlPlugin();
+    SwirlPlugin(OfxImageEffectHandle handle);
+    virtual ~SwirlPlugin();
     virtual void render(const OFX::RenderArguments &args) OVERRIDE FINAL;
     virtual bool getRegionOfDefinition(const OFX::RegionOfDefinitionArguments &args, OfxRectD &rod) OVERRIDE FINAL;
 private:
@@ -71,7 +71,7 @@ private:
     OFX::DoubleParam *swirlDegree_;
 };
 
-MagickSwirlPlugin::MagickSwirlPlugin(OfxImageEffectHandle handle)
+SwirlPlugin::SwirlPlugin(OfxImageEffectHandle handle)
 : OFX::ImageEffect(handle)
 , dstClip_(0)
 , srcClip_(0)
@@ -86,11 +86,11 @@ MagickSwirlPlugin::MagickSwirlPlugin(OfxImageEffectHandle handle)
     assert(swirlDegree_);
 }
 
-MagickSwirlPlugin::~MagickSwirlPlugin()
+SwirlPlugin::~SwirlPlugin()
 {
 }
 
-void MagickSwirlPlugin::render(const OFX::RenderArguments &args)
+void SwirlPlugin::render(const OFX::RenderArguments &args)
 {
     if (!kSupportsRenderScale && (args.renderScale.x != 1. || args.renderScale.y != 1.)) {
         OFX::throwSuiteStatusException(kOfxStatFailed);
@@ -198,7 +198,7 @@ void MagickSwirlPlugin::render(const OFX::RenderArguments &args)
     image.write(0,0,dstRod.x2-dstRod.x1,dstRod.y2-dstRod.y1,channels,Magick::FloatPixel,(float*)dstImg->getPixelData());
 }
 
-bool MagickSwirlPlugin::getRegionOfDefinition(const OFX::RegionOfDefinitionArguments &args, OfxRectD &rod)
+bool SwirlPlugin::getRegionOfDefinition(const OFX::RegionOfDefinitionArguments &args, OfxRectD &rod)
 {
     if (!kSupportsRenderScale && (args.renderScale.x != 1. || args.renderScale.y != 1.)) {
         OFX::throwSuiteStatusException(kOfxStatFailed);
@@ -213,10 +213,10 @@ bool MagickSwirlPlugin::getRegionOfDefinition(const OFX::RegionOfDefinitionArgum
     return true;
 }
 
-mDeclarePluginFactory(MagickSwirlPluginFactory, {}, {});
+mDeclarePluginFactory(SwirlPluginFactory, {}, {});
 
 /** @brief The basic describe function, passed a plugin descriptor */
-void MagickSwirlPluginFactory::describe(OFX::ImageEffectDescriptor &desc)
+void SwirlPluginFactory::describe(OFX::ImageEffectDescriptor &desc)
 {
     // basic labels
     desc.setLabel(kPluginName);
@@ -238,7 +238,7 @@ void MagickSwirlPluginFactory::describe(OFX::ImageEffectDescriptor &desc)
 }
 
 /** @brief The describe in context function, passed a plugin descriptor and a context */
-void MagickSwirlPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, ContextEnum /*context*/)
+void SwirlPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, ContextEnum /*context*/)
 {
     // create the mandated source clip
     ClipDescriptor *srcClip = desc.defineClip(kOfxImageEffectSimpleSourceClipName);
@@ -270,14 +270,14 @@ void MagickSwirlPluginFactory::describeInContext(OFX::ImageEffectDescriptor &des
 }
 
 /** @brief The create instance function, the plugin must return an object derived from the \ref OFX::ImageEffect class */
-ImageEffect* MagickSwirlPluginFactory::createInstance(OfxImageEffectHandle handle, ContextEnum /*context*/)
+ImageEffect* SwirlPluginFactory::createInstance(OfxImageEffectHandle handle, ContextEnum /*context*/)
 {
-    return new MagickSwirlPlugin(handle);
+    return new SwirlPlugin(handle);
 }
 
 
-void getMagickSwirlPluginID(OFX::PluginFactoryArray &ids)
+void getSwirlPluginID(OFX::PluginFactoryArray &ids)
 {
-    static MagickSwirlPluginFactory p(kPluginIdentifier, kPluginVersionMajor, kPluginVersionMinor);
+    static SwirlPluginFactory p(kPluginIdentifier, kPluginVersionMajor, kPluginVersionMinor);
     ids.push_back(&p);
 }

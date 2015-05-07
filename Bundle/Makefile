@@ -14,22 +14,23 @@ PLUGINNAME = Arena
 RESOURCES = \
 ../Image/net.fxarena.openfx.Text.png \
 ../Image/net.fxarena.openfx.Text.svg \
-../Magick/net.fxarena.openfx.MagickSwirl.png \
-../Magick/net.fxarena.openfx.MagickSwirl.svg \
+../Filter/net.fxarena.openfx.Swirl.png \
+../Filter/net.fxarena.openfx.Swirl.svg \
 ../Magick/net.fxarena.openfx.MagickMirror.png \
 ../Magick/net.fxarena.openfx.MagickMirror.svg \
-../Magick/net.fxarena.openfx.MagickImplode.png \
-../Magick/net.fxarena.openfx.MagickImplode.svg \
+../Filter/net.fxarena.openfx.Implode.png \
+../Filter/net.fxarena.openfx.Implode.svg \
 ../Magick/net.fxarena.openfx.MagickTile.png \
 ../Magick/net.fxarena.openfx.MagickTile.svg \
 
 VPATH += \
 ../Magick \
 ../Image \
+../Filter \
 
 include ../Makefile.master
 
-CXXFLAGS += -I../Magick -I../Image
+CXXFLAGS += -I../Magick -I../Image -I../Filter
 
 CXXFLAGS  += $(MAGICK_CXXFLAGS)
 LINKFLAGS += $(MAGICK_LINKFLAGS)
