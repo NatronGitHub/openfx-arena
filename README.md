@@ -3,15 +3,26 @@ OpenFX Arena [![Build Status](https://travis-ci.org/olear/openfx-arena.svg)](htt
 
 A set of visual effect plugins for OpenFX compatible applications.
 
+ * Image
+  * Text
+ * Filter
+  * Implode
+  * Swirl
+ * Transform
+  * Mirror
+  * Tile
+
 Compatibility
 =============
 
 Made for Natron and Nuke, but will probably work on others.
 
-See the issues page for known compatibility issues.
-
 Download
 ========
+
+Download the latest binary bundle from our release page, or download the source:
+
+Stable:
 
 ```
 git clone https://github.com/olear/openfx-arena
@@ -19,12 +30,19 @@ cd openfx-arena
 git submodule update -i
 ```
 
-Or download from the releases page.
+Devel:
+
+```
+git clone https://github.com/olear/openfx-arena
+cd openfx-arena
+git checkout trunk
+git submodule update -i
+```
 
 Build
 =====
 
-Requires MagickCore and Magick++ (Q16-HDRI with fontconfig and freetype support, version 6.9.1-2 minimum) installed prior to build. Also see 'deploy.sh' for information.
+Requires MagickCore and Magick++ (Q16-HDRI with fontconfig, freetype, libpng and zlib support, version 6.9.1-2 minimum, or patch lower versions with 'composite-private.h' from the '3rdparty' folder) installed prior to build. Also see 'deploy.sh' for more information.
 
 **RHEL/CentOS/Fedora** (and compatible)
 ```
@@ -46,17 +64,13 @@ pkg install ImageMagick
 make CONFIG=release
 ```
 
-If you only want the Text plugin, 'cd Text' before build.
-
 **Make on Windows**
 
-Download and install MinGW and MSYS, see 'deploy.sh' for recommended build options.
+Download and install MinGW64, MSYS, pkgconfig. Then build zlib, libpng, expat, freetype, fontconfig and ImageMagick. see 'deploy.sh' for recommended build options.
 
 ```
 make STATIC=1 MINGW=1 BIT=64 CONFIG=release
 ```
-
-If you only want the Text plugin, 'cd Text' before build.
 
 **Install on Linux/FreeBSD**
 ```
@@ -67,6 +81,15 @@ cp -a Plugin/*-*-*/Arena.ofx.bundle /usr/OFX/Plugins/
 ```
 cp -a Plugin/*-*-*/Arena.ofx.bundle "/c/Program Files/Common Files/OFX/Plugins/"
 ```
+
+Contribute
+==========
+
+We always need more plugins, if you know ImageMagick (MagickCore/Magick++) please fork and push! Try to avoid plugins that already exists in Natron (openfx-io/openfx-misc) and/or Nuke.
+
+ * https://github.com/olear/openfx-arena/issues/33 (examples of plugins that could be added)
+
+The 'Swirl' plugin should be the easiest starting point.
 
 License
 =======
@@ -81,7 +104,7 @@ modification, are permitted provided that the following conditions are met:
 * Redistributions of source code must retain the above copyright notice, this
   list of conditions and the following disclaimer.
 
-*  Neither the name of the {organization} nor the names of its
+*  Neither the name of FxArena DA nor the names of its
    contributors may be used to endorse or promote products derived from
    this software without specific prior written permission.
 
