@@ -63,7 +63,7 @@
 #define kPluginVersionMinor 0
 
 #define kSupportsTiles 0
-#define kSupportsMultiResolution 0
+#define kSupportsMultiResolution 1
 #define kSupportsRenderScale 1
 #define kRenderThreadSafety eRenderInstanceSafe
 
@@ -206,9 +206,22 @@ void MagickTextPlugin::render(const OFX::RenderArguments &args)
         OFX::throwSuiteStatusException(kOfxStatErrFormat);
         return;
     }
+    std::string channels;
+    switch (dstComponents) {
+    case ePixelComponentRGBA:
+        channels = "RGBA";
+        break;
+    case ePixelComponentRGB:
+        channels = "RGB";
+        break;
+    case ePixelComponentAlpha:
+        channels = "A";
+        break;
+    }
 
     // are we in the image bounds
     OfxRectI dstBounds = dstImg->getBounds();
+    OfxRectI dstRod = dstImg->getRegionOfDefinition();
     if(args.renderWindow.x1 < dstBounds.x1 || args.renderWindow.x1 >= dstBounds.x2 || args.renderWindow.y1 < dstBounds.y1 || args.renderWindow.y1 >= dstBounds.y2 ||
        args.renderWindow.x2 <= dstBounds.x1 || args.renderWindow.x2 > dstBounds.x2 || args.renderWindow.y2 <= dstBounds.y1 || args.renderWindow.y2 > dstBounds.y2) {
         OFX::throwSuiteStatusException(kOfxStatErrValue);
@@ -257,12 +270,8 @@ void MagickTextPlugin::render(const OFX::RenderArguments &args)
         free(fonts[i]);
 
     // setup
-    int magickWidth = args.renderWindow.x2 - args.renderWindow.x1;
-    int magickHeight = args.renderWindow.y2 - args.renderWindow.y1;
-    int magickWidthStep = magickWidth*4;
-    int magickSize = magickWidth*magickHeight*4;
-    float* magickBlock;
-    magickBlock = new float[magickSize];
+    int magickWidth = dstRod.x2-dstRod.x1;
+    int magickHeight = dstRod.y2-dstRod.y1;
 
     // Generate empty image
     Magick::Image magickImage(Magick::Geometry(magickWidth,magickHeight),Magick::Color("rgba(0,0,0,0)"));
@@ -292,13 +301,10 @@ void MagickTextPlugin::render(const OFX::RenderArguments &args)
     magickImage.flip();
 
     // Position x y
-    OfxRectI rod,bounds;
-    rod = dstImg->getRegionOfDefinition();
-    bounds = dstImg->getBounds();
-    int ytext = y*args.renderScale.y;
-    int xtext = x*args.renderScale.x;
-    int tmp_y = rod.y2 - bounds.y2;
-    int tmp_height = bounds.y2 - bounds.y1;
+    double ytext = y*args.renderScale.y;
+    double xtext = x*args.renderScale.x;
+    int tmp_y = dstRod.y2 - dstBounds.y2;
+    int tmp_height = dstBounds.y2 - dstBounds.y1;
     ytext = tmp_y + ((tmp_y+tmp_height-1) - ytext);
 
     // Setup draw
@@ -333,21 +339,20 @@ void MagickTextPlugin::render(const OFX::RenderArguments &args)
     // Flip image
     magickImage.flip();
 
-    // Return
-    magickImage.write(0,0,magickWidth,magickHeight,"RGBA",Magick::FloatPixel,magickBlock);
-    for(int y = args.renderWindow.y1; y < (args.renderWindow.y1 + magickHeight); y++) {
-        OfxRGBAColourF *dstPix = (OfxRGBAColourF *)dstImg->getPixelAddress(args.renderWindow.x1, y);
-        float *srcPix = (float*)(magickBlock + y * magickWidthStep + args.renderWindow.x1);
-        for(int x = args.renderWindow.x1; x < (args.renderWindow.x1 + magickWidth); x++) {
-            dstPix->r = srcPix[0];
-            dstPix->g = srcPix[1];
-            dstPix->b = srcPix[2];
-            dstPix->a = srcPix[3];
-            dstPix++;
-            srcPix+=4;
-        }
+    // check bit depth
+    switch (dstBitDepth) {
+    case OFX::eBitDepthUByte:
+        if (magickImage.depth()>8)
+            magickImage.depth(8);
+        break;
+    case OFX::eBitDepthUShort:
+        if (magickImage.depth()>16)
+            magickImage.depth(16);
+        break;
     }
-    free(magickBlock);
+
+    // return image
+    magickImage.write(0,0,dstRod.x2-dstRod.x1,dstRod.y2-dstRod.y1,channels,Magick::FloatPixel,(float*)dstImg->getPixelData());
 }
 
 void MagickTextPlugin::changedParam(const OFX::InstanceChangedArgs &args, const std::string &/*paramName*/)

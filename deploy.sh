@@ -26,8 +26,7 @@ FTYPE=2.4.11
 FTYPE_URL=http://sourceforge.net/projects/freetype/files/freetype2/${FTYPE}/freetype-${FTYPE}.tar.gz/download
 
 ARENA=0.4
-TEXT=1.0
-PKGNAME=Text # only enable MagickText at the moment, the rest are a bit buggy yet
+PKGNAME=Arena
 
 if [ -z "$PREFIX" ]; then
   PREFIX=$CWD/tmp
@@ -63,7 +62,7 @@ if [ "$OS" == "Msys" ]; then
   PKGOS=Windows
 fi
 
-PKG=$PKGNAME.ofx.bundle-$TEXT-$PKGOS-x86-release-$BIT
+PKG=$PKGNAME.ofx.bundle-$ARENA-$PKGOS-x86-release-$BIT
 
 export PKG_CONFIG_PATH=$PREFIX/lib/pkgconfig
 export LD_LIBRARY_PATH=$PREFIX/lib:$LD_LIBRARY_PATH

@@ -34,27 +34,27 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 */
 
 #include "MagickSwirl.h"
-#include <iostream>
+
 #include "ofxsMacros.h"
 #include <Magick++.h>
 
 #define kPluginName "Swirl"
 #define kPluginGrouping "Filter"
-#define kPluginDescription  "Swirl image."
+#define kPluginDescription  "Swirl image"
 
 #define kPluginIdentifier "net.fxarena.openfx.MagickSwirl"
 #define kPluginVersionMajor 1
 #define kPluginVersionMinor 0
 
-#define kSupportsTiles 0
-#define kSupportsMultiResolution 0
-#define kSupportsRenderScale 1
-#define kRenderThreadSafety eRenderInstanceSafe
-
 #define kParamSwirl "swirl"
 #define kParamSwirlLabel "Swirl"
 #define kParamSwirlHint "Swirl image by degree"
 #define kParamSwirlDefault 90
+
+#define kSupportsTiles 0
+#define kSupportsMultiResolution 1
+#define kSupportsRenderScale 1
+#define kRenderThreadSafety eRenderInstanceSafe
 
 using namespace OFX;
 
@@ -64,13 +64,10 @@ public:
     MagickSwirlPlugin(OfxImageEffectHandle handle);
     virtual ~MagickSwirlPlugin();
     virtual void render(const OFX::RenderArguments &args) OVERRIDE FINAL;
-
+    virtual bool getRegionOfDefinition(const OFX::RegionOfDefinitionArguments &args, OfxRectD &rod) OVERRIDE FINAL;
 private:
-    // do not need to delete these, the ImageEffect is managing them for us
     OFX::Clip *dstClip_;
     OFX::Clip *srcClip_;
-
-    // Swirl degree param
     OFX::DoubleParam *swirlDegree_;
 };
 
@@ -80,7 +77,6 @@ MagickSwirlPlugin::MagickSwirlPlugin(OfxImageEffectHandle handle)
 , srcClip_(0)
 {
     Magick::InitializeMagick("");
-
     dstClip_ = fetchClip(kOfxImageEffectOutputClipName);
     assert(dstClip_ && (dstClip_->getPixelComponents() == OFX::ePixelComponentRGBA || dstClip_->getPixelComponents() == OFX::ePixelComponentRGB));
     srcClip_ = fetchClip(kOfxImageEffectSimpleSourceClipName);
@@ -94,23 +90,25 @@ MagickSwirlPlugin::~MagickSwirlPlugin()
 {
 }
 
-/* Override the render */
-void
-MagickSwirlPlugin::render(const OFX::RenderArguments &args)
+void MagickSwirlPlugin::render(const OFX::RenderArguments &args)
 {
     if (!kSupportsRenderScale && (args.renderScale.x != 1. || args.renderScale.y != 1.)) {
         OFX::throwSuiteStatusException(kOfxStatFailed);
         return;
     }
 
-    // Get src clip
     if (!srcClip_) {
         OFX::throwSuiteStatusException(kOfxStatFailed);
         return;
     }
     assert(srcClip_);
     std::auto_ptr<const OFX::Image> srcImg(srcClip_->fetchImage(args.time));
+    OfxRectI srcRod,srcBounds;
+    OFX::BitDepthEnum bitDepth = eBitDepthNone;
     if (srcImg.get()) {
+        srcRod = srcImg->getRegionOfDefinition();
+        srcBounds = srcImg->getBounds();
+        bitDepth = srcImg->getPixelDepth();
         if (srcImg->getRenderScale().x != args.renderScale.x ||
             srcImg->getRenderScale().y != args.renderScale.y ||
             srcImg->getField() != args.fieldToRender) {
@@ -120,7 +118,6 @@ MagickSwirlPlugin::render(const OFX::RenderArguments &args)
         }
     }
 
-    // Get dst clip
     if (!dstClip_) {
         OFX::throwSuiteStatusException(kOfxStatFailed);
         return;
@@ -138,28 +135,36 @@ MagickSwirlPlugin::render(const OFX::RenderArguments &args)
         OFX::throwSuiteStatusException(kOfxStatFailed);
         return;
     }
+    OfxRectI dstRod = dstImg->getRegionOfDefinition();
 
-    // dst bit depth
+    // get bit depth
     OFX::BitDepthEnum dstBitDepth = dstImg->getPixelDepth();
     if (dstBitDepth != OFX::eBitDepthFloat || (srcImg.get() && dstBitDepth != srcImg->getPixelDepth())) {
         OFX::throwSuiteStatusException(kOfxStatErrFormat);
         return;
     }
 
-    // dst pixel components
+    // get pixel component
     OFX::PixelComponentEnum dstComponents  = dstImg->getPixelComponents();
     if ((dstComponents != OFX::ePixelComponentRGBA && dstComponents != OFX::ePixelComponentRGB && dstComponents != OFX::ePixelComponentAlpha) ||
         (srcImg.get() && (dstComponents != srcImg->getPixelComponents()))) {
         OFX::throwSuiteStatusException(kOfxStatErrFormat);
         return;
     }
-    int channels = 0;
-    if (dstComponents != OFX::ePixelComponentRGB)
-        channels = 4;
-    else
-        channels = 3;
+    std::string channels;
+    switch (dstComponents) {
+    case ePixelComponentRGBA:
+        channels = "RGBA";
+        break;
+    case ePixelComponentRGB:
+        channels = "RGB";
+        break;
+    case ePixelComponentAlpha:
+        channels = "A";
+        break;
+    }
 
-    // are we in the image bounds?
+    // are we in the image bounds
     OfxRectI dstBounds = dstImg->getBounds();
     if(args.renderWindow.x1 < dstBounds.x1 || args.renderWindow.x1 >= dstBounds.x2 || args.renderWindow.y1 < dstBounds.y1 || args.renderWindow.y1 >= dstBounds.y2 ||
        args.renderWindow.x2 <= dstBounds.x1 || args.renderWindow.x2 > dstBounds.x2 || args.renderWindow.y2 <= dstBounds.y1 || args.renderWindow.y2 > dstBounds.y2) {
@@ -167,61 +172,45 @@ MagickSwirlPlugin::render(const OFX::RenderArguments &args)
         return;
     }
 
-    // Get params
+    // get param
     double swirl;
     swirlDegree_->getValueAtTime(args.time, swirl);
 
-    // Setup image
-    int magickWidth = args.renderWindow.x2 - args.renderWindow.x1;
-    int magickHeight = args.renderWindow.y2 - args.renderWindow.y1;
-    int magickWidthStep = magickWidth*channels;
-    int magickSize = magickWidth*magickHeight*channels;
-    float* magickBlock;
-    magickBlock = new float[magickSize];
-    std::string colorType;
-    if (channels==4)
-        colorType="RGBA";
-    else
-        colorType = "RGB";
+    // read image
+    Magick::Image image(srcRod.x2-srcRod.x1,srcRod.y2-srcRod.y1,channels,Magick::FloatPixel,(float*)srcImg->getPixelData());
 
-    // Read image
-    Magick::Image magickImage(magickWidth,magickHeight,colorType,Magick::FloatPixel,(float*)srcImg->getPixelData());
+    // proc image
+    image.swirl(swirl);
 
-    // Swirl image
-    magickImage.swirl(swirl);
-
-    // Write to buffer
-    magickImage.write(0,0,magickWidth,magickHeight,colorType,Magick::FloatPixel,magickBlock);
-
-    // Return image
-    if (channels==4) { // RGBA
-        for(int y = args.renderWindow.y1; y < (args.renderWindow.y1 + magickHeight); y++) {
-            OfxRGBAColourF *dstPix = (OfxRGBAColourF *)dstImg->getPixelAddress(args.renderWindow.x1, y);
-            float *srcPix = (float*)(magickBlock + y * magickWidthStep + args.renderWindow.x1);
-            for(int x = args.renderWindow.x1; x < (args.renderWindow.x1 + magickWidth); x++) {
-                dstPix->r = srcPix[0];
-                dstPix->g = srcPix[1];
-                dstPix->b = srcPix[2];
-                dstPix->a = srcPix[3];
-                dstPix++;
-                srcPix+=4;
-            }
-        }
+    // check bit depth
+    switch (bitDepth) {
+    case OFX::eBitDepthUByte:
+        if (image.depth()>8)
+            image.depth(8);
+        break;
+    case OFX::eBitDepthUShort:
+        if (image.depth()>16)
+            image.depth(16);
+        break;
     }
-    else { // RGB
-        for(int y = args.renderWindow.y1; y < (args.renderWindow.y1 + magickHeight); y++) {
-            OfxRGBColourF *dstPix = (OfxRGBColourF *)dstImg->getPixelAddress(args.renderWindow.x1, y);
-            float *srcPix = (float*)(magickBlock + y * magickWidthStep + args.renderWindow.x1);
-            for(int x = args.renderWindow.x1; x < (args.renderWindow.x1 + magickWidth); x++) {
-                dstPix->r = srcPix[0];
-                dstPix->g = srcPix[1];
-                dstPix->b = srcPix[2];
-                dstPix++;
-                srcPix+=3;
-            }
-        }
+
+    // return image
+    image.write(0,0,dstRod.x2-dstRod.x1,dstRod.y2-dstRod.y1,channels,Magick::FloatPixel,(float*)dstImg->getPixelData());
+}
+
+bool MagickSwirlPlugin::getRegionOfDefinition(const OFX::RegionOfDefinitionArguments &args, OfxRectD &rod)
+{
+    if (!kSupportsRenderScale && (args.renderScale.x != 1. || args.renderScale.y != 1.)) {
+        OFX::throwSuiteStatusException(kOfxStatFailed);
+        return false;
     }
-    free(magickBlock);
+    if (srcClip_ && srcClip_->isConnected()) {
+        rod = srcClip_->getRegionOfDefinition(args.time);
+    } else {
+        rod.x1 = rod.y1 = kOfxFlagInfiniteMin;
+        rod.x2 = rod.y2 = kOfxFlagInfiniteMax;
+    }
+    return true;
 }
 
 mDeclarePluginFactory(MagickSwirlPluginFactory, {}, {});
@@ -237,9 +226,10 @@ void MagickSwirlPluginFactory::describe(OFX::ImageEffectDescriptor &desc)
     // add the supported contexts
     desc.addSupportedContext(eContextGeneral);
     desc.addSupportedContext(eContextFilter);
-    desc.addSupportedContext(eContextGenerator);
 
     // add supported pixel depths
+    //desc.addSupportedBitDepth(eBitDepthUByte); // not tested yet
+    //desc.addSupportedBitDepth(eBitDepthUShort); // not tested yet
     desc.addSupportedBitDepth(eBitDepthFloat);
 
     desc.setSupportsTiles(kSupportsTiles);
@@ -249,11 +239,12 @@ void MagickSwirlPluginFactory::describe(OFX::ImageEffectDescriptor &desc)
 
 /** @brief The describe in context function, passed a plugin descriptor and a context */
 void MagickSwirlPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, ContextEnum /*context*/)
-{   
+{
     // create the mandated source clip
     ClipDescriptor *srcClip = desc.defineClip(kOfxImageEffectSimpleSourceClipName);
     srcClip->addSupportedComponent(ePixelComponentRGBA);
     srcClip->addSupportedComponent(ePixelComponentRGB);
+    //srcClip->addSupportedComponent(ePixelComponentAlpha); // should work, not tested
     srcClip->setTemporalClipAccess(false);
     srcClip->setSupportsTiles(kSupportsTiles);
     srcClip->setIsMask(false);
@@ -262,10 +253,11 @@ void MagickSwirlPluginFactory::describeInContext(OFX::ImageEffectDescriptor &des
     ClipDescriptor *dstClip = desc.defineClip(kOfxImageEffectOutputClipName);
     dstClip->addSupportedComponent(ePixelComponentRGBA);
     dstClip->addSupportedComponent(ePixelComponentRGB);
+    //dstClip->addSupportedComponent(ePixelComponentAlpha); // should work, not tested
     dstClip->setSupportsTiles(kSupportsTiles);
 
-    // make some pages
-    PageParamDescriptor *page = desc.definePageParam("Swirl");
+    // make some pages and to things in
+    PageParamDescriptor *page = desc.definePageParam(kPluginName);
     {
         DoubleParamDescriptor *param = desc.defineDoubleParam(kParamSwirl);
         param->setLabel(kParamSwirlLabel);
@@ -282,6 +274,7 @@ ImageEffect* MagickSwirlPluginFactory::createInstance(OfxImageEffectHandle handl
 {
     return new MagickSwirlPlugin(handle);
 }
+
 
 void getMagickSwirlPluginID(OFX::PluginFactoryArray &ids)
 {
