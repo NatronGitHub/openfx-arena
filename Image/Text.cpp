@@ -1,5 +1,5 @@
 /*
- MagickText
+ Text
  Write text on image using Magick.
 
  Written by Ole-André Rodlie <olear@fxarena.net>
@@ -43,7 +43,7 @@
 
 */
 
-#include "MagickText.h"
+#include "Text.h"
 #include "ofxsPositionInteract.h"
 #include "ofxsMacros.h"
 #include <Magick++.h>
@@ -58,7 +58,7 @@
 #define kPluginGrouping "Image"
 #define kPluginDescription  "Write text"
 
-#define kPluginIdentifier "net.fxarena.openfx.MagickText"
+#define kPluginIdentifier "net.fxarena.openfx.Text"
 #define kPluginVersionMajor 1
 #define kPluginVersionMinor 0
 
@@ -111,11 +111,11 @@
 
 using namespace OFX;
 
-class MagickTextPlugin : public OFX::ImageEffect
+class TextPlugin : public OFX::ImageEffect
 {
 public:
-    MagickTextPlugin(OfxImageEffectHandle handle);
-    virtual ~MagickTextPlugin();
+    TextPlugin(OfxImageEffectHandle handle);
+    virtual ~TextPlugin();
 
     /* Override the render */
     virtual void render(const OFX::RenderArguments &args) OVERRIDE FINAL;
@@ -125,9 +125,6 @@ public:
 
     // override the rod call
     virtual bool getRegionOfDefinition(const OFX::RegionOfDefinitionArguments &args, OfxRectD &rod) OVERRIDE FINAL;
-
-private:
-
 
 private:
     // do not need to delete these, the ImageEffect is managing them for us
@@ -143,7 +140,7 @@ private:
     OFX::DoubleParam *strokeWidth_;
 };
 
-MagickTextPlugin::MagickTextPlugin(OfxImageEffectHandle handle)
+TextPlugin::TextPlugin(OfxImageEffectHandle handle)
 : OFX::ImageEffect(handle)
 , dstClip_(0)
 {
@@ -165,12 +162,12 @@ MagickTextPlugin::MagickTextPlugin(OfxImageEffectHandle handle)
     assert(position_ && text_ && fontSize_ && fontName_ && textColor_ && fontDecor_ && strokeColor_ && strokeEnabled_ && strokeWidth_);
 }
 
-MagickTextPlugin::~MagickTextPlugin()
+TextPlugin::~TextPlugin()
 {
 }
 
 /* Override the render */
-void MagickTextPlugin::render(const OFX::RenderArguments &args)
+void TextPlugin::render(const OFX::RenderArguments &args)
 {
     if (!kSupportsRenderScale && (args.renderScale.x != 1. || args.renderScale.y != 1.)) {
         OFX::throwSuiteStatusException(kOfxStatFailed);
@@ -226,7 +223,6 @@ void MagickTextPlugin::render(const OFX::RenderArguments &args)
        args.renderWindow.x2 <= dstBounds.x1 || args.renderWindow.x2 > dstBounds.x2 || args.renderWindow.y2 <= dstBounds.y1 || args.renderWindow.y2 > dstBounds.y2) {
         OFX::throwSuiteStatusException(kOfxStatErrValue);
         return;
-        //throw std::runtime_error("render window outside of image bounds");
     }
 
     // Get params
@@ -355,7 +351,7 @@ void MagickTextPlugin::render(const OFX::RenderArguments &args)
     magickImage.write(0,0,dstRod.x2-dstRod.x1,dstRod.y2-dstRod.y1,channels,Magick::FloatPixel,(float*)dstImg->getPixelData());
 }
 
-void MagickTextPlugin::changedParam(const OFX::InstanceChangedArgs &args, const std::string &/*paramName*/)
+void TextPlugin::changedParam(const OFX::InstanceChangedArgs &args, const std::string &/*paramName*/)
 {
     if (!kSupportsRenderScale && (args.renderScale.x != 1. || args.renderScale.y != 1.)) {
         OFX::throwSuiteStatusException(kOfxStatFailed);
@@ -365,7 +361,7 @@ void MagickTextPlugin::changedParam(const OFX::InstanceChangedArgs &args, const 
     clearPersistentMessage();
 }
 
-bool MagickTextPlugin::getRegionOfDefinition(const OFX::RegionOfDefinitionArguments &args, OfxRectD &rod)
+bool TextPlugin::getRegionOfDefinition(const OFX::RegionOfDefinitionArguments &args, OfxRectD &rod)
 {
     if (!kSupportsRenderScale && (args.renderScale.x != 1. || args.renderScale.y != 1.)) {
         OFX::throwSuiteStatusException(kOfxStatFailed);
@@ -378,7 +374,7 @@ bool MagickTextPlugin::getRegionOfDefinition(const OFX::RegionOfDefinitionArgume
     return true;
 }
 
-mDeclarePluginFactory(MagickTextPluginFactory, {}, {});
+mDeclarePluginFactory(TextPluginFactory, {}, {});
 
 namespace {
 struct PositionInteractParam {
@@ -388,7 +384,7 @@ struct PositionInteractParam {
 }
 
 /** @brief The basic describe function, passed a plugin descriptor */
-void MagickTextPluginFactory::describe(OFX::ImageEffectDescriptor &desc)
+void TextPluginFactory::describe(OFX::ImageEffectDescriptor &desc)
 {
     // basic labels
     desc.setLabel(kPluginName);
@@ -401,8 +397,7 @@ void MagickTextPluginFactory::describe(OFX::ImageEffectDescriptor &desc)
 
     // add supported pixel depths
     /*desc.addSupportedBitDepth(eBitDepthUByte);
-    desc.addSupportedBitDepth(eBitDepthUShort);
-    desc.addSupportedBitDepth(eBitDepthHalf);*/
+    desc.addSupportedBitDepth(eBitDepthUShort);*/
     desc.addSupportedBitDepth(eBitDepthFloat);
 
     desc.setSupportsTiles(kSupportsTiles);
@@ -413,7 +408,7 @@ void MagickTextPluginFactory::describe(OFX::ImageEffectDescriptor &desc)
 }
 
 /** @brief The describe in context function, passed a plugin descriptor and a context */
-void MagickTextPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, ContextEnum /*context*/)
+void TextPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, ContextEnum /*context*/)
 {   
     // there has to be an input clip, even for generators
     ClipDescriptor* srcClip = desc.defineClip(kOfxImageEffectSimpleSourceClipName);
@@ -427,7 +422,7 @@ void MagickTextPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc
     dstClip->setSupportsTiles(kSupportsTiles);
 
     // make some pages and to things in
-    PageParamDescriptor *page = desc.definePageParam("Text");
+    PageParamDescriptor *page = desc.definePageParam(kPluginName);
 
     bool hostHasNativeOverlayForPosition;
     {
@@ -538,13 +533,13 @@ void MagickTextPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc
 }
 
 /** @brief The create instance function, the plugin must return an object derived from the \ref OFX::ImageEffect class */
-ImageEffect* MagickTextPluginFactory::createInstance(OfxImageEffectHandle handle, ContextEnum /*context*/)
+ImageEffect* TextPluginFactory::createInstance(OfxImageEffectHandle handle, ContextEnum /*context*/)
 {
-    return new MagickTextPlugin(handle);
+    return new TextPlugin(handle);
 }
 
-void getMagickTextPluginID(OFX::PluginFactoryArray &ids)
+void getTextPluginID(OFX::PluginFactoryArray &ids)
 {
-    static MagickTextPluginFactory p(kPluginIdentifier, kPluginVersionMajor, kPluginVersionMinor);
+    static TextPluginFactory p(kPluginIdentifier, kPluginVersionMajor, kPluginVersionMinor);
     ids.push_back(&p);
 }

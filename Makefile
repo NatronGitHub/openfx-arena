@@ -1,7 +1,7 @@
 # build a combined plugin that reads all formats
-SUBDIRS = Plugin
+SUBDIRS = Bundle
 
-SUBDIRS_NOMULTI = Magick
+SUBDIRS_NOMULTI = Magick Image
 
 all: subdirs
 

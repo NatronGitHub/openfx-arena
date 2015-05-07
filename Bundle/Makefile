@@ -1,5 +1,5 @@
 PLUGINOBJECTS = \
-	MagickText.o \
+        Text.o \
 	MagickSwirl.o \
 	MagickMirror.o \
 	MagickImplode.o \
@@ -12,8 +12,8 @@ PLUGINOBJECTS = \
 PLUGINNAME = Arena
 
 RESOURCES = \
-../Magick/net.fxarena.openfx.MagickText.png \
-../Magick/net.fxarena.openfx.MagickText.svg \
+../Image/net.fxarena.openfx.Text.png \
+../Image/net.fxarena.openfx.Text.svg \
 ../Magick/net.fxarena.openfx.MagickSwirl.png \
 ../Magick/net.fxarena.openfx.MagickSwirl.svg \
 ../Magick/net.fxarena.openfx.MagickMirror.png \
@@ -25,10 +25,11 @@ RESOURCES = \
 
 VPATH += \
 ../Magick \
+../Image \
 
 include ../Makefile.master
 
-CXXFLAGS += -I../Magick
+CXXFLAGS += -I../Magick -I../Image
 
 CXXFLAGS  += $(MAGICK_CXXFLAGS)
 LINKFLAGS += $(MAGICK_LINKFLAGS)

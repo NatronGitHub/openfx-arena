@@ -204,7 +204,7 @@ fi
 if [ "$PKGNAME" != "Arena" ]; then
   PKGSRC=$PKGNAME
 else
-  PKGSRC=Plugin
+  PKGSRC=Bundle
 fi
 if [ "$BIT" == "64" ]; then
   PKGBIT=x86-$BIT
