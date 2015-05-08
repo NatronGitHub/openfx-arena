@@ -109,6 +109,10 @@
 #define kParamStrokeHint "Adjust stroke width for outline"
 #define kParamStrokeDefault 1
 
+#define kParamFontOverride "customFont"
+#define kParamFontOverrideLabel "Custom Font"
+#define kParamFontOverrideHint "Override the font list. You can use font names or direct path(s)."
+
 using namespace OFX;
 
 class TextPlugin : public OFX::ImageEffect
@@ -138,6 +142,7 @@ private:
     OFX::RGBAParam *strokeColor_;
     OFX::BooleanParam *strokeEnabled_;
     OFX::DoubleParam *strokeWidth_;
+    OFX::StringParam *fontOverride_;
 };
 
 TextPlugin::TextPlugin(OfxImageEffectHandle handle)
@@ -159,7 +164,8 @@ TextPlugin::TextPlugin(OfxImageEffectHandle handle)
     strokeColor_ = fetchRGBAParam(kParamStrokeColor);
     strokeEnabled_ = fetchBooleanParam(kParamStrokeCheck);
     strokeWidth_ = fetchDoubleParam(kParamStroke);
-    assert(position_ && text_ && fontSize_ && fontName_ && textColor_ && fontDecor_ && strokeColor_ && strokeEnabled_ && strokeWidth_);
+    fontOverride_ = fetchStringParam(kParamFontOverride);
+    assert(position_ && text_ && fontSize_ && fontName_ && textColor_ && fontDecor_ && strokeColor_ && strokeEnabled_ && strokeWidth_ && fontOverride_);
 }
 
 TextPlugin::~TextPlugin()
@@ -254,16 +260,21 @@ void TextPlugin::render(const OFX::RenderArguments &args)
     strokeEnabled_->getValueAtTime(args.time, use_stroke);
     double strokeWidth;
     strokeWidth_->getValueAtTime(args.time, strokeWidth);
+    std::string fontOverride;
+    fontOverride_->getValueAtTime(args.time, fontOverride);
 
     // Get font
     std::string fontFile;
-    char **fonts;
-    std::size_t fontList;
-    fonts=MagickCore::MagickQueryFonts("*",&fontList);
-    fontFile = fonts[fontName];
-
-    for (size_t i = 0; i < fontList; i++)
-        free(fonts[i]);
+    if (fontOverride.empty()) {
+        char **fonts;
+        std::size_t fontList;
+        fonts=MagickCore::MagickQueryFonts("*",&fontList);
+        fontFile = fonts[fontName];
+        for (size_t i = 0; i < fontList; i++)
+            free(fonts[i]);
+    }
+    else
+        fontFile=fontOverride;
 
     // setup
     int magickWidth = dstRod.x2-dstRod.x1;
@@ -483,6 +494,14 @@ void TextPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, Cont
         for (size_t i = 0; i < fontList; i++)
             free(fonts[i]);
 
+        param->setAnimates(true);
+        page->addChild(*param);
+    }
+    {
+        StringParamDescriptor* param = desc.defineStringParam(kParamFontOverride);
+        param->setLabel(kParamFontOverrideLabel);
+        param->setHint(kParamFontOverrideHint);
+        param->setStringType(eStringTypeSingleLine);
         param->setAnimates(true);
         page->addChild(*param);
     }
