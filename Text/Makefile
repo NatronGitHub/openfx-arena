@@ -1,5 +1,5 @@
 PLUGINOBJECTS = \
-	MagickText.o \
+        Text.o \
 	ofxsOGLTextRenderer.o \
 	ofxsOGLFontData.o \
 	ofxsRectangleInteract.o \
@@ -8,15 +8,15 @@ PLUGINOBJECTS = \
 PLUGINNAME = Text
 
 RESOURCES = \
-../Magick/net.fxarena.openfx.MagickText.png \
-../Magick/net.fxarena.openfx.MagickText.svg \
+../Image/net.fxarena.openfx.Text.png \
+../Image/net.fxarena.openfx.Text.svg \
 
 VPATH += \
-../Magick \
+../Image \
 
 include ../Makefile.master
 
-CXXFLAGS += -I../Magick
+CXXFLAGS += -I../Image
 
-CXXFLAGS  += $(FONTCONFIG_CXXFLAGS) $(MAGICK_CXXFLAGS)
-LINKFLAGS += $(FONTCONFIG_LINKFLAGS) $(MAGICK_LINKFLAGS)
+CXXFLAGS  += $(MAGICK_CXXFLAGS)
+LINKFLAGS += $(MAGICK_LINKFLAGS)

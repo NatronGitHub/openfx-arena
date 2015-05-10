@@ -1,5 +1,5 @@
 #include "ofxsImageEffect.h"
-#include "MagickText.h"
+#include "Text.h"
 
 namespace OFX
 {
@@ -7,7 +7,7 @@ namespace OFX
     {
         void getPluginIDs(OFX::PluginFactoryArray &ids)
         {
-            getMagickTextPluginID(ids);
+            getTextPluginID(ids);
         }
     }
 }

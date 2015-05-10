@@ -9,15 +9,6 @@ endif
 CXXFLAGS += -DOFX_EXTENSIONS_VEGAS -DOFX_EXTENSIONS_NUKE -DOFX_EXTENSIONS_TUTTLE -DOFX_EXTENSIONS_NATRON -I../SupportExt
 VPATH += ../SupportExt
 
-# Fontconfig
-FONTCONFIG_CXXFLAGS = `pkg-config --cflags freetype2 fontconfig`
-FONTCONFIG_LINKFLAGS = `pkg-config --libs freetype2 fontconfig`
-ifeq ($(STATIC),1)
-  ifeq ($(MINGW),1)
-    FONTCONFIG_LINKFLAGS += -lfontconfig -lfreetype -lexpat -lpng -lz
-  endif
-endif
-
 # Magick++
 ifeq ($(MAGICK),GraphicsMagick)
   # Only for testing, GM don't support fontconfig so MagickText will not work.

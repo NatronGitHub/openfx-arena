@@ -12,9 +12,9 @@ modification, are permitted provided that the following conditions are met:
 * Redistributions of source code must retain the above copyright notice, this
   list of conditions and the following disclaimer.
 
-*  Neither the name of the {organization} nor the names of its
-   contributors may be used to endorse or promote products derived from
-   this software without specific prior written permission.
+* Neither the name of FxArena DA nor the names of its
+  contributors may be used to endorse or promote products derived from
+  this software without specific prior written permission.
 
 * Redistributions in binary form must reproduce the above copyright notice,
   this list of conditions and the following disclaimer in the documentation
@@ -33,7 +33,7 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 */
 
-#include "MagickImplode.h"
+#include "Implode.h"
 
 #include "ofxsMacros.h"
 #include <Magick++.h>
@@ -42,7 +42,7 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #define kPluginGrouping "Filter"
 #define kPluginDescription "Implode image"
 
-#define kPluginIdentifier "net.fxarena.openfx.MagickImplode"
+#define kPluginIdentifier "net.fxarena.openfx.Implode"
 #define kPluginVersionMajor 1
 #define kPluginVersionMinor 0
 
@@ -58,11 +58,11 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 using namespace OFX;
 
-class MagickImplodePlugin : public OFX::ImageEffect
+class ImplodePlugin : public OFX::ImageEffect
 {
 public:
-    MagickImplodePlugin(OfxImageEffectHandle handle);
-    virtual ~MagickImplodePlugin();
+    ImplodePlugin(OfxImageEffectHandle handle);
+    virtual ~ImplodePlugin();
     virtual void render(const OFX::RenderArguments &args) OVERRIDE FINAL;
     virtual bool getRegionOfDefinition(const OFX::RegionOfDefinitionArguments &args, OfxRectD &rod) OVERRIDE FINAL;
 private:
@@ -71,7 +71,7 @@ private:
     OFX::DoubleParam *implode_;
 };
 
-MagickImplodePlugin::MagickImplodePlugin(OfxImageEffectHandle handle)
+ImplodePlugin::ImplodePlugin(OfxImageEffectHandle handle)
 : OFX::ImageEffect(handle)
 , dstClip_(0)
 , srcClip_(0)
@@ -86,11 +86,11 @@ MagickImplodePlugin::MagickImplodePlugin(OfxImageEffectHandle handle)
     assert(implode_);
 }
 
-MagickImplodePlugin::~MagickImplodePlugin()
+ImplodePlugin::~ImplodePlugin()
 {
 }
 
-void MagickImplodePlugin::render(const OFX::RenderArguments &args)
+void ImplodePlugin::render(const OFX::RenderArguments &args)
 {
     if (!kSupportsRenderScale && (args.renderScale.x != 1. || args.renderScale.y != 1.)) {
         OFX::throwSuiteStatusException(kOfxStatFailed);
@@ -198,7 +198,7 @@ void MagickImplodePlugin::render(const OFX::RenderArguments &args)
     image.write(0,0,dstRod.x2-dstRod.x1,dstRod.y2-dstRod.y1,channels,Magick::FloatPixel,(float*)dstImg->getPixelData());
 }
 
-bool MagickImplodePlugin::getRegionOfDefinition(const OFX::RegionOfDefinitionArguments &args, OfxRectD &rod)
+bool ImplodePlugin::getRegionOfDefinition(const OFX::RegionOfDefinitionArguments &args, OfxRectD &rod)
 {
     if (!kSupportsRenderScale && (args.renderScale.x != 1. || args.renderScale.y != 1.)) {
         OFX::throwSuiteStatusException(kOfxStatFailed);
@@ -213,10 +213,10 @@ bool MagickImplodePlugin::getRegionOfDefinition(const OFX::RegionOfDefinitionArg
     return true;
 }
 
-mDeclarePluginFactory(MagickImplodePluginFactory, {}, {});
+mDeclarePluginFactory(ImplodePluginFactory, {}, {});
 
 /** @brief The basic describe function, passed a plugin descriptor */
-void MagickImplodePluginFactory::describe(OFX::ImageEffectDescriptor &desc)
+void ImplodePluginFactory::describe(OFX::ImageEffectDescriptor &desc)
 {
     // basic labels
     desc.setLabel(kPluginName);
@@ -238,7 +238,7 @@ void MagickImplodePluginFactory::describe(OFX::ImageEffectDescriptor &desc)
 }
 
 /** @brief The describe in context function, passed a plugin descriptor and a context */
-void MagickImplodePluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, ContextEnum /*context*/)
+void ImplodePluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, ContextEnum /*context*/)
 {
     // create the mandated source clip
     ClipDescriptor *srcClip = desc.defineClip(kOfxImageEffectSimpleSourceClipName);
@@ -270,14 +270,14 @@ void MagickImplodePluginFactory::describeInContext(OFX::ImageEffectDescriptor &d
 }
 
 /** @brief The create instance function, the plugin must return an object derived from the \ref OFX::ImageEffect class */
-ImageEffect* MagickImplodePluginFactory::createInstance(OfxImageEffectHandle handle, ContextEnum /*context*/)
+ImageEffect* ImplodePluginFactory::createInstance(OfxImageEffectHandle handle, ContextEnum /*context*/)
 {
-    return new MagickImplodePlugin(handle);
+    return new ImplodePlugin(handle);
 }
 
 
-void getMagickImplodePluginID(OFX::PluginFactoryArray &ids)
+void getImplodePluginID(OFX::PluginFactoryArray &ids)
 {
-    static MagickImplodePluginFactory p(kPluginIdentifier, kPluginVersionMajor, kPluginVersionMinor);
+    static ImplodePluginFactory p(kPluginIdentifier, kPluginVersionMajor, kPluginVersionMinor);
     ids.push_back(&p);
 }

@@ -12,9 +12,9 @@ modification, are permitted provided that the following conditions are met:
 * Redistributions of source code must retain the above copyright notice, this
   list of conditions and the following disclaimer.
 
-*  Neither the name of the {organization} nor the names of its
-   contributors may be used to endorse or promote products derived from
-   this software without specific prior written permission.
+* Neither the name of FxArena DA nor the names of its
+  contributors may be used to endorse or promote products derived from
+  this software without specific prior written permission.
 
 * Redistributions in binary form must reproduce the above copyright notice,
   this list of conditions and the following disclaimer in the documentation
@@ -33,23 +33,33 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 */
 
-#include "MagickSwirl.h"
+#include "Mirror.h"
 
 #include "ofxsMacros.h"
 #include <Magick++.h>
 
-#define kPluginName "Swirl"
-#define kPluginGrouping "Filter"
-#define kPluginDescription  "Swirl image"
+#define kPluginName "Mirror"
+#define kPluginGrouping "Transform"
+#define kPluginDescription  "Mirror image."
 
-#define kPluginIdentifier "net.fxarena.openfx.MagickSwirl"
+#define kPluginIdentifier "net.fxarena.openfx.Mirror"
 #define kPluginVersionMajor 1
 #define kPluginVersionMinor 0
 
-#define kParamSwirl "swirl"
-#define kParamSwirlLabel "Swirl"
-#define kParamSwirlHint "Swirl image by degree"
-#define kParamSwirlDefault 90
+#define kParamMirror "mirror"
+#define kParamMirrorLabel "Region"
+#define kParamMirrorHint "Mirror image"
+
+#define REGION_NORTH "North"
+#define REGION_SOUTH "South"
+#define REGION_EAST "East"
+#define REGION_WEST "West"
+#define REGION_NORTHWEST "NorthWest"
+#define REGION_NORTHEAST "NorthEast"
+#define REGION_SOUTHWEST "SouthWest"
+#define REGION_SOUTHEAST "SouthEast"
+#define REGION_FLIP "Flip"
+#define REGION_FLOP "Flop"
 
 #define kSupportsTiles 0
 #define kSupportsMultiResolution 1
@@ -58,20 +68,20 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 using namespace OFX;
 
-class MagickSwirlPlugin : public OFX::ImageEffect
+class MirrorPlugin : public OFX::ImageEffect
 {
 public:
-    MagickSwirlPlugin(OfxImageEffectHandle handle);
-    virtual ~MagickSwirlPlugin();
+    MirrorPlugin(OfxImageEffectHandle handle);
+    virtual ~MirrorPlugin();
     virtual void render(const OFX::RenderArguments &args) OVERRIDE FINAL;
     virtual bool getRegionOfDefinition(const OFX::RegionOfDefinitionArguments &args, OfxRectD &rod) OVERRIDE FINAL;
 private:
     OFX::Clip *dstClip_;
     OFX::Clip *srcClip_;
-    OFX::DoubleParam *swirlDegree_;
+    OFX::ChoiceParam *mirror_;
 };
 
-MagickSwirlPlugin::MagickSwirlPlugin(OfxImageEffectHandle handle)
+MirrorPlugin::MirrorPlugin(OfxImageEffectHandle handle)
 : OFX::ImageEffect(handle)
 , dstClip_(0)
 , srcClip_(0)
@@ -82,15 +92,15 @@ MagickSwirlPlugin::MagickSwirlPlugin(OfxImageEffectHandle handle)
     srcClip_ = fetchClip(kOfxImageEffectSimpleSourceClipName);
     assert(srcClip_ && (srcClip_->getPixelComponents() == OFX::ePixelComponentRGBA || srcClip_->getPixelComponents() == OFX::ePixelComponentRGB));
 
-    swirlDegree_ = fetchDoubleParam(kParamSwirl);
-    assert(swirlDegree_);
+    mirror_ = fetchChoiceParam(kParamMirror);
+    assert(mirror_);
 }
 
-MagickSwirlPlugin::~MagickSwirlPlugin()
+MirrorPlugin::~MirrorPlugin()
 {
 }
 
-void MagickSwirlPlugin::render(const OFX::RenderArguments &args)
+void MirrorPlugin::render(const OFX::RenderArguments &args)
 {
     if (!kSupportsRenderScale && (args.renderScale.x != 1. || args.renderScale.y != 1.)) {
         OFX::throwSuiteStatusException(kOfxStatFailed);
@@ -173,14 +183,97 @@ void MagickSwirlPlugin::render(const OFX::RenderArguments &args)
     }
 
     // get param
-    double swirl;
-    swirlDegree_->getValueAtTime(args.time, swirl);
+    int mirror;
+    mirror_->getValueAtTime(args.time, mirror);
 
     // read image
     Magick::Image image(srcRod.x2-srcRod.x1,srcRod.y2-srcRod.y1,channels,Magick::FloatPixel,(float*)srcImg->getPixelData());
 
     // proc image
-    image.swirl(swirl);
+    int magickWidth = srcRod.x2-srcRod.x1;
+    int magickHeight = srcRod.y2-srcRod.y1;
+    int mirrorWidth = magickWidth/2;
+    int mirrorHeight = magickHeight/2;
+    Magick::Image image1;
+    Magick::Image image2;
+    Magick::Image image3;
+    Magick::Image image4;
+    image1 = image;
+    //image1.backgroundColor("none");
+    switch(mirror) {
+    case 1: // North
+          image1.flip();
+          image1.crop(Magick::Geometry(magickWidth,mirrorHeight,0,0));
+          break;
+    case 2: // South
+          image.flip();
+          image1.crop(Magick::Geometry(magickWidth,mirrorHeight,0,0));
+          break;
+    case 3: // East
+          image1.flop();
+          image1.crop(Magick::Geometry(mirrorWidth,magickHeight,0,0));
+          break;
+    case 4: // West
+        image.flop();
+        image1.crop(Magick::Geometry(mirrorWidth,magickHeight,0,0));
+          break;
+    case 5: // NorthWest
+        image1.crop(Magick::Geometry(mirrorWidth,mirrorHeight,0,mirrorHeight));
+        image2 = image1;
+        image2.flop();
+        image3 = image2;
+        image3.flip();
+        image4 = image3;
+        image4.flop();
+        break;
+    case 6: // NorthEast
+        image1.crop(Magick::Geometry(mirrorWidth,mirrorHeight,mirrorWidth,mirrorHeight));
+        image1.flop();
+        image2 = image1;
+        image2.flop();
+        image3 = image2;
+        image3.flip();
+        image4 = image3;
+        image4.flop();
+        break;
+    case 7: // SouthWest
+        image1.crop(Magick::Geometry(mirrorWidth,mirrorHeight,0,0));
+        image1.flip();
+        image2 = image1;
+        image2.flop();
+        image3 = image2;
+        image3.flip();
+        image4 = image3;
+        image4.flop();
+        break;
+    case 8: // SouthEast
+        image1.crop(Magick::Geometry(mirrorWidth,mirrorHeight,mirrorWidth,0));
+        image1.flop();
+        image1.flip();
+        image2 = image1;
+        image2.flop();
+        image3 = image2;
+        image3.flip();
+        image4 = image3;
+        image4.flop();
+        break;
+    case 9: // Flip
+        image.flip();
+        break;
+    case 10: // Flop
+        image.flop();
+        break;
+    }
+    if (mirror==5||mirror==6||mirror==7||mirror==8) {
+        image.composite(image1,0,mirrorHeight,Magick::OverCompositeOp);
+        image.composite(image2,mirrorWidth,mirrorHeight,Magick::OverCompositeOp);
+        image.composite(image3,mirrorWidth,0,Magick::OverCompositeOp);
+        image.composite(image4,0,0,Magick::OverCompositeOp);
+    }
+    else {
+        if (mirror==1||mirror==2||mirror==3||mirror==4)
+            image.composite(image1,0,0,Magick::OverCompositeOp);
+    }
 
     // check bit depth
     switch (bitDepth) {
@@ -198,7 +291,7 @@ void MagickSwirlPlugin::render(const OFX::RenderArguments &args)
     image.write(0,0,dstRod.x2-dstRod.x1,dstRod.y2-dstRod.y1,channels,Magick::FloatPixel,(float*)dstImg->getPixelData());
 }
 
-bool MagickSwirlPlugin::getRegionOfDefinition(const OFX::RegionOfDefinitionArguments &args, OfxRectD &rod)
+bool MirrorPlugin::getRegionOfDefinition(const OFX::RegionOfDefinitionArguments &args, OfxRectD &rod)
 {
     if (!kSupportsRenderScale && (args.renderScale.x != 1. || args.renderScale.y != 1.)) {
         OFX::throwSuiteStatusException(kOfxStatFailed);
@@ -213,10 +306,10 @@ bool MagickSwirlPlugin::getRegionOfDefinition(const OFX::RegionOfDefinitionArgum
     return true;
 }
 
-mDeclarePluginFactory(MagickSwirlPluginFactory, {}, {});
+mDeclarePluginFactory(MirrorPluginFactory, {}, {});
 
 /** @brief The basic describe function, passed a plugin descriptor */
-void MagickSwirlPluginFactory::describe(OFX::ImageEffectDescriptor &desc)
+void MirrorPluginFactory::describe(OFX::ImageEffectDescriptor &desc)
 {
     // basic labels
     desc.setLabel(kPluginName);
@@ -238,7 +331,7 @@ void MagickSwirlPluginFactory::describe(OFX::ImageEffectDescriptor &desc)
 }
 
 /** @brief The describe in context function, passed a plugin descriptor and a context */
-void MagickSwirlPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, ContextEnum /*context*/)
+void MirrorPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, ContextEnum /*context*/)
 {
     // create the mandated source clip
     ClipDescriptor *srcClip = desc.defineClip(kOfxImageEffectSimpleSourceClipName);
@@ -259,25 +352,34 @@ void MagickSwirlPluginFactory::describeInContext(OFX::ImageEffectDescriptor &des
     // make some pages and to things in
     PageParamDescriptor *page = desc.definePageParam(kPluginName);
     {
-        DoubleParamDescriptor *param = desc.defineDoubleParam(kParamSwirl);
-        param->setLabel(kParamSwirlLabel);
-        param->setHint(kParamSwirlHint);
-        param->setRange(-360, 360);
-        param->setDisplayRange(-360, 360);
-        param->setDefault(kParamSwirlDefault);
+        ChoiceParamDescriptor *param = desc.defineChoiceParam(kParamMirror);
+        param->setLabel(kParamMirrorLabel);
+        param->setHint(kParamMirrorHint);
+	param->appendOption("None");
+        param->appendOption(REGION_NORTH);
+        param->appendOption(REGION_SOUTH);
+        param->appendOption(REGION_EAST);
+        param->appendOption(REGION_WEST);
+        param->appendOption(REGION_NORTHWEST);
+        param->appendOption(REGION_NORTHEAST);
+        param->appendOption(REGION_SOUTHWEST);
+        param->appendOption(REGION_SOUTHEAST);
+        param->appendOption(REGION_FLIP);
+        param->appendOption(REGION_FLOP);
+        param->setAnimates(true);
         page->addChild(*param);
     }
 }
 
 /** @brief The create instance function, the plugin must return an object derived from the \ref OFX::ImageEffect class */
-ImageEffect* MagickSwirlPluginFactory::createInstance(OfxImageEffectHandle handle, ContextEnum /*context*/)
+ImageEffect* MirrorPluginFactory::createInstance(OfxImageEffectHandle handle, ContextEnum /*context*/)
 {
-    return new MagickSwirlPlugin(handle);
+    return new MirrorPlugin(handle);
 }
 
 
-void getMagickSwirlPluginID(OFX::PluginFactoryArray &ids)
+void getMirrorPluginID(OFX::PluginFactoryArray &ids)
 {
-    static MagickSwirlPluginFactory p(kPluginIdentifier, kPluginVersionMajor, kPluginVersionMinor);
+    static MirrorPluginFactory p(kPluginIdentifier, kPluginVersionMajor, kPluginVersionMinor);
     ids.push_back(&p);
 }

@@ -25,9 +25,16 @@ FCONFIG_URL=http://www.freedesktop.org/software/fontconfig/release/fontconfig-${
 FTYPE=2.4.11
 FTYPE_URL=http://sourceforge.net/projects/freetype/files/freetype2/${FTYPE}/freetype-${FTYPE}.tar.gz/download
 
-ARENA=0.4
-PKGNAME=Arena
-
+if [ -z "$VERSION" ]; then
+  ARENA=0.4
+else
+  ARENA=$VERSION
+fi
+if [ -z "$PACKAGE" ]; then
+  PKGNAME=Arena
+else
+  PKGNAME=$PACKAGE
+fi
 if [ -z "$PREFIX" ]; then
   PREFIX=$CWD/tmp
 fi
@@ -204,7 +211,7 @@ fi
 if [ "$PKGNAME" != "Arena" ]; then
   PKGSRC=$PKGNAME
 else
-  PKGSRC=Plugin
+  PKGSRC=Bundle
 fi
 if [ "$BIT" == "64" ]; then
   PKGBIT=x86-$BIT
