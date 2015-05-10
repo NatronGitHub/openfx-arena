@@ -1,13 +1,39 @@
 /*
- Text
- Write text on image using Magick.
 
- Written by Ole-André Rodlie <olear@fxarena.net>
+ MagickText
+ openfx-arena - https://github.com/olear/openfx-arena
+
+ Copyright (c) 2015, Ole-André Rodlie <olear@fxarena.net>
+ Copyright (c) 2015, FxArena DA <mail@fxarena.net>
+ All rights reserved.
+
+ Redistribution and use in source and binary forms, with or without
+ modification, are permitted provided that the following conditions are met:
+
+ * Redistributions of source code must retain the above copyright notice, this
+   list of conditions and the following disclaimer.
+
+ * Neither the name of FxArena DA nor the names of its
+   contributors may be used to endorse or promote products derived from
+   this software without specific prior written permission.
+
+ * Redistributions in binary form must reproduce the above copyright notice,
+   this list of conditions and the following disclaimer in the documentation
+   and/or other materials provided with the distribution.
+
+ THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
+ AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
+ IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
+ DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE
+ FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL
+ DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR
+ SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER
+ CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY,
+ OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
+ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+
 
  Based on https://github.com/MrKepzie/openfx-io/blob/master/OIIO/OIIOText.cpp
-
- OIIOText plugin
- Write text on images using OIIO.
 
  Written by Alexandre Gauthier <https://github.com/MrKepzie>
 
@@ -56,15 +82,15 @@
 
 #define kPluginName "Text"
 #define kPluginGrouping "Image"
-#define kPluginDescription  "Write text"
+#define kPluginDescription  "A simple text generator - https://github.com/olear/openfx-arena"
 
 #define kPluginIdentifier "net.fxarena.openfx.Text"
 #define kPluginVersionMajor 1
-#define kPluginVersionMinor 0
+#define kPluginVersionMinor 1
 
 #define kSupportsTiles 0
 #define kSupportsMultiResolution 1
-#define kSupportsRenderScale 1
+#define kSupportsRenderScale 0 // disable works in natron, enable works in nuke but not natron
 #define kRenderThreadSafety eRenderInstanceSafe
 
 #define kParamPosition "position"
@@ -82,6 +108,7 @@
 #define kParamFontSize "fontSize"
 #define kParamFontSizeLabel "Size"
 #define kParamFontSizeHint "The height of the characters to render in pixels"
+#define kParamFontSizeDefault 64
 
 #define kParamFontName "fontName"
 #define kParamFontNameLabel "Font"
@@ -149,8 +176,8 @@ TextPlugin::TextPlugin(OfxImageEffectHandle handle)
 : OFX::ImageEffect(handle)
 , dstClip_(0)
 {
-    Magick::InitializeMagick("");
-    MagickCore::MagickCoreGenesis( NULL, MagickCore::MagickTrue );
+    Magick::InitializeMagick(NULL);
+    MagickCore::MagickCoreGenesis(NULL, MagickCore::MagickTrue);
 
     dstClip_ = fetchClip(kOfxImageEffectOutputClipName);
     assert(dstClip_ && (dstClip_->getPixelComponents() == OFX::ePixelComponentRGBA || dstClip_->getPixelComponents() == OFX::ePixelComponentRGB));
@@ -185,11 +212,13 @@ void TextPlugin::render(const OFX::RenderArguments &args)
         return;
     }
     assert(dstClip_);
+
     std::auto_ptr<OFX::Image> dstImg(dstClip_->fetchImage(args.time));
     if (!dstImg.get()) {
         OFX::throwSuiteStatusException(kOfxStatFailed);
         return;
     }
+
     if (dstImg->getRenderScale().x != args.renderScale.x ||
         dstImg->getRenderScale().y != args.renderScale.y ||
         dstImg->getField() != args.fieldToRender) {
@@ -199,7 +228,7 @@ void TextPlugin::render(const OFX::RenderArguments &args)
     }
 
     OFX::BitDepthEnum dstBitDepth = dstImg->getPixelDepth();
-    if (dstBitDepth != OFX::eBitDepthFloat) {
+    if (dstBitDepth != OFX::eBitDepthFloat && dstBitDepth != OFX::eBitDepthUShort && dstBitDepth != OFX::eBitDepthUByte) {
         OFX::throwSuiteStatusException(kOfxStatErrFormat);
         return;
     }
@@ -209,6 +238,7 @@ void TextPlugin::render(const OFX::RenderArguments &args)
         OFX::throwSuiteStatusException(kOfxStatErrFormat);
         return;
     }
+
     std::string channels;
     switch (dstComponents) {
     case ePixelComponentRGBA:
@@ -232,36 +262,33 @@ void TextPlugin::render(const OFX::RenderArguments &args)
     }
 
     // Get params
-    double x, y;
+    double x, y, r, g, b, a, r_s, g_s, b_s, a_s, strokeWidth;
+    int fontSize, fontName, fontDecor;
+    bool use_stroke = false;
+    std::string text, fontOverride;
+
     position_->getValueAtTime(args.time, x, y);
-    std::string text;
     text_->getValueAtTime(args.time, text);
-    int fontSize;
     fontSize_->getValueAtTime(args.time, fontSize);
-    int fontName;
     fontName_->getValueAtTime(args.time, fontName);
-    int fontDecor;
     fontDecor_->getValueAtTime(args.time, fontDecor);
-    double r, g, b, a;
+    strokeEnabled_->getValueAtTime(args.time, use_stroke);
+    strokeWidth_->getValueAtTime(args.time, strokeWidth);
+    fontOverride_->getValueAtTime(args.time, fontOverride);
     textColor_->getValueAtTime(args.time, r, g, b, a);
+    strokeColor_->getValueAtTime(args.time, r_s, g_s, b_s, a_s);
+
     float textColor[4];
     textColor[0] = (float)r;
     textColor[1] = (float)g;
     textColor[2] = (float)b;
     textColor[3] = (float)a;
-    double r_s, g_s, b_s, a_s;
-    strokeColor_->getValueAtTime(args.time, r_s, g_s, b_s, a_s);
+
     float strokeColor[4];
     strokeColor[0] = (float)r_s;
     strokeColor[1] = (float)g_s;
     strokeColor[2] = (float)b_s;
     strokeColor[3] = (float)a_s;
-    bool use_stroke = false;
-    strokeEnabled_->getValueAtTime(args.time, use_stroke);
-    double strokeWidth;
-    strokeWidth_->getValueAtTime(args.time, strokeWidth);
-    std::string fontOverride;
-    fontOverride_->getValueAtTime(args.time, fontOverride);
 
     // Get font
     std::string fontFile;
@@ -276,18 +303,16 @@ void TextPlugin::render(const OFX::RenderArguments &args)
     else
         fontFile=fontOverride;
 
-    // setup
-    int magickWidth = dstRod.x2-dstRod.x1;
-    int magickHeight = dstRod.y2-dstRod.y1;
-
     // Generate empty image
-    Magick::Image magickImage(Magick::Geometry(magickWidth,magickHeight),Magick::Color("rgba(0,0,0,0)"));
+    int width = dstRod.x2-dstRod.x1;
+    int height = dstRod.y2-dstRod.y1;
+    Magick::Image image(Magick::Geometry(width,height),Magick::Color("rgba(0,0,0,0)"));
 
     // Set font size
-    magickImage.fontPointsize(fontSize);
+    image.fontPointsize(fontSize);
 
     // Set stroke width
-    magickImage.strokeWidth(strokeWidth);
+    image.strokeWidth(strokeWidth);
 
     // Convert colors to int
     int rI = ((uint8_t)(255.0f *CLAMP(r, 0.0, 1.0)));
@@ -305,7 +330,7 @@ void TextPlugin::render(const OFX::RenderArguments &args)
     std::string strokeRGBA = rgba_s.str();
 
     // Flip image
-    magickImage.flip();
+    image.flip();
 
     // Position x y
     double ytext = y*args.renderScale.y;
@@ -341,25 +366,27 @@ void TextPlugin::render(const OFX::RenderArguments &args)
     }
 
     // Draw
-    magickImage.draw(text_draw_list);
+    image.draw(text_draw_list);
 
     // Flip image
-    magickImage.flip();
-
-    // check bit depth
-    switch (dstBitDepth) {
-    case OFX::eBitDepthUByte:
-        if (magickImage.depth()>8)
-            magickImage.depth(8);
-        break;
-    case OFX::eBitDepthUShort:
-        if (magickImage.depth()>16)
-            magickImage.depth(16);
-        break;
-    }
+    image.flip();
 
     // return image
-    magickImage.write(0,0,dstRod.x2-dstRod.x1,dstRod.y2-dstRod.y1,channels,Magick::FloatPixel,(float*)dstImg->getPixelData());
+    switch (dstBitDepth) {
+    case eBitDepthUByte:
+        if (image.depth()>8)
+            image.depth(8);
+        image.write(0,0,width,height,channels,Magick::CharPixel,(float*)dstImg->getPixelData());
+        break;
+    case eBitDepthUShort:
+        if (image.depth()>16)
+            image.depth(16);
+        image.write(0,0,width,height,channels,Magick::ShortPixel,(float*)dstImg->getPixelData());
+        break;
+    case eBitDepthFloat:
+        image.write(0,0,width,height,channels,Magick::FloatPixel,(float*)dstImg->getPixelData());
+        break;
+    }
 }
 
 void TextPlugin::changedParam(const OFX::InstanceChangedArgs &args, const std::string &/*paramName*/)
@@ -407,8 +434,8 @@ void TextPluginFactory::describe(OFX::ImageEffectDescriptor &desc)
     desc.addSupportedContext(eContextGenerator);
 
     // add supported pixel depths
-    /*desc.addSupportedBitDepth(eBitDepthUByte);
-    desc.addSupportedBitDepth(eBitDepthUShort);*/
+    desc.addSupportedBitDepth(eBitDepthUByte);
+    desc.addSupportedBitDepth(eBitDepthUShort);
     desc.addSupportedBitDepth(eBitDepthFloat);
 
     desc.setSupportsTiles(kSupportsTiles);
@@ -424,6 +451,7 @@ void TextPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, Cont
     // there has to be an input clip, even for generators
     ClipDescriptor* srcClip = desc.defineClip(kOfxImageEffectSimpleSourceClipName);
     srcClip->addSupportedComponent(ePixelComponentRGBA);
+    srcClip->addSupportedComponent(ePixelComponentRGB);
     srcClip->setSupportsTiles(kSupportsTiles);
     srcClip->setOptional(true);
 
@@ -475,7 +503,7 @@ void TextPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, Cont
         IntParamDescriptor* param = desc.defineIntParam(kParamFontSize);
         param->setLabel(kParamFontSizeLabel);
         param->setHint(kParamFontSizeHint);
-        param->setDefault(32);
+        param->setDefault(kParamFontSizeDefault);
         param->setAnimates(true);
         page->addChild(*param);
     }
@@ -544,8 +572,8 @@ void TextPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, Cont
         DoubleParamDescriptor *param = desc.defineDoubleParam(kParamStroke);
         param->setLabel(kParamStrokeLabel);
         param->setHint(kParamStrokeHint);
-        param->setRange(0, 100);
-        param->setDisplayRange(0, 100);
+        param->setRange(0, 50);
+        param->setDisplayRange(0, 50);
         param->setDefault(kParamStrokeDefault);
         page->addChild(*param);
     }
