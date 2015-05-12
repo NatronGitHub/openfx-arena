@@ -39,7 +39,7 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include <Magick++.h>
 
 #define kPluginName "Reflection"
-#define kPluginGrouping "Filter"
+#define kPluginGrouping "Transform"
 #define kPluginDescription  "Apply reflection effect to image."
 
 #define kPluginIdentifier "net.fxarena.openfx.Reflection"
