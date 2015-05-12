@@ -62,8 +62,8 @@ $(OBJECTPATH)/$(PLUGINNAME).ofx.bundle: $(OBJECTPATH)/$(PLUGINNAME).ofx
 	mkdir -p  $@/Contents/$(ARCH)
 	cp  $^  $@/Contents/$(ARCH)
 	cp  Info.plist  $@/Contents/
-	cp manifest $@/Contents/$(ARCH)
-	cp /mingw/bin/libgcc_s_seh-1.dll $@/Contents/$(ARCH)
+	if [ "$(BIT)" == "32" ]; then cat manifest | sed 's/s_seh/s_dw2/g;' > $@/Contents/$(ARCH)/manifest ;else cp manifest $@/Contents/$(ARCH) ;fi
+	if [ "$(BIT)" == "32" ]; then cp /mingw/bin/libgcc_s_dw2-1.dll $@/Contents/$(ARCH) ;else cp /mingw/bin/libgcc_s_seh-1.dll $@/Contents/$(ARCH) ;fi
 	cp /mingw/bin/libgomp-1.dll $@/Contents/$(ARCH)
 	cp /mingw/bin/libstdc++-6.dll $@/Contents/$(ARCH)
 	cp /mingw/bin/libwinpthread-1.dll $@/Contents/$(ARCH)
