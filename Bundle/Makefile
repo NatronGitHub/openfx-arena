@@ -4,6 +4,7 @@ PLUGINOBJECTS = \
         Mirror.o \
         Implode.o \
         Tile.o \
+        Reflection.o \
 	ofxsOGLTextRenderer.o \
 	ofxsOGLFontData.o \
 	ofxsRectangleInteract.o \
@@ -22,6 +23,8 @@ RESOURCES = \
 ../Filter/net.fxarena.openfx.Implode.svg \
 ../Transform/net.fxarena.openfx.Tile.png \
 ../Transform/net.fxarena.openfx.Tile.svg \
+../Transform/net.fxarena.openfx.Reflection.png \
+../Transform/net.fxarena.openfx.Reflection.svg \
 
 VPATH += \
 ../Transform \

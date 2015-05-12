@@ -4,6 +4,7 @@
 #include "Mirror.h"
 #include "Implode.h"
 #include "Tile.h"
+#include "Reflection.h"
 
 namespace OFX
 {
@@ -16,6 +17,7 @@ namespace OFX
             getMirrorPluginID(ids);
             getImplodePluginID(ids);
             getTilePluginID(ids);
+            getReflectionPluginID(ids);
         }
     }
 }
