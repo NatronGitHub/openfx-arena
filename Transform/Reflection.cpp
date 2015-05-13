@@ -48,7 +48,7 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 #define kSupportsTiles 0
 #define kSupportsMultiResolution 1
-#define kSupportsRenderScale 1 // does not work 100% in natron
+#define kSupportsRenderScale 0 // does not work 100% in natron
 #define kRenderThreadSafety eRenderInstanceSafe
 
 #define kParamSpace "spacing"
@@ -323,8 +323,8 @@ void ReflectionPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc
         IntParamDescriptor *param = desc.defineIntParam(kParamOffset);
         param->setLabel(kParamOffsetLabel);
         param->setHint(kParamOffsetHint);
-        param->setRange(0, 200);
-        param->setDisplayRange(0, 200);
+        param->setRange(0, 500);
+        param->setDisplayRange(0, 500);
         param->setDefault(kParamOffsetDefault);
         page->addChild(*param);
     }
