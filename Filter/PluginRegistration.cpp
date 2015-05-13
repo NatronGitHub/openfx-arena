@@ -1,6 +1,7 @@
 #include "ofxsImageEffect.h"
 #include "Swirl.h"
 #include "Implode.h"
+#include "UnsharpMask.h"
 
 namespace OFX 
 {
@@ -10,6 +11,7 @@ namespace OFX
     {
         getSwirlPluginID(ids);
         getImplodePluginID(ids);
+        getUnsharpMaskPluginID(ids);
     }
   }
 }
