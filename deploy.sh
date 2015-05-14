@@ -26,7 +26,7 @@ FTYPE=2.4.11
 FTYPE_URL=http://sourceforge.net/projects/freetype/files/freetype2/${FTYPE}/freetype-${FTYPE}.tar.gz/download
 
 if [ -z "$VERSION" ]; then
-  ARENA=0.4
+  ARENA=0.5
 else
   ARENA=$VERSION
 fi
@@ -88,8 +88,8 @@ if [ ! -f ${PREFIX}/lib/libz.a ] && [ "$OS" == "Msys" ]; then
     tar xvf $CWD/3rdparty/zlib-$ZLIB.tar.gz -C $CWD/3rdparty/ || exit 1
   fi
   cd $CWD/3rdparty/zlib-$ZLIB || exit 1
-  if [ -f $CWD/3rdparty/Makefile.gcc ] && [ "$BIT" == "64" ]; then
-    cat $CWD/3rdparty/Makefile.gcc > win32/Makefile.gcc || exit 1
+  if [ -f $CWD/3rdparty/Makefile.zlib ] && [ "$BIT" == "64" ]; then
+    cat $CWD/3rdparty/Makefile.zlib > win32/Makefile.gcc || exit 1
   fi
   make distclean
   CFLAGS="-m${BIT} ${BF}" CXXFLAGS="-m${BIT} ${BF} -I${PREFIX}/include" CPPFLAGS="-I${PREFIX}/include -L${PREFIX}/lib" make -f win32/Makefile.gcc || exit 1

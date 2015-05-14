@@ -182,20 +182,22 @@ void SwirlPlugin::render(const OFX::RenderArguments &args)
     // proc image
     image.swirl(swirl);
 
-    // check bit depth
-    switch (bitDepth) {
-    case OFX::eBitDepthUByte:
+    // return image
+    switch (dstBitDepth) {
+    case eBitDepthUByte:
         if (image.depth()>8)
             image.depth(8);
+        image.write(0,0,dstRod.x2-dstRod.x1,dstRod.y2-dstRod.y1,channels,Magick::CharPixel,(float*)dstImg->getPixelData());
         break;
-    case OFX::eBitDepthUShort:
+    case eBitDepthUShort:
         if (image.depth()>16)
             image.depth(16);
+        image.write(0,0,dstRod.x2-dstRod.x1,dstRod.y2-dstRod.y1,channels,Magick::ShortPixel,(float*)dstImg->getPixelData());
+        break;
+    case eBitDepthFloat:
+        image.write(0,0,dstRod.x2-dstRod.x1,dstRod.y2-dstRod.y1,channels,Magick::FloatPixel,(float*)dstImg->getPixelData());
         break;
     }
-
-    // return image
-    image.write(0,0,dstRod.x2-dstRod.x1,dstRod.y2-dstRod.y1,channels,Magick::FloatPixel,(float*)dstImg->getPixelData());
 }
 
 bool SwirlPlugin::getRegionOfDefinition(const OFX::RegionOfDefinitionArguments &args, OfxRectD &rod)
@@ -228,8 +230,8 @@ void SwirlPluginFactory::describe(OFX::ImageEffectDescriptor &desc)
     desc.addSupportedContext(eContextFilter);
 
     // add supported pixel depths
-    //desc.addSupportedBitDepth(eBitDepthUByte); // not tested yet
-    //desc.addSupportedBitDepth(eBitDepthUShort); // not tested yet
+    desc.addSupportedBitDepth(eBitDepthUByte);
+    desc.addSupportedBitDepth(eBitDepthUShort);
     desc.addSupportedBitDepth(eBitDepthFloat);
 
     desc.setSupportsTiles(kSupportsTiles);

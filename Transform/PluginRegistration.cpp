@@ -1,6 +1,7 @@
 #include "ofxsImageEffect.h"
 #include "Mirror.h"
 #include "Tile.h"
+#include "Reflection.h"
 
 namespace OFX 
 {
@@ -10,6 +11,7 @@ namespace OFX
     {
         getMirrorPluginID(ids);
         getTilePluginID(ids);
+        getReflectionPluginID(ids);
     }
   }
 }

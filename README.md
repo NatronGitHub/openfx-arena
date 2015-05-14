@@ -11,11 +11,15 @@ A set of visual effect plugins for OpenFX compatible applications.
  * Transform
   * Mirror
   * Tile
+  * Reflection
 
 Compatibility
 =============
 
-Made for Natron and Nuke, but will probably work on others.
+Tested on the following hosts:
+
+ * Natron
+ * Nuke
 
 Download
 ========

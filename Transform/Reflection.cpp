@@ -12,9 +12,9 @@ modification, are permitted provided that the following conditions are met:
 * Redistributions of source code must retain the above copyright notice, this
   list of conditions and the following disclaimer.
 
-* Neither the name of FxArena DA nor the names of its
-  contributors may be used to endorse or promote products derived from
-  this software without specific prior written permission.
+*  Neither the name of the {organization} nor the names of its
+   contributors may be used to endorse or promote products derived from
+   this software without specific prior written permission.
 
 * Redistributions in binary form must reproduce the above copyright notice,
   this list of conditions and the following disclaimer in the documentation
@@ -33,80 +33,87 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 */
 
-#include "Mirror.h"
-
+#include "Reflection.h"
+#include <iostream>
 #include "ofxsMacros.h"
 #include <Magick++.h>
 
-#define kPluginName "Mirror"
+#define kPluginName "Reflection"
 #define kPluginGrouping "Transform"
-#define kPluginDescription  "Mirror image."
+#define kPluginDescription  "Apply reflection effect to image."
 
-#define kPluginIdentifier "net.fxarena.openfx.Mirror"
+#define kPluginIdentifier "net.fxarena.openfx.Reflection"
 #define kPluginVersionMajor 1
-#define kPluginVersionMinor 1
-
-#define kParamMirror "mirror"
-#define kParamMirrorLabel "Region"
-#define kParamMirrorHint "Mirror image"
-
-#define REGION_NORTH "North"
-#define REGION_SOUTH "South"
-#define REGION_EAST "East"
-#define REGION_WEST "West"
-#define REGION_NORTHWEST "NorthWest"
-#define REGION_NORTHEAST "NorthEast"
-#define REGION_SOUTHWEST "SouthWest"
-#define REGION_SOUTHEAST "SouthEast"
-#define REGION_FLIP "Flip"
-#define REGION_FLOP "Flop"
+#define kPluginVersionMinor 0
 
 #define kSupportsTiles 0
 #define kSupportsMultiResolution 1
-#define kSupportsRenderScale 1
+#define kSupportsRenderScale 0 // does not work 100% in natron
 #define kRenderThreadSafety eRenderInstanceSafe
+
+#define kParamSpace "spacing"
+#define kParamSpaceLabel "Space"
+#define kParamSpaceHint "Space between image and reflection"
+#define kParamSpaceDefault 0
+
+#define kParamOffset "offset"
+#define kParamOffsetLabel "Offset"
+#define kParamOffsetHint "Mirror offset"
+#define kParamOffsetDefault 0
 
 using namespace OFX;
 
-class MirrorPlugin : public OFX::ImageEffect
+class ReflectionPlugin : public OFX::ImageEffect
 {
 public:
-    MirrorPlugin(OfxImageEffectHandle handle);
-    virtual ~MirrorPlugin();
+    ReflectionPlugin(OfxImageEffectHandle handle);
+    virtual ~ReflectionPlugin();
     virtual void render(const OFX::RenderArguments &args) OVERRIDE FINAL;
     virtual bool getRegionOfDefinition(const OFX::RegionOfDefinitionArguments &args, OfxRectD &rod) OVERRIDE FINAL;
 private:
     OFX::Clip *dstClip_;
     OFX::Clip *srcClip_;
-    OFX::ChoiceParam *mirror_;
+    OFX::Clip *maskClip_;
+    OFX::Double2DParam *position_;
+    OFX::IntParam *spacing_;
+    OFX::IntParam *offset_;
 };
 
-MirrorPlugin::MirrorPlugin(OfxImageEffectHandle handle)
+ReflectionPlugin::ReflectionPlugin(OfxImageEffectHandle handle)
 : OFX::ImageEffect(handle)
 , dstClip_(0)
 , srcClip_(0)
+, maskClip_(0)
 {
     Magick::InitializeMagick("");
+
     dstClip_ = fetchClip(kOfxImageEffectOutputClipName);
     assert(dstClip_ && (dstClip_->getPixelComponents() == OFX::ePixelComponentRGBA || dstClip_->getPixelComponents() == OFX::ePixelComponentRGB));
     srcClip_ = fetchClip(kOfxImageEffectSimpleSourceClipName);
     assert(srcClip_ && (srcClip_->getPixelComponents() == OFX::ePixelComponentRGBA || srcClip_->getPixelComponents() == OFX::ePixelComponentRGB));
 
-    mirror_ = fetchChoiceParam(kParamMirror);
-    assert(mirror_);
+    maskClip_ = getContext() == OFX::eContextFilter ? NULL : fetchClip(getContext() == OFX::eContextPaint ? "Brush" : "Mask");
+    assert(!maskClip_ || maskClip_->getPixelComponents() == OFX::ePixelComponentAlpha);
+
+    spacing_ = fetchIntParam(kParamSpace);
+    offset_ = fetchIntParam(kParamOffset);
+    assert(spacing_ && offset_);
 }
 
-MirrorPlugin::~MirrorPlugin()
+ReflectionPlugin::~ReflectionPlugin()
 {
 }
 
-void MirrorPlugin::render(const OFX::RenderArguments &args)
+/* Override the render */
+void
+ReflectionPlugin::render(const OFX::RenderArguments &args)
 {
     if (!kSupportsRenderScale && (args.renderScale.x != 1. || args.renderScale.y != 1.)) {
         OFX::throwSuiteStatusException(kOfxStatFailed);
         return;
     }
 
+    // Get src clip
     if (!srcClip_) {
         OFX::throwSuiteStatusException(kOfxStatFailed);
         return;
@@ -128,6 +135,13 @@ void MirrorPlugin::render(const OFX::RenderArguments &args)
         }
     }
 
+    // Get mask clip
+    std::auto_ptr<const OFX::Image> maskImg((getContext() != OFX::eContextFilter && maskClip_ && maskClip_->isConnected()) ? maskClip_->fetchImage(args.time) : 0);
+    OfxRectI maskRod;
+    if (getContext() != OFX::eContextFilter && maskClip_ && maskClip_->isConnected())
+        maskRod=maskImg->getRegionOfDefinition();
+
+    // Get dst clip
     if (!dstClip_) {
         OFX::throwSuiteStatusException(kOfxStatFailed);
         return;
@@ -147,14 +161,14 @@ void MirrorPlugin::render(const OFX::RenderArguments &args)
     }
     OfxRectI dstRod = dstImg->getRegionOfDefinition();
 
-    // get bit depth
+    // dst bit depth
     OFX::BitDepthEnum dstBitDepth = dstImg->getPixelDepth();
     if (dstBitDepth != OFX::eBitDepthFloat || (srcImg.get() && dstBitDepth != srcImg->getPixelDepth())) {
         OFX::throwSuiteStatusException(kOfxStatErrFormat);
         return;
     }
 
-    // get pixel component
+    // dst pixel components
     OFX::PixelComponentEnum dstComponents  = dstImg->getPixelComponents();
     if ((dstComponents != OFX::ePixelComponentRGBA && dstComponents != OFX::ePixelComponentRGB && dstComponents != OFX::ePixelComponentAlpha) ||
         (srcImg.get() && (dstComponents != srcImg->getPixelComponents()))) {
@@ -174,7 +188,7 @@ void MirrorPlugin::render(const OFX::RenderArguments &args)
         break;
     }
 
-    // are we in the image bounds
+    // are we in the image bounds?
     OfxRectI dstBounds = dstImg->getBounds();
     if(args.renderWindow.x1 < dstBounds.x1 || args.renderWindow.x1 >= dstBounds.x2 || args.renderWindow.y1 < dstBounds.y1 || args.renderWindow.y1 >= dstBounds.y2 ||
        args.renderWindow.x2 <= dstBounds.x1 || args.renderWindow.x2 > dstBounds.x2 || args.renderWindow.y2 <= dstBounds.y1 || args.renderWindow.y2 > dstBounds.y2) {
@@ -182,118 +196,64 @@ void MirrorPlugin::render(const OFX::RenderArguments &args)
         return;
     }
 
-    // get param
-    int mirror;
-    mirror_->getValueAtTime(args.time, mirror);
+    // Get params
+    int spacing,offset;
+    spacing_->getValueAtTime(args.time, spacing);
+    offset_->getValueAtTime(args.time, offset);
 
-    // read image
-    Magick::Image image(srcRod.x2-srcRod.x1,srcRod.y2-srcRod.y1,channels,Magick::FloatPixel,(float*)srcImg->getPixelData());
+    // Setup image
+    int width = 0;
+    int height = 0;
+    int maskWidth = 0;
+    int maskHeight = 0;
+    width = srcRod.x2-srcRod.x1;
+    height = srcRod.y2-srcRod.y1;
+    maskWidth = maskRod.x2-maskRod.x1;
+    maskHeight = maskRod.y2-maskRod.y1;
+
+    // Read image
+    Magick::Image image(width,height,channels,Magick::FloatPixel,(float*)srcImg->getPixelData());
+    Magick::Image wrapper(Magick::Geometry(width,height),Magick::Color("rgba(0,0,0,0)"));
 
     // proc image
-    int magickWidth = srcRod.x2-srcRod.x1;
-    int magickHeight = srcRod.y2-srcRod.y1;
-    int mirrorWidth = magickWidth/2;
-    int mirrorHeight = magickHeight/2;
-    Magick::Image image1;
-    Magick::Image image2;
-    Magick::Image image3;
-    Magick::Image image4;
-    image1 = image;
-    //image1.backgroundColor("none");
-    switch(mirror) {
-    case 1: // North
-          image1.flip();
-          image1.crop(Magick::Geometry(magickWidth,mirrorHeight,0,0));
-          break;
-    case 2: // South
-          image.flip();
-          image1.crop(Magick::Geometry(magickWidth,mirrorHeight,0,0));
-          break;
-    case 3: // East
-          image1.flop();
-          image1.crop(Magick::Geometry(mirrorWidth,magickHeight,0,0));
-          break;
-    case 4: // West
-        image.flop();
-        image1.crop(Magick::Geometry(mirrorWidth,magickHeight,0,0));
-          break;
-    case 5: // NorthWest
-        image1.crop(Magick::Geometry(mirrorWidth,mirrorHeight,0,mirrorHeight));
-        image2 = image1;
-        image2.flop();
-        image3 = image2;
-        image3.flip();
-        image4 = image3;
-        image4.flop();
-        break;
-    case 6: // NorthEast
-        image1.crop(Magick::Geometry(mirrorWidth,mirrorHeight,mirrorWidth,mirrorHeight));
-        image1.flop();
-        image2 = image1;
-        image2.flop();
-        image3 = image2;
-        image3.flip();
-        image4 = image3;
-        image4.flop();
-        break;
-    case 7: // SouthWest
-        image1.crop(Magick::Geometry(mirrorWidth,mirrorHeight,0,0));
-        image1.flip();
-        image2 = image1;
-        image2.flop();
-        image3 = image2;
-        image3.flip();
-        image4 = image3;
-        image4.flop();
-        break;
-    case 8: // SouthEast
-        image1.crop(Magick::Geometry(mirrorWidth,mirrorHeight,mirrorWidth,0));
-        image1.flop();
-        image1.flip();
-        image2 = image1;
-        image2.flop();
-        image3 = image2;
-        image3.flip();
-        image4 = image3;
-        image4.flop();
-        break;
-    case 9: // Flip
-        image.flip();
-        break;
-    case 10: // Flop
-        image.flop();
-        break;
+    int mirrorWidth = width;
+    int mirrorHeight = height/2;
+    Magick::Image mirror;
+    mirror = image;
+    //mirror.backgroundColor("none");
+    mirror.flip();
+    mirror.crop(Magick::Geometry(mirrorWidth,mirrorHeight-offset,0,offset+offset));
+    image.crop(Magick::Geometry(mirrorWidth,mirrorHeight+offset,0,mirrorHeight-offset));
+
+    // apply mask
+    if (maskClip_ && maskClip_->isConnected() && maskWidth>0 && maskHeight>0) {
+        Magick::Image mask(maskWidth,maskHeight,"A",Magick::FloatPixel,(float*)maskImg->getPixelData());
+        mirror.composite(mask,0,0,Magick::CopyOpacityCompositeOp);
     }
-    if (mirror==5||mirror==6||mirror==7||mirror==8) {
-        image.composite(image1,0,mirrorHeight,Magick::OverCompositeOp);
-        image.composite(image2,mirrorWidth,mirrorHeight,Magick::OverCompositeOp);
-        image.composite(image3,mirrorWidth,0,Magick::OverCompositeOp);
-        image.composite(image4,0,0,Magick::OverCompositeOp);
-    }
-    else {
-        if (mirror==1||mirror==2||mirror==3||mirror==4)
-            image.composite(image1,0,0,Magick::OverCompositeOp);
-    }
+
+    // comp image
+    wrapper.composite(mirror,0,-spacing,Magick::OverCompositeOp);
+    wrapper.composite(image,0,mirrorHeight-offset,Magick::OverCompositeOp);
 
     // return image
     switch (dstBitDepth) {
     case eBitDepthUByte:
         if (image.depth()>8)
             image.depth(8);
-        image.write(0,0,magickWidth,magickHeight,channels,Magick::CharPixel,(float*)dstImg->getPixelData());
+        wrapper.write(0,0,width,height,"RGBA",Magick::CharPixel,(float*)dstImg->getPixelData());
         break;
     case eBitDepthUShort:
         if (image.depth()>16)
             image.depth(16);
-        image.write(0,0,magickWidth,magickHeight,channels,Magick::ShortPixel,(float*)dstImg->getPixelData());
+        wrapper.write(0,0,width,height,"RGBA",Magick::ShortPixel,(float*)dstImg->getPixelData());
         break;
     case eBitDepthFloat:
-        image.write(0,0,magickWidth,magickHeight,channels,Magick::FloatPixel,(float*)dstImg->getPixelData());
+        wrapper.write(0,0,width,height,"RGBA",Magick::FloatPixel,(float*)dstImg->getPixelData());
         break;
     }
 }
 
-bool MirrorPlugin::getRegionOfDefinition(const OFX::RegionOfDefinitionArguments &args, OfxRectD &rod)
+bool ReflectionPlugin::getRegionOfDefinition(const OFX::RegionOfDefinitionArguments &args, OfxRectD &rod)
 {
     if (!kSupportsRenderScale && (args.renderScale.x != 1. || args.renderScale.y != 1.)) {
         OFX::throwSuiteStatusException(kOfxStatFailed);
@@ -308,10 +268,10 @@ bool MirrorPlugin::getRegionOfDefinition(const OFX::RegionOfDefinitionArguments 
     return true;
 }
 
-mDeclarePluginFactory(MirrorPluginFactory, {}, {});
+mDeclarePluginFactory(ReflectionPluginFactory, {}, {});
 
 /** @brief The basic describe function, passed a plugin descriptor */
-void MirrorPluginFactory::describe(OFX::ImageEffectDescriptor &desc)
+void ReflectionPluginFactory::describe(OFX::ImageEffectDescriptor &desc)
 {
     // basic labels
     desc.setLabel(kPluginName);
@@ -327,19 +287,19 @@ void MirrorPluginFactory::describe(OFX::ImageEffectDescriptor &desc)
     desc.addSupportedBitDepth(eBitDepthUShort);
     desc.addSupportedBitDepth(eBitDepthFloat);
 
+    // other
     desc.setSupportsTiles(kSupportsTiles);
     desc.setSupportsMultiResolution(kSupportsMultiResolution);
     desc.setRenderThreadSafety(kRenderThreadSafety);
 }
 
 /** @brief The describe in context function, passed a plugin descriptor and a context */
-void MirrorPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, ContextEnum /*context*/)
-{
+void ReflectionPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, ContextEnum /*context*/)
+{   
     // create the mandated source clip
     ClipDescriptor *srcClip = desc.defineClip(kOfxImageEffectSimpleSourceClipName);
     srcClip->addSupportedComponent(ePixelComponentRGBA);
     srcClip->addSupportedComponent(ePixelComponentRGB);
-    //srcClip->addSupportedComponent(ePixelComponentAlpha); // should work, not tested
     srcClip->setTemporalClipAccess(false);
     srcClip->setSupportsTiles(kSupportsTiles);
     srcClip->setIsMask(false);
@@ -347,41 +307,47 @@ void MirrorPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, Co
     // create the mandated output clip
     ClipDescriptor *dstClip = desc.defineClip(kOfxImageEffectOutputClipName);
     dstClip->addSupportedComponent(ePixelComponentRGBA);
-    dstClip->addSupportedComponent(ePixelComponentRGB);
-    //dstClip->addSupportedComponent(ePixelComponentAlpha); // should work, not tested
+    //dstClip->addSupportedComponent(ePixelComponentRGB);
     dstClip->setSupportsTiles(kSupportsTiles);
 
-    // make some pages and to things in
+    ClipDescriptor *maskClip = desc.defineClip("Mask");
+    maskClip->addSupportedComponent(OFX::ePixelComponentAlpha);
+    maskClip->setTemporalClipAccess(false);
+    maskClip->setOptional(true);
+    maskClip->setSupportsTiles(kSupportsTiles);
+    maskClip->setIsMask(true);
+
+    // make some pages
     PageParamDescriptor *page = desc.definePageParam(kPluginName);
     {
-        ChoiceParamDescriptor *param = desc.defineChoiceParam(kParamMirror);
-        param->setLabel(kParamMirrorLabel);
-        param->setHint(kParamMirrorHint);
-	param->appendOption("None");
-        param->appendOption(REGION_NORTH);
-        param->appendOption(REGION_SOUTH);
-        param->appendOption(REGION_EAST);
-        param->appendOption(REGION_WEST);
-        param->appendOption(REGION_NORTHWEST);
-        param->appendOption(REGION_NORTHEAST);
-        param->appendOption(REGION_SOUTHWEST);
-        param->appendOption(REGION_SOUTHEAST);
-        param->appendOption(REGION_FLIP);
-        param->appendOption(REGION_FLOP);
-        param->setAnimates(true);
+        IntParamDescriptor *param = desc.defineIntParam(kParamOffset);
+        param->setLabel(kParamOffsetLabel);
+        param->setHint(kParamOffsetHint);
+        param->setRange(0, 500);
+        param->setDisplayRange(0, 500);
+        param->setDefault(kParamOffsetDefault);
         page->addChild(*param);
     }
+    {
+        IntParamDescriptor *param = desc.defineIntParam(kParamSpace);
+        param->setLabel(kParamSpaceLabel);
+        param->setHint(kParamSpaceHint);
+        param->setRange(0, 100);
+        param->setDisplayRange(0, 100);
+        param->setDefault(kParamSpaceDefault);
+        page->addChild(*param);
+    }
+
 }
 
 /** @brief The create instance function, the plugin must return an object derived from the \ref OFX::ImageEffect class */
-ImageEffect* MirrorPluginFactory::createInstance(OfxImageEffectHandle handle, ContextEnum /*context*/)
+ImageEffect* ReflectionPluginFactory::createInstance(OfxImageEffectHandle handle, ContextEnum /*context*/)
 {
-    return new MirrorPlugin(handle);
+    return new ReflectionPlugin(handle);
 }
 
-
-void getMirrorPluginID(OFX::PluginFactoryArray &ids)
+void getReflectionPluginID(OFX::PluginFactoryArray &ids)
 {
-    static MirrorPluginFactory p(kPluginIdentifier, kPluginVersionMajor, kPluginVersionMinor);
+    static ReflectionPluginFactory p(kPluginIdentifier, kPluginVersionMajor, kPluginVersionMinor);
     ids.push_back(&p);
 }
