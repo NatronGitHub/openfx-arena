@@ -5,7 +5,6 @@
 #include "Implode.h"
 #include "Tile.h"
 #include "Reflection.h"
-#include "UnsharpMask.h"
 
 namespace OFX
 {
@@ -19,7 +18,6 @@ namespace OFX
             getImplodePluginID(ids);
             getTilePluginID(ids);
             getReflectionPluginID(ids);
-            getUnsharpMaskPluginID(ids);
         }
     }
 }
