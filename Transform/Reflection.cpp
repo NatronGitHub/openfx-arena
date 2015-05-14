@@ -220,7 +220,7 @@ ReflectionPlugin::render(const OFX::RenderArguments &args)
     int mirrorHeight = height/2;
     Magick::Image mirror;
     mirror = image;
-    mirror.backgroundColor("none");
+    //mirror.backgroundColor("none");
     mirror.flip();
     mirror.crop(Magick::Geometry(mirrorWidth,mirrorHeight-offset,0,offset+offset));
     image.crop(Magick::Geometry(mirrorWidth,mirrorHeight+offset,0,mirrorHeight-offset));
