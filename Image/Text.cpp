@@ -86,7 +86,7 @@
 
 #define kPluginIdentifier "net.fxarena.openfx.Text"
 #define kPluginVersionMajor 1
-#define kPluginVersionMinor 1
+#define kPluginVersionMinor 2
 
 #define kSupportsTiles 0
 #define kSupportsMultiResolution 1
@@ -263,20 +263,22 @@ void TextPlugin::render(const OFX::RenderArguments &args)
 
     // Get params
     double x, y, r, g, b, a, r_s, g_s, b_s, a_s, strokeWidth;
-    int fontSize, fontName, fontDecor;
+    int fontSize, fontID, fontDecor;
     bool use_stroke = false;
-    std::string text, fontOverride;
+    std::string text, fontOverride, fontName;
 
     position_->getValueAtTime(args.time, x, y);
     text_->getValueAtTime(args.time, text);
     fontSize_->getValueAtTime(args.time, fontSize);
-    fontName_->getValueAtTime(args.time, fontName);
+    fontName_->getValueAtTime(args.time, fontID);
     fontDecor_->getValueAtTime(args.time, fontDecor);
     strokeEnabled_->getValueAtTime(args.time, use_stroke);
     strokeWidth_->getValueAtTime(args.time, strokeWidth);
     fontOverride_->getValueAtTime(args.time, fontOverride);
     textColor_->getValueAtTime(args.time, r, g, b, a);
     strokeColor_->getValueAtTime(args.time, r_s, g_s, b_s, a_s);
+
+    fontName_->getOption(fontID,fontName);
 
     float textColor[4];
     textColor[0] = (float)r;
@@ -290,18 +292,9 @@ void TextPlugin::render(const OFX::RenderArguments &args)
     strokeColor[2] = (float)b_s;
     strokeColor[3] = (float)a_s;
 
-    // Get font
-    std::string fontFile;
-    if (fontOverride.empty()) {
-        char **fonts;
-        std::size_t fontList;
-        fonts=MagickCore::MagickQueryFonts("*",&fontList);
-        fontFile = fonts[fontName];
-        for (size_t i = 0; i < fontList; i++)
-            free(fonts[i]);
-    }
-    else
-        fontFile=fontOverride;
+    // use custom font
+    if (!fontOverride.empty())
+        fontName=fontOverride;
 
     // Generate empty image
     int width = dstRod.x2-dstRod.x1;
@@ -341,7 +334,7 @@ void TextPlugin::render(const OFX::RenderArguments &args)
 
     // Setup draw
     std::list<Magick::Drawable> text_draw_list;
-    text_draw_list.push_back(Magick::DrawableFont(fontFile));
+    text_draw_list.push_back(Magick::DrawableFont(fontName));
     text_draw_list.push_back(Magick::DrawableText(xtext, ytext, text));
     text_draw_list.push_back(Magick::DrawableFillColor(textRGBA));
     if (use_stroke)
