@@ -1,8 +1,7 @@
 #!/bin/sh
 # Build and deploy plugin
 #
-# Works on Linux and Windows
-# FreeBSD and Mac is on the TODO
+# Works on Linux, FreeBSD and Windows
 #
 
 CWD=$(pwd)
@@ -26,7 +25,7 @@ FTYPE=2.4.11
 FTYPE_URL=http://sourceforge.net/projects/freetype/files/freetype2/${FTYPE}/freetype-${FTYPE}.tar.gz/download
 
 if [ -z "$VERSION" ]; then
-  ARENA=0.5
+  ARENA=0.5.1
 else
   ARENA=$VERSION
 fi
@@ -46,6 +45,7 @@ OS=$(uname -o)
 if [ -z "$ARCH" ]; then
   case "$( uname -m )" in
     i?86) export ARCH=i686 ;;
+    amd64) export ARCH=x86_64 ;;
        *) export ARCH=$( uname -m ) ;;
   esac
 fi
@@ -74,6 +74,16 @@ PKG=$PKGNAME.ofx.bundle-$ARENA-$PKGOS-x86-release-$BIT
 export PKG_CONFIG_PATH=$PREFIX/lib/pkgconfig
 export LD_LIBRARY_PATH=$PREFIX/lib:$LD_LIBRARY_PATH
 export PATH=$PREFIX/bin:$PATH
+
+MAKE=make
+
+if [ "$OS" == "FreeBSD" ]; then
+  export CXX=clang++
+  export CC=clang
+  MAKE=gmake
+  BSD="-std=c++11"
+  USE_FREEBSD=1
+fi
 
 if [ ! -d $PREFIX ]; then
   mkdir -p $PREFIX/{bin,lib,include} || exit 1
@@ -106,9 +116,9 @@ if [ ! -f ${PREFIX}/lib/libpng.a ]; then
     tar xvf $CWD/3rdparty/libpng-$PNG.tar.gz -C $CWD/3rdparty/ || exit 1
   fi
   cd $CWD/3rdparty/libpng-$PNG || exit 1
-  make distclean
-  CFLAGS="-m${BIT} ${BF}" CXXFLAGS="-m${BIT} ${BF} -I${PREFIX}/include" CPPFLAGS="-I${PREFIX}/include -L${PREFIX}/lib" ./configure --prefix=$PREFIX --enable-static --disable-shared || exit 1
-  make -j$JOBS install || exit 1
+  $MAKE distclean
+  CFLAGS="-m${BIT} ${BF}" CXXFLAGS="-m${BIT} ${BF} ${BSD} -I${PREFIX}/include" CPPFLAGS="-I${PREFIX}/include -L${PREFIX}/lib" ./configure --prefix=$PREFIX --enable-static --disable-shared || exit 1
+  $MAKE -j$JOBS install || exit 1
 fi
 
 # expat
@@ -170,9 +180,9 @@ if [ ! -f ${PREFIX}/lib/libMagick++-6.Q16HDRI.a ]; then
   cd $CWD/3rdparty/ImageMagick-$MAGICK || exit 1
   # fix smooth fonts
   cat $CWD/3rdparty/composite-private.h > magick/composite-private.h || exit 1
-  make distclean
-  CFLAGS="-m${BIT} ${BF}" CXXFLAGS="-m${BIT} ${BF} -I${PREFIX}/include" CPPFLAGS="-I${PREFIX}/include -L${PREFIX}/lib" ./configure --libdir=${PREFIX}/lib --prefix=${PREFIX} --disable-deprecated --with-magick-plus-plus=yes --with-quantum-depth=16 --without-dps --without-djvu --without-fftw --without-fpx --without-gslib --without-gvc --without-jbig --without-jpeg --without-lcms --without-lcms2 --without-openjp2 --without-lqr --without-lzma --without-openexr --without-pango --with-png --without-rsvg --without-tiff --without-webp --without-xml --with-zlib --without-bzlib --enable-static --disable-shared --enable-hdri --with-freetype --with-fontconfig --without-x --without-modules || exit 1
-  make -j$JOBS install || exit 1
+  $MAKE distclean
+  CFLAGS="-m${BIT} ${BF}" CXXFLAGS="-m${BIT} ${BF} ${BSD} -I${PREFIX}/include" CPPFLAGS="-I${PREFIX}/include -L${PREFIX}/lib" ./configure --libdir=${PREFIX}/lib --prefix=${PREFIX} --disable-deprecated --with-magick-plus-plus=yes --with-quantum-depth=16 --without-dps --without-djvu --without-fftw --without-fpx --without-gslib --without-gvc --without-jbig --without-jpeg --without-lcms --without-lcms2 --without-openjp2 --without-lqr --without-lzma --without-openexr --without-pango --with-png --without-rsvg --without-tiff --without-webp --without-xml --with-zlib --without-bzlib --enable-static --disable-shared --enable-hdri --with-freetype --with-fontconfig --without-x --without-modules || exit 1
+  $MAKE -j$JOBS install || exit 1
 fi
 
 cd $CWD || exit 1
@@ -182,9 +192,8 @@ if [ "$PKGNAME" != "Arena" ]; then
 fi
 
 if [ "$OS" != "Msys" ]; then
-  #probably add gmake for freebsd
-  make STATIC=1 BITS=$BIT CONFIG=release clean
-  make STATIC=1 BITS=$BIT CONFIG=release || exit 1
+  $MAKE STATIC=1 FREEBSD=$USE_FREEBSD BITS=$BIT CONFIG=release clean
+  $MAKE STATIC=1 FREEBSD=$USE_FREEBSD BITS=$BIT CONFIG=release || exit 1
 else
   make STATIC=1 MINGW=1 BIT=$BIT CONFIG=release clean
   make STATIC=1 MINGW=1 BIT=$BIT CONFIG=release || exit 1
