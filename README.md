@@ -63,9 +63,14 @@ apt-get install libmagick++-dev libmagickcore-dev
 pkg install ImageMagick
 ```
 
-**Make on Linux/FreeBSD**
+**Make on Linux**
 ```
 make CONFIG=release
+```
+
+**Make on FreeBSD**
+```
+gmake FREEBSD=1 CONFIG=release
 ```
 
 **Make on Windows**
