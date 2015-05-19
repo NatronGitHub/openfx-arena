@@ -2,6 +2,7 @@ PLUGINOBJECTS = \
 	Swirl.o \
 	Implode.o \
         UnsharpMask.o \
+	Polar.o \
 	PluginRegistration.o \
 
 PLUGINNAME = Filter
@@ -13,6 +14,8 @@ net.fxarena.openfx.Implode.png \
 net.fxarena.openfx.Implode.svg \
 net.fxarena.openfx.UnsharpMask.png \
 net.fxarena.openfx.UnsharpMask.svg \
+net.fxarena.openfx.Polar.png \
+net.fxarena.openfx.Polar.svg \
 
 include ../Makefile.master
 

@@ -3,6 +3,7 @@ PLUGINOBJECTS = \
         Swirl.o \
         Mirror.o \
         Implode.o \
+        Polar.o \
         Tile.o \
         Reflection.o \
 	ofxsOGLTextRenderer.o \
@@ -25,6 +26,8 @@ RESOURCES = \
 ../Transform/net.fxarena.openfx.Tile.svg \
 ../Transform/net.fxarena.openfx.Reflection.png \
 ../Transform/net.fxarena.openfx.Reflection.svg \
+../Filter/net.fxarena.openfx.Polar.png \
+../Filter/net.fxarena.openfx.Polar.svg \
 
 VPATH += \
 ../Transform \

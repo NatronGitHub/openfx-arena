@@ -2,6 +2,7 @@
 #include "Swirl.h"
 #include "Implode.h"
 #include "UnsharpMask.h"
+#include "Polar.h"
 
 namespace OFX 
 {
@@ -12,6 +13,7 @@ namespace OFX
         getSwirlPluginID(ids);
         getImplodePluginID(ids);
         getUnsharpMaskPluginID(ids);
+	getPolarPluginID(ids);
     }
   }
 }

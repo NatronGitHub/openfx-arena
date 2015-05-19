@@ -5,6 +5,7 @@
 #include "Implode.h"
 #include "Tile.h"
 #include "Reflection.h"
+#include "Polar.h"
 
 namespace OFX
 {
@@ -18,6 +19,7 @@ namespace OFX
             getImplodePluginID(ids);
             getTilePluginID(ids);
             getReflectionPluginID(ids);
+            getPolarPlugin(ids);
         }
     }
 }
