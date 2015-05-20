@@ -8,6 +8,8 @@ A set of visual effect plugins for OpenFX compatible applications.
  * Filter
   * Implode
   * Swirl
+  * Polar Distort
+  * Arc Distort
  * Transform
   * Mirror
   * Tile
