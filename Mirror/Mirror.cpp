@@ -73,7 +73,7 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 #define kSupportsTiles 0
 #define kSupportsMultiResolution 1
-#define kSupportsRenderScale 1 // Don't work in Natron
+#define kSupportsRenderScale 0 // renderscale dont work in natron, disable. NOTE! this breaks compat with natronv2 ....
 #define kRenderThreadSafety eRenderInstanceSafe
 
 using namespace OFX;
