@@ -33,18 +33,38 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 */
 
-#include "Implode.h"
+#include "Distort.h"
 
 #include "ofxsMacros.h"
 #include <Magick++.h>
 
-#define kPluginName "Implode"
+#define kPluginName "Distort"
 #define kPluginGrouping "Filter"
-#define kPluginDescription "Implode image"
+#define kPluginDescription  "Distort image using varius techniques"
 
-#define kPluginIdentifier "net.fxarena.openfx.Implode"
+#define kPluginIdentifier "net.fxarena.openfx.Distort"
 #define kPluginVersionMajor 1
-#define kPluginVersionMinor 1
+#define kPluginVersionMinor 0
+
+#define kParamVPixel "virtualPixelMethod"
+#define kParamVPixelLabel "Virtual Pixel"
+#define kParamVPixelHint "Virtual Pixel Method"
+#define kParamVPixelDefault 7
+
+#define kParamDistort "distort"
+#define kParamDistortLabel "Distort"
+#define kParamDistortHint "Distort technique"
+#define kParamDistortDefault 0
+
+#define kParamArcAngle "arcAngle"
+#define kParamArcAngleLabel "Angle"
+#define kParamArcAngleHint "Arc angle"
+#define kParamArcAngleDefault 60
+
+#define kParamSwirl "swirl"
+#define kParamSwirlLabel "Swirl"
+#define kParamSwirlHint "Swirl image by degree"
+#define kParamSwirlDefault 60
 
 #define kParamImplode "factor"
 #define kParamImplodeLabel "Factor"
@@ -58,20 +78,24 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 using namespace OFX;
 
-class ImplodePlugin : public OFX::ImageEffect
+class DistortPlugin : public OFX::ImageEffect
 {
 public:
-    ImplodePlugin(OfxImageEffectHandle handle);
-    virtual ~ImplodePlugin();
+    DistortPlugin(OfxImageEffectHandle handle);
+    virtual ~DistortPlugin();
     virtual void render(const OFX::RenderArguments &args) OVERRIDE FINAL;
     virtual bool getRegionOfDefinition(const OFX::RegionOfDefinitionArguments &args, OfxRectD &rod) OVERRIDE FINAL;
 private:
     OFX::Clip *dstClip_;
     OFX::Clip *srcClip_;
+    OFX::ChoiceParam *vpixel_;
+    OFX::ChoiceParam *distort_;
+    OFX::DoubleParam *arcAngle_;
+    OFX::DoubleParam *swirlDegree_;
     OFX::DoubleParam *implode_;
 };
 
-ImplodePlugin::ImplodePlugin(OfxImageEffectHandle handle)
+DistortPlugin::DistortPlugin(OfxImageEffectHandle handle)
 : OFX::ImageEffect(handle)
 , dstClip_(0)
 , srcClip_(0)
@@ -82,15 +106,19 @@ ImplodePlugin::ImplodePlugin(OfxImageEffectHandle handle)
     srcClip_ = fetchClip(kOfxImageEffectSimpleSourceClipName);
     assert(srcClip_ && (srcClip_->getPixelComponents() == OFX::ePixelComponentRGBA || srcClip_->getPixelComponents() == OFX::ePixelComponentRGB));
 
+    vpixel_ = fetchChoiceParam(kParamVPixel);
+    distort_ = fetchChoiceParam(kParamDistort);
+    arcAngle_ = fetchDoubleParam(kParamArcAngle);
+    swirlDegree_ = fetchDoubleParam(kParamSwirl);
     implode_ = fetchDoubleParam(kParamImplode);
-    assert(implode_);
+    assert(vpixel_ && distort_ && arcAngle_ && swirlDegree_ && implode_);
 }
 
-ImplodePlugin::~ImplodePlugin()
+DistortPlugin::~DistortPlugin()
 {
 }
 
-void ImplodePlugin::render(const OFX::RenderArguments &args)
+void DistortPlugin::render(const OFX::RenderArguments &args)
 {
     if (!kSupportsRenderScale && (args.renderScale.x != 1. || args.renderScale.y != 1.)) {
         OFX::throwSuiteStatusException(kOfxStatFailed);
@@ -172,35 +200,145 @@ void ImplodePlugin::render(const OFX::RenderArguments &args)
         return;
     }
 
-    // get param
-    double implode;
+    // get params
+    int vpixel,distort,value;
+    double arcAngle,swirlDegree,implode;
+    vpixel_->getValueAtTime(args.time, vpixel);
+    distort_->getValueAtTime(args.time, distort);
+    arcAngle_->getValueAtTime(args.time, arcAngle);
+    swirlDegree_->getValueAtTime(args.time, swirlDegree);
     implode_->getValueAtTime(args.time, implode);
+
+    value = 1; // TODO! should this be a param?
 
     // read image
     Magick::Image image(srcRod.x2-srcRod.x1,srcRod.y2-srcRod.y1,channels,Magick::FloatPixel,(float*)srcImg->getPixelData());
 
-    // proc image
-    image.implode(implode);
+    // create empty container
+    Magick::Image container(Magick::Geometry(srcRod.x2-srcRod.x1,srcRod.y2-srcRod.y1),Magick::Color("rgba(0,0,0,0)"));
+
+    // dimension
+    int width = dstRod.x2-dstRod.x1;
+    int height = dstRod.y2-dstRod.y1;
+    int offsetX = 0;
+    int offsetY = 0;
+
+    // flip it, if needed
+    if (distort==0||distort==1)
+        image.flip();
+
+    // set virtual pixel
+    switch (vpixel) {
+    case 0:
+        image.virtualPixelMethod(Magick::UndefinedVirtualPixelMethod);
+        break;
+    case 1:
+        image.virtualPixelMethod(Magick::BackgroundVirtualPixelMethod);
+        break;
+    case 2:
+        image.virtualPixelMethod(Magick::BlackVirtualPixelMethod);
+        break;
+    case 3:
+        image.virtualPixelMethod(Magick::CheckerTileVirtualPixelMethod);
+        break;
+    case 4:
+        image.virtualPixelMethod(Magick::DitherVirtualPixelMethod);
+        break;
+    case 5:
+        image.virtualPixelMethod(Magick::EdgeVirtualPixelMethod);
+        break;
+    case 6:
+        image.virtualPixelMethod(Magick::GrayVirtualPixelMethod);
+        break;
+    case 7:
+        image.virtualPixelMethod(Magick::HorizontalTileVirtualPixelMethod);
+        break;
+    case 8:
+        image.virtualPixelMethod(Magick::HorizontalTileEdgeVirtualPixelMethod);
+        break;
+    case 9:
+        image.virtualPixelMethod(Magick::MirrorVirtualPixelMethod);
+        break;
+    case 10:
+        image.virtualPixelMethod(Magick::RandomVirtualPixelMethod);
+        break;
+    case 11:
+        image.virtualPixelMethod(Magick::TileVirtualPixelMethod);
+        break;
+    case 12:
+        image.virtualPixelMethod(Magick::TransparentVirtualPixelMethod);
+        break;
+    case 13:
+        image.virtualPixelMethod(Magick::VerticalTileVirtualPixelMethod);
+        break;
+    case 14:
+        image.virtualPixelMethod(Magick::VerticalTileEdgeVirtualPixelMethod);
+        break;
+    case 15:
+        image.virtualPixelMethod(Magick::WhiteVirtualPixelMethod);
+        break;
+    }
+
+    // distort method
+    double distortArgs[4] = {NULL, NULL, NULL, NULL};
+    switch (distort) {
+    case 0: // Polar Distort
+        image.backgroundColor(Magick::Color("black")); // TODO! own param?
+        image.distort(Magick::PolarDistortion, value, distortArgs, Magick::MagickTrue);
+        if (image.rows()>height)
+            image.scale(Magick::Geometry(NULL,height));
+        if (image.columns()<width)
+            offsetX = (width-image.columns())/2;
+        break;
+    case 1: // Arc Distort
+        distortArgs[0] = arcAngle;
+        image.backgroundColor(Magick::Color("black")); // TODO! own param?
+        image.distort(Magick::ArcDistortion, value, distortArgs, Magick::MagickTrue);
+        if (image.columns()>width)
+            image.scale(Magick::Geometry(width,NULL));
+        if (image.rows()>height)
+            image.scale(Magick::Geometry(NULL,height));
+        if (image.rows()<height)
+            offsetY = (height-image.rows())/2;
+        if (image.columns()<width)
+            offsetX = (width-image.columns())/2;
+        break;
+    case 2: // Swirl
+        if (swirlDegree!=0)
+            image.swirl(swirlDegree);
+        break;
+    case 3: // Implode
+        if (implode!=0)
+            image.implode(implode);
+    }
+
+    // flip and comp, if needed
+    if (distort==0||distort==1) {
+        image.flip();
+        container.composite(image,offsetX,offsetY,Magick::OverCompositeOp);
+    }
+    else
+        container=image;
 
     // return image
     switch (dstBitDepth) {
     case eBitDepthUByte:
-        if (image.depth()>8)
-            image.depth(8);
-        image.write(0,0,dstRod.x2-dstRod.x1,dstRod.y2-dstRod.y1,channels,Magick::CharPixel,(float*)dstImg->getPixelData());
+        if (container.depth()>8)
+            container.depth(8);
+        container.write(0,0,width,height,channels,Magick::CharPixel,(float*)dstImg->getPixelData());
         break;
     case eBitDepthUShort:
-        if (image.depth()>16)
-            image.depth(16);
-        image.write(0,0,dstRod.x2-dstRod.x1,dstRod.y2-dstRod.y1,channels,Magick::ShortPixel,(float*)dstImg->getPixelData());
+        if (container.depth()>16)
+            container.depth(16);
+        container.write(0,0,width,height,channels,Magick::ShortPixel,(float*)dstImg->getPixelData());
         break;
     case eBitDepthFloat:
-        image.write(0,0,dstRod.x2-dstRod.x1,dstRod.y2-dstRod.y1,channels,Magick::FloatPixel,(float*)dstImg->getPixelData());
+        container.write(0,0,width,height,channels,Magick::FloatPixel,(float*)dstImg->getPixelData());
         break;
     }
 }
 
-bool ImplodePlugin::getRegionOfDefinition(const OFX::RegionOfDefinitionArguments &args, OfxRectD &rod)
+bool DistortPlugin::getRegionOfDefinition(const OFX::RegionOfDefinitionArguments &args, OfxRectD &rod)
 {
     if (!kSupportsRenderScale && (args.renderScale.x != 1. || args.renderScale.y != 1.)) {
         OFX::throwSuiteStatusException(kOfxStatFailed);
@@ -215,10 +353,10 @@ bool ImplodePlugin::getRegionOfDefinition(const OFX::RegionOfDefinitionArguments
     return true;
 }
 
-mDeclarePluginFactory(ImplodePluginFactory, {}, {});
+mDeclarePluginFactory(DistortPluginFactory, {}, {});
 
 /** @brief The basic describe function, passed a plugin descriptor */
-void ImplodePluginFactory::describe(OFX::ImageEffectDescriptor &desc)
+void DistortPluginFactory::describe(OFX::ImageEffectDescriptor &desc)
 {
     // basic labels
     desc.setLabel(kPluginName);
@@ -240,7 +378,7 @@ void ImplodePluginFactory::describe(OFX::ImageEffectDescriptor &desc)
 }
 
 /** @brief The describe in context function, passed a plugin descriptor and a context */
-void ImplodePluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, ContextEnum /*context*/)
+void DistortPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, ContextEnum /*context*/)
 {
     // create the mandated source clip
     ClipDescriptor *srcClip = desc.defineClip(kOfxImageEffectSimpleSourceClipName);
@@ -260,6 +398,70 @@ void ImplodePluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, C
 
     // make some pages and to things in
     PageParamDescriptor *page = desc.definePageParam(kPluginName);
+    PageParamDescriptor *pagePolar = desc.definePageParam("Polar");
+    PageParamDescriptor *pageArc = desc.definePageParam("Arc");
+    PageParamDescriptor *pageSwirl = desc.definePageParam("Swirl");
+    PageParamDescriptor *pageImplode = desc.definePageParam("Implode");
+    {
+        ChoiceParamDescriptor *param = desc.defineChoiceParam(kParamVPixel);
+        param->setLabel(kParamVPixelLabel);
+        param->setHint(kParamVPixelHint);
+
+        param->appendOption("Undefined");
+        param->appendOption("Background");
+        param->appendOption("Black");
+        param->appendOption("CheckerTile");
+        param->appendOption("Dither");
+        param->appendOption("Edge");
+        param->appendOption("Gray");
+        param->appendOption("HorizontalTile");
+        param->appendOption("HorizontalTileEdge");
+        param->appendOption("Mirror");
+        param->appendOption("Random");
+        param->appendOption("Tile");
+        param->appendOption("Transparent");
+        param->appendOption("VerticalTile");
+        param->appendOption("VerticalTileEdge");
+        param->appendOption("White");
+
+        param->setDefault(kParamVPixelDefault);
+
+        param->setAnimates(true);
+        page->addChild(*param);
+    }
+    {
+        ChoiceParamDescriptor *param = desc.defineChoiceParam(kParamDistort);
+        param->setLabel(kParamDistortLabel);
+        param->setHint(kParamDistortHint);
+
+        param->appendOption("Polar");
+        param->appendOption("Arc");
+        param->appendOption("Swirl");
+        param->appendOption("Implode");
+
+        param->setDefault(kParamDistortDefault);
+
+        param->setAnimates(true);
+        page->addChild(*param);
+    }
+    {
+        DoubleParamDescriptor *param = desc.defineDoubleParam(kParamArcAngle);
+        param->setLabel(kParamArcAngleLabel);
+        param->setHint(kParamArcAngleHint);
+        param->setRange(1, 360);
+        param->setDisplayRange(1, 360);
+        param->setDefault(kParamArcAngleDefault);
+        pageArc->addChild(*param);
+    }
+    {
+        DoubleParamDescriptor *param = desc.defineDoubleParam(kParamSwirl);
+        param->setLabel(kParamSwirlLabel);
+        param->setHint(kParamSwirlHint);
+        param->setRange(-360, 360);
+        param->setDisplayRange(-360, 360);
+        param->setDefault(kParamSwirlDefault);
+        pageSwirl->addChild(*param);
+    }
     {
         DoubleParamDescriptor *param = desc.defineDoubleParam(kParamImplode);
         param->setLabel(kParamImplodeLabel);
@@ -267,19 +469,18 @@ void ImplodePluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, C
         param->setRange(-10, 1.5);
         param->setDisplayRange(-10, 1.5);
         param->setDefault(kParamImplodeDefault);
-        page->addChild(*param);
+        pageImplode->addChild(*param);
     }
 }
 
 /** @brief The create instance function, the plugin must return an object derived from the \ref OFX::ImageEffect class */
-ImageEffect* ImplodePluginFactory::createInstance(OfxImageEffectHandle handle, ContextEnum /*context*/)
+ImageEffect* DistortPluginFactory::createInstance(OfxImageEffectHandle handle, ContextEnum /*context*/)
 {
-    return new ImplodePlugin(handle);
+    return new DistortPlugin(handle);
 }
 
-
-void getImplodePluginID(OFX::PluginFactoryArray &ids)
+void getDistortPluginID(OFX::PluginFactoryArray &ids)
 {
-    static ImplodePluginFactory p(kPluginIdentifier, kPluginVersionMajor, kPluginVersionMinor);
+    static DistortPluginFactory p(kPluginIdentifier, kPluginVersionMajor, kPluginVersionMinor);
     ids.push_back(&p);
 }

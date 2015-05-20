@@ -1,12 +1,9 @@
 #include "ofxsImageEffect.h"
 #include "Text.h"
-#include "Swirl.h"
+#include "Distort.h"
 #include "Mirror.h"
-#include "Implode.h"
 #include "Tile.h"
 #include "Reflection.h"
-#include "Polar.h"
-#include "Arc.h"
 
 namespace OFX
 {
@@ -15,13 +12,10 @@ namespace OFX
         void getPluginIDs(OFX::PluginFactoryArray &ids)
         {
             getTextPluginID(ids);
-            getSwirlPluginID(ids);
+            getDistortPluginID(ids);
             getMirrorPluginID(ids);
-            getImplodePluginID(ids);
             getTilePluginID(ids);
             getReflectionPluginID(ids);
-            getPolarPluginID(ids);
-            getArcPluginID(ids);
         }
     }
 }
