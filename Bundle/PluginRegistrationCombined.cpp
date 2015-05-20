@@ -2,7 +2,6 @@
 #include "Text.h"
 #include "Distort.h"
 #include "Mirror.h"
-#include "Tile.h"
 #include "Reflection.h"
 
 namespace OFX
@@ -14,7 +13,6 @@ namespace OFX
             getTextPluginID(ids);
             getDistortPluginID(ids);
             getMirrorPluginID(ids);
-            getTilePluginID(ids);
             getReflectionPluginID(ids);
         }
     }

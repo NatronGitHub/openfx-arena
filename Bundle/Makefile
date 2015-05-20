@@ -2,7 +2,6 @@ PLUGINOBJECTS = \
         Text.o \
         Distort.o \
         Mirror.o \
-        Tile.o \
         Reflection.o \
 	ofxsOGLTextRenderer.o \
 	ofxsOGLFontData.o \
@@ -18,8 +17,6 @@ RESOURCES = \
 ../Distort/net.fxarena.openfx.Distort.svg \
 ../Transform/net.fxarena.openfx.Mirror.png \
 ../Transform/net.fxarena.openfx.Mirror.svg \
-../Transform/net.fxarena.openfx.Tile.png \
-../Transform/net.fxarena.openfx.Tile.svg \
 ../Transform/net.fxarena.openfx.Reflection.png \
 ../Transform/net.fxarena.openfx.Reflection.svg \
 

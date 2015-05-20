@@ -82,7 +82,7 @@
 
 #define kPluginName "Text"
 #define kPluginGrouping "Draw"
-#define kPluginDescription  "A simple text generator - https://github.com/olear/openfx-arena"
+#define kPluginDescription  "A simple text generator. \n\nhttps://github.com/olear/openfx-arena"
 
 #define kPluginIdentifier "net.fxarena.openfx.Text"
 #define kPluginVersionMajor 1

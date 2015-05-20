@@ -40,7 +40,7 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 #define kPluginName "Distort"
 #define kPluginGrouping "Filter"
-#define kPluginDescription  "Distort image using varius techniques - https://github.com/olear/openfx-arena"
+#define kPluginDescription  "Distort image using varius techniques. \n\nhttps://github.com/olear/openfx-arena"
 
 #define kPluginIdentifier "net.fxarena.openfx.Distort"
 #define kPluginVersionMajor 1
