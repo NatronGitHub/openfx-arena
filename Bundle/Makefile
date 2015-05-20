@@ -12,8 +12,8 @@ PLUGINOBJECTS = \
 PLUGINNAME = Arena
 
 RESOURCES = \
-../Image/net.fxarena.openfx.Text.png \
-../Image/net.fxarena.openfx.Text.svg \
+../Text/net.fxarena.openfx.Text.png \
+../Text/net.fxarena.openfx.Text.svg \
 ../Distort/net.fxarena.openfx.Distort.png \
 ../Distort/net.fxarena.openfx.Distort.svg \
 ../Transform/net.fxarena.openfx.Mirror.png \
@@ -25,12 +25,12 @@ RESOURCES = \
 
 VPATH += \
 ../Transform \
-../Image \
+../Text \
 ../Distort \
 
 include ../Makefile.master
 
-CXXFLAGS += -I../Transform -I../Image -I../Distort
+CXXFLAGS += -I../Transform -I../Text -I../Distort
 
 CXXFLAGS  += $(MAGICK_CXXFLAGS)
 LINKFLAGS += $(MAGICK_LINKFLAGS)

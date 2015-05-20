@@ -40,7 +40,7 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 #define kPluginName "Distort"
 #define kPluginGrouping "Filter"
-#define kPluginDescription  "Distort image using varius techniques"
+#define kPluginDescription  "Distort image using varius techniques - https://github.com/olear/openfx-arena"
 
 #define kPluginIdentifier "net.fxarena.openfx.Distort"
 #define kPluginVersionMajor 1
@@ -61,12 +61,12 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #define kParamArcAngleHint "Arc angle"
 #define kParamArcAngleDefault 60
 
-#define kParamSwirl "swirl"
-#define kParamSwirlLabel "Swirl"
+#define kParamSwirl "swirlDegree"
+#define kParamSwirlLabel "Degree"
 #define kParamSwirlHint "Swirl image by degree"
 #define kParamSwirlDefault 60
 
-#define kParamImplode "factor"
+#define kParamImplode "implodeFactor"
 #define kParamImplodeLabel "Factor"
 #define kParamImplodeHint "Implode image by factor"
 #define kParamImplodeDefault 0.5
@@ -310,6 +310,7 @@ void DistortPlugin::render(const OFX::RenderArguments &args)
     case 3: // Implode
         if (implode!=0)
             image.implode(implode);
+        break;
     }
 
     // flip and comp, if needed

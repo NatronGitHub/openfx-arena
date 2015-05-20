@@ -1,22 +1,17 @@
 PLUGINOBJECTS = \
-        Text.o \
+	Text.o \
 	ofxsOGLTextRenderer.o \
 	ofxsOGLFontData.o \
 	ofxsRectangleInteract.o \
-	PluginRegistrationCombined.o \
+	PluginRegistration.o \
 
 PLUGINNAME = Text
 
 RESOURCES = \
-../Image/net.fxarena.openfx.Text.png \
-../Image/net.fxarena.openfx.Text.svg \
-
-VPATH += \
-../Image \
+net.fxarena.openfx.Text.png \
+net.fxarena.openfx.Text.svg \
 
 include ../Makefile.master
 
-CXXFLAGS += -I../Image
-
-CXXFLAGS  += $(MAGICK_CXXFLAGS)
+CXXFLAGS += $(MAGICK_CXXFLAGS)
 LINKFLAGS += $(MAGICK_LINKFLAGS)

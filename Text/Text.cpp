@@ -81,7 +81,7 @@
 #define CLAMP(value, min, max) (((value) >(max)) ? (max) : (((value) <(min)) ? (min) : (value)))
 
 #define kPluginName "Text"
-#define kPluginGrouping "Image"
+#define kPluginGrouping "Draw"
 #define kPluginDescription  "A simple text generator - https://github.com/olear/openfx-arena"
 
 #define kPluginIdentifier "net.fxarena.openfx.Text"

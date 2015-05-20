@@ -1,7 +1,7 @@
 # build a combined plugin that reads all formats
 SUBDIRS = Bundle
 
-SUBDIRS_NOMULTI = Transform Image Distort
+SUBDIRS_NOMULTI = Transform Text Distort
 
 all: subdirs
 
