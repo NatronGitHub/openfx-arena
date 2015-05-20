@@ -3,6 +3,7 @@
 #include "Implode.h"
 #include "UnsharpMask.h"
 #include "Polar.h"
+#include "Arc.h"
 
 namespace OFX 
 {
@@ -14,6 +15,7 @@ namespace OFX
         getImplodePluginID(ids);
         getUnsharpMaskPluginID(ids);
         getPolarPluginID(ids);
+        getArcPluginID(ids);
     }
   }
 }
