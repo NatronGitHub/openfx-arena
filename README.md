@@ -3,18 +3,6 @@ OpenFX Arena [![Build Status](https://travis-ci.org/olear/openfx-arena.svg)](htt
 
 A set of visual effect plugins for OpenFX compatible applications.
 
- * Image
-  * Text
- * Filter
-  * Implode
-  * Swirl
-  * Polar Distort
-  * Arc Distort
- * Transform
-  * Mirror
-  * Tile
-  * Reflection
-
 Compatibility
 =============
 
