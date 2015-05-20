@@ -83,12 +83,12 @@ make STATIC=1 MINGW=1 BIT=64 CONFIG=release
 
 **Install on Linux/FreeBSD**
 ```
-cp -a Plugin/*-*-*/Arena.ofx.bundle /usr/OFX/Plugins/
+cp -a Bundle/*-*-*/Arena.ofx.bundle /usr/OFX/Plugins/
 ```
 
 **Install on Windows**
 ```
-cp -a Plugin/*-*-*/Arena.ofx.bundle "/c/Program Files/Common Files/OFX/Plugins/"
+cp -a Bundle/*-*-*/Arena.ofx.bundle "/c/Program Files/Common Files/OFX/Plugins/"
 ```
 
 Contribute

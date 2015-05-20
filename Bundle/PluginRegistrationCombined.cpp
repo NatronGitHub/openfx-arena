@@ -19,7 +19,7 @@ namespace OFX
             getImplodePluginID(ids);
             getTilePluginID(ids);
             getReflectionPluginID(ids);
-            getPolarPlugin(ids);
+            getPolarPluginID(ids);
         }
     }
 }

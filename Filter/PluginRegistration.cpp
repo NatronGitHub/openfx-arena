@@ -13,7 +13,7 @@ namespace OFX
         getSwirlPluginID(ids);
         getImplodePluginID(ids);
         getUnsharpMaskPluginID(ids);
-	getPolarPluginID(ids);
+        getPolarPluginID(ids);
     }
   }
 }
