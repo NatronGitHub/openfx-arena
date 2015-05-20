@@ -40,16 +40,26 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 #define kPluginName "Polar"
 #define kPluginGrouping "Filter"
-#define kPluginDescription  "Swirl image"
+#define kPluginDescription  "Polar Distort Image"
 
 #define kPluginIdentifier "net.fxarena.openfx.Polar"
-#define kPluginVersionMajor 1
-#define kPluginVersionMinor 0
+#define kPluginVersionMajor 0
+#define kPluginVersionMinor 1
 
-//#define kParamSwirl "swirl"
-//#define kParamSwirlLabel "Swirl"
-//#define kParamSwirlHint "Swirl image by degree"
-//#define kParamSwirlDefault 90
+#define kParamVPixel "virtualPixelMethod"
+#define kParamVPixelLabel "Virtual Pixel"
+#define kParamVPixelHint "Virtual Pixel Method"
+#define kParamVPixelDefault 7
+
+#define kParamDistort "distort"
+#define kParamDistortLabel "Distort"
+#define kParamDistortHint "Distort type"
+#define kParamDistortDefault 0
+
+/*#define kParamRadius "radius"
+#define kParamRadiusLabel "Radius"
+#define kParamRadiusHint "Radius amount"
+#define kParamRadiusDefault 0*/
 
 #define kSupportsTiles 0
 #define kSupportsMultiResolution 1
@@ -68,7 +78,9 @@ public:
 private:
     OFX::Clip *dstClip_;
     OFX::Clip *srcClip_;
-    //OFX::DoubleParam *swirlDegree_;
+    OFX::ChoiceParam *vpixel_;
+    OFX::ChoiceParam *distort_;
+    //OFX::IntParam *radius_;
 };
 
 PolarPlugin::PolarPlugin(OfxImageEffectHandle handle)
@@ -82,8 +94,10 @@ PolarPlugin::PolarPlugin(OfxImageEffectHandle handle)
     srcClip_ = fetchClip(kOfxImageEffectSimpleSourceClipName);
     assert(srcClip_ && (srcClip_->getPixelComponents() == OFX::ePixelComponentRGBA || srcClip_->getPixelComponents() == OFX::ePixelComponentRGB));
 
-    //swirlDegree_ = fetchDoubleParam(kParamSwirl);
-    //assert(swirlDegree_);
+    vpixel_ = fetchChoiceParam(kParamVPixel);
+    distort_ = fetchChoiceParam(kParamDistort);
+    //radius_ = fetchIntParam(kParamRadius);
+    assert(vpixel_ && distort_ /*&& radius_*/);
 }
 
 PolarPlugin::~PolarPlugin()
@@ -172,33 +186,107 @@ void PolarPlugin::render(const OFX::RenderArguments &args)
         return;
     }
 
-    // get param
-    //double swirl;
-    //swirlDegree_->getValueAtTime(args.time, swirl);
+    // get params
+    int vpixel,distort,radius;
+    vpixel_->getValueAtTime(args.time, vpixel);
+    distort_->getValueAtTime(args.time, distort);
+    //radius_->getValueAtTime(args.time, radius);
+    radius = 0;
 
     // read image
     Magick::Image image(srcRod.x2-srcRod.x1,srcRod.y2-srcRod.y1,channels,Magick::FloatPixel,(float*)srcImg->getPixelData());
+    Magick::Image wrapper(Magick::Geometry(srcRod.x2-srcRod.x1,srcRod.y2-srcRod.y1),Magick::Color("rgba(0,0,0,0)"));
 
-    // proc image
-    //image.swirl(swirl);
-    image.virtualPixelMethod(Magick::BlackVirtualPixelMethod);
-    const double polarArgs[4] = {0, 0, 0, 0};
-    image.distort(Magick::PolarDistortion, 1, polarArgs, Magick::MagickTrue);
+    // flip it!
+    image.flip();
+
+    // set virtual pixel
+    switch (vpixel) {
+    case 0:
+        image.virtualPixelMethod(Magick::UndefinedVirtualPixelMethod);
+        break;
+    case 1:
+        image.virtualPixelMethod(Magick::BackgroundVirtualPixelMethod);
+        break;
+    case 2:
+        image.virtualPixelMethod(Magick::BlackVirtualPixelMethod);
+        break;
+    case 3:
+        image.virtualPixelMethod(Magick::CheckerTileVirtualPixelMethod);
+        break;
+    case 4:
+        image.virtualPixelMethod(Magick::DitherVirtualPixelMethod);
+        break;
+    case 5:
+        image.virtualPixelMethod(Magick::EdgeVirtualPixelMethod);
+        break;
+    case 6:
+        image.virtualPixelMethod(Magick::GrayVirtualPixelMethod);
+        break;
+    case 7:
+        image.virtualPixelMethod(Magick::HorizontalTileVirtualPixelMethod);
+        break;
+    case 8:
+        image.virtualPixelMethod(Magick::HorizontalTileEdgeVirtualPixelMethod);
+        break;
+    case 9:
+        image.virtualPixelMethod(Magick::MirrorVirtualPixelMethod);
+        break;
+    case 10:
+        image.virtualPixelMethod(Magick::RandomVirtualPixelMethod);
+        break;
+    case 11:
+        image.virtualPixelMethod(Magick::TileVirtualPixelMethod);
+        break;
+    case 12:
+        image.virtualPixelMethod(Magick::TransparentVirtualPixelMethod);
+        break;
+    case 13:
+        image.virtualPixelMethod(Magick::VerticalTileVirtualPixelMethod);
+        break;
+    case 14:
+        image.virtualPixelMethod(Magick::VerticalTileEdgeVirtualPixelMethod);
+        break;
+    case 15:
+        image.virtualPixelMethod(Magick::WhiteVirtualPixelMethod);
+        break;
+    }
+
+    // set bg
+    image.backgroundColor(Magick::Color("black"));
+    wrapper.backgroundColor(Magick::Color("black"));
+
+    // set args
+    const double polarArgs[4] = {0, 0, 0, 0}; // TODO! add params
+
+    // distort
+    switch (distort) {
+    case 0:
+        image.distort(Magick::PolarDistortion, radius, NULL, Magick::MagickTrue);
+        break;
+    case 1:
+        image.distort(Magick::DePolarDistortion, radius, NULL, Magick::MagickTrue);
+        break;
+    }
+
+    // flip and comp
+    image.flip();
+    wrapper.composite(image,0,0,Magick::OverCompositeOp);
 
     // return image
     switch (dstBitDepth) {
     case eBitDepthUByte:
         if (image.depth()>8)
             image.depth(8);
-        image.write(0,0,dstRod.x2-dstRod.x1,dstRod.y2-dstRod.y1,channels,Magick::CharPixel,(float*)dstImg->getPixelData());
+        wrapper.write(0,0,dstRod.x2-dstRod.x1,dstRod.y2-dstRod.y1,channels,Magick::CharPixel,(float*)dstImg->getPixelData());
         break;
     case eBitDepthUShort:
         if (image.depth()>16)
             image.depth(16);
-        image.write(0,0,dstRod.x2-dstRod.x1,dstRod.y2-dstRod.y1,channels,Magick::ShortPixel,(float*)dstImg->getPixelData());
+        wrapper.write(0,0,dstRod.x2-dstRod.x1,dstRod.y2-dstRod.y1,channels,Magick::ShortPixel,(float*)dstImg->getPixelData());
         break;
     case eBitDepthFloat:
-        image.write(0,0,dstRod.x2-dstRod.x1,dstRod.y2-dstRod.y1,channels,Magick::FloatPixel,(float*)dstImg->getPixelData());
+        wrapper.write(0,0,dstRod.x2-dstRod.x1,dstRod.y2-dstRod.y1,channels,Magick::FloatPixel,(float*)dstImg->getPixelData());
         break;
     }
 }
@@ -263,13 +351,53 @@ void PolarPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, Con
 
     // make some pages and to things in
     PageParamDescriptor *page = desc.definePageParam(kPluginName);
+    {
+        ChoiceParamDescriptor *param = desc.defineChoiceParam(kParamVPixel);
+        param->setLabel(kParamVPixelLabel);
+        param->setHint(kParamVPixelHint);
+
+        param->appendOption("Undefined");
+        param->appendOption("Background");
+        param->appendOption("Black");
+        param->appendOption("CheckerTile");
+        param->appendOption("Dither");
+        param->appendOption("Edge");
+        param->appendOption("Gray");
+        param->appendOption("HorizontalTile");
+        param->appendOption("HorizontalTileEdge");
+        param->appendOption("Mirror");
+        param->appendOption("Random");
+        param->appendOption("Tile");
+        param->appendOption("Transparent");
+        param->appendOption("VerticalTile");
+        param->appendOption("VerticalTileEdge");
+        param->appendOption("White");
+
+        param->setDefault(kParamVPixelDefault);
+
+        param->setAnimates(true);
+        page->addChild(*param);
+    }
+    {
+        ChoiceParamDescriptor *param = desc.defineChoiceParam(kParamDistort);
+        param->setLabel(kParamDistortLabel);
+        param->setHint(kParamDistortHint);
+
+        param->appendOption("Polar");
+        param->appendOption("DePolar");
+
+        param->setDefault(kParamDistortDefault);
+
+        param->setAnimates(true);
+        page->addChild(*param);
+    }
     /*{
-        DoubleParamDescriptor *param = desc.defineDoubleParam(kParamSwirl);
-        param->setLabel(kParamSwirlLabel);
-        param->setHint(kParamSwirlHint);
-        param->setRange(-360, 360);
-        param->setDisplayRange(-360, 360);
-        param->setDefault(kParamSwirlDefault);
+        IntParamDescriptor *param = desc.defineIntParam(kParamRadius);
+        param->setLabel(kParamRadiusLabel);
+        param->setHint(kParamRadiusHint);
+        param->setRange(0, 10);
+        param->setDisplayRange(0, 10);
+        param->setDefault(kParamRadiusDefault);
         page->addChild(*param);
     }*/
 }
