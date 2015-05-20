@@ -90,7 +90,7 @@
 
 #define kSupportsTiles 0
 #define kSupportsMultiResolution 1
-#define kSupportsRenderScale 0 // disable works in natron, enable works in nuke but not natron
+#define kSupportsRenderScale 0 // renderscale dont work in natron, disable. NOTE! this breaks compat with natronv2 ....
 #define kRenderThreadSafety eRenderInstanceSafe
 
 #define kParamPosition "position"
