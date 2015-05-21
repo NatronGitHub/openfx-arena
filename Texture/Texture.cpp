@@ -58,6 +58,26 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #define kParamEffectOptionsLabel "Effect"
 #define kParamEffectOptionsHint "Apply effect to background"
 
+#define kParamBlurX "blurX"
+#define kParamBlurXLabel "Blur X"
+#define kParamBlurXHint "Apply blur effect"
+#define kParamBlurXDefault 0
+
+#define kParamBlurY "blurY"
+#define kParamBlurYLabel "Blur Y"
+#define kParamBlurYHint "Apply blur effect"
+#define kParamBlurYDefault 10
+
+#define kParamEmboss "emboss"
+#define kParamEmbossLabel "Emboss"
+#define kParamEmbossHint "Apply emboss effect"
+#define kParamEmbossDefault 1
+
+#define kParamEdge "edge"
+#define kParamEdgeLabel "Edge"
+#define kParamEdgeHint "Apply edge effect"
+#define kParamEdgeDefault 1
+
 using namespace OFX;
 
 class TexturePlugin : public OFX::ImageEffect
@@ -71,6 +91,10 @@ private:
     OFX::Clip *dstClip_;
     OFX::ChoiceParam *effect_;
     OFX::ChoiceParam *options_;
+    OFX::DoubleParam *blurx_;
+    OFX::DoubleParam *blury_;
+    OFX::DoubleParam *emboss_;
+    OFX::DoubleParam *edge_;
 };
 
 TexturePlugin::TexturePlugin(OfxImageEffectHandle handle)
@@ -84,7 +108,11 @@ TexturePlugin::TexturePlugin(OfxImageEffectHandle handle)
 
     effect_ = fetchChoiceParam(kParamEffect);
     options_ = fetchChoiceParam(kParamEffectOptions);
-    assert(effect_ && options_);
+    blurx_ = fetchDoubleParam(kParamBlurX);
+    blury_ = fetchDoubleParam(kParamBlurY);
+    emboss_ = fetchDoubleParam(kParamEmboss);
+    edge_ = fetchDoubleParam(kParamEdge);
+    assert(effect_ && options_ && blurx_ && blury_ && emboss_ && edge_);
 }
 
 TexturePlugin::~TexturePlugin()
@@ -155,44 +183,55 @@ void TexturePlugin::render(const OFX::RenderArguments &args)
 
     // Get params
     int effect,options;
+    double blurx,blury,emboss,edge;
     effect_->getValueAtTime(args.time, effect);
     options_->getValueAtTime(args.time, options);
+    blurx_->getValueAtTime(args.time, blurx);
+    blury_->getValueAtTime(args.time, blury);
+    emboss_->getValueAtTime(args.time, emboss);
+    edge_->getValueAtTime(args.time, edge);
 
     // Generate empty image
     int width = dstRod.x2-dstRod.x1;
     int height = dstRod.y2-dstRod.y1;
     Magick::Image image(Magick::Geometry(width,height),Magick::Color("rgba(0,0,0,0)"));
 
+    // generate background
     switch (effect) {
     case 1: // Plasma
+        image.read("plasma:");
+        break;
+    case 2: // Plasma Fractal
         image.read("plasma:fractal");
         break;
     }
 
-    // apply effect to background, TODO! add params
+    // apply options to background, TODO! add params
     switch (options) {
     case 1: // Shade
         image.shade(120,45,true);
         break;
     case 2: // Emboss
-        image.blur(0,5);
-        image.emboss(1);
+        image.blur(blurx,blury);
+        image.emboss(emboss);
         break;
     case 3: // Edge
-        image.blur(0,2);
-        image.edge(10);
+        image.blur(blurx,blury);
+        image.edge(edge);
         break;
     case 4: // Lines
-        image.blur(0,10);
-        image.emboss(4);
-        image.edge(1);
+        image.blur(blurx,blury);
+        image.emboss(emboss);
+        image.edge(edge);
         break;
-    case 5: // Blobs TODO!
-        image.blur(0,10);
-        image.edge(1);
+    case 5: // Loops
+        image.blur(blurx,blury);
+        image.edge(edge);
+        image.edge(edge/15);
+        image.blur(0,blury/10);
         break;
     case 6: // Filaments TODO!
-        image.blur(0,5);
+        image.blur(blurx,blury);
         image.normalize();
         image.fx("g");
         image.sigmoidalContrast(1,15,50);
@@ -279,6 +318,7 @@ void TexturePluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, C
 
         param->appendOption("None");
         param->appendOption("Plasma");
+        param->appendOption("Plasma Fractal");
 
         param->setAnimates(true);
         page->addChild(*param);
@@ -293,10 +333,46 @@ void TexturePluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, C
         param->appendOption("Emboss");
         param->appendOption("Edge");
         param->appendOption("Lines");
-        //param->appendOption("Blobs");
+        param->appendOption("Loops");
         //param->appendOption("Filaments");
 
         param->setAnimates(true);
+        page->addChild(*param);
+    }
+    {
+        DoubleParamDescriptor *param = desc.defineDoubleParam(kParamBlurX);
+        param->setLabel(kParamBlurXLabel);
+        param->setHint(kParamBlurXHint);
+        param->setRange(0, 500);
+        param->setDisplayRange(0, 100);
+        param->setDefault(kParamBlurXDefault);
+        page->addChild(*param);
+    }
+    {
+        DoubleParamDescriptor *param = desc.defineDoubleParam(kParamBlurY);
+        param->setLabel(kParamBlurYLabel);
+        param->setHint(kParamBlurYHint);
+        param->setRange(0, 500);
+        param->setDisplayRange(0, 100);
+        param->setDefault(kParamBlurYDefault);
+        page->addChild(*param);
+    }
+    {
+        DoubleParamDescriptor *param = desc.defineDoubleParam(kParamEmboss);
+        param->setLabel(kParamEmbossLabel);
+        param->setHint(kParamEmbossHint);
+        param->setRange(0, 500);
+        param->setDisplayRange(0, 25);
+        param->setDefault(kParamEmbossDefault);
+        page->addChild(*param);
+    }
+    {
+        DoubleParamDescriptor *param = desc.defineDoubleParam(kParamEdge);
+        param->setLabel(kParamEdgeLabel);
+        param->setHint(kParamEdgeHint);
+        param->setRange(0, 500);
+        param->setDisplayRange(0, 25);
+        param->setDefault(kParamEdgeDefault);
         page->addChild(*param);
     }
 }
