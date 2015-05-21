@@ -10,4 +10,4 @@ install:
 
 script:
   - git submodule update -i
-  - sh deploy.sh
+  - bash deploy.sh
