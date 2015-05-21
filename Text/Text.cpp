@@ -85,12 +85,12 @@
 #define kPluginDescription  "A simple text generator. \n\nhttps://github.com/olear/openfx-arena"
 
 #define kPluginIdentifier "net.fxarena.openfx.Text"
-#define kPluginVersionMajor 1
-#define kPluginVersionMinor 2
+#define kPluginVersionMajor 2
+#define kPluginVersionMinor 0
 
 #define kSupportsTiles 0
 #define kSupportsMultiResolution 1
-#define kSupportsRenderScale 0 // renderscale dont work in natron, disable. NOTE! this breaks compat with natronv2 ....
+#define kSupportsRenderScale 1 // renderscale dont work in natron, disable. NOTE! this breaks compat with natronv2 ....
 #define kRenderThreadSafety eRenderInstanceSafe
 
 #define kParamPosition "position"
@@ -140,6 +140,31 @@
 #define kParamFontOverrideLabel "Custom Font"
 #define kParamFontOverrideHint "Override the font list. You can use font names or direct path(s)."
 
+#define kParamShadowCheck "shadow"
+#define kParamShadowCheckLabel "Shadow"
+#define kParamShadowCheckHint "Enable or disable drop shadow"
+#define kParamShadowCheckDefault false
+
+#define kParamShadowOpacity "shadowOpacity"
+#define kParamShadowOpacityLabel "Shadow opacity"
+#define kParamShadowOpacityHint "Adjust shadow opacity"
+#define kParamShadowOpacityDefault 60
+
+#define kParamShadowSigma "shadowSigma"
+#define kParamShadowSigmaLabel "Shadow sigma"
+#define kParamShadowSigmaHint "Adjust shadow sigma"
+#define kParamShadowSigmaDefault 5
+
+/*#define kParamShadowX "shadowX"
+#define kParamShadowXLabel "Shadow position X"
+#define kParamShadowXHint "Adjust shadow position X"
+#define kParamShadowXDefault 0
+
+#define kParamShadowY "shadowY"
+#define kParamShadowYLabel "Shadow position Y"
+#define kParamShadowYHint "Adjust shadow position Y"
+#define kParamShadowYDefault 0*/
+
 using namespace OFX;
 
 class TextPlugin : public OFX::ImageEffect
@@ -170,6 +195,11 @@ private:
     OFX::BooleanParam *strokeEnabled_;
     OFX::DoubleParam *strokeWidth_;
     OFX::StringParam *fontOverride_;
+    OFX::BooleanParam *shadowEnabled_;
+    OFX::DoubleParam *shadowOpacity_;
+    OFX::DoubleParam *shadowSigma_;
+    //OFX::DoubleParam *shadowX_;
+    //OFX::DoubleParam *shadowY_;
 };
 
 TextPlugin::TextPlugin(OfxImageEffectHandle handle)
@@ -192,7 +222,12 @@ TextPlugin::TextPlugin(OfxImageEffectHandle handle)
     strokeEnabled_ = fetchBooleanParam(kParamStrokeCheck);
     strokeWidth_ = fetchDoubleParam(kParamStroke);
     fontOverride_ = fetchStringParam(kParamFontOverride);
-    assert(position_ && text_ && fontSize_ && fontName_ && textColor_ && fontDecor_ && strokeColor_ && strokeEnabled_ && strokeWidth_ && fontOverride_);
+    shadowEnabled_ = fetchBooleanParam(kParamShadowCheck);
+    shadowOpacity_ = fetchDoubleParam(kParamShadowOpacity);
+    shadowSigma_ = fetchDoubleParam(kParamShadowSigma);
+    //shadowX_ = fetchDoubleParam(kParamShadowX);
+    //shadowY_ = fetchDoubleParam(kParamShadowY);
+    assert(position_ && text_ && fontSize_ && fontName_ && textColor_ && fontDecor_ && strokeColor_ && strokeEnabled_ && strokeWidth_ && fontOverride_ && shadowEnabled_ && shadowOpacity_ && shadowSigma_ /*&& shadowX_ && shadowY_*/);
 }
 
 TextPlugin::~TextPlugin()
@@ -262,9 +297,10 @@ void TextPlugin::render(const OFX::RenderArguments &args)
     }
 
     // Get params
-    double x, y, r, g, b, a, r_s, g_s, b_s, a_s, strokeWidth;
+    double x, y, r, g, b, a, r_s, g_s, b_s, a_s, strokeWidth,shadowOpacity,shadowSigma;//,shadowX,shadowY;
     int fontSize, fontID, fontDecor;
     bool use_stroke = false;
+    bool use_shadow = false;
     std::string text, fontOverride, fontName;
 
     position_->getValueAtTime(args.time, x, y);
@@ -277,6 +313,11 @@ void TextPlugin::render(const OFX::RenderArguments &args)
     fontOverride_->getValueAtTime(args.time, fontOverride);
     textColor_->getValueAtTime(args.time, r, g, b, a);
     strokeColor_->getValueAtTime(args.time, r_s, g_s, b_s, a_s);
+    shadowEnabled_->getValueAtTime(args.time, use_shadow);
+    shadowOpacity_->getValueAtTime(args.time, shadowOpacity);
+    shadowSigma_->getValueAtTime(args.time, shadowSigma);
+    //shadowX_->getValueAtTime(args.time, shadowX);
+    //shadowY_->getValueAtTime(args.time, shadowY);
 
     fontName_->getOption(fontID,fontName);
 
@@ -360,6 +401,17 @@ void TextPlugin::render(const OFX::RenderArguments &args)
 
     // Draw
     image.draw(text_draw_list);
+
+    // Shadow
+    if (use_shadow) {
+        Magick::Image dropShadow;
+        dropShadow=image;
+        dropShadow.backgroundColor("Black");
+        dropShadow.virtualPixelMethod(Magick::TransparentVirtualPixelMethod);
+        dropShadow.shadow(shadowOpacity,shadowSigma,0,0);
+        dropShadow.composite(image,0,0,Magick::OverCompositeOp);
+        image=dropShadow;
+    }
 
     // Flip image
     image.flip();
@@ -551,6 +603,7 @@ void TextPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, Cont
         param->setHint(kParamStrokeCheckHint);
         param->setEvaluateOnChange(true);
         param->setDefault(kParamStrokeCheckDefault);
+        param->setAnimates(true);
         page->addChild(*param);
     }
     {
@@ -570,6 +623,51 @@ void TextPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, Cont
         param->setDefault(kParamStrokeDefault);
         page->addChild(*param);
     }
+    {
+        BooleanParamDescriptor* param = desc.defineBooleanParam(kParamShadowCheck);
+        param->setLabel(kParamShadowCheckLabel);
+        param->setHint(kParamShadowCheckHint);
+        param->setEvaluateOnChange(true);
+        param->setDefault(kParamShadowCheckDefault);
+        param->setAnimates(true);
+        page->addChild(*param);
+    }
+    {
+        DoubleParamDescriptor *param = desc.defineDoubleParam(kParamShadowOpacity);
+        param->setLabel(kParamShadowOpacityLabel);
+        param->setHint(kParamShadowOpacityHint);
+        param->setRange(0, 100);
+        param->setDisplayRange(0, 100);
+        param->setDefault(kParamShadowOpacityDefault);
+        page->addChild(*param);
+    }
+    {
+        DoubleParamDescriptor *param = desc.defineDoubleParam(kParamShadowSigma);
+        param->setLabel(kParamShadowSigmaLabel);
+        param->setHint(kParamShadowSigmaHint);
+        param->setRange(0, 100);
+        param->setDisplayRange(0, 10);
+        param->setDefault(kParamShadowSigmaDefault);
+        page->addChild(*param);
+    }
+    /*{
+        DoubleParamDescriptor *param = desc.defineDoubleParam(kParamShadowX);
+        param->setLabel(kParamShadowXLabel);
+        param->setHint(kParamShadowXHint);
+        param->setRange(0, 1000);
+        param->setDisplayRange(0, 100);
+        param->setDefault(kParamShadowXDefault);
+        page->addChild(*param);
+    }
+    {
+        DoubleParamDescriptor *param = desc.defineDoubleParam(kParamShadowY);
+        param->setLabel(kParamShadowYLabel);
+        param->setHint(kParamShadowYHint);
+        param->setRange(0, 1000);
+        param->setDisplayRange(0, 100);
+        param->setDefault(kParamShadowYDefault);
+        page->addChild(*param);
+    }*/
 }
 
 /** @brief The create instance function, the plugin must return an object derived from the \ref OFX::ImageEffect class */
