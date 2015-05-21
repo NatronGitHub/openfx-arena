@@ -224,7 +224,7 @@ void DistortPlugin::render(const OFX::RenderArguments &args)
     int offsetY = 0;
 
     // flip it, if needed
-    if (distort==0||distort==1)
+    if (distort==0||distort==1||distort==2)
         image.flip();
 
     // set virtual pixel
@@ -280,7 +280,7 @@ void DistortPlugin::render(const OFX::RenderArguments &args)
     }
 
     // distort method
-    double distortArgs[4] = {NULL, NULL, NULL, NULL};
+    double distortArgs[4];
     switch (distort) {
     case 0: // Polar Distort
         image.backgroundColor(Magick::Color("black")); // TODO! own param?
@@ -290,7 +290,19 @@ void DistortPlugin::render(const OFX::RenderArguments &args)
         if (image.columns()<width)
             offsetX = (width-image.columns())/2;
         break;
-    case 1: // Arc Distort
+    case 1: // DePolar Distort
+        image.backgroundColor(Magick::Color("black")); // TODO! own param?
+        image.distort(Magick::DePolarDistortion, value, distortArgs, Magick::MagickTrue);
+        if (image.columns()>width)
+            image.scale(Magick::Geometry(width,NULL));
+        if (image.rows()>height)
+            image.scale(Magick::Geometry(NULL,height));
+        if (image.rows()<height)
+            offsetY = (height-image.rows())/2;
+        if (image.columns()<width)
+            offsetX = (width-image.columns())/2;
+        break;
+    case 2: // Arc Distort
         distortArgs[0] = arcAngle;
         image.backgroundColor(Magick::Color("black")); // TODO! own param?
         image.distort(Magick::ArcDistortion, value, distortArgs, Magick::MagickTrue);
@@ -303,18 +315,18 @@ void DistortPlugin::render(const OFX::RenderArguments &args)
         if (image.columns()<width)
             offsetX = (width-image.columns())/2;
         break;
-    case 2: // Swirl
+    case 3: // Swirl
         if (swirlDegree!=0)
             image.swirl(swirlDegree);
         break;
-    case 3: // Implode
+    case 4: // Implode
         if (implode!=0)
             image.implode(implode);
         break;
     }
 
     // flip and comp, if needed
-    if (distort==0||distort==1) {
+    if (distort==0||distort==1||distort==2) {
         image.flip();
         container.composite(image,offsetX,offsetY,Magick::OverCompositeOp);
     }
@@ -399,7 +411,7 @@ void DistortPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, C
 
     // make some pages and to things in
     PageParamDescriptor *page = desc.definePageParam(kPluginName);
-    PageParamDescriptor *pagePolar = desc.definePageParam("Polar");
+    PageParamDescriptor *pagePolar = desc.definePageParam("(De)Polar");
     PageParamDescriptor *pageArc = desc.definePageParam("Arc");
     PageParamDescriptor *pageSwirl = desc.definePageParam("Swirl");
     PageParamDescriptor *pageImplode = desc.definePageParam("Implode");
@@ -436,6 +448,7 @@ void DistortPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, C
         param->setHint(kParamDistortHint);
 
         param->appendOption("Polar");
+        param->appendOption("DePolar");
         param->appendOption("Arc");
         param->appendOption("Swirl");
         param->appendOption("Implode");
