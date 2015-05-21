@@ -6,8 +6,8 @@ compiler:
 
 install:
   - sudo apt-get update
-  - sudo apt-get install libmagick++-dev libfreetype6-dev libfontconfig1-dev libmagickcore-dev
+  - sudo apt-get install libfreetype6-dev libfontconfig1-dev
 
 script:
   - git submodule update -i
-  - make
+  - sh deploy.sh
