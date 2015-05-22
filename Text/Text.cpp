@@ -76,7 +76,6 @@
 #include <sstream>
 #include <iostream>
 #include <stdint.h>
-#include <magick/MagickCore.h>
 
 #define CLAMP(value, min, max) (((value) >(max)) ? (max) : (((value) <(min)) ? (min) : (value)))
 
@@ -90,7 +89,7 @@
 
 #define kSupportsTiles 0
 #define kSupportsMultiResolution 1
-#define kSupportsRenderScale 1 // renderscale dont work in natron, disable. NOTE! this breaks compat with natronv2 ....
+#define kSupportsRenderScale 0
 #define kRenderThreadSafety eRenderInstanceSafe
 
 #define kParamPosition "position"
@@ -112,7 +111,7 @@
 
 #define kParamFontName "fontName"
 #define kParamFontNameLabel "Font"
-#define kParamFontNameHint "The name of the font to be used. If empty then you need to update your font cache."
+#define kParamFontNameHint "The name of the font to be used"
 
 #define kParamFontDecor "fontDecor"
 #define kParamFontDecorLabel "Decoration"
@@ -128,17 +127,17 @@
 #define kParamStrokeCheckDefault false
 
 #define kParamStrokeColor "strokeColor"
-#define kParamStrokeColorLabel "Stroke Color"
+#define kParamStrokeColorLabel "Outline Color"
 #define kParamStrokeColorHint "The stroke color of the text to render"
 
 #define kParamStroke "stroke"
-#define kParamStrokeLabel "Stroke Width"
+#define kParamStrokeLabel "Outline Width"
 #define kParamStrokeHint "Adjust stroke width for outline"
 #define kParamStrokeDefault 1
 
 #define kParamFontOverride "customFont"
 #define kParamFontOverrideLabel "Custom Font"
-#define kParamFontOverrideHint "Override the font list. You can use font names or direct path(s)."
+#define kParamFontOverrideHint "Override the font list. You can use font name or direct path"
 
 #define kParamShadowCheck "shadow"
 #define kParamShadowCheckLabel "Shadow"
@@ -150,20 +149,10 @@
 #define kParamShadowOpacityHint "Adjust shadow opacity"
 #define kParamShadowOpacityDefault 60
 
-#define kParamShadowSigma "shadowSigma"
-#define kParamShadowSigmaLabel "Shadow sigma"
-#define kParamShadowSigmaHint "Adjust shadow sigma"
+#define kParamShadowSigma "shadowOffset"
+#define kParamShadowSigmaLabel "Shadow offset"
+#define kParamShadowSigmaHint "Adjust shadow offset"
 #define kParamShadowSigmaDefault 5
-
-/*#define kParamShadowX "shadowX"
-#define kParamShadowXLabel "Shadow position X"
-#define kParamShadowXHint "Adjust shadow position X"
-#define kParamShadowXDefault 0
-
-#define kParamShadowY "shadowY"
-#define kParamShadowYLabel "Shadow position Y"
-#define kParamShadowYHint "Adjust shadow position Y"
-#define kParamShadowYDefault 0*/
 
 using namespace OFX;
 
@@ -198,8 +187,6 @@ private:
     OFX::BooleanParam *shadowEnabled_;
     OFX::DoubleParam *shadowOpacity_;
     OFX::DoubleParam *shadowSigma_;
-    //OFX::DoubleParam *shadowX_;
-    //OFX::DoubleParam *shadowY_;
 };
 
 TextPlugin::TextPlugin(OfxImageEffectHandle handle)
@@ -207,7 +194,6 @@ TextPlugin::TextPlugin(OfxImageEffectHandle handle)
 , dstClip_(0)
 {
     Magick::InitializeMagick(NULL);
-    MagickCore::MagickCoreGenesis(NULL, MagickCore::MagickTrue);
 
     dstClip_ = fetchClip(kOfxImageEffectOutputClipName);
     assert(dstClip_ && (dstClip_->getPixelComponents() == OFX::ePixelComponentRGBA || dstClip_->getPixelComponents() == OFX::ePixelComponentRGB));
@@ -225,9 +211,7 @@ TextPlugin::TextPlugin(OfxImageEffectHandle handle)
     shadowEnabled_ = fetchBooleanParam(kParamShadowCheck);
     shadowOpacity_ = fetchDoubleParam(kParamShadowOpacity);
     shadowSigma_ = fetchDoubleParam(kParamShadowSigma);
-    //shadowX_ = fetchDoubleParam(kParamShadowX);
-    //shadowY_ = fetchDoubleParam(kParamShadowY);
-    assert(position_ && text_ && fontSize_ && fontName_ && textColor_ && fontDecor_ && strokeColor_ && strokeEnabled_ && strokeWidth_ && fontOverride_ && shadowEnabled_ && shadowOpacity_ && shadowSigma_ /*&& shadowX_ && shadowY_*/);
+    assert(position_ && text_ && fontSize_ && fontName_ && textColor_ && fontDecor_ && strokeColor_ && strokeEnabled_ && strokeWidth_ && fontOverride_ && shadowEnabled_ && shadowOpacity_ && shadowSigma_);
 }
 
 TextPlugin::~TextPlugin()
@@ -297,7 +281,7 @@ void TextPlugin::render(const OFX::RenderArguments &args)
     }
 
     // Get params
-    double x, y, r, g, b, a, r_s, g_s, b_s, a_s, strokeWidth,shadowOpacity,shadowSigma;//,shadowX,shadowY;
+    double x, y, r, g, b, a, r_s, g_s, b_s, a_s, strokeWidth,shadowOpacity,shadowSigma;
     int fontSize, fontID, fontDecor;
     bool use_stroke = false;
     bool use_shadow = false;
@@ -316,9 +300,6 @@ void TextPlugin::render(const OFX::RenderArguments &args)
     shadowEnabled_->getValueAtTime(args.time, use_shadow);
     shadowOpacity_->getValueAtTime(args.time, shadowOpacity);
     shadowSigma_->getValueAtTime(args.time, shadowSigma);
-    //shadowX_->getValueAtTime(args.time, shadowX);
-    //shadowY_->getValueAtTime(args.time, shadowY);
-
     fontName_->getOption(fontID,fontName);
 
     float textColor[4];
@@ -343,10 +324,12 @@ void TextPlugin::render(const OFX::RenderArguments &args)
     Magick::Image image(Magick::Geometry(width,height),Magick::Color("rgba(0,0,0,0)"));
 
     // Set font size
-    image.fontPointsize(fontSize);
+    if (fontSize>0)
+        image.fontPointsize(fontSize);
 
     // Set stroke width
-    image.strokeWidth(strokeWidth);
+    if (use_stroke)
+        image.strokeWidth(strokeWidth);
 
     // Convert colors to int
     int rI = ((uint8_t)(255.0f *CLAMP(r, 0.0, 1.0)));
@@ -392,9 +375,6 @@ void TextPlugin::render(const OFX::RenderArguments &args)
             break;
         case 3:
             text_draw_list.push_back(Magick::DrawableTextDecoration(Magick::LineThroughDecoration));
-            break;
-        default:
-            text_draw_list.push_back(Magick::DrawableTextDecoration(Magick::NoDecoration));
             break;
         }
     }
@@ -650,24 +630,6 @@ void TextPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, Cont
         param->setDefault(kParamShadowSigmaDefault);
         page->addChild(*param);
     }
-    /*{
-        DoubleParamDescriptor *param = desc.defineDoubleParam(kParamShadowX);
-        param->setLabel(kParamShadowXLabel);
-        param->setHint(kParamShadowXHint);
-        param->setRange(0, 1000);
-        param->setDisplayRange(0, 100);
-        param->setDefault(kParamShadowXDefault);
-        page->addChild(*param);
-    }
-    {
-        DoubleParamDescriptor *param = desc.defineDoubleParam(kParamShadowY);
-        param->setLabel(kParamShadowYLabel);
-        param->setHint(kParamShadowYHint);
-        param->setRange(0, 1000);
-        param->setDisplayRange(0, 100);
-        param->setDefault(kParamShadowYDefault);
-        page->addChild(*param);
-    }*/
 }
 
 /** @brief The create instance function, the plugin must return an object derived from the \ref OFX::ImageEffect class */

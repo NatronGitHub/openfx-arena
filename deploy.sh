@@ -25,7 +25,7 @@ FTYPE=2.4.11
 FTYPE_URL=http://sourceforge.net/projects/freetype/files/freetype2/${FTYPE}/freetype-${FTYPE}.tar.gz/download
 
 if [ -z "$VERSION" ]; then
-  ARENA=0.5.1
+  ARENA=0.6
 else
   ARENA=$VERSION
 fi
