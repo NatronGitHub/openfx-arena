@@ -38,9 +38,12 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include "ofxsMacros.h"
 #include <Magick++.h>
 
+#include <iostream>
+#include <stdint.h>
+
 #define kPluginName "Distort"
 #define kPluginGrouping "Filter"
-#define kPluginDescription  "Distort image using varius techniques. \n\nhttps://github.com/olear/openfx-arena"
+#define kPluginDescription "Distort image using varius techniques. \n\nhttps://github.com/olear/openfx-arena"
 
 #define kPluginIdentifier "net.fxarena.openfx.Distort"
 #define kPluginVersionMajor 1
@@ -103,7 +106,7 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 #define kSupportsTiles 0
 #define kSupportsMultiResolution 1
-#define kSupportsRenderScale 1
+#define kSupportsRenderScale 0
 #define kRenderThreadSafety eRenderInstanceSafe
 
 using namespace OFX;
@@ -243,7 +246,7 @@ void DistortPlugin::render(const OFX::RenderArguments &args)
     }
 
     // get params
-    int vpixel,distort,value;
+    int vpixel,distort;
     double arcAngle,arcRotate,arcTopRadius,arcBottomRadius,swirlDegree,implode,edge,embossRadius,embossSigma;
     vpixel_->getValueAtTime(args.time, vpixel);
     distort_->getValueAtTime(args.time, distort);
@@ -256,8 +259,6 @@ void DistortPlugin::render(const OFX::RenderArguments &args)
     edge_->getValueAtTime(args.time, edge);
     embossRadius_->getValueAtTime(args.time, embossRadius);
     embossSigma_->getValueAtTime(args.time, embossSigma);
-
-    value = 1; // TODO! should this be a param?
 
     // read image
     Magick::Image image(srcRod.x2-srcRod.x1,srcRod.y2-srcRod.y1,channels,Magick::FloatPixel,(float*)srcImg->getPixelData());
@@ -330,22 +331,26 @@ void DistortPlugin::render(const OFX::RenderArguments &args)
     // distort method
     double distortArgs[4];
     int distortOpts = 0;
+    std::ostringstream scaleW;
+    scaleW << width << "x";
+    std::ostringstream scaleH;
+    scaleH << "x" << height;
     switch (distort) {
     case 0: // Polar Distort
         image.backgroundColor(Magick::Color("black"));
-        image.distort(Magick::PolarDistortion, value, distortArgs, Magick::MagickTrue);
+        image.distort(Magick::PolarDistortion, 0, distortArgs, Magick::MagickTrue);
         if (image.rows()>height)
-            image.scale(Magick::Geometry(NULL,height));
+            image.scale(scaleH.str());
         if (image.columns()<width)
             offsetX = (width-image.columns())/2;
         break;
     case 1: // DePolar Distort
         image.backgroundColor(Magick::Color("black"));
-        image.distort(Magick::DePolarDistortion, value, distortArgs, Magick::MagickFalse);
+        image.distort(Magick::DePolarDistortion, 0, distortArgs, Magick::MagickFalse);
         if (image.columns()>width)
-            image.scale(Magick::Geometry(width,NULL));
+            image.scale(scaleW.str());
         if (image.rows()>height)
-            image.scale(Magick::Geometry(NULL,height));
+            image.scale(scaleH.str());
         if (image.rows()<height)
             offsetY = (height-image.rows())/2;
         if (image.columns()<width)
@@ -375,9 +380,9 @@ void DistortPlugin::render(const OFX::RenderArguments &args)
         image.backgroundColor(Magick::Color("black"));
         image.distort(Magick::ArcDistortion, distortOpts, distortArgs, Magick::MagickTrue);
         if (image.columns()>width)
-            image.scale(Magick::Geometry(width,NULL));
+            image.scale(scaleW.str());
         if (image.rows()>height)
-            image.scale(Magick::Geometry(NULL,height));
+            image.scale(scaleH.str());
         if (image.rows()<height)
             offsetY = (height-image.rows())/2;
         if (image.columns()<width)
