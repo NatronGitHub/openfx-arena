@@ -71,6 +71,21 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #define kParamImplodeHint "Implode image by factor"
 #define kParamImplodeDefault 0.5
 
+#define kParamEdge "edgeRadius"
+#define kParamEdgeLabel "Radius"
+#define kParamEdgeHint "The radius is the radius of the pixel neighborhood. Specify a radius of zero for automatic radius selection"
+#define kParamEdgeDefault 1
+
+#define kParamEmboss "embossRadius"
+#define kParamEmbossLabel "Radius"
+#define kParamEmbossHint "Radius of the Gaussian, in pixels, not counting the center pixel"
+#define kParamEmbossDefault 1
+
+#define kParamEmbossSigma "embossSigma"
+#define kParamEmbossSigmaLabel "Sigma"
+#define kParamEmbossSigmaHint "Specifies the standard deviation of the Laplacian, in pixels"
+#define kParamEmbossSigmaDefault 0.5
+
 #define kSupportsTiles 0
 #define kSupportsMultiResolution 1
 #define kSupportsRenderScale 1
@@ -93,6 +108,9 @@ private:
     OFX::DoubleParam *arcAngle_;
     OFX::DoubleParam *swirlDegree_;
     OFX::DoubleParam *implode_;
+    OFX::DoubleParam *edge_;
+    OFX::DoubleParam *emboss_;
+    OFX::DoubleParam *embossSigma_;
 };
 
 DistortPlugin::DistortPlugin(OfxImageEffectHandle handle)
@@ -111,7 +129,10 @@ DistortPlugin::DistortPlugin(OfxImageEffectHandle handle)
     arcAngle_ = fetchDoubleParam(kParamArcAngle);
     swirlDegree_ = fetchDoubleParam(kParamSwirl);
     implode_ = fetchDoubleParam(kParamImplode);
-    assert(vpixel_ && distort_ && arcAngle_ && swirlDegree_ && implode_);
+    edge_ = fetchDoubleParam(kParamEdge);
+    emboss_ = fetchDoubleParam(kParamEmboss);
+    embossSigma_ = fetchDoubleParam(kParamEmbossSigma);
+    assert(vpixel_ && distort_ && arcAngle_ && swirlDegree_ && implode_ && edge_ && emboss_ && embossSigma_);
 }
 
 DistortPlugin::~DistortPlugin()
@@ -202,12 +223,15 @@ void DistortPlugin::render(const OFX::RenderArguments &args)
 
     // get params
     int vpixel,distort,value;
-    double arcAngle,swirlDegree,implode;
+    double arcAngle,swirlDegree,implode,edge,emboss,embossSigma;
     vpixel_->getValueAtTime(args.time, vpixel);
     distort_->getValueAtTime(args.time, distort);
     arcAngle_->getValueAtTime(args.time, arcAngle);
     swirlDegree_->getValueAtTime(args.time, swirlDegree);
     implode_->getValueAtTime(args.time, implode);
+    edge_->getValueAtTime(args.time, edge);
+    emboss_->getValueAtTime(args.time, emboss);
+    embossSigma_->getValueAtTime(args.time, embossSigma);
 
     value = 1; // TODO! should this be a param?
 
@@ -323,6 +347,12 @@ void DistortPlugin::render(const OFX::RenderArguments &args)
         if (implode!=0)
             image.implode(implode);
         break;
+    case 5: // Edge
+        image.edge(edge);
+        break;
+    case 6: // Emboss
+        image.emboss(emboss,embossSigma);
+        break;
     }
 
     // flip and comp, if needed
@@ -415,6 +445,8 @@ void DistortPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, C
     PageParamDescriptor *pageArc = desc.definePageParam("Arc");
     PageParamDescriptor *pageSwirl = desc.definePageParam("Swirl");
     PageParamDescriptor *pageImplode = desc.definePageParam("Implode");
+    PageParamDescriptor *pageEdge = desc.definePageParam("Edge");
+    PageParamDescriptor *pageEmboss = desc.definePageParam("Emboss");
     {
         ChoiceParamDescriptor *param = desc.defineChoiceParam(kParamVPixel);
         param->setLabel(kParamVPixelLabel);
@@ -452,6 +484,8 @@ void DistortPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, C
         param->appendOption("Arc");
         param->appendOption("Swirl");
         param->appendOption("Implode");
+        param->appendOption("Edge");
+        param->appendOption("Emboss");
 
         param->setDefault(kParamDistortDefault);
 
@@ -480,10 +514,37 @@ void DistortPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, C
         DoubleParamDescriptor *param = desc.defineDoubleParam(kParamImplode);
         param->setLabel(kParamImplodeLabel);
         param->setHint(kParamImplodeHint);
-        param->setRange(-10, 1.5);
-        param->setDisplayRange(-10, 1.5);
+        param->setRange(-100, 100);
+        param->setDisplayRange(-3, 3);
         param->setDefault(kParamImplodeDefault);
         pageImplode->addChild(*param);
+    }
+    {
+        DoubleParamDescriptor *param = desc.defineDoubleParam(kParamEdge);
+        param->setLabel(kParamEdgeLabel);
+        param->setHint(kParamEdgeHint);
+        param->setRange(0, 1000);
+        param->setDisplayRange(0, 50);
+        param->setDefault(kParamEdgeDefault);
+        pageEdge->addChild(*param);
+    }
+    {
+        DoubleParamDescriptor *param = desc.defineDoubleParam(kParamEmboss);
+        param->setLabel(kParamEmbossLabel);
+        param->setHint(kParamEmbossHint);
+        param->setRange(0, 1000);
+        param->setDisplayRange(0, 50);
+        param->setDefault(kParamEmbossDefault);
+        pageEmboss->addChild(*param);
+    }
+    {
+        DoubleParamDescriptor *param = desc.defineDoubleParam(kParamEmbossSigma);
+        param->setLabel(kParamEmbossSigmaLabel);
+        param->setHint(kParamEmbossSigmaHint);
+        param->setRange(0, 1000);
+        param->setDisplayRange(0, 50);
+        param->setDefault(kParamEmbossSigmaDefault);
+        pageEmboss->addChild(*param);
     }
 }
 
