@@ -61,6 +61,21 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #define kParamArcAngleHint "Arc angle"
 #define kParamArcAngleDefault 60
 
+#define kParamArcRotate "arcRotate"
+#define kParamArcRotateLabel "Rotate"
+#define kParamArcRotateHint "Arc rotate"
+#define kParamArcRotateDefault 0
+
+#define kParamArcTopRadius "arcTopRadius"
+#define kParamArcTopRadiusLabel "Top radius"
+#define kParamArcTopRadiusHint "Arc top radius"
+#define kParamArcTopRadiusDefault 0
+
+#define kParamArcBottomRadius "arcBottomRadius"
+#define kParamArcBottomRadiusLabel "Bottom radius"
+#define kParamArcBottomRadiusHint "Arc bottom radius"
+#define kParamArcBottomRadiusDefault 0
+
 #define kParamSwirl "swirlDegree"
 #define kParamSwirlLabel "Degree"
 #define kParamSwirlHint "Swirl image by degree"
@@ -76,10 +91,10 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #define kParamEdgeHint "The radius is the radius of the pixel neighborhood. Specify a radius of zero for automatic radius selection"
 #define kParamEdgeDefault 1
 
-#define kParamEmboss "embossRadius"
-#define kParamEmbossLabel "Radius"
-#define kParamEmbossHint "Radius of the Gaussian, in pixels, not counting the center pixel"
-#define kParamEmbossDefault 1
+#define kParamEmbossRadius "embossRadius"
+#define kParamEmbossRadiusLabel "Radius"
+#define kParamEmbossRadiusHint "Radius of the Gaussian, in pixels, not counting the center pixel"
+#define kParamEmbossRadiusDefault 1
 
 #define kParamEmbossSigma "embossSigma"
 #define kParamEmbossSigmaLabel "Sigma"
@@ -106,10 +121,13 @@ private:
     OFX::ChoiceParam *vpixel_;
     OFX::ChoiceParam *distort_;
     OFX::DoubleParam *arcAngle_;
+    OFX::DoubleParam *arcRotate_;
+    OFX::DoubleParam *arcTopRadius_;
+    OFX::DoubleParam *arcBottomRadius_;
     OFX::DoubleParam *swirlDegree_;
     OFX::DoubleParam *implode_;
     OFX::DoubleParam *edge_;
-    OFX::DoubleParam *emboss_;
+    OFX::DoubleParam *embossRadius_;
     OFX::DoubleParam *embossSigma_;
 };
 
@@ -127,12 +145,15 @@ DistortPlugin::DistortPlugin(OfxImageEffectHandle handle)
     vpixel_ = fetchChoiceParam(kParamVPixel);
     distort_ = fetchChoiceParam(kParamDistort);
     arcAngle_ = fetchDoubleParam(kParamArcAngle);
+    arcRotate_ = fetchDoubleParam(kParamArcRotate);
+    arcTopRadius_ = fetchDoubleParam(kParamArcTopRadius);
+    arcBottomRadius_ = fetchDoubleParam(kParamArcBottomRadius);
     swirlDegree_ = fetchDoubleParam(kParamSwirl);
     implode_ = fetchDoubleParam(kParamImplode);
     edge_ = fetchDoubleParam(kParamEdge);
-    emboss_ = fetchDoubleParam(kParamEmboss);
+    embossRadius_ = fetchDoubleParam(kParamEmbossRadius);
     embossSigma_ = fetchDoubleParam(kParamEmbossSigma);
-    assert(vpixel_ && distort_ && arcAngle_ && swirlDegree_ && implode_ && edge_ && emboss_ && embossSigma_);
+    assert(vpixel_ && distort_ && arcAngle_ && arcRotate_ && arcTopRadius_&& arcBottomRadius_ && arcBg_ && swirlDegree_ && implode_ && edge_ && embossRadius_ && embossSigma_);
 }
 
 DistortPlugin::~DistortPlugin()
@@ -223,14 +244,17 @@ void DistortPlugin::render(const OFX::RenderArguments &args)
 
     // get params
     int vpixel,distort,value;
-    double arcAngle,swirlDegree,implode,edge,emboss,embossSigma;
+    double arcAngle,arcRotate,arcTopRadius,arcBottomRadius,swirlDegree,implode,edge,embossRadius,embossSigma;
     vpixel_->getValueAtTime(args.time, vpixel);
     distort_->getValueAtTime(args.time, distort);
     arcAngle_->getValueAtTime(args.time, arcAngle);
+    arcRotate_->getValueAtTime(args.time, arcRotate);
+    arcTopRadius_->getValueAtTime(args.time, arcTopRadius);
+    arcBottomRadius_->getValueAtTime(args.time, arcBottomRadius);
     swirlDegree_->getValueAtTime(args.time, swirlDegree);
     implode_->getValueAtTime(args.time, implode);
     edge_->getValueAtTime(args.time, edge);
-    emboss_->getValueAtTime(args.time, emboss);
+    embossRadius_->getValueAtTime(args.time, embossRadius);
     embossSigma_->getValueAtTime(args.time, embossSigma);
 
     value = 1; // TODO! should this be a param?
@@ -305,6 +329,7 @@ void DistortPlugin::render(const OFX::RenderArguments &args)
 
     // distort method
     double distortArgs[4];
+    int distortOpts = 0;
     switch (distort) {
     case 0: // Polar Distort
         image.backgroundColor(Magick::Color("black")); // TODO! own param?
@@ -327,9 +352,24 @@ void DistortPlugin::render(const OFX::RenderArguments &args)
             offsetX = (width-image.columns())/2;
         break;
     case 2: // Arc Distort
-        distortArgs[0] = arcAngle;
-        image.backgroundColor(Magick::Color("black")); // TODO! own param?
-        image.distort(Magick::ArcDistortion, value, distortArgs, Magick::MagickTrue);
+        if (arcAngle!=0) {
+            distortArgs[0] = arcAngle;
+            distortOpts++;
+        }
+        if (arcRotate!=0) {
+            distortArgs[1] = arcRotate;
+            distortOpts++;
+        }
+        if (arcTopRadius!=0) {
+            distortArgs[2] = arcTopRadius;
+            distortOpts++;
+        }
+        if (arcBottomRadius!=0) {
+            distortArgs[3] = arcBottomRadius;
+            distortOpts++;
+        }
+        image.backgroundColor(Magick::Color("black"));
+        image.distort(Magick::ArcDistortion, distortOpts, distortArgs, Magick::MagickTrue);
         if (image.columns()>width)
             image.scale(Magick::Geometry(width,NULL));
         if (image.rows()>height)
@@ -351,7 +391,7 @@ void DistortPlugin::render(const OFX::RenderArguments &args)
         image.edge(edge);
         break;
     case 6: // Emboss
-        image.emboss(emboss,embossSigma);
+        image.emboss(embossRadius,embossSigma);
         break;
     }
 
@@ -427,7 +467,6 @@ void DistortPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, C
     ClipDescriptor *srcClip = desc.defineClip(kOfxImageEffectSimpleSourceClipName);
     srcClip->addSupportedComponent(ePixelComponentRGBA);
     srcClip->addSupportedComponent(ePixelComponentRGB);
-    //srcClip->addSupportedComponent(ePixelComponentAlpha); // should work, not tested
     srcClip->setTemporalClipAccess(false);
     srcClip->setSupportsTiles(kSupportsTiles);
     srcClip->setIsMask(false);
@@ -436,12 +475,11 @@ void DistortPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, C
     ClipDescriptor *dstClip = desc.defineClip(kOfxImageEffectOutputClipName);
     dstClip->addSupportedComponent(ePixelComponentRGBA);
     dstClip->addSupportedComponent(ePixelComponentRGB);
-    //dstClip->addSupportedComponent(ePixelComponentAlpha); // should work, not tested
     dstClip->setSupportsTiles(kSupportsTiles);
 
     // make some pages and to things in
-    PageParamDescriptor *page = desc.definePageParam(kPluginName);
-    PageParamDescriptor *pagePolar = desc.definePageParam("(De)Polar");
+    PageParamDescriptor *page = desc.definePageParam("General");
+    PageParamDescriptor *pagePolar = desc.definePageParam("Polar");
     PageParamDescriptor *pageArc = desc.definePageParam("Arc");
     PageParamDescriptor *pageSwirl = desc.definePageParam("Swirl");
     PageParamDescriptor *pageImplode = desc.definePageParam("Implode");
@@ -451,7 +489,6 @@ void DistortPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, C
         ChoiceParamDescriptor *param = desc.defineChoiceParam(kParamVPixel);
         param->setLabel(kParamVPixelLabel);
         param->setHint(kParamVPixelHint);
-
         param->appendOption("Undefined");
         param->appendOption("Background");
         param->appendOption("Black");
@@ -468,9 +505,7 @@ void DistortPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, C
         param->appendOption("VerticalTile");
         param->appendOption("VerticalTileEdge");
         param->appendOption("White");
-
         param->setDefault(kParamVPixelDefault);
-
         param->setAnimates(true);
         page->addChild(*param);
     }
@@ -478,7 +513,6 @@ void DistortPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, C
         ChoiceParamDescriptor *param = desc.defineChoiceParam(kParamDistort);
         param->setLabel(kParamDistortLabel);
         param->setHint(kParamDistortHint);
-
         param->appendOption("Polar");
         param->appendOption("DePolar");
         param->appendOption("Arc");
@@ -486,9 +520,7 @@ void DistortPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, C
         param->appendOption("Implode");
         param->appendOption("Edge");
         param->appendOption("Emboss");
-
         param->setDefault(kParamDistortDefault);
-
         param->setAnimates(true);
         page->addChild(*param);
     }
@@ -499,6 +531,33 @@ void DistortPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, C
         param->setRange(1, 360);
         param->setDisplayRange(1, 360);
         param->setDefault(kParamArcAngleDefault);
+        pageArc->addChild(*param);
+    }
+    {
+        DoubleParamDescriptor *param = desc.defineDoubleParam(kParamArcRotate);
+        param->setLabel(kParamArcRotateLabel);
+        param->setHint(kParamArcRotateHint);
+        param->setRange(0, 360);
+        param->setDisplayRange(0, 360);
+        param->setDefault(kParamArcRotateDefault);
+        pageArc->addChild(*param);
+    }
+    {
+        DoubleParamDescriptor *param = desc.defineDoubleParam(kParamArcTopRadius);
+        param->setLabel(kParamArcTopRadiusLabel);
+        param->setHint(kParamArcTopRadiusHint);
+        param->setRange(0, 360);
+        param->setDisplayRange(0, 360);
+        param->setDefault(kParamArcTopRadiusDefault);
+        pageArc->addChild(*param);
+    }
+    {
+        DoubleParamDescriptor *param = desc.defineDoubleParam(kParamArcBottomRadius);
+        param->setLabel(kParamArcBottomRadiusLabel);
+        param->setHint(kParamArcBottomRadiusHint);
+        param->setRange(0, 360);
+        param->setDisplayRange(0, 360);
+        param->setDefault(kParamArcBottomRadiusDefault);
         pageArc->addChild(*param);
     }
     {
@@ -529,20 +588,20 @@ void DistortPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, C
         pageEdge->addChild(*param);
     }
     {
-        DoubleParamDescriptor *param = desc.defineDoubleParam(kParamEmboss);
-        param->setLabel(kParamEmbossLabel);
-        param->setHint(kParamEmbossHint);
-        param->setRange(0, 1000);
-        param->setDisplayRange(0, 50);
-        param->setDefault(kParamEmbossDefault);
+        DoubleParamDescriptor *param = desc.defineDoubleParam(kParamEmbossRadius);
+        param->setLabel(kParamEmbossRadiusLabel);
+        param->setHint(kParamEmbossRadiusHint);
+        param->setRange(0, 1.1);
+        param->setDisplayRange(0, 1.1);
+        param->setDefault(kParamEmbossRadiusDefault);
         pageEmboss->addChild(*param);
     }
     {
         DoubleParamDescriptor *param = desc.defineDoubleParam(kParamEmbossSigma);
         param->setLabel(kParamEmbossSigmaLabel);
         param->setHint(kParamEmbossSigmaHint);
-        param->setRange(0, 1000);
-        param->setDisplayRange(0, 50);
+        param->setRange(0, 1.1);
+        param->setDisplayRange(0, 1.1);
         param->setDefault(kParamEmbossSigmaDefault);
         pageEmboss->addChild(*param);
     }
