@@ -48,7 +48,7 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 #define kParamVPixel "virtualPixelMethod"
 #define kParamVPixelLabel "Virtual Pixel"
-#define kParamVPixelHint "Virtual Pixel Method"
+#define kParamVPixelHint "Virtual Pixel Method. Affects (De)Polar/Arc"
 #define kParamVPixelDefault 7
 
 #define kParamDistort "distort"
@@ -332,7 +332,7 @@ void DistortPlugin::render(const OFX::RenderArguments &args)
     int distortOpts = 0;
     switch (distort) {
     case 0: // Polar Distort
-        image.backgroundColor(Magick::Color("black")); // TODO! own param?
+        image.backgroundColor(Magick::Color("black"));
         image.distort(Magick::PolarDistortion, value, distortArgs, Magick::MagickTrue);
         if (image.rows()>height)
             image.scale(Magick::Geometry(NULL,height));
@@ -340,8 +340,8 @@ void DistortPlugin::render(const OFX::RenderArguments &args)
             offsetX = (width-image.columns())/2;
         break;
     case 1: // DePolar Distort
-        image.backgroundColor(Magick::Color("black")); // TODO! own param?
-        image.distort(Magick::DePolarDistortion, value, distortArgs, Magick::MagickTrue);
+        image.backgroundColor(Magick::Color("black"));
+        image.distort(Magick::DePolarDistortion, value, distortArgs, Magick::MagickFalse);
         if (image.columns()>width)
             image.scale(Magick::Geometry(width,NULL));
         if (image.rows()>height)
@@ -353,19 +353,23 @@ void DistortPlugin::render(const OFX::RenderArguments &args)
         break;
     case 2: // Arc Distort
         if (arcAngle!=0) {
-            distortArgs[0] = arcAngle;
+            distortArgs[distortOpts] = arcAngle;
             distortOpts++;
         }
         if (arcRotate!=0) {
-            distortArgs[1] = arcRotate;
+            distortArgs[distortOpts] = arcRotate;
+            distortOpts++;
+        }
+        else {
+            distortArgs[distortOpts] = 0;
             distortOpts++;
         }
         if (arcTopRadius!=0) {
-            distortArgs[2] = arcTopRadius;
+            distortArgs[distortOpts] = arcTopRadius;
             distortOpts++;
         }
-        if (arcBottomRadius!=0) {
-            distortArgs[3] = arcBottomRadius;
+        if (arcBottomRadius!=0&&arcTopRadius!=0) {
+            distortArgs[distortOpts] = arcBottomRadius;
             distortOpts++;
         }
         image.backgroundColor(Magick::Color("black"));
@@ -479,7 +483,6 @@ void DistortPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, C
 
     // make some pages and to things in
     PageParamDescriptor *page = desc.definePageParam("General");
-    PageParamDescriptor *pagePolar = desc.definePageParam("Polar");
     PageParamDescriptor *pageArc = desc.definePageParam("Arc");
     PageParamDescriptor *pageSwirl = desc.definePageParam("Swirl");
     PageParamDescriptor *pageImplode = desc.definePageParam("Implode");
