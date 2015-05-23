@@ -37,33 +37,43 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 #include "ofxsMacros.h"
 #include <Magick++.h>
+#include <iostream>
 
 #define kPluginName "Mirror"
-#define kPluginGrouping "Transform"
-#define kPluginDescription  "Mirror image."
+#define kPluginGrouping "Filter"
+#define kPluginDescription  "Mirrors, tiles and reflect image in various ways. \n\nhttps://github.com/olear/openfx-arena"
 
 #define kPluginIdentifier "net.fxarena.openfx.Mirror"
-#define kPluginVersionMajor 1
-#define kPluginVersionMinor 1
+#define kPluginVersionMajor 2
+#define kPluginVersionMinor 0
 
-#define kParamMirror "mirror"
-#define kParamMirrorLabel "Region"
-#define kParamMirrorHint "Mirror image"
+#define kParamMirror "mirrorType"
+#define kParamMirrorLabel "Type"
+#define kParamMirrorHint "Select mirror type"
 
-#define REGION_NORTH "North"
-#define REGION_SOUTH "South"
-#define REGION_EAST "East"
-#define REGION_WEST "West"
-#define REGION_NORTHWEST "NorthWest"
-#define REGION_NORTHEAST "NorthEast"
-#define REGION_SOUTHWEST "SouthWest"
-#define REGION_SOUTHEAST "SouthEast"
-#define REGION_FLIP "Flip"
-#define REGION_FLOP "Flop"
+#define kParamRows "rows"
+#define kParamRowsLabel "Rows"
+#define kParamRowsHint "Rows in grid"
+#define kParamRowsDefault 2
+
+#define kParamCols "cols"
+#define kParamColsLabel "Colums"
+#define kParamColsHint "Columns in grid"
+#define kParamColsDefault 2
+
+#define kParamSpace "spacing"
+#define kParamSpaceLabel "Space"
+#define kParamSpaceHint "Space between image and reflection"
+#define kParamSpaceDefault 0
+
+#define kParamOffset "offset"
+#define kParamOffsetLabel "Offset"
+#define kParamOffsetHint "Mirror offset"
+#define kParamOffsetDefault 0
 
 #define kSupportsTiles 0
 #define kSupportsMultiResolution 1
-#define kSupportsRenderScale 1
+#define kSupportsRenderScale 0
 #define kRenderThreadSafety eRenderInstanceSafe
 
 using namespace OFX;
@@ -78,22 +88,34 @@ public:
 private:
     OFX::Clip *dstClip_;
     OFX::Clip *srcClip_;
+    OFX::Clip *maskClip_;
     OFX::ChoiceParam *mirror_;
+    OFX::IntParam *rows_;
+    OFX::IntParam *cols_;
+    OFX::IntParam *spacing_;
+    OFX::IntParam *offset_;
 };
 
 MirrorPlugin::MirrorPlugin(OfxImageEffectHandle handle)
 : OFX::ImageEffect(handle)
 , dstClip_(0)
 , srcClip_(0)
+, maskClip_(0)
 {
-    Magick::InitializeMagick("");
+    Magick::InitializeMagick(NULL);
     dstClip_ = fetchClip(kOfxImageEffectOutputClipName);
     assert(dstClip_ && (dstClip_->getPixelComponents() == OFX::ePixelComponentRGBA || dstClip_->getPixelComponents() == OFX::ePixelComponentRGB));
     srcClip_ = fetchClip(kOfxImageEffectSimpleSourceClipName);
     assert(srcClip_ && (srcClip_->getPixelComponents() == OFX::ePixelComponentRGBA || srcClip_->getPixelComponents() == OFX::ePixelComponentRGB));
+    maskClip_ = getContext() == OFX::eContextFilter ? NULL : fetchClip(getContext() == OFX::eContextPaint ? "Brush" : "Mask");
+    assert(!maskClip_ || maskClip_->getPixelComponents() == OFX::ePixelComponentAlpha);
 
     mirror_ = fetchChoiceParam(kParamMirror);
-    assert(mirror_);
+    rows_ = fetchIntParam(kParamRows);
+    cols_ = fetchIntParam(kParamCols);
+    spacing_ = fetchIntParam(kParamSpace);
+    offset_ = fetchIntParam(kParamOffset);
+    assert(mirror_ && rows_ && cols_ && spacing_ && offset_);
 }
 
 MirrorPlugin::~MirrorPlugin()
@@ -107,6 +129,7 @@ void MirrorPlugin::render(const OFX::RenderArguments &args)
         return;
     }
 
+    // get src clip
     if (!srcClip_) {
         OFX::throwSuiteStatusException(kOfxStatFailed);
         return;
@@ -128,6 +151,13 @@ void MirrorPlugin::render(const OFX::RenderArguments &args)
         }
     }
 
+    // Get mask clip
+    std::auto_ptr<const OFX::Image> maskImg((getContext() != OFX::eContextFilter && maskClip_ && maskClip_->isConnected()) ? maskClip_->fetchImage(args.time) : 0);
+    OfxRectI maskRod;
+    if (getContext() != OFX::eContextFilter && maskClip_ && maskClip_->isConnected())
+        maskRod=maskImg->getRegionOfDefinition();
+
+    // get dest clip
     if (!dstClip_) {
         OFX::throwSuiteStatusException(kOfxStatFailed);
         return;
@@ -183,8 +213,15 @@ void MirrorPlugin::render(const OFX::RenderArguments &args)
     }
 
     // get param
-    int mirror;
+    int mirror,rows,cols,spacing,offset;;
+    rows_->getValueAtTime(args.time, rows);
+    cols_->getValueAtTime(args.time, cols);
     mirror_->getValueAtTime(args.time, mirror);
+    spacing_->getValueAtTime(args.time, spacing);
+    offset_->getValueAtTime(args.time, offset);
+
+    bool use_tile = false;
+    bool use_refl = false;
 
     // read image
     Magick::Image image(srcRod.x2-srcRod.x1,srcRod.y2-srcRod.y1,channels,Magick::FloatPixel,(float*)srcImg->getPixelData());
@@ -199,7 +236,6 @@ void MirrorPlugin::render(const OFX::RenderArguments &args)
     Magick::Image image3;
     Magick::Image image4;
     image1 = image;
-    //image1.backgroundColor("none");
     switch(mirror) {
     case 1: // North
           image1.flip();
@@ -263,6 +299,16 @@ void MirrorPlugin::render(const OFX::RenderArguments &args)
     case 10: // Flop
         image.flop();
         break;
+    case 11: // Flip+Flop
+        image.flip();
+        image.flop();
+        break;
+    case 12: // Tile
+        use_tile = true;
+        break;
+    case 13: // Reflection
+        use_refl = true;
+        break;
     }
     if (mirror==5||mirror==6||mirror==7||mirror==8) {
         image.composite(image1,0,mirrorHeight,Magick::OverCompositeOp);
@@ -273,6 +319,69 @@ void MirrorPlugin::render(const OFX::RenderArguments &args)
     else {
         if (mirror==1||mirror==2||mirror==3||mirror==4)
             image.composite(image1,0,0,Magick::OverCompositeOp);
+    }
+
+    // Tile image, if enabled
+    if (use_tile) {
+        int tileWidth = magickWidth/rows;
+        int tileHeight = magickHeight/cols;
+        int thumbs = rows*cols;
+
+        std::string thumb;
+        std::ostringstream makeThumb;
+        makeThumb << tileWidth << "x" << tileHeight << "-0-0";
+        thumb = makeThumb.str();
+
+        std::string grid;
+        std::ostringstream makeGrid;
+        makeGrid << rows << "x" << cols;
+        grid = makeGrid.str();
+        Magick::Montage montageSettings;
+        montageSettings.shadow(false);
+
+        // avoid warn, set a default font
+        std::string fontFile;
+        char **fonts;
+        std::size_t fontList;
+        fonts=MagickCore::MagickQueryFonts("*",&fontList);
+        fontFile = fonts[0];
+        for (size_t i = 0; i < fontList; i++)
+            free(fonts[i]);
+        montageSettings.font(fontFile);
+        montageSettings.backgroundColor(Magick::Color("rgba(0,0,0,0)"));
+        montageSettings.geometry(thumb);
+        montageSettings.tile(grid);
+
+        std::list<Magick::Image> montagelist;
+        std::list<Magick::Image> imageList;
+        for(int y = 0; y < thumbs; y++)
+            imageList.push_back(image);
+
+        Magick::montageImages(&montagelist,imageList.begin(),imageList.end(),montageSettings);
+        Magick::appendImages(&image,montagelist.begin(),montagelist.end());
+    }
+
+    // Reflection
+    if (use_refl) {
+        Magick::Image container(Magick::Geometry(magickWidth,magickHeight),Magick::Color("rgba(0,0,0,0)"));
+        image1 = image;
+        image1.flip();
+        image1.crop(Magick::Geometry(magickWidth,mirrorHeight-offset,0,offset+offset));
+        image.crop(Magick::Geometry(magickWidth,mirrorHeight+offset,0,mirrorHeight-offset));
+
+        // apply mask if exists
+        if (maskClip_ && maskClip_->isConnected()) {
+            int maskWidth = maskRod.x2-maskRod.x1;
+            int maskHeight = maskRod.y2-maskRod.y1;
+            if (maskWidth>0&&maskHeight>0) {
+                Magick::Image mask(maskWidth,maskHeight,"A",Magick::FloatPixel,(float*)maskImg->getPixelData());
+                image1.composite(mask,0,0,Magick::CopyOpacityCompositeOp);
+            }
+        }
+
+        container.composite(image1,0,-spacing,Magick::OverCompositeOp);
+        container.composite(image,0,mirrorHeight-offset,Magick::OverCompositeOp);
+        image=container;
     }
 
     // return image
@@ -339,7 +448,6 @@ void MirrorPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, Co
     ClipDescriptor *srcClip = desc.defineClip(kOfxImageEffectSimpleSourceClipName);
     srcClip->addSupportedComponent(ePixelComponentRGBA);
     srcClip->addSupportedComponent(ePixelComponentRGB);
-    //srcClip->addSupportedComponent(ePixelComponentAlpha); // should work, not tested
     srcClip->setTemporalClipAccess(false);
     srcClip->setSupportsTiles(kSupportsTiles);
     srcClip->setIsMask(false);
@@ -348,28 +456,76 @@ void MirrorPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, Co
     ClipDescriptor *dstClip = desc.defineClip(kOfxImageEffectOutputClipName);
     dstClip->addSupportedComponent(ePixelComponentRGBA);
     dstClip->addSupportedComponent(ePixelComponentRGB);
-    //dstClip->addSupportedComponent(ePixelComponentAlpha); // should work, not tested
     dstClip->setSupportsTiles(kSupportsTiles);
+
+    // create optional mask clip
+    ClipDescriptor *maskClip = desc.defineClip("Mask");
+    maskClip->addSupportedComponent(OFX::ePixelComponentAlpha);
+    maskClip->setTemporalClipAccess(false);
+    maskClip->setOptional(true);
+    maskClip->setSupportsTiles(kSupportsTiles);
+    maskClip->setIsMask(true);
 
     // make some pages and to things in
     PageParamDescriptor *page = desc.definePageParam(kPluginName);
+    PageParamDescriptor *pageTile = desc.definePageParam("Tile");
+    PageParamDescriptor *pageRefl = desc.definePageParam("Reflection");
     {
         ChoiceParamDescriptor *param = desc.defineChoiceParam(kParamMirror);
         param->setLabel(kParamMirrorLabel);
         param->setHint(kParamMirrorHint);
-	param->appendOption("None");
-        param->appendOption(REGION_NORTH);
-        param->appendOption(REGION_SOUTH);
-        param->appendOption(REGION_EAST);
-        param->appendOption(REGION_WEST);
-        param->appendOption(REGION_NORTHWEST);
-        param->appendOption(REGION_NORTHEAST);
-        param->appendOption(REGION_SOUTHWEST);
-        param->appendOption(REGION_SOUTHEAST);
-        param->appendOption(REGION_FLIP);
-        param->appendOption(REGION_FLOP);
+        param->appendOption("None");
+        param->appendOption("North");
+        param->appendOption("South");
+        param->appendOption("East");
+        param->appendOption("West");
+        param->appendOption("NorthWest");
+        param->appendOption("NorthEast");
+        param->appendOption("SouthWest");
+        param->appendOption("SouthEast");
+        param->appendOption("Flip");
+        param->appendOption("Flop");
+        param->appendOption("Flip+Flop");
+        param->appendOption("Tile");
+        param->appendOption("Reflection");
         param->setAnimates(true);
         page->addChild(*param);
+    }
+    {
+        IntParamDescriptor *param = desc.defineIntParam(kParamRows);
+        param->setLabel(kParamRowsLabel);
+        param->setHint(kParamRowsHint);
+        param->setRange(1, 100);
+        param->setDisplayRange(1, 10);
+        param->setDefault(kParamRowsDefault);
+        pageTile->addChild(*param);
+    }
+    {
+        IntParamDescriptor *param = desc.defineIntParam(kParamCols);
+        param->setLabel(kParamColsLabel);
+        param->setHint(kParamColsHint);
+        param->setRange(1, 100);
+        param->setDisplayRange(1, 10);
+        param->setDefault(kParamColsDefault);
+        pageTile->addChild(*param);
+    }
+    {
+        IntParamDescriptor *param = desc.defineIntParam(kParamOffset);
+        param->setLabel(kParamOffsetLabel);
+        param->setHint(kParamOffsetHint);
+        param->setRange(0, 500);
+        param->setDisplayRange(0, 50);
+        param->setDefault(kParamOffsetDefault);
+        pageRefl->addChild(*param);
+    }
+    {
+        IntParamDescriptor *param = desc.defineIntParam(kParamSpace);
+        param->setLabel(kParamSpaceLabel);
+        param->setHint(kParamSpaceHint);
+        param->setRange(0, 100);
+        param->setDisplayRange(0, 10);
+        param->setDefault(kParamSpaceDefault);
+        pageRefl->addChild(*param);
     }
 }
 
@@ -378,7 +534,6 @@ ImageEffect* MirrorPluginFactory::createInstance(OfxImageEffectHandle handle, Co
 {
     return new MirrorPlugin(handle);
 }
-
 
 void getMirrorPluginID(OFX::PluginFactoryArray &ids)
 {

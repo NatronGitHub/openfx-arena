@@ -1,10 +1,7 @@
 PLUGINOBJECTS = \
         Text.o \
-        Swirl.o \
+        Distort.o \
         Mirror.o \
-        Implode.o \
-        Tile.o \
-        Reflection.o \
 	ofxsOGLTextRenderer.o \
 	ofxsOGLFontData.o \
 	ofxsRectangleInteract.o \
@@ -13,27 +10,21 @@ PLUGINOBJECTS = \
 PLUGINNAME = Arena
 
 RESOURCES = \
-../Image/net.fxarena.openfx.Text.png \
-../Image/net.fxarena.openfx.Text.svg \
-../Filter/net.fxarena.openfx.Swirl.png \
-../Filter/net.fxarena.openfx.Swirl.svg \
-../Transform/net.fxarena.openfx.Mirror.png \
-../Transform/net.fxarena.openfx.Mirror.svg \
-../Filter/net.fxarena.openfx.Implode.png \
-../Filter/net.fxarena.openfx.Implode.svg \
-../Transform/net.fxarena.openfx.Tile.png \
-../Transform/net.fxarena.openfx.Tile.svg \
-../Transform/net.fxarena.openfx.Reflection.png \
-../Transform/net.fxarena.openfx.Reflection.svg \
+../Text/net.fxarena.openfx.Text.png \
+../Text/net.fxarena.openfx.Text.svg \
+../Distort/net.fxarena.openfx.Distort.png \
+../Distort/net.fxarena.openfx.Distort.svg \
+../Mirror/net.fxarena.openfx.Mirror.png \
+../Mirror/net.fxarena.openfx.Mirror.svg \
 
 VPATH += \
-../Transform \
-../Image \
-../Filter \
+../Mirror \
+../Text \
+../Distort \
 
 include ../Makefile.master
 
-CXXFLAGS += -I../Transform -I../Image -I../Filter
+CXXFLAGS += -I../Mirror -I../Text -I../Distort
 
 CXXFLAGS  += $(MAGICK_CXXFLAGS)
 LINKFLAGS += $(MAGICK_LINKFLAGS)

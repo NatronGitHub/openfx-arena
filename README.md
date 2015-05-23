@@ -3,16 +3,6 @@ OpenFX Arena [![Build Status](https://travis-ci.org/olear/openfx-arena.svg)](htt
 
 A set of visual effect plugins for OpenFX compatible applications.
 
- * Image
-  * Text
- * Filter
-  * Implode
-  * Swirl
- * Transform
-  * Mirror
-  * Tile
-  * Reflection
-
 Compatibility
 =============
 
@@ -83,12 +73,12 @@ make STATIC=1 MINGW=1 BIT=64 CONFIG=release
 
 **Install on Linux/FreeBSD**
 ```
-cp -a Plugin/*-*-*/Arena.ofx.bundle /usr/OFX/Plugins/
+cp -a Bundle/*-*-*/Arena.ofx.bundle /usr/OFX/Plugins/
 ```
 
 **Install on Windows**
 ```
-cp -a Plugin/*-*-*/Arena.ofx.bundle "/c/Program Files/Common Files/OFX/Plugins/"
+cp -a Bundle/*-*-*/Arena.ofx.bundle "/c/Program Files/Common Files/OFX/Plugins/"
 ```
 
 Contribute

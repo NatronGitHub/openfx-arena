@@ -76,21 +76,20 @@
 #include <sstream>
 #include <iostream>
 #include <stdint.h>
-#include <magick/MagickCore.h>
 
 #define CLAMP(value, min, max) (((value) >(max)) ? (max) : (((value) <(min)) ? (min) : (value)))
 
 #define kPluginName "Text"
-#define kPluginGrouping "Image"
-#define kPluginDescription  "A simple text generator - https://github.com/olear/openfx-arena"
+#define kPluginGrouping "Draw"
+#define kPluginDescription  "A simple text generator. \n\nhttps://github.com/olear/openfx-arena"
 
 #define kPluginIdentifier "net.fxarena.openfx.Text"
-#define kPluginVersionMajor 1
-#define kPluginVersionMinor 2
+#define kPluginVersionMajor 2
+#define kPluginVersionMinor 0
 
 #define kSupportsTiles 0
 #define kSupportsMultiResolution 1
-#define kSupportsRenderScale 0 // disable works in natron, enable works in nuke but not natron
+#define kSupportsRenderScale 0
 #define kRenderThreadSafety eRenderInstanceSafe
 
 #define kParamPosition "position"
@@ -112,7 +111,7 @@
 
 #define kParamFontName "fontName"
 #define kParamFontNameLabel "Font"
-#define kParamFontNameHint "The name of the font to be used. If empty then you need to update your font cache."
+#define kParamFontNameHint "The name of the font to be used"
 
 #define kParamFontDecor "fontDecor"
 #define kParamFontDecorLabel "Decoration"
@@ -128,17 +127,32 @@
 #define kParamStrokeCheckDefault false
 
 #define kParamStrokeColor "strokeColor"
-#define kParamStrokeColorLabel "Stroke Color"
+#define kParamStrokeColorLabel "Outline Color"
 #define kParamStrokeColorHint "The stroke color of the text to render"
 
 #define kParamStroke "stroke"
-#define kParamStrokeLabel "Stroke Width"
+#define kParamStrokeLabel "Outline Width"
 #define kParamStrokeHint "Adjust stroke width for outline"
 #define kParamStrokeDefault 1
 
 #define kParamFontOverride "customFont"
 #define kParamFontOverrideLabel "Custom Font"
-#define kParamFontOverrideHint "Override the font list. You can use font names or direct path(s)."
+#define kParamFontOverrideHint "Override the font list. You can use font name or direct path"
+
+#define kParamShadowCheck "shadow"
+#define kParamShadowCheckLabel "Shadow"
+#define kParamShadowCheckHint "Enable or disable drop shadow"
+#define kParamShadowCheckDefault false
+
+#define kParamShadowOpacity "shadowOpacity"
+#define kParamShadowOpacityLabel "Shadow opacity"
+#define kParamShadowOpacityHint "Adjust shadow opacity"
+#define kParamShadowOpacityDefault 60
+
+#define kParamShadowSigma "shadowOffset"
+#define kParamShadowSigmaLabel "Shadow offset"
+#define kParamShadowSigmaHint "Adjust shadow offset"
+#define kParamShadowSigmaDefault 5
 
 using namespace OFX;
 
@@ -170,6 +184,9 @@ private:
     OFX::BooleanParam *strokeEnabled_;
     OFX::DoubleParam *strokeWidth_;
     OFX::StringParam *fontOverride_;
+    OFX::BooleanParam *shadowEnabled_;
+    OFX::DoubleParam *shadowOpacity_;
+    OFX::DoubleParam *shadowSigma_;
 };
 
 TextPlugin::TextPlugin(OfxImageEffectHandle handle)
@@ -177,7 +194,6 @@ TextPlugin::TextPlugin(OfxImageEffectHandle handle)
 , dstClip_(0)
 {
     Magick::InitializeMagick(NULL);
-    MagickCore::MagickCoreGenesis(NULL, MagickCore::MagickTrue);
 
     dstClip_ = fetchClip(kOfxImageEffectOutputClipName);
     assert(dstClip_ && (dstClip_->getPixelComponents() == OFX::ePixelComponentRGBA || dstClip_->getPixelComponents() == OFX::ePixelComponentRGB));
@@ -192,7 +208,10 @@ TextPlugin::TextPlugin(OfxImageEffectHandle handle)
     strokeEnabled_ = fetchBooleanParam(kParamStrokeCheck);
     strokeWidth_ = fetchDoubleParam(kParamStroke);
     fontOverride_ = fetchStringParam(kParamFontOverride);
-    assert(position_ && text_ && fontSize_ && fontName_ && textColor_ && fontDecor_ && strokeColor_ && strokeEnabled_ && strokeWidth_ && fontOverride_);
+    shadowEnabled_ = fetchBooleanParam(kParamShadowCheck);
+    shadowOpacity_ = fetchDoubleParam(kParamShadowOpacity);
+    shadowSigma_ = fetchDoubleParam(kParamShadowSigma);
+    assert(position_ && text_ && fontSize_ && fontName_ && textColor_ && fontDecor_ && strokeColor_ && strokeEnabled_ && strokeWidth_ && fontOverride_ && shadowEnabled_ && shadowOpacity_ && shadowSigma_);
 }
 
 TextPlugin::~TextPlugin()
@@ -262,9 +281,10 @@ void TextPlugin::render(const OFX::RenderArguments &args)
     }
 
     // Get params
-    double x, y, r, g, b, a, r_s, g_s, b_s, a_s, strokeWidth;
+    double x, y, r, g, b, a, r_s, g_s, b_s, a_s, strokeWidth,shadowOpacity,shadowSigma;
     int fontSize, fontID, fontDecor;
     bool use_stroke = false;
+    bool use_shadow = false;
     std::string text, fontOverride, fontName;
 
     position_->getValueAtTime(args.time, x, y);
@@ -277,7 +297,9 @@ void TextPlugin::render(const OFX::RenderArguments &args)
     fontOverride_->getValueAtTime(args.time, fontOverride);
     textColor_->getValueAtTime(args.time, r, g, b, a);
     strokeColor_->getValueAtTime(args.time, r_s, g_s, b_s, a_s);
-
+    shadowEnabled_->getValueAtTime(args.time, use_shadow);
+    shadowOpacity_->getValueAtTime(args.time, shadowOpacity);
+    shadowSigma_->getValueAtTime(args.time, shadowSigma);
     fontName_->getOption(fontID,fontName);
 
     float textColor[4];
@@ -302,10 +324,12 @@ void TextPlugin::render(const OFX::RenderArguments &args)
     Magick::Image image(Magick::Geometry(width,height),Magick::Color("rgba(0,0,0,0)"));
 
     // Set font size
-    image.fontPointsize(fontSize);
+    if (fontSize>0)
+        image.fontPointsize(fontSize);
 
     // Set stroke width
-    image.strokeWidth(strokeWidth);
+    if (use_stroke)
+        image.strokeWidth(strokeWidth);
 
     // Convert colors to int
     int rI = ((uint8_t)(255.0f *CLAMP(r, 0.0, 1.0)));
@@ -352,14 +376,22 @@ void TextPlugin::render(const OFX::RenderArguments &args)
         case 3:
             text_draw_list.push_back(Magick::DrawableTextDecoration(Magick::LineThroughDecoration));
             break;
-        default:
-            text_draw_list.push_back(Magick::DrawableTextDecoration(Magick::NoDecoration));
-            break;
         }
     }
 
     // Draw
     image.draw(text_draw_list);
+
+    // Shadow
+    if (use_shadow) {
+        Magick::Image dropShadow;
+        dropShadow=image;
+        dropShadow.backgroundColor("Black");
+        dropShadow.virtualPixelMethod(Magick::TransparentVirtualPixelMethod);
+        dropShadow.shadow(shadowOpacity,shadowSigma,0,0);
+        dropShadow.composite(image,0,0,Magick::OverCompositeOp);
+        image=dropShadow;
+    }
 
     // Flip image
     image.flip();
@@ -551,6 +583,7 @@ void TextPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, Cont
         param->setHint(kParamStrokeCheckHint);
         param->setEvaluateOnChange(true);
         param->setDefault(kParamStrokeCheckDefault);
+        param->setAnimates(true);
         page->addChild(*param);
     }
     {
@@ -568,6 +601,33 @@ void TextPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, Cont
         param->setRange(0, 50);
         param->setDisplayRange(0, 50);
         param->setDefault(kParamStrokeDefault);
+        page->addChild(*param);
+    }
+    {
+        BooleanParamDescriptor* param = desc.defineBooleanParam(kParamShadowCheck);
+        param->setLabel(kParamShadowCheckLabel);
+        param->setHint(kParamShadowCheckHint);
+        param->setEvaluateOnChange(true);
+        param->setDefault(kParamShadowCheckDefault);
+        param->setAnimates(true);
+        page->addChild(*param);
+    }
+    {
+        DoubleParamDescriptor *param = desc.defineDoubleParam(kParamShadowOpacity);
+        param->setLabel(kParamShadowOpacityLabel);
+        param->setHint(kParamShadowOpacityHint);
+        param->setRange(0, 100);
+        param->setDisplayRange(0, 100);
+        param->setDefault(kParamShadowOpacityDefault);
+        page->addChild(*param);
+    }
+    {
+        DoubleParamDescriptor *param = desc.defineDoubleParam(kParamShadowSigma);
+        param->setLabel(kParamShadowSigmaLabel);
+        param->setHint(kParamShadowSigmaHint);
+        param->setRange(0, 100);
+        param->setDisplayRange(0, 10);
+        param->setDefault(kParamShadowSigmaDefault);
         page->addChild(*param);
     }
 }
