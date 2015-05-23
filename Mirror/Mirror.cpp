@@ -61,6 +61,11 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #define kParamColsHint "Columns in grid"
 #define kParamColsDefault 2
 
+#define kParamTileTimeOffset "timeOffset"
+#define kParamTileTimeOffsetLabel "Time Offset"
+#define kParamTileTimeOffsetHint "Set a time offset"
+#define kParamTileTimeOffsetDefault 0
+
 #define kParamSpace "spacing"
 #define kParamSpaceLabel "Space"
 #define kParamSpaceHint "Space between image and reflection"
@@ -94,6 +99,7 @@ private:
     OFX::IntParam *cols_;
     OFX::IntParam *spacing_;
     OFX::IntParam *offset_;
+    OFX::IntParam *tileTimeOffset_;
 };
 
 MirrorPlugin::MirrorPlugin(OfxImageEffectHandle handle)
@@ -115,7 +121,8 @@ MirrorPlugin::MirrorPlugin(OfxImageEffectHandle handle)
     cols_ = fetchIntParam(kParamCols);
     spacing_ = fetchIntParam(kParamSpace);
     offset_ = fetchIntParam(kParamOffset);
-    assert(mirror_ && rows_ && cols_ && spacing_ && offset_);
+    tileTimeOffset_ = fetchIntParam(kParamTileTimeOffset);
+    assert(mirror_ && rows_ && cols_ && spacing_ && offset_ && tileTimeOffset_);
 }
 
 MirrorPlugin::~MirrorPlugin()
@@ -213,12 +220,13 @@ void MirrorPlugin::render(const OFX::RenderArguments &args)
     }
 
     // get param
-    int mirror,rows,cols,spacing,offset;;
+    int mirror,rows,cols,spacing,offset,tileTimeOffset;
     rows_->getValueAtTime(args.time, rows);
     cols_->getValueAtTime(args.time, cols);
     mirror_->getValueAtTime(args.time, mirror);
     spacing_->getValueAtTime(args.time, spacing);
     offset_->getValueAtTime(args.time, offset);
+    tileTimeOffset_->getValueAtTime(args.time, tileTimeOffset);
 
     bool use_tile = false;
     bool use_refl = false;
@@ -348,15 +356,38 @@ void MirrorPlugin::render(const OFX::RenderArguments &args)
         for (size_t i = 0; i < fontList; i++)
             free(fonts[i]);
         montageSettings.font(fontFile);
+
         montageSettings.backgroundColor(Magick::Color("rgba(0,0,0,0)"));
         montageSettings.geometry(thumb);
         montageSettings.tile(grid);
 
         std::list<Magick::Image> montagelist;
         std::list<Magick::Image> imageList;
+
+        // add images
+        if (tileTimeOffset==0) {
         for(int y = 0; y < thumbs; y++)
             imageList.push_back(image);
-
+        }
+        else { // time offset
+            imageList.push_back(image);
+            int frame = args.time+tileTimeOffset;
+            for(int y = 0; y < thumbs-1; y++) {
+                std::auto_ptr<const OFX::Image> tileImg(srcClip_->fetchImage(frame));
+                if (tileImg.get()) {
+                    OfxRectI tileRod;
+                    tileRod = tileImg->getRegionOfDefinition();
+                    int tileWidth = tileRod.x2-tileRod.x1;
+                    int tileHeight = tileRod.y2-tileRod.y1;
+                    if (tileWidth>0&&tileHeight>0) {
+                        Magick::Image tmpTile(tileWidth,tileHeight,channels,Magick::FloatPixel,(float*)tileImg->getPixelData());
+                        if (tmpTile.columns()==tileWidth&&tmpTile.rows()==tileHeight)
+                            imageList.push_back(tmpTile);
+                    }
+                }
+                frame++;
+            }
+        }
         Magick::montageImages(&montagelist,imageList.begin(),imageList.end(),montageSettings);
         Magick::appendImages(&image,montagelist.begin(),montagelist.end());
     }
@@ -510,11 +541,20 @@ void MirrorPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, Co
         pageTile->addChild(*param);
     }
     {
+        IntParamDescriptor *param = desc.defineIntParam(kParamTileTimeOffset);
+        param->setLabel(kParamTileTimeOffsetLabel);
+        param->setHint(kParamTileTimeOffsetHint);
+        param->setRange(0, 1000);
+        param->setDisplayRange(0, 100);
+        param->setDefault(kParamTileTimeOffsetDefault);
+        pageTile->addChild(*param);
+    }
+    {
         IntParamDescriptor *param = desc.defineIntParam(kParamOffset);
         param->setLabel(kParamOffsetLabel);
         param->setHint(kParamOffsetHint);
-        param->setRange(0, 500);
-        param->setDisplayRange(0, 50);
+        param->setRange(0, 2000);
+        param->setDisplayRange(0, 500);
         param->setDefault(kParamOffsetDefault);
         pageRefl->addChild(*param);
     }
