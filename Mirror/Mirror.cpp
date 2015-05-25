@@ -45,11 +45,12 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 #define kPluginIdentifier "net.fxarena.openfx.Mirror"
 #define kPluginVersionMajor 2
-#define kPluginVersionMinor 0
+#define kPluginVersionMinor 1
 
 #define kParamMirror "mirrorType"
 #define kParamMirrorLabel "Type"
 #define kParamMirrorHint "Select mirror type"
+#define kParamMirrorDefault 1
 
 #define kParamRows "rows"
 #define kParamRowsLabel "Rows"
@@ -77,7 +78,7 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #define kParamOffsetDefault 0
 
 #define kSupportsTiles 0
-#define kSupportsMultiResolution 1
+#define kSupportsMultiResolution 0
 #define kSupportsRenderScale 0
 #define kRenderThreadSafety eRenderInstanceSafe
 
@@ -234,7 +235,10 @@ void MirrorPlugin::render(const OFX::RenderArguments &args)
     // read image
     Magick::Image image(srcRod.x2-srcRod.x1,srcRod.y2-srcRod.y1,channels,Magick::FloatPixel,(float*)srcImg->getPixelData());
 
-    // proc image
+    // create empty container
+    Magick::Image container(Magick::Geometry(srcRod.x2-srcRod.x1,srcRod.y2-srcRod.y1),Magick::Color("rgba(0,0,0,0)"));
+
+    // setup
     int magickWidth = srcRod.x2-srcRod.x1;
     int magickHeight = srcRod.y2-srcRod.y1;
     int mirrorWidth = magickWidth/2;
@@ -243,24 +247,32 @@ void MirrorPlugin::render(const OFX::RenderArguments &args)
     Magick::Image image2;
     Magick::Image image3;
     Magick::Image image4;
-    image1 = image;
+
+    if (mirror>0&&mirror<9)
+        image1 = image;
+
+    // Mirror type
     switch(mirror) {
     case 1: // North
-          image1.flip();
-          image1.crop(Magick::Geometry(magickWidth,mirrorHeight,0,0));
-          break;
+        image1.flip();
+        image.crop(Magick::Geometry(magickWidth,mirrorHeight,0,mirrorHeight));
+        image1.crop(Magick::Geometry(magickWidth,mirrorHeight,0,0));
+        break;
     case 2: // South
-          image.flip();
-          image1.crop(Magick::Geometry(magickWidth,mirrorHeight,0,0));
-          break;
+        image.flip();
+        image.crop(Magick::Geometry(magickWidth,mirrorHeight,0,mirrorHeight));
+        image1.crop(Magick::Geometry(magickWidth,mirrorHeight,0,0));
+        break;
     case 3: // East
-          image1.flop();
-          image1.crop(Magick::Geometry(mirrorWidth,magickHeight,0,0));
-          break;
+        image1.flop();
+        image.crop(Magick::Geometry(mirrorWidth,magickHeight,mirrorWidth,0));
+        image1.crop(Magick::Geometry(mirrorWidth,magickHeight,0,0));
+        break;
     case 4: // West
         image.flop();
+        image.crop(Magick::Geometry(mirrorWidth,magickHeight,mirrorWidth,0));
         image1.crop(Magick::Geometry(mirrorWidth,magickHeight,0,0));
-          break;
+        break;
     case 5: // NorthWest
         image1.crop(Magick::Geometry(mirrorWidth,mirrorHeight,0,mirrorHeight));
         image2 = image1;
@@ -318,15 +330,22 @@ void MirrorPlugin::render(const OFX::RenderArguments &args)
         use_refl = true;
         break;
     }
-    if (mirror==5||mirror==6||mirror==7||mirror==8) {
-        image.composite(image1,0,mirrorHeight,Magick::OverCompositeOp);
-        image.composite(image2,mirrorWidth,mirrorHeight,Magick::OverCompositeOp);
-        image.composite(image3,mirrorWidth,0,Magick::OverCompositeOp);
-        image.composite(image4,0,0,Magick::OverCompositeOp);
+
+    // Mirror image, if enabled
+    if (mirror>4&&mirror<9) {
+        container.composite(image1,0,mirrorHeight,Magick::PlusCompositeOp);
+        container.composite(image2,mirrorWidth,mirrorHeight,Magick::PlusCompositeOp);
+        container.composite(image3,mirrorWidth,0,Magick::PlusCompositeOp);
+        container.composite(image4,0,0,Magick::PlusCompositeOp);
+        image=container;
     }
-    else {
-        if (mirror==1||mirror==2||mirror==3||mirror==4)
-            image.composite(image1,0,0,Magick::OverCompositeOp);
+    else if (mirror>0&&mirror<5) {
+        if (mirror==1||mirror==2)
+            container.composite(image,0,mirrorHeight,Magick::PlusCompositeOp);
+        else if (mirror==3||mirror==4)
+            container.composite(image,mirrorWidth,0,Magick::PlusCompositeOp);
+        container.composite(image1,0,0,Magick::PlusCompositeOp);
+        image=container;
     }
 
     // Tile image, if enabled
@@ -411,7 +430,7 @@ void MirrorPlugin::render(const OFX::RenderArguments &args)
         }
 
         container.composite(image1,0,-spacing,Magick::OverCompositeOp);
-        container.composite(image,0,mirrorHeight-offset,Magick::OverCompositeOp);
+        container.composite(image,0,mirrorHeight-offset,Magick::PlusCompositeOp);
         image=container;
     }
 
@@ -519,6 +538,7 @@ void MirrorPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, Co
         param->appendOption("Flip+Flop");
         param->appendOption("Tile");
         param->appendOption("Reflection");
+        param->setDefault(kParamMirrorDefault);
         param->setAnimates(true);
         page->addChild(*param);
     }
