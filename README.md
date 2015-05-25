@@ -36,7 +36,7 @@ git submodule update -i
 Build
 =====
 
-Requires MagickCore and Magick++ (Q16-HDRI with fontconfig, freetype, libpng and zlib support, version 6.9.1-4 minimum, or patch lower versions with 'composite-private.h' from the '3rdparty' folder) installed prior to build. Also see 'deploy.sh' for more information.
+Requires ImageMagick (MagickCore/Magick++ Q16-HDRI with fontconfig, freetype, libpng and zlib support, version 6.9.1-4 minimum) installed prior to build). Also see 'deploy.sh' for more information.
 
 **Make on Linux**
 ```
