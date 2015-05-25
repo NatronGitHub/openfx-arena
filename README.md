@@ -36,22 +36,7 @@ git submodule update -i
 Build
 =====
 
-Requires MagickCore and Magick++ (Q16-HDRI with fontconfig, freetype, libpng and zlib support, version 6.9.1-2 minimum, or patch lower versions with 'composite-private.h' from the '3rdparty' folder) installed prior to build. Also see 'deploy.sh' for more information.
-
-**RHEL/CentOS/Fedora** (and compatible)
-```
-yum install ImageMagick-c++-devel ImageMagick-devel
-```
-
-**Debian/Ubuntu** (and compatible)
-```
-apt-get install libmagick++-dev libmagickcore-dev 
-```
-
-**FreeBSD** (and compatible)
-```
-pkg install ImageMagick
-```
+Requires MagickCore and Magick++ (Q16-HDRI with fontconfig, freetype, libpng and zlib support, version 6.9.1-4 minimum, or patch lower versions with 'composite-private.h' from the '3rdparty' folder) installed prior to build. Also see 'deploy.sh' for more information.
 
 **Make on Linux**
 ```
@@ -84,11 +69,7 @@ cp -a Bundle/*-*-*/Arena.ofx.bundle "/c/Program Files/Common Files/OFX/Plugins/"
 Contribute
 ==========
 
-We always need more plugins, if you know ImageMagick (MagickCore/Magick++) please fork and push! Try to avoid plugins that already exists in Natron (openfx-io/openfx-misc) and/or Nuke.
-
- * https://github.com/olear/openfx-arena/issues/33 (examples of plugins that could be added)
-
-The 'Swirl' plugin should be the easiest starting point.
+We always need more plugins, if you know ImageMagick (MagickCore/Magick++) please help! Try to avoid plugins that already exists in Natron (openfx-io/openfx-misc) and/or Nuke.
 
 License
 =======
