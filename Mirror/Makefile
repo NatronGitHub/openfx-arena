@@ -2,7 +2,7 @@ PLUGINOBJECTS = \
 	Mirror.o \
 	PluginRegistration.o \
 
-PLUGINNAME = Transform
+PLUGINNAME = Mirror
 
 RESOURCES = \
 net.fxarena.openfx.Mirror.png \
