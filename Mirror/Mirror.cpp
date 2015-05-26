@@ -182,15 +182,40 @@ void MirrorPlugin::render(const OFX::RenderArguments &args)
     // proc image(s)
     switch(mirror) {
     case 1: // North
-        image1=image; // copy src
-        image1.flip(); // flip copy
-        image.crop(Magick::Geometry(srcWidth,mirrorHeight,0,mirrorHeight)); // crop src
-        image1.crop(Magick::Geometry(srcWidth,mirrorHeight,0,0)); // crop copy
-        container.composite(image,0,mirrorHeight,Magick::OverCompositeOp); // add to container
-        container.composite(image1,0,0,Magick::OverCompositeOp); // add to container
+        image1 = image;
+        image1.flip();
+        image.crop(Magick::Geometry(srcWidth,mirrorHeight,0,mirrorHeight));
+        image1.crop(Magick::Geometry(srcWidth,mirrorHeight,0,0));
+        container.composite(image,0,mirrorHeight,Magick::OverCompositeOp);
+        container.composite(image1,0,0,Magick::OverCompositeOp);
+        break;
+    case 2: // South
+        image1 = image;
+        image.flip();
+        image.crop(Magick::Geometry(srcWidth,mirrorHeight,0,mirrorHeight));
+        image1.crop(Magick::Geometry(srcWidth,mirrorHeight,0,0));
+        container.composite(image,0,mirrorHeight,Magick::OverCompositeOp);
+        container.composite(image1,0,0,Magick::OverCompositeOp);
+        break;
+    case 3: // East
+        image1 = image;
+        image1.flop();
+        image.crop(Magick::Geometry(mirrorWidth,srcHeight,mirrorWidth,0));
+        image1.crop(Magick::Geometry(mirrorWidth,srcHeight,0,0));
+        container.composite(image,mirrorWidth,0,Magick::OverCompositeOp);
+        container.composite(image1,0,0,Magick::OverCompositeOp);
+        break;
+    case 4: // West
+        image1 = image;
+        image.flop();
+        image.crop(Magick::Geometry(mirrorWidth,srcHeight,mirrorWidth,0));
+        image1.crop(Magick::Geometry(mirrorWidth,srcHeight,0,0));
+        container.composite(image,mirrorWidth,0,Magick::OverCompositeOp);
+        container.composite(image1,0,0,Magick::OverCompositeOp);
         break;
     default: // None
-        container=image;
+        container = image;
+        break;
     }
 
     // return image
@@ -274,6 +299,9 @@ void MirrorPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, Co
         param->setHint(kParamMirrorHint);
         param->appendOption("Undefined");
         param->appendOption("North");
+        param->appendOption("South");
+        param->appendOption("East");
+        param->appendOption("West");
         param->setDefault(kParamMirrorDefault);
         param->setAnimates(true);
         page->addChild(*param);
