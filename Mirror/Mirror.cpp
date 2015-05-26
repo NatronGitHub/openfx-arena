@@ -171,6 +171,9 @@ void MirrorPlugin::render(const OFX::RenderArguments &args)
     Magick::Image container;
     Magick::Image image;
     Magick::Image image1;
+    Magick::Image image2;
+    Magick::Image image3;
+    Magick::Image image4;
 
     // read source image
     image.read(srcWidth,srcHeight,"RGB",Magick::FloatPixel,(float*)srcImg->getPixelData());
@@ -213,9 +216,59 @@ void MirrorPlugin::render(const OFX::RenderArguments &args)
         container.composite(image,mirrorWidth,0,Magick::OverCompositeOp);
         container.composite(image1,0,0,Magick::OverCompositeOp);
         break;
+    case 5: // NorthWest
+        image1 = image;
+        image1.crop(Magick::Geometry(mirrorWidth,mirrorHeight,0,mirrorHeight));
+        image2 = image1;
+        image2.flop();
+        image3 = image2;
+        image3.flip();
+        image4 = image3;
+        image4.flop();
+        break;
+    case 6: // NorthEast
+        image1 = image;
+        image1.crop(Magick::Geometry(mirrorWidth,mirrorHeight,mirrorWidth,mirrorHeight));
+        image1.flop();
+        image2 = image1;
+        image2.flop();
+        image3 = image2;
+        image3.flip();
+        image4 = image3;
+        image4.flop();
+        break;
+    case 7: // SouthWest
+        image1 = image;
+        image1.crop(Magick::Geometry(mirrorWidth,mirrorHeight,0,0));
+        image1.flip();
+        image2 = image1;
+        image2.flop();
+        image3 = image2;
+        image3.flip();
+        image4 = image3;
+        image4.flop();
+        break;
+    case 8: // SouthEast
+        image1 = image;
+        image1.crop(Magick::Geometry(mirrorWidth,mirrorHeight,mirrorWidth,0));
+        image1.flop();
+        image1.flip();
+        image2 = image1;
+        image2.flop();
+        image3 = image2;
+        image3.flip();
+        image4 = image3;
+        image4.flop();
+        break;
     default: // None
         container = image;
         break;
+    }
+    if (mirror==5|mirror==6||mirror==7||mirror==8) {
+        container.composite(image1,0,mirrorHeight,Magick::OverCompositeOp);
+        container.composite(image2,mirrorWidth,mirrorHeight,Magick::OverCompositeOp);
+        container.composite(image3,mirrorWidth,0,Magick::OverCompositeOp);
+        container.composite(image4,0,0,Magick::OverCompositeOp);
     }
 
     // return image
@@ -302,6 +355,10 @@ void MirrorPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, Co
         param->appendOption("South");
         param->appendOption("East");
         param->appendOption("West");
+        param->appendOption("NorthWest");
+        param->appendOption("NorthEast");
+        param->appendOption("SouthWest");
+        param->appendOption("SouthEast");
         param->setDefault(kParamMirrorDefault);
         param->setAnimates(true);
         page->addChild(*param);
