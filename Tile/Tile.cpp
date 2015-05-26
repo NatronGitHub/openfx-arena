@@ -39,7 +39,7 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include <iostream>
 
 #define kPluginName "Tile"
-#define kPluginGrouping "Filter"
+#define kPluginGrouping "Transform"
 #define kPluginDescription  "Tiles image."
 
 #define kPluginIdentifier "net.fxarena.openfx.Tile"
@@ -119,11 +119,11 @@ void TilePlugin::render(const OFX::RenderArguments &args)
     assert(srcClip_);
     std::auto_ptr<const OFX::Image> srcImg(srcClip_->fetchImage(args.time));
     OfxRectI srcRod,srcBounds;
-    OFX::BitDepthEnum bitDepth = eBitDepthNone;
+    //OFX::BitDepthEnum bitDepth = eBitDepthNone;
     if (srcImg.get()) {
         srcRod = srcImg->getRegionOfDefinition();
         srcBounds = srcImg->getBounds();
-        bitDepth = srcImg->getPixelDepth();
+        //bitDepth = srcImg->getPixelDepth();
         if (srcImg->getRenderScale().x != args.renderScale.x ||
             srcImg->getRenderScale().y != args.renderScale.y ||
             srcImg->getField() != args.fieldToRender) {

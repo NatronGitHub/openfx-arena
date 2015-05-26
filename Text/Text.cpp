@@ -89,7 +89,7 @@
 
 #define kSupportsTiles 0
 #define kSupportsMultiResolution 1
-#define kSupportsRenderScale 0
+#define kSupportsRenderScale 1 // enable to be compatible with natron v2, but still broken
 #define kRenderThreadSafety eRenderInstanceSafe
 
 #define kParamPosition "position"

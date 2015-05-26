@@ -42,12 +42,12 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include <stdint.h>
 
 #define kPluginName "Distort"
-#define kPluginGrouping "Filter"
-#define kPluginDescription "Distort image using varius techniques. \n\nhttps://github.com/olear/openfx-arena"
+#define kPluginGrouping "Transform"
+#define kPluginDescription "Distort image using varius techniques."
 
 #define kPluginIdentifier "net.fxarena.openfx.Distort"
-#define kPluginVersionMajor 1
-#define kPluginVersionMinor 1
+#define kPluginVersionMajor 2
+#define kPluginVersionMinor 0
 
 #define kParamVPixel "virtualPixelMethod"
 #define kParamVPixelLabel "Virtual Pixel"
@@ -115,8 +115,8 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #define kParamWaveLengthDefault 150
 
 #define kSupportsTiles 0
-#define kSupportsMultiResolution 1
-#define kSupportsRenderScale 0
+#define kSupportsMultiResolution 0
+#define kSupportsRenderScale 1
 #define kRenderThreadSafety eRenderInstanceSafe
 
 using namespace OFX;
@@ -151,11 +151,11 @@ DistortPlugin::DistortPlugin(OfxImageEffectHandle handle)
 , dstClip_(0)
 , srcClip_(0)
 {
-    Magick::InitializeMagick("");
+    Magick::InitializeMagick(NULL);
     dstClip_ = fetchClip(kOfxImageEffectOutputClipName);
-    assert(dstClip_ && (dstClip_->getPixelComponents() == OFX::ePixelComponentRGBA || dstClip_->getPixelComponents() == OFX::ePixelComponentRGB));
+    assert(dstClip_ && dstClip_->getPixelComponents() == OFX::ePixelComponentRGBA);
     srcClip_ = fetchClip(kOfxImageEffectSimpleSourceClipName);
-    assert(srcClip_ && (srcClip_->getPixelComponents() == OFX::ePixelComponentRGBA || srcClip_->getPixelComponents() == OFX::ePixelComponentRGB));
+    assert(srcClip_ && srcClip_->getPixelComponents() == OFX::ePixelComponentRGBA);
 
     vpixel_ = fetchChoiceParam(kParamVPixel);
     distort_ = fetchChoiceParam(kParamDistort);
@@ -179,11 +179,13 @@ DistortPlugin::~DistortPlugin()
 
 void DistortPlugin::render(const OFX::RenderArguments &args)
 {
+    // render scale
     if (!kSupportsRenderScale && (args.renderScale.x != 1. || args.renderScale.y != 1.)) {
         OFX::throwSuiteStatusException(kOfxStatFailed);
         return;
     }
 
+    // get src clip
     if (!srcClip_) {
         OFX::throwSuiteStatusException(kOfxStatFailed);
         return;
@@ -191,11 +193,11 @@ void DistortPlugin::render(const OFX::RenderArguments &args)
     assert(srcClip_);
     std::auto_ptr<const OFX::Image> srcImg(srcClip_->fetchImage(args.time));
     OfxRectI srcRod,srcBounds;
-    OFX::BitDepthEnum bitDepth = eBitDepthNone;
+    //OFX::BitDepthEnum bitDepth = eBitDepthNone;
     if (srcImg.get()) {
         srcRod = srcImg->getRegionOfDefinition();
         srcBounds = srcImg->getBounds();
-        bitDepth = srcImg->getPixelDepth();
+        //bitDepth = srcImg->getPixelDepth();
         if (srcImg->getRenderScale().x != args.renderScale.x ||
             srcImg->getRenderScale().y != args.renderScale.y ||
             srcImg->getField() != args.fieldToRender) {
@@ -205,6 +207,7 @@ void DistortPlugin::render(const OFX::RenderArguments &args)
         }
     }
 
+    // get dest clip
     if (!dstClip_) {
         OFX::throwSuiteStatusException(kOfxStatFailed);
         return;
@@ -222,36 +225,22 @@ void DistortPlugin::render(const OFX::RenderArguments &args)
         OFX::throwSuiteStatusException(kOfxStatFailed);
         return;
     }
-    OfxRectI dstRod = dstImg->getRegionOfDefinition();
 
     // get bit depth
     OFX::BitDepthEnum dstBitDepth = dstImg->getPixelDepth();
-    if (dstBitDepth != OFX::eBitDepthFloat || (srcImg.get() && dstBitDepth != srcImg->getPixelDepth())) {
+    if (dstBitDepth != OFX::eBitDepthFloat || (srcImg.get() && (dstBitDepth != srcImg->getPixelDepth()))) {
         OFX::throwSuiteStatusException(kOfxStatErrFormat);
         return;
     }
 
     // get pixel component
     OFX::PixelComponentEnum dstComponents  = dstImg->getPixelComponents();
-    if ((dstComponents != OFX::ePixelComponentRGBA && dstComponents != OFX::ePixelComponentRGB && dstComponents != OFX::ePixelComponentAlpha) ||
-        (srcImg.get() && (dstComponents != srcImg->getPixelComponents()))) {
+    if (dstComponents != OFX::ePixelComponentRGBA || (srcImg.get() && (dstComponents != srcImg->getPixelComponents()))) {
         OFX::throwSuiteStatusException(kOfxStatErrFormat);
         return;
     }
-    std::string channels;
-    switch (dstComponents) {
-    case ePixelComponentRGBA:
-        channels = "RGBA";
-        break;
-    case ePixelComponentRGB:
-        channels = "RGB";
-        break;
-    case ePixelComponentAlpha:
-        channels = "A";
-        break;
-    }
 
-    // are we in the image bounds
+    // are we in the image bounds?
     OfxRectI dstBounds = dstImg->getBounds();
     if(args.renderWindow.x1 < dstBounds.x1 || args.renderWindow.x1 >= dstBounds.x2 || args.renderWindow.y1 < dstBounds.y1 || args.renderWindow.y1 >= dstBounds.y2 ||
        args.renderWindow.x2 <= dstBounds.x1 || args.renderWindow.x2 > dstBounds.x2 || args.renderWindow.y2 <= dstBounds.y1 || args.renderWindow.y2 > dstBounds.y2) {
@@ -276,17 +265,18 @@ void DistortPlugin::render(const OFX::RenderArguments &args)
     waveAmp_->getValueAtTime(args.time, waveAmp);
     waveLength_->getValueAtTime(args.time, waveLength);
 
-    // read image
-    Magick::Image image(srcRod.x2-srcRod.x1,srcRod.y2-srcRod.y1,channels,Magick::FloatPixel,(float*)srcImg->getPixelData());
-
-    // create empty container
-    Magick::Image container(Magick::Geometry(srcRod.x2-srcRod.x1,srcRod.y2-srcRod.y1),Magick::Color("rgba(0,0,0,0)"));
-
-    // dimension
-    int width = dstRod.x2-dstRod.x1;
-    int height = dstRod.y2-dstRod.y1;
+    // setup
+    int width = srcRod.x2-srcRod.x1;
+    int height = srcRod.y2-srcRod.y1;
     int offsetX = 0;
     int offsetY = 0;
+
+    // read image
+    Magick::Image image(width,height,"RGBA",Magick::FloatPixel,(float*)srcImg->getPixelData());
+    image.matte(false);
+
+    // create empty container
+    Magick::Image container(Magick::Geometry(width,height),Magick::Color("rgba(0,0,0,0)"));
 
     // flip it, if needed
     if (distort==0||distort==1||distort==2)
@@ -355,7 +345,8 @@ void DistortPlugin::render(const OFX::RenderArguments &args)
     scaleH << "x" << height;
     switch (distort) {
     case 0: // Polar Distort
-        image.backgroundColor(Magick::Color("black"));
+        image.matte(true);
+        image.backgroundColor(Magick::Color("rgba(0,0,0,0)"));
         image.distort(Magick::PolarDistortion, 0, distortArgs, Magick::MagickTrue);
         if (image.rows()>height)
             image.scale(scaleH.str());
@@ -363,7 +354,8 @@ void DistortPlugin::render(const OFX::RenderArguments &args)
             offsetX = (width-image.columns())/2;
         break;
     case 1: // DePolar Distort
-        image.backgroundColor(Magick::Color("black"));
+        image.matte(true);
+        image.backgroundColor(Magick::Color("rgba(0,0,0,0)"));
         image.distort(Magick::DePolarDistortion, 0, distortArgs, Magick::MagickFalse);
         if (image.columns()>width)
             image.scale(scaleW.str());
@@ -395,7 +387,8 @@ void DistortPlugin::render(const OFX::RenderArguments &args)
             distortArgs[distortOpts] = arcBottomRadius;
             distortOpts++;
         }
-        image.backgroundColor(Magick::Color("black"));
+        image.matte(true);
+        image.backgroundColor(Magick::Color("rgba(0,0,0,0)"));
         image.distort(Magick::ArcDistortion, distortOpts, distortArgs, Magick::MagickTrue);
         if (image.columns()>width)
             image.scale(scaleW.str());
@@ -421,7 +414,7 @@ void DistortPlugin::render(const OFX::RenderArguments &args)
         image.emboss(embossRadius,embossSigma);
         break;
     case 7: // Wave
-        image.backgroundColor("black");
+        image.backgroundColor(Magick::Color("rgba(0,0,0,0)"));
         image.wave(waveAmp,waveLength);
         break;
     }
@@ -435,19 +428,21 @@ void DistortPlugin::render(const OFX::RenderArguments &args)
         container=image;
 
     // return image
+    if (!container.matte())
+        container.matte(true);
     switch (dstBitDepth) {
     case eBitDepthUByte:
         if (container.depth()>8)
             container.depth(8);
-        container.write(0,0,width,height,channels,Magick::CharPixel,(float*)dstImg->getPixelData());
+        container.write(0,0,width,height,"RGBA",Magick::CharPixel,(float*)dstImg->getPixelData());
         break;
     case eBitDepthUShort:
         if (container.depth()>16)
             container.depth(16);
-        container.write(0,0,width,height,channels,Magick::ShortPixel,(float*)dstImg->getPixelData());
+        container.write(0,0,width,height,"RGBA",Magick::ShortPixel,(float*)dstImg->getPixelData());
         break;
     case eBitDepthFloat:
-        container.write(0,0,width,height,channels,Magick::FloatPixel,(float*)dstImg->getPixelData());
+        container.write(0,0,width,height,"RGBA",Magick::FloatPixel,(float*)dstImg->getPixelData());
         break;
     }
 }
@@ -482,8 +477,8 @@ void DistortPluginFactory::describe(OFX::ImageEffectDescriptor &desc)
     desc.addSupportedContext(eContextFilter);
 
     // add supported pixel depths
-    desc.addSupportedBitDepth(eBitDepthUByte);
-    desc.addSupportedBitDepth(eBitDepthUShort);
+    //desc.addSupportedBitDepth(eBitDepthUByte);
+    //desc.addSupportedBitDepth(eBitDepthUShort);
     desc.addSupportedBitDepth(eBitDepthFloat);
 
     desc.setSupportsTiles(kSupportsTiles);
@@ -497,7 +492,7 @@ void DistortPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, C
     // create the mandated source clip
     ClipDescriptor *srcClip = desc.defineClip(kOfxImageEffectSimpleSourceClipName);
     srcClip->addSupportedComponent(ePixelComponentRGBA);
-    srcClip->addSupportedComponent(ePixelComponentRGB);
+    //srcClip->addSupportedComponent(ePixelComponentRGB);
     srcClip->setTemporalClipAccess(false);
     srcClip->setSupportsTiles(kSupportsTiles);
     srcClip->setIsMask(false);
@@ -505,7 +500,7 @@ void DistortPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, C
     // create the mandated output clip
     ClipDescriptor *dstClip = desc.defineClip(kOfxImageEffectOutputClipName);
     dstClip->addSupportedComponent(ePixelComponentRGBA);
-    dstClip->addSupportedComponent(ePixelComponentRGB);
+    //dstClip->addSupportedComponent(ePixelComponentRGB);
     dstClip->setSupportsTiles(kSupportsTiles);
 
     // make some pages and to things in

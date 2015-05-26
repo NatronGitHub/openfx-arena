@@ -1,37 +1,7 @@
 OpenFX Arena [![Build Status](https://travis-ci.org/olear/openfx-arena.svg)](https://travis-ci.org/olear/openfx-arena) [![GitHub issues](https://img.shields.io/github/issues/olear/openfx-arena.svg)](https://github.com/olear/openfx-arena/issues)
 ============
 
-A set of visual effect plugins for OpenFX compatible applications.
-
-Compatibility
-=============
-
-Tested on the following hosts:
-
- * Natron
- * Nuke
-
-Download
-========
-
-Download the latest binary bundle from our release page, or download the source:
-
-Stable:
-
-```
-git clone https://github.com/olear/openfx-arena
-cd openfx-arena
-git submodule update -i
-```
-
-Devel:
-
-```
-git clone https://github.com/olear/openfx-arena
-cd openfx-arena
-git checkout trunk
-git submodule update -i
-```
+A set of visual effect plugins (OFX) for Natron.
 
 Build
 =====
@@ -48,7 +18,7 @@ make CONFIG=release
 gmake FREEBSD=1 CONFIG=release
 ```
 
-**Make on Windows**
+**Make on Windows (MinGW)**
 
 Download and install MinGW64, MSYS, pkgconfig. Then build zlib, libpng, expat, freetype, fontconfig and ImageMagick. see 'deploy.sh' for recommended build options.
 
@@ -65,11 +35,6 @@ cp -a Bundle/*-*-*/Arena.ofx.bundle /usr/OFX/Plugins/
 ```
 cp -a Bundle/*-*-*/Arena.ofx.bundle "/c/Program Files/Common Files/OFX/Plugins/"
 ```
-
-Contribute
-==========
-
-We always need more plugins, if you know ImageMagick (MagickCore/Magick++) please help! Try to avoid plugins that already exists in Natron (openfx-io/openfx-misc) and/or Nuke.
 
 License
 =======

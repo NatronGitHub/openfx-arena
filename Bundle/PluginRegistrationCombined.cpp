@@ -3,6 +3,8 @@
 #include "Distort.h"
 #include "Mirror.h"
 #include "Texture.h"
+#include "Tile.h"
+#include "Reflection.h"
 
 namespace OFX
 {
@@ -14,6 +16,8 @@ namespace OFX
             getDistortPluginID(ids);
             getMirrorPluginID(ids);
             getTexturePluginID(ids);
+            getTilePluginID(ids);
+            getReflectionPluginID(ids);
         }
     }
 }
