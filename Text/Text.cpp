@@ -114,7 +114,7 @@
 #define kParamFontName "fontName"
 #define kParamFontNameLabel "Font"
 #define kParamFontNameHint "The name of the font to be used"
-#define kParamFontNameDefault "Helvetica"
+#define kParamFontNameDefault "Arial"
 #define kParamFontNameAltDefault "DejaVu-Sans" // failsafe on Linux/BSD
 
 #define kParamFontDecor "fontDecor"
