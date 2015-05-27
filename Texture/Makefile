@@ -1,12 +1,12 @@
 PLUGINOBJECTS = \
-	Mirror.o \
+        Texture.o \
 	PluginRegistration.o \
 
-PLUGINNAME = Mirror
+PLUGINNAME = Texture
 
 RESOURCES = \
-net.fxarena.openfx.Mirror.png \
-net.fxarena.openfx.Mirror.svg \
+net.fxarena.openfx.Texture.png \
+net.fxarena.openfx.Texture.svg \
 
 include ../Makefile.master
 

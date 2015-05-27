@@ -76,20 +76,22 @@
 #include <sstream>
 #include <iostream>
 #include <stdint.h>
+#include <cmath>
+#include <cstring>
 
 #define CLAMP(value, min, max) (((value) >(max)) ? (max) : (((value) <(min)) ? (min) : (value)))
 
 #define kPluginName "Text"
 #define kPluginGrouping "Draw"
-#define kPluginDescription  "A simple text generator. \n\nhttps://github.com/olear/openfx-arena"
+#define kPluginDescription  "A simple text generator."
 
 #define kPluginIdentifier "net.fxarena.openfx.Text"
 #define kPluginVersionMajor 2
-#define kPluginVersionMinor 0
+#define kPluginVersionMinor 1
 
 #define kSupportsTiles 0
 #define kSupportsMultiResolution 1
-#define kSupportsRenderScale 0
+#define kSupportsRenderScale 1
 #define kRenderThreadSafety eRenderInstanceSafe
 
 #define kParamPosition "position"
@@ -112,6 +114,7 @@
 #define kParamFontName "fontName"
 #define kParamFontNameLabel "Font"
 #define kParamFontNameHint "The name of the font to be used"
+#define kParamFontNameDefault "Helvetica"
 
 #define kParamFontDecor "fontDecor"
 #define kParamFontDecorLabel "Decoration"
@@ -323,13 +326,17 @@ void TextPlugin::render(const OFX::RenderArguments &args)
     int height = dstRod.y2-dstRod.y1;
     Magick::Image image(Magick::Geometry(width,height),Magick::Color("rgba(0,0,0,0)"));
 
+    // if rgb set background
+    if (channels=="RGB")
+        image.backgroundColor("black");
+
     // Set font size
     if (fontSize>0)
-        image.fontPointsize(fontSize);
+        image.fontPointsize(std::floor(fontSize * args.renderScale.x + 0.5));
 
     // Set stroke width
     if (use_stroke)
-        image.strokeWidth(strokeWidth);
+        image.strokeWidth(std::floor(strokeWidth * args.renderScale.x + 0.5));
 
     // Convert colors to int
     int rI = ((uint8_t)(255.0f *CLAMP(r, 0.0, 1.0)));
@@ -388,7 +395,7 @@ void TextPlugin::render(const OFX::RenderArguments &args)
         dropShadow=image;
         dropShadow.backgroundColor("Black");
         dropShadow.virtualPixelMethod(Magick::TransparentVirtualPixelMethod);
-        dropShadow.shadow(shadowOpacity,shadowSigma,0,0);
+        dropShadow.shadow(shadowOpacity,std::floor(shadowSigma * args.renderScale.x + 0.5),0,0);
         dropShadow.composite(image,0,0,Magick::OverCompositeOp);
         image=dropShadow;
     }
@@ -538,14 +545,21 @@ void TextPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, Cont
         param->setHint(kParamFontNameHint);
 
         // Get all fonts
+        int defaultFont = 0;
         char **fonts;
         std::size_t fontList;
         fonts=MagickCore::MagickQueryFonts("*",&fontList);
-        for (size_t i=0;i<fontList;i++)
+        for (size_t i=0;i<fontList;i++) {
           param->appendOption(fonts[i]);
+          if (std::strcmp(fonts[i],kParamFontNameDefault)==0)
+              defaultFont=i;
+        }
 
         for (size_t i = 0; i < fontList; i++)
             free(fonts[i]);
+
+        if (defaultFont>0)
+            param->setDefault(defaultFont);
 
         param->setAnimates(true);
         page->addChild(*param);

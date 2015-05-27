@@ -40,13 +40,14 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 #include <iostream>
 #include <stdint.h>
+#include <cmath>
 
 #define kPluginName "Distort"
 #define kPluginGrouping "Filter"
-#define kPluginDescription "Distort image using varius techniques. \n\nhttps://github.com/olear/openfx-arena"
+#define kPluginDescription "Distort image using varius techniques."
 
 #define kPluginIdentifier "net.fxarena.openfx.Distort"
-#define kPluginVersionMajor 1
+#define kPluginVersionMajor 2
 #define kPluginVersionMinor 0
 
 #define kParamVPixel "virtualPixelMethod"
@@ -104,9 +105,19 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #define kParamEmbossSigmaHint "Specifies the standard deviation of the Laplacian, in pixels"
 #define kParamEmbossSigmaDefault 0.5
 
+#define kParamWaveAmp "waveAmp"
+#define kParamWaveAmpLabel "Amplitude"
+#define kParamWaveAmpHint "Adjust wave amplitude"
+#define kParamWaveAmpDefault 25
+
+#define kParamWaveLength "waveLength"
+#define kParamWaveLengthLabel "Length"
+#define kParamWaveLengthHint "Adjust wave length"
+#define kParamWaveLengthDefault 150
+
 #define kSupportsTiles 0
-#define kSupportsMultiResolution 1
-#define kSupportsRenderScale 0
+#define kSupportsMultiResolution 0
+#define kSupportsRenderScale 1
 #define kRenderThreadSafety eRenderInstanceSafe
 
 using namespace OFX;
@@ -132,6 +143,8 @@ private:
     OFX::DoubleParam *edge_;
     OFX::DoubleParam *embossRadius_;
     OFX::DoubleParam *embossSigma_;
+    OFX::DoubleParam *waveAmp_;
+    OFX::DoubleParam *waveLength_;
 };
 
 DistortPlugin::DistortPlugin(OfxImageEffectHandle handle)
@@ -139,11 +152,11 @@ DistortPlugin::DistortPlugin(OfxImageEffectHandle handle)
 , dstClip_(0)
 , srcClip_(0)
 {
-    Magick::InitializeMagick("");
+    Magick::InitializeMagick(NULL);
     dstClip_ = fetchClip(kOfxImageEffectOutputClipName);
-    assert(dstClip_ && (dstClip_->getPixelComponents() == OFX::ePixelComponentRGBA || dstClip_->getPixelComponents() == OFX::ePixelComponentRGB));
+    assert(dstClip_ && dstClip_->getPixelComponents() == OFX::ePixelComponentRGBA);
     srcClip_ = fetchClip(kOfxImageEffectSimpleSourceClipName);
-    assert(srcClip_ && (srcClip_->getPixelComponents() == OFX::ePixelComponentRGBA || srcClip_->getPixelComponents() == OFX::ePixelComponentRGB));
+    assert(srcClip_ && srcClip_->getPixelComponents() == OFX::ePixelComponentRGBA);
 
     vpixel_ = fetchChoiceParam(kParamVPixel);
     distort_ = fetchChoiceParam(kParamDistort);
@@ -156,7 +169,9 @@ DistortPlugin::DistortPlugin(OfxImageEffectHandle handle)
     edge_ = fetchDoubleParam(kParamEdge);
     embossRadius_ = fetchDoubleParam(kParamEmbossRadius);
     embossSigma_ = fetchDoubleParam(kParamEmbossSigma);
-    assert(vpixel_ && distort_ && arcAngle_ && arcRotate_ && arcTopRadius_&& arcBottomRadius_ && arcBg_ && swirlDegree_ && implode_ && edge_ && embossRadius_ && embossSigma_);
+    waveAmp_ = fetchDoubleParam(kParamWaveAmp);
+    waveLength_ = fetchDoubleParam(kParamWaveLength);
+    assert(vpixel_ && distort_ && arcAngle_ && arcRotate_ && arcTopRadius_&& arcBottomRadius_ && swirlDegree_ && implode_ && edge_ && embossRadius_ && embossSigma_ && waveAmp_ && waveLength_);
 }
 
 DistortPlugin::~DistortPlugin()
@@ -165,11 +180,13 @@ DistortPlugin::~DistortPlugin()
 
 void DistortPlugin::render(const OFX::RenderArguments &args)
 {
+    // render scale
     if (!kSupportsRenderScale && (args.renderScale.x != 1. || args.renderScale.y != 1.)) {
         OFX::throwSuiteStatusException(kOfxStatFailed);
         return;
     }
 
+    // get src clip
     if (!srcClip_) {
         OFX::throwSuiteStatusException(kOfxStatFailed);
         return;
@@ -177,11 +194,9 @@ void DistortPlugin::render(const OFX::RenderArguments &args)
     assert(srcClip_);
     std::auto_ptr<const OFX::Image> srcImg(srcClip_->fetchImage(args.time));
     OfxRectI srcRod,srcBounds;
-    OFX::BitDepthEnum bitDepth = eBitDepthNone;
     if (srcImg.get()) {
         srcRod = srcImg->getRegionOfDefinition();
         srcBounds = srcImg->getBounds();
-        bitDepth = srcImg->getPixelDepth();
         if (srcImg->getRenderScale().x != args.renderScale.x ||
             srcImg->getRenderScale().y != args.renderScale.y ||
             srcImg->getField() != args.fieldToRender) {
@@ -191,6 +206,7 @@ void DistortPlugin::render(const OFX::RenderArguments &args)
         }
     }
 
+    // get dest clip
     if (!dstClip_) {
         OFX::throwSuiteStatusException(kOfxStatFailed);
         return;
@@ -208,36 +224,22 @@ void DistortPlugin::render(const OFX::RenderArguments &args)
         OFX::throwSuiteStatusException(kOfxStatFailed);
         return;
     }
-    OfxRectI dstRod = dstImg->getRegionOfDefinition();
 
     // get bit depth
     OFX::BitDepthEnum dstBitDepth = dstImg->getPixelDepth();
-    if (dstBitDepth != OFX::eBitDepthFloat || (srcImg.get() && dstBitDepth != srcImg->getPixelDepth())) {
+    if (dstBitDepth != OFX::eBitDepthFloat || (srcImg.get() && (dstBitDepth != srcImg->getPixelDepth()))) {
         OFX::throwSuiteStatusException(kOfxStatErrFormat);
         return;
     }
 
     // get pixel component
     OFX::PixelComponentEnum dstComponents  = dstImg->getPixelComponents();
-    if ((dstComponents != OFX::ePixelComponentRGBA && dstComponents != OFX::ePixelComponentRGB && dstComponents != OFX::ePixelComponentAlpha) ||
-        (srcImg.get() && (dstComponents != srcImg->getPixelComponents()))) {
+    if (dstComponents != OFX::ePixelComponentRGBA || (srcImg.get() && (dstComponents != srcImg->getPixelComponents()))) {
         OFX::throwSuiteStatusException(kOfxStatErrFormat);
         return;
     }
-    std::string channels;
-    switch (dstComponents) {
-    case ePixelComponentRGBA:
-        channels = "RGBA";
-        break;
-    case ePixelComponentRGB:
-        channels = "RGB";
-        break;
-    case ePixelComponentAlpha:
-        channels = "A";
-        break;
-    }
 
-    // are we in the image bounds
+    // are we in the image bounds?
     OfxRectI dstBounds = dstImg->getBounds();
     if(args.renderWindow.x1 < dstBounds.x1 || args.renderWindow.x1 >= dstBounds.x2 || args.renderWindow.y1 < dstBounds.y1 || args.renderWindow.y1 >= dstBounds.y2 ||
        args.renderWindow.x2 <= dstBounds.x1 || args.renderWindow.x2 > dstBounds.x2 || args.renderWindow.y2 <= dstBounds.y1 || args.renderWindow.y2 > dstBounds.y2) {
@@ -247,7 +249,7 @@ void DistortPlugin::render(const OFX::RenderArguments &args)
 
     // get params
     int vpixel,distort;
-    double arcAngle,arcRotate,arcTopRadius,arcBottomRadius,swirlDegree,implode,edge,embossRadius,embossSigma;
+    double arcAngle,arcRotate,arcTopRadius,arcBottomRadius,swirlDegree,implode,edge,embossRadius,embossSigma,waveAmp,waveLength;
     vpixel_->getValueAtTime(args.time, vpixel);
     distort_->getValueAtTime(args.time, distort);
     arcAngle_->getValueAtTime(args.time, arcAngle);
@@ -259,73 +261,77 @@ void DistortPlugin::render(const OFX::RenderArguments &args)
     edge_->getValueAtTime(args.time, edge);
     embossRadius_->getValueAtTime(args.time, embossRadius);
     embossSigma_->getValueAtTime(args.time, embossSigma);
+    waveAmp_->getValueAtTime(args.time, waveAmp);
+    waveLength_->getValueAtTime(args.time, waveLength);
 
-    // read image
-    Magick::Image image(srcRod.x2-srcRod.x1,srcRod.y2-srcRod.y1,channels,Magick::FloatPixel,(float*)srcImg->getPixelData());
-
-    // create empty container
-    Magick::Image container(Magick::Geometry(srcRod.x2-srcRod.x1,srcRod.y2-srcRod.y1),Magick::Color("rgba(0,0,0,0)"));
-
-    // dimension
-    int width = dstRod.x2-dstRod.x1;
-    int height = dstRod.y2-dstRod.y1;
+    // setup
+    int width = srcRod.x2-srcRod.x1;
+    int height = srcRod.y2-srcRod.y1;
     int offsetX = 0;
     int offsetY = 0;
+
+    // read image
+    Magick::Image image(width,height,"RGBA",Magick::FloatPixel,(float*)srcImg->getPixelData());
+
+    // create empty container
+    Magick::Image container(Magick::Geometry(width,height),Magick::Color("rgba(0,0,0,0)"));
 
     // flip it, if needed
     if (distort==0||distort==1||distort==2)
         image.flip();
 
     // set virtual pixel
-    switch (vpixel) {
-    case 0:
-        image.virtualPixelMethod(Magick::UndefinedVirtualPixelMethod);
-        break;
-    case 1:
-        image.virtualPixelMethod(Magick::BackgroundVirtualPixelMethod);
-        break;
-    case 2:
-        image.virtualPixelMethod(Magick::BlackVirtualPixelMethod);
-        break;
-    case 3:
-        image.virtualPixelMethod(Magick::CheckerTileVirtualPixelMethod);
-        break;
-    case 4:
-        image.virtualPixelMethod(Magick::DitherVirtualPixelMethod);
-        break;
-    case 5:
-        image.virtualPixelMethod(Magick::EdgeVirtualPixelMethod);
-        break;
-    case 6:
-        image.virtualPixelMethod(Magick::GrayVirtualPixelMethod);
-        break;
-    case 7:
-        image.virtualPixelMethod(Magick::HorizontalTileVirtualPixelMethod);
-        break;
-    case 8:
-        image.virtualPixelMethod(Magick::HorizontalTileEdgeVirtualPixelMethod);
-        break;
-    case 9:
-        image.virtualPixelMethod(Magick::MirrorVirtualPixelMethod);
-        break;
-    case 10:
-        image.virtualPixelMethod(Magick::RandomVirtualPixelMethod);
-        break;
-    case 11:
-        image.virtualPixelMethod(Magick::TileVirtualPixelMethod);
-        break;
-    case 12:
-        image.virtualPixelMethod(Magick::TransparentVirtualPixelMethod);
-        break;
-    case 13:
-        image.virtualPixelMethod(Magick::VerticalTileVirtualPixelMethod);
-        break;
-    case 14:
-        image.virtualPixelMethod(Magick::VerticalTileEdgeVirtualPixelMethod);
-        break;
-    case 15:
-        image.virtualPixelMethod(Magick::WhiteVirtualPixelMethod);
-        break;
+    if (distort==0||distort==1||distort==2) {
+        switch (vpixel) {
+        case 0:
+            image.virtualPixelMethod(Magick::UndefinedVirtualPixelMethod);
+            break;
+        case 1:
+            image.virtualPixelMethod(Magick::BackgroundVirtualPixelMethod);
+            break;
+        case 2:
+            image.virtualPixelMethod(Magick::BlackVirtualPixelMethod);
+            break;
+        case 3:
+            image.virtualPixelMethod(Magick::CheckerTileVirtualPixelMethod);
+            break;
+        case 4:
+            image.virtualPixelMethod(Magick::DitherVirtualPixelMethod);
+            break;
+        case 5:
+            image.virtualPixelMethod(Magick::EdgeVirtualPixelMethod);
+            break;
+        case 6:
+            image.virtualPixelMethod(Magick::GrayVirtualPixelMethod);
+            break;
+        case 7:
+            image.virtualPixelMethod(Magick::HorizontalTileVirtualPixelMethod);
+            break;
+        case 8:
+            image.virtualPixelMethod(Magick::HorizontalTileEdgeVirtualPixelMethod);
+            break;
+        case 9:
+            image.virtualPixelMethod(Magick::MirrorVirtualPixelMethod);
+            break;
+        case 10:
+            image.virtualPixelMethod(Magick::RandomVirtualPixelMethod);
+            break;
+        case 11:
+            image.virtualPixelMethod(Magick::TileVirtualPixelMethod);
+            break;
+        case 12:
+            image.virtualPixelMethod(Magick::TransparentVirtualPixelMethod);
+            break;
+        case 13:
+            image.virtualPixelMethod(Magick::VerticalTileVirtualPixelMethod);
+            break;
+        case 14:
+            image.virtualPixelMethod(Magick::VerticalTileEdgeVirtualPixelMethod);
+            break;
+        case 15:
+            image.virtualPixelMethod(Magick::WhiteVirtualPixelMethod);
+            break;
+        }
     }
 
     // distort method
@@ -337,7 +343,6 @@ void DistortPlugin::render(const OFX::RenderArguments &args)
     scaleH << "x" << height;
     switch (distort) {
     case 0: // Polar Distort
-        image.backgroundColor(Magick::Color("black"));
         image.distort(Magick::PolarDistortion, 0, distortArgs, Magick::MagickTrue);
         if (image.rows()>height)
             image.scale(scaleH.str());
@@ -345,7 +350,6 @@ void DistortPlugin::render(const OFX::RenderArguments &args)
             offsetX = (width-image.columns())/2;
         break;
     case 1: // DePolar Distort
-        image.backgroundColor(Magick::Color("black"));
         image.distort(Magick::DePolarDistortion, 0, distortArgs, Magick::MagickFalse);
         if (image.columns()>width)
             image.scale(scaleW.str());
@@ -377,7 +381,6 @@ void DistortPlugin::render(const OFX::RenderArguments &args)
             distortArgs[distortOpts] = arcBottomRadius;
             distortOpts++;
         }
-        image.backgroundColor(Magick::Color("black"));
         image.distort(Magick::ArcDistortion, distortOpts, distortArgs, Magick::MagickTrue);
         if (image.columns()>width)
             image.scale(scaleW.str());
@@ -402,6 +405,10 @@ void DistortPlugin::render(const OFX::RenderArguments &args)
     case 6: // Emboss
         image.emboss(embossRadius,embossSigma);
         break;
+    case 7: // Wave
+        image.backgroundColor(Magick::Color("rgba(0,0,0,0)"));
+        image.wave(std::floor(waveAmp * args.renderScale.x + 0.5),std::floor(waveLength * args.renderScale.x + 0.5));
+        break;
     }
 
     // flip and comp, if needed
@@ -413,19 +420,21 @@ void DistortPlugin::render(const OFX::RenderArguments &args)
         container=image;
 
     // return image
+    if (!container.matte())
+        container.matte(true);
     switch (dstBitDepth) {
     case eBitDepthUByte:
         if (container.depth()>8)
             container.depth(8);
-        container.write(0,0,width,height,channels,Magick::CharPixel,(float*)dstImg->getPixelData());
+        container.write(0,0,width,height,"RGBA",Magick::CharPixel,(float*)dstImg->getPixelData());
         break;
     case eBitDepthUShort:
         if (container.depth()>16)
             container.depth(16);
-        container.write(0,0,width,height,channels,Magick::ShortPixel,(float*)dstImg->getPixelData());
+        container.write(0,0,width,height,"RGBA",Magick::ShortPixel,(float*)dstImg->getPixelData());
         break;
     case eBitDepthFloat:
-        container.write(0,0,width,height,channels,Magick::FloatPixel,(float*)dstImg->getPixelData());
+        container.write(0,0,width,height,"RGBA",Magick::FloatPixel,(float*)dstImg->getPixelData());
         break;
     }
 }
@@ -460,8 +469,8 @@ void DistortPluginFactory::describe(OFX::ImageEffectDescriptor &desc)
     desc.addSupportedContext(eContextFilter);
 
     // add supported pixel depths
-    desc.addSupportedBitDepth(eBitDepthUByte);
-    desc.addSupportedBitDepth(eBitDepthUShort);
+    //desc.addSupportedBitDepth(eBitDepthUByte);
+    //desc.addSupportedBitDepth(eBitDepthUShort);
     desc.addSupportedBitDepth(eBitDepthFloat);
 
     desc.setSupportsTiles(kSupportsTiles);
@@ -475,7 +484,6 @@ void DistortPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, C
     // create the mandated source clip
     ClipDescriptor *srcClip = desc.defineClip(kOfxImageEffectSimpleSourceClipName);
     srcClip->addSupportedComponent(ePixelComponentRGBA);
-    srcClip->addSupportedComponent(ePixelComponentRGB);
     srcClip->setTemporalClipAccess(false);
     srcClip->setSupportsTiles(kSupportsTiles);
     srcClip->setIsMask(false);
@@ -483,7 +491,6 @@ void DistortPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, C
     // create the mandated output clip
     ClipDescriptor *dstClip = desc.defineClip(kOfxImageEffectOutputClipName);
     dstClip->addSupportedComponent(ePixelComponentRGBA);
-    dstClip->addSupportedComponent(ePixelComponentRGB);
     dstClip->setSupportsTiles(kSupportsTiles);
 
     // make some pages and to things in
@@ -493,6 +500,7 @@ void DistortPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, C
     PageParamDescriptor *pageImplode = desc.definePageParam("Implode");
     PageParamDescriptor *pageEdge = desc.definePageParam("Edge");
     PageParamDescriptor *pageEmboss = desc.definePageParam("Emboss");
+    PageParamDescriptor *pageWave = desc.definePageParam("Wave");
     {
         ChoiceParamDescriptor *param = desc.defineChoiceParam(kParamVPixel);
         param->setLabel(kParamVPixelLabel);
@@ -528,6 +536,7 @@ void DistortPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, C
         param->appendOption("Implode");
         param->appendOption("Edge");
         param->appendOption("Emboss");
+        param->appendOption("Wave");
         param->setDefault(kParamDistortDefault);
         param->setAnimates(true);
         page->addChild(*param);
@@ -612,6 +621,24 @@ void DistortPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, C
         param->setDisplayRange(0, 1.1);
         param->setDefault(kParamEmbossSigmaDefault);
         pageEmboss->addChild(*param);
+    }
+    {
+        DoubleParamDescriptor *param = desc.defineDoubleParam(kParamWaveAmp);
+        param->setLabel(kParamWaveAmpLabel);
+        param->setHint(kParamWaveAmpHint);
+        param->setRange(0, 1000);
+        param->setDisplayRange(0, 500);
+        param->setDefault(kParamWaveAmpDefault);
+        pageWave->addChild(*param);
+    }
+    {
+        DoubleParamDescriptor *param = desc.defineDoubleParam(kParamWaveLength);
+        param->setLabel(kParamWaveLengthLabel);
+        param->setHint(kParamWaveLengthHint);
+        param->setRange(0, 1000);
+        param->setDisplayRange(0, 500);
+        param->setDefault(kParamWaveLengthDefault);
+        pageWave->addChild(*param);
     }
 }
 
