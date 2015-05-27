@@ -329,7 +329,7 @@ void TextPlugin::render(const OFX::RenderArguments &args)
 
     // Set stroke width
     if (use_stroke)
-        image.strokeWidth(strokeWidth);
+        image.strokeWidth(strokeWidth*args.renderScale.y);
 
     // Convert colors to int
     int rI = ((uint8_t)(255.0f *CLAMP(r, 0.0, 1.0)));
@@ -388,7 +388,7 @@ void TextPlugin::render(const OFX::RenderArguments &args)
         dropShadow=image;
         dropShadow.backgroundColor("Black");
         dropShadow.virtualPixelMethod(Magick::TransparentVirtualPixelMethod);
-        dropShadow.shadow(shadowOpacity,shadowSigma,0,0);
+        dropShadow.shadow(shadowOpacity,shadowSigma*args.renderScale.y,0,0);
         dropShadow.composite(image,0,0,Magick::OverCompositeOp);
         image=dropShadow;
     }
