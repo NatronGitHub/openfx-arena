@@ -415,7 +415,7 @@ void DistortPlugin::render(const OFX::RenderArguments &args)
         break;
     case 7: // Wave
         image.backgroundColor(Magick::Color("rgba(0,0,0,0)"));
-        image.wave(waveAmp,waveLength);
+        image.wave(waveAmp*args.renderScale.y,waveLength*args.renderScale.y);
         break;
     }
 
