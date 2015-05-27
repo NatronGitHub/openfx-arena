@@ -42,7 +42,7 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include <stdint.h>
 
 #define kPluginName "Distort"
-#define kPluginGrouping "Transform"
+#define kPluginGrouping "Filter"
 #define kPluginDescription "Distort image using varius techniques."
 
 #define kPluginIdentifier "net.fxarena.openfx.Distort"

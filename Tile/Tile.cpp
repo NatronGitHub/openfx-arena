@@ -39,7 +39,7 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include <iostream>
 
 #define kPluginName "Tile"
-#define kPluginGrouping "Transform"
+#define kPluginGrouping "Filter"
 #define kPluginDescription  "Tiles image."
 
 #define kPluginIdentifier "net.fxarena.openfx.Tile"
