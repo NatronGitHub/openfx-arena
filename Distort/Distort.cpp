@@ -271,7 +271,9 @@ void DistortPlugin::render(const OFX::RenderArguments &args)
 
     // read image
     Magick::Image image(width,height,"RGBA",Magick::FloatPixel,(float*)srcImg->getPixelData());
-    image.matte(false);
+
+    if (distort<3)
+        image.matte(false);
 
     // create empty container
     Magick::Image container(Magick::Geometry(width,height),Magick::Color("rgba(0,0,0,0)"));
