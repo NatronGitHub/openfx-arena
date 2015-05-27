@@ -325,7 +325,7 @@ void TextPlugin::render(const OFX::RenderArguments &args)
 
     // Set font size
     if (fontSize>0)
-        image.fontPointsize(fontSize);
+        image.fontPointsize(fontSize*args.renderScale.y);
 
     // Set stroke width
     if (use_stroke)
