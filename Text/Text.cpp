@@ -115,6 +115,7 @@
 #define kParamFontNameLabel "Font"
 #define kParamFontNameHint "The name of the font to be used"
 #define kParamFontNameDefault "Helvetica"
+#define kParamFontNameAltDefault "DejaVu-Sans" // failsafe on Linux/BSD
 
 #define kParamFontDecor "fontDecor"
 #define kParamFontDecorLabel "Decoration"
@@ -546,6 +547,7 @@ void TextPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, Cont
 
         // Get all fonts
         int defaultFont = 0;
+        int altFont = 0;
         char **fonts;
         std::size_t fontList;
         fonts=MagickCore::MagickQueryFonts("*",&fontList);
@@ -553,6 +555,8 @@ void TextPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, Cont
           param->appendOption(fonts[i]);
           if (std::strcmp(fonts[i],kParamFontNameDefault)==0)
               defaultFont=i;
+          if (std::strcmp(fonts[i],kParamFontNameAltDefault)==0)
+              altFont=i;
         }
 
         for (size_t i = 0; i < fontList; i++)
@@ -560,6 +564,8 @@ void TextPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, Cont
 
         if (defaultFont>0)
             param->setDefault(defaultFont);
+        else if (defaultFont==0&&altFont>0)
+            param->setDefault(altFont);
 
         param->setAnimates(true);
         page->addChild(*param);
