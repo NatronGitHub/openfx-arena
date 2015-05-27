@@ -272,9 +272,6 @@ void DistortPlugin::render(const OFX::RenderArguments &args)
     // read image
     Magick::Image image(width,height,"RGBA",Magick::FloatPixel,(float*)srcImg->getPixelData());
 
-    if (distort<3)
-        image.matte(false);
-
     // create empty container
     Magick::Image container(Magick::Geometry(width,height),Magick::Color("rgba(0,0,0,0)"));
 
@@ -345,8 +342,6 @@ void DistortPlugin::render(const OFX::RenderArguments &args)
     scaleH << "x" << height;
     switch (distort) {
     case 0: // Polar Distort
-        image.matte(true);
-        image.backgroundColor(Magick::Color("rgba(0,0,0,0)"));
         image.distort(Magick::PolarDistortion, 0, distortArgs, Magick::MagickTrue);
         if (image.rows()>height)
             image.scale(scaleH.str());
@@ -354,8 +349,6 @@ void DistortPlugin::render(const OFX::RenderArguments &args)
             offsetX = (width-image.columns())/2;
         break;
     case 1: // DePolar Distort
-        image.matte(true);
-        image.backgroundColor(Magick::Color("rgba(0,0,0,0)"));
         image.distort(Magick::DePolarDistortion, 0, distortArgs, Magick::MagickFalse);
         if (image.columns()>width)
             image.scale(scaleW.str());
@@ -387,8 +380,6 @@ void DistortPlugin::render(const OFX::RenderArguments &args)
             distortArgs[distortOpts] = arcBottomRadius;
             distortOpts++;
         }
-        image.matte(true);
-        image.backgroundColor(Magick::Color("rgba(0,0,0,0)"));
         image.distort(Magick::ArcDistortion, distortOpts, distortArgs, Magick::MagickTrue);
         if (image.columns()>width)
             image.scale(scaleW.str());
