@@ -165,6 +165,10 @@ void TexturePlugin::render(const OFX::RenderArguments &args)
     int height = dstRod.y2-dstRod.y1;
     Magick::Image image(Magick::Geometry(width,height),Magick::Color("rgba(0,0,0,0)"));
 
+    // set bg if rgb
+    if (channels=="RGB")
+        image.backgroundColor("black");
+
     // Set seed
     if (seed!=0)
         Magick::SetRandomSeed(seed);
@@ -193,7 +197,7 @@ void TexturePlugin::render(const OFX::RenderArguments &args)
         image.read("plasma:fractal");
         break;
     case 7: // Noise
-        image.addNoise(Magick::GaussianNoise); // TODO add more options?
+        image.addNoise(Magick::GaussianNoise);
         break;
     }
 

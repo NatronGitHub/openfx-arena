@@ -119,11 +119,9 @@ void TilePlugin::render(const OFX::RenderArguments &args)
     assert(srcClip_);
     std::auto_ptr<const OFX::Image> srcImg(srcClip_->fetchImage(args.time));
     OfxRectI srcRod,srcBounds;
-    //OFX::BitDepthEnum bitDepth = eBitDepthNone;
     if (srcImg.get()) {
         srcRod = srcImg->getRegionOfDefinition();
         srcBounds = srcImg->getBounds();
-        //bitDepth = srcImg->getPixelDepth();
         if (srcImg->getRenderScale().x != args.renderScale.x ||
             srcImg->getRenderScale().y != args.renderScale.y ||
             srcImg->getField() != args.fieldToRender) {

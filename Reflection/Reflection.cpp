@@ -115,11 +115,9 @@ void ReflectionPlugin::render(const OFX::RenderArguments &args)
     assert(srcClip_);
     std::auto_ptr<const OFX::Image> srcImg(srcClip_->fetchImage(args.time));
     OfxRectI srcRod,srcBounds;
-    //OFX::BitDepthEnum bitDepth = eBitDepthNone;
     if (srcImg.get()) {
         srcRod = srcImg->getRegionOfDefinition();
         srcBounds = srcImg->getBounds();
-        //bitDepth = srcImg->getPixelDepth();
         if (srcImg->getRenderScale().x != args.renderScale.x ||
             srcImg->getRenderScale().y != args.renderScale.y ||
             srcImg->getField() != args.fieldToRender) {
@@ -196,7 +194,6 @@ void ReflectionPlugin::render(const OFX::RenderArguments &args)
 
     // setup container
     container.size(Magick::Geometry(srcWidth,srcHeight));
-    //container.magick("RGB");
     container.backgroundColor("black");
 
     // proc images
@@ -222,7 +219,6 @@ void ReflectionPlugin::render(const OFX::RenderArguments &args)
     container.composite(image,0,mirrorHeight-offset,Magick::OverCompositeOp);
 
     // return image
-    //container.matte(true);
     switch (dstBitDepth) {
     case eBitDepthUByte: // 8bit
         if (image.depth()>8)

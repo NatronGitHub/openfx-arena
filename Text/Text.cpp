@@ -81,15 +81,15 @@
 
 #define kPluginName "Text"
 #define kPluginGrouping "Draw"
-#define kPluginDescription  "A simple text generator. \n\nhttps://github.com/olear/openfx-arena"
+#define kPluginDescription  "A simple text generator."
 
 #define kPluginIdentifier "net.fxarena.openfx.Text"
 #define kPluginVersionMajor 2
-#define kPluginVersionMinor 0
+#define kPluginVersionMinor 1
 
 #define kSupportsTiles 0
 #define kSupportsMultiResolution 1
-#define kSupportsRenderScale 1 // enable to be compatible with natron v2, but still broken
+#define kSupportsRenderScale 1
 #define kRenderThreadSafety eRenderInstanceSafe
 
 #define kParamPosition "position"
@@ -322,6 +322,10 @@ void TextPlugin::render(const OFX::RenderArguments &args)
     int width = dstRod.x2-dstRod.x1;
     int height = dstRod.y2-dstRod.y1;
     Magick::Image image(Magick::Geometry(width,height),Magick::Color("rgba(0,0,0,0)"));
+
+    // if rgb set background
+    if (channels=="RGB")
+        image.backgroundColor("black");
 
     // Set font size
     if (fontSize>0)
