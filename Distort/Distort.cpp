@@ -40,6 +40,7 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 #include <iostream>
 #include <stdint.h>
+#include <cmath>
 
 #define kPluginName "Distort"
 #define kPluginGrouping "Filter"
@@ -170,7 +171,7 @@ DistortPlugin::DistortPlugin(OfxImageEffectHandle handle)
     embossSigma_ = fetchDoubleParam(kParamEmbossSigma);
     waveAmp_ = fetchDoubleParam(kParamWaveAmp);
     waveLength_ = fetchDoubleParam(kParamWaveLength);
-    assert(vpixel_ && distort_ && arcAngle_ && arcRotate_ && arcTopRadius_&& arcBottomRadius_ && arcBg_ && swirlDegree_ && implode_ && edge_ && embossRadius_ && embossSigma_ && waveAmp_ && waveLength_);
+    assert(vpixel_ && distort_ && arcAngle_ && arcRotate_ && arcTopRadius_&& arcBottomRadius_ && swirlDegree_ && implode_ && edge_ && embossRadius_ && embossSigma_ && waveAmp_ && waveLength_);
 }
 
 DistortPlugin::~DistortPlugin()
@@ -406,7 +407,7 @@ void DistortPlugin::render(const OFX::RenderArguments &args)
         break;
     case 7: // Wave
         image.backgroundColor(Magick::Color("rgba(0,0,0,0)"));
-        image.wave(waveAmp*args.renderScale.y,waveLength*args.renderScale.y);
+        image.wave(std::floor(waveAmp * args.renderScale.x + 0.5),std::floor(waveLength * args.renderScale.x + 0.5));
         break;
     }
 
