@@ -258,15 +258,15 @@ void TilePlugin::render(const OFX::RenderArguments &args)
     case eBitDepthUByte: // 8bit
         if (image.depth()>8)
             image.depth(8);
-        container.write(0,0,container.columns(),container.rows(),"RGB",Magick::CharPixel,(float*)dstImg->getPixelData());
+        container.write(0,0,srcWidth,srcHeight,"RGB",Magick::CharPixel,(float*)dstImg->getPixelData());
         break;
     case eBitDepthUShort: // 16bit
         if (image.depth()>16)
             image.depth(16);
-        container.write(0,0,container.columns(),container.rows(),"RGB",Magick::ShortPixel,(float*)dstImg->getPixelData());
+        container.write(0,0,srcWidth,srcHeight,"RGB",Magick::ShortPixel,(float*)dstImg->getPixelData());
         break;
     case eBitDepthFloat: // 32bit
-        container.write(0,0,container.columns(),container.rows(),"RGB",Magick::FloatPixel,(float*)dstImg->getPixelData());
+        container.write(0,0,srcWidth,srcHeight,"RGB",Magick::FloatPixel,(float*)dstImg->getPixelData());
         break;
     }
 }
