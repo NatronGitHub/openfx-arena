@@ -6,8 +6,8 @@
 
 CWD=$(pwd)
 
-MAGICK_WIN=6.8.9-10 # higher is broken on mingw
-MAGICK_UNIX=$MAGICK_WIN # use the same, no reason to upgrade
+MAGICK_WIN=6.8.9-10 # higher is broken on mingw, on the TODO
+MAGICK_UNIX=6.9.1-2 # higher breaks text
 
 ZLIB=1.2.8
 ZLIB_URL=http://prdownloads.sourceforge.net/libpng/zlib-${ZLIB}.tar.gz?download
@@ -183,6 +183,10 @@ if [ ! -f ${PREFIX}/lib/libMagick++-6.Q16HDRI.a ]; then
     cat $CWD/3rdparty/composite-private.h > magick/composite-private.h || exit 1
     # random seed
     patch -p0< $CWD/3rdparty/magick-seed.diff || exit 1
+  fi
+  if [ "$MAGICK" == "6.9.1-2" ]; then
+    # random seed
+    patch -p0< $CWD/3rdparty/changeset_18632.diff || exit 1
   fi
   $MAKE distclean
   CFLAGS="-m${BIT} ${BF}" CXXFLAGS="-m${BIT} ${BF} ${BSD} -I${PREFIX}/include" CPPFLAGS="-I${PREFIX}/include -L${PREFIX}/lib" ./configure --libdir=${PREFIX}/lib --prefix=${PREFIX} --disable-deprecated --with-magick-plus-plus=yes --with-quantum-depth=16 --without-dps --without-djvu --without-fftw --without-fpx --without-gslib --without-gvc --without-jbig --without-jpeg --without-lcms --without-lcms2 --without-openjp2 --without-lqr --without-lzma --without-openexr --without-pango --with-png --without-rsvg --without-tiff --without-webp --without-xml --with-zlib --without-bzlib --enable-static --disable-shared --enable-hdri --with-freetype --with-fontconfig --without-x --without-modules || exit 1
