@@ -36,6 +36,7 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include "Distort.h"
 
 #include "ofxsMacros.h"
+#include "ofxNatron.h"
 #include <Magick++.h>
 
 #include <iostream>
@@ -53,7 +54,7 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #define kParamVPixel "virtualPixelMethod"
 #define kParamVPixelLabel "Virtual Pixel"
 #define kParamVPixelHint "Virtual Pixel Method. Affects (De)Polar/Arc"
-#define kParamVPixelDefault 7
+#define kParamVPixelDefault 12
 
 #define kParamDistort "distort"
 #define kParamDistortLabel "Distort"
@@ -128,6 +129,7 @@ public:
     DistortPlugin(OfxImageEffectHandle handle);
     virtual ~DistortPlugin();
     virtual void render(const OFX::RenderArguments &args) OVERRIDE FINAL;
+    virtual void changedParam(const OFX::InstanceChangedArgs &args, const std::string &paramName) OVERRIDE FINAL;
     virtual bool getRegionOfDefinition(const OFX::RegionOfDefinitionArguments &args, OfxRectD &rod) OVERRIDE FINAL;
 private:
     OFX::Clip *dstClip_;
@@ -145,6 +147,7 @@ private:
     OFX::DoubleParam *embossSigma_;
     OFX::DoubleParam *waveAmp_;
     OFX::DoubleParam *waveLength_;
+    OFX::StringParam *sublabel_;
 };
 
 DistortPlugin::DistortPlugin(OfxImageEffectHandle handle)
@@ -171,7 +174,8 @@ DistortPlugin::DistortPlugin(OfxImageEffectHandle handle)
     embossSigma_ = fetchDoubleParam(kParamEmbossSigma);
     waveAmp_ = fetchDoubleParam(kParamWaveAmp);
     waveLength_ = fetchDoubleParam(kParamWaveLength);
-    assert(vpixel_ && distort_ && arcAngle_ && arcRotate_ && arcTopRadius_&& arcBottomRadius_ && swirlDegree_ && implode_ && edge_ && embossRadius_ && embossSigma_ && waveAmp_ && waveLength_);
+    sublabel_ = fetchStringParam(kNatronOfxParamStringSublabelName);
+    assert(vpixel_ && distort_ && arcAngle_ && arcRotate_ && arcTopRadius_&& arcBottomRadius_ && swirlDegree_ && implode_ && edge_ && embossRadius_ && embossSigma_ && waveAmp_ && waveLength_ && sublabel_);
 }
 
 DistortPlugin::~DistortPlugin()
@@ -439,6 +443,17 @@ void DistortPlugin::render(const OFX::RenderArguments &args)
     }
 }
 
+void DistortPlugin::changedParam(const OFX::InstanceChangedArgs &args, const std::string &paramName)
+{
+    if (paramName == kParamDistort) {
+        int i;
+        std::string distortOpt;
+        distort_->getValueAtTime(args.time, i);
+        distort_->getOption(i,distortOpt);
+        sublabel_->setValue(distortOpt);
+    }
+}
+
 bool DistortPlugin::getRegionOfDefinition(const OFX::RegionOfDefinitionArguments &args, OfxRectD &rod)
 {
     if (!kSupportsRenderScale && (args.renderScale.x != 1. || args.renderScale.y != 1.)) {
@@ -502,6 +517,31 @@ void DistortPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, C
     PageParamDescriptor *pageEmboss = desc.definePageParam("Emboss");
     PageParamDescriptor *pageWave = desc.definePageParam("Wave");
     {
+        StringParamDescriptor* param = desc.defineStringParam(kNatronOfxParamStringSublabelName);
+        param->setIsSecret(true);
+        param->setEnabled(false);
+        param->setIsPersistant(true);
+        param->setEvaluateOnChange(false);
+        param->setDefault("Polar");
+        page->addChild(*param);
+    }
+    {
+        ChoiceParamDescriptor *param = desc.defineChoiceParam(kParamDistort);
+        param->setLabel(kParamDistortLabel);
+        param->setHint(kParamDistortHint);
+        param->appendOption("Polar");
+        param->appendOption("DePolar");
+        param->appendOption("Arc");
+        param->appendOption("Swirl");
+        param->appendOption("Implode");
+        param->appendOption("Edge");
+        param->appendOption("Emboss");
+        param->appendOption("Wave");
+        param->setDefault(kParamDistortDefault);
+        param->setAnimates(true);
+        page->addChild(*param);
+    }
+    {
         ChoiceParamDescriptor *param = desc.defineChoiceParam(kParamVPixel);
         param->setLabel(kParamVPixelLabel);
         param->setHint(kParamVPixelHint);
@@ -522,22 +562,6 @@ void DistortPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, C
         param->appendOption("VerticalTileEdge");
         param->appendOption("White");
         param->setDefault(kParamVPixelDefault);
-        param->setAnimates(true);
-        page->addChild(*param);
-    }
-    {
-        ChoiceParamDescriptor *param = desc.defineChoiceParam(kParamDistort);
-        param->setLabel(kParamDistortLabel);
-        param->setHint(kParamDistortHint);
-        param->appendOption("Polar");
-        param->appendOption("DePolar");
-        param->appendOption("Arc");
-        param->appendOption("Swirl");
-        param->appendOption("Implode");
-        param->appendOption("Edge");
-        param->appendOption("Emboss");
-        param->appendOption("Wave");
-        param->setDefault(kParamDistortDefault);
         param->setAnimates(true);
         page->addChild(*param);
     }
