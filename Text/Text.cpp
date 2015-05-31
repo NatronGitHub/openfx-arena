@@ -441,6 +441,9 @@ void TextPlugin::render(const OFX::RenderArguments &args)
     image.flip();
 
     // return image
+    if (channels=="RGB" && image.matte())
+        image.matte(false);
+
     switch (dstBitDepth) {
     case eBitDepthUByte:
         if (image.depth()>8)
