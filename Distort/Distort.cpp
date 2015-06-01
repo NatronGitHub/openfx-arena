@@ -516,12 +516,12 @@ void DistortPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, C
     GroupParamDescriptor *groupEdge = desc.defineGroupParam("Edge");
     GroupParamDescriptor *groupEmboss = desc.defineGroupParam("Emboss");
     GroupParamDescriptor *groupWave = desc.defineGroupParam("Wave");
-    groupArc->setAsTab();
-    groupEdge->setAsTab();
-    groupEmboss->setAsTab();
-    groupImplode->setAsTab();
-    groupSwirl->setAsTab();
-    groupWave->setAsTab();
+    groupArc->setOpen(false);
+    groupEdge->setOpen(false);
+    groupEmboss->setOpen(false);
+    groupImplode->setOpen(false);
+    groupSwirl->setOpen(false);
+    groupWave->setOpen(false);
     {
         StringParamDescriptor* param = desc.defineStringParam(kNatronOfxParamStringSublabelName);
         param->setIsSecret(true);
@@ -548,28 +548,12 @@ void DistortPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, C
         page->addChild(*param);
     }
     {
-        ChoiceParamDescriptor *param = desc.defineChoiceParam(kParamVPixel);
-        param->setLabel(kParamVPixelLabel);
-        param->setHint(kParamVPixelHint);
-        param->appendOption("Undefined");
-        param->appendOption("Background");
-        param->appendOption("Black");
-        param->appendOption("CheckerTile");
-        param->appendOption("Dither");
-        param->appendOption("Edge");
-        param->appendOption("Gray");
-        param->appendOption("HorizontalTile");
-        param->appendOption("HorizontalTileEdge");
-        param->appendOption("Mirror");
-        param->appendOption("Random");
-        param->appendOption("Tile");
-        param->appendOption("Transparent");
-        param->appendOption("VerticalTile");
-        param->appendOption("VerticalTileEdge");
-        param->appendOption("White");
-        param->setDefault(kParamVPixelDefault);
-        param->setAnimates(true);
-        page->addChild(*param);
+        page->addChild(*groupArc);
+        page->addChild(*groupEdge);
+        page->addChild(*groupEmboss);
+        page->addChild(*groupImplode);
+        page->addChild(*groupSwirl);
+        page->addChild(*groupWave);
     }
     {
         DoubleParamDescriptor *param = desc.defineDoubleParam(kParamArcAngle);
@@ -680,6 +664,30 @@ void DistortPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, C
         param->setDefault(kParamWaveLengthDefault);
         param->setParent(*groupWave);
         //page->addChild(*param);
+    }
+    {
+        ChoiceParamDescriptor *param = desc.defineChoiceParam(kParamVPixel);
+        param->setLabel(kParamVPixelLabel);
+        param->setHint(kParamVPixelHint);
+        param->appendOption("Undefined");
+        param->appendOption("Background");
+        param->appendOption("Black");
+        param->appendOption("CheckerTile");
+        param->appendOption("Dither");
+        param->appendOption("Edge");
+        param->appendOption("Gray");
+        param->appendOption("HorizontalTile");
+        param->appendOption("HorizontalTileEdge");
+        param->appendOption("Mirror");
+        param->appendOption("Random");
+        param->appendOption("Tile");
+        param->appendOption("Transparent");
+        param->appendOption("VerticalTile");
+        param->appendOption("VerticalTileEdge");
+        param->appendOption("White");
+        param->setDefault(kParamVPixelDefault);
+        param->setAnimates(true);
+        page->addChild(*param);
     }
 }
 
