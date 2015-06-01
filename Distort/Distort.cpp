@@ -509,13 +509,19 @@ void DistortPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, C
     dstClip->setSupportsTiles(kSupportsTiles);
 
     // make some pages and to things in
-    PageParamDescriptor *page = desc.definePageParam("General");
-    PageParamDescriptor *pageArc = desc.definePageParam("Arc");
-    PageParamDescriptor *pageSwirl = desc.definePageParam("Swirl");
-    PageParamDescriptor *pageImplode = desc.definePageParam("Implode");
-    PageParamDescriptor *pageEdge = desc.definePageParam("Edge");
-    PageParamDescriptor *pageEmboss = desc.definePageParam("Emboss");
-    PageParamDescriptor *pageWave = desc.definePageParam("Wave");
+    PageParamDescriptor *page = desc.definePageParam("Distort");
+    GroupParamDescriptor *groupArc = desc.defineGroupParam("Arc");
+    GroupParamDescriptor *groupSwirl = desc.defineGroupParam("Swirl");
+    GroupParamDescriptor *groupImplode = desc.defineGroupParam("Implode");
+    GroupParamDescriptor *groupEdge = desc.defineGroupParam("Edge");
+    GroupParamDescriptor *groupEmboss = desc.defineGroupParam("Emboss");
+    GroupParamDescriptor *groupWave = desc.defineGroupParam("Wave");
+    groupArc->setAsTab();
+    groupEdge->setAsTab();
+    groupEmboss->setAsTab();
+    groupImplode->setAsTab();
+    groupSwirl->setAsTab();
+    groupWave->setAsTab();
     {
         StringParamDescriptor* param = desc.defineStringParam(kNatronOfxParamStringSublabelName);
         param->setIsSecret(true);
@@ -572,7 +578,8 @@ void DistortPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, C
         param->setRange(1, 360);
         param->setDisplayRange(1, 360);
         param->setDefault(kParamArcAngleDefault);
-        pageArc->addChild(*param);
+        param->setParent(*groupArc);
+        //page->addChild(*param);
     }
     {
         DoubleParamDescriptor *param = desc.defineDoubleParam(kParamArcRotate);
@@ -581,7 +588,8 @@ void DistortPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, C
         param->setRange(0, 360);
         param->setDisplayRange(0, 360);
         param->setDefault(kParamArcRotateDefault);
-        pageArc->addChild(*param);
+        param->setParent(*groupArc);
+        //page->addChild(*param);
     }
     {
         DoubleParamDescriptor *param = desc.defineDoubleParam(kParamArcTopRadius);
@@ -590,7 +598,8 @@ void DistortPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, C
         param->setRange(0, 360);
         param->setDisplayRange(0, 360);
         param->setDefault(kParamArcTopRadiusDefault);
-        pageArc->addChild(*param);
+        param->setParent(*groupArc);
+        //page->addChild(*param);
     }
     {
         DoubleParamDescriptor *param = desc.defineDoubleParam(kParamArcBottomRadius);
@@ -599,7 +608,8 @@ void DistortPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, C
         param->setRange(0, 360);
         param->setDisplayRange(0, 360);
         param->setDefault(kParamArcBottomRadiusDefault);
-        pageArc->addChild(*param);
+        param->setParent(*groupArc);
+        //page->addChild(*param);
     }
     {
         DoubleParamDescriptor *param = desc.defineDoubleParam(kParamSwirl);
@@ -608,7 +618,8 @@ void DistortPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, C
         param->setRange(-360, 360);
         param->setDisplayRange(-360, 360);
         param->setDefault(kParamSwirlDefault);
-        pageSwirl->addChild(*param);
+        param->setParent(*groupSwirl);
+        //page->addChild(*param);
     }
     {
         DoubleParamDescriptor *param = desc.defineDoubleParam(kParamImplode);
@@ -617,7 +628,8 @@ void DistortPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, C
         param->setRange(-100, 100);
         param->setDisplayRange(-3, 3);
         param->setDefault(kParamImplodeDefault);
-        pageImplode->addChild(*param);
+        param->setParent(*groupImplode);
+        //page->addChild(*param);
     }
     {
         DoubleParamDescriptor *param = desc.defineDoubleParam(kParamEdge);
@@ -626,7 +638,8 @@ void DistortPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, C
         param->setRange(0, 1000);
         param->setDisplayRange(0, 50);
         param->setDefault(kParamEdgeDefault);
-        pageEdge->addChild(*param);
+        param->setParent(*groupEdge);
+        //page->addChild(*param);
     }
     {
         DoubleParamDescriptor *param = desc.defineDoubleParam(kParamEmbossRadius);
@@ -635,7 +648,8 @@ void DistortPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, C
         param->setRange(0, 1.1);
         param->setDisplayRange(0, 1.1);
         param->setDefault(kParamEmbossRadiusDefault);
-        pageEmboss->addChild(*param);
+        param->setParent(*groupEmboss);
+        //page->addChild(*param);
     }
     {
         DoubleParamDescriptor *param = desc.defineDoubleParam(kParamEmbossSigma);
@@ -644,7 +658,8 @@ void DistortPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, C
         param->setRange(0, 1.1);
         param->setDisplayRange(0, 1.1);
         param->setDefault(kParamEmbossSigmaDefault);
-        pageEmboss->addChild(*param);
+        param->setParent(*groupEmboss);
+        //page->addChild(*param);
     }
     {
         DoubleParamDescriptor *param = desc.defineDoubleParam(kParamWaveAmp);
@@ -653,7 +668,8 @@ void DistortPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, C
         param->setRange(0, 1000);
         param->setDisplayRange(0, 500);
         param->setDefault(kParamWaveAmpDefault);
-        pageWave->addChild(*param);
+        param->setParent(*groupWave);
+        //page->addChild(*param);
     }
     {
         DoubleParamDescriptor *param = desc.defineDoubleParam(kParamWaveLength);
@@ -662,7 +678,8 @@ void DistortPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, C
         param->setRange(0, 1000);
         param->setDisplayRange(0, 500);
         param->setDefault(kParamWaveLengthDefault);
-        pageWave->addChild(*param);
+        param->setParent(*groupWave);
+        //page->addChild(*param);
     }
 }
 
