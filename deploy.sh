@@ -183,8 +183,7 @@ if [ ! -f ${PREFIX}/lib/libMagick++-6.Q16HDRI.a ]; then
     cat $CWD/3rdparty/composite-private.h > magick/composite-private.h || exit 1
     # random seed
     patch -p0< $CWD/3rdparty/magick-seed.diff || exit 1
-  fi
-  if [ "$MAGICK" == "6.9.1-2" ]; then
+  else
     # random seed
     patch -p0< $CWD/3rdparty/changeset_18632.diff || exit 1
   fi
