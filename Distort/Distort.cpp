@@ -49,7 +49,7 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 #define kPluginIdentifier "net.fxarena.openfx.Distort"
 #define kPluginVersionMajor 2
-#define kPluginVersionMinor 0
+#define kPluginVersionMinor 1
 
 #define kParamVPixel "virtualPixelMethod"
 #define kParamVPixelLabel "Virtual Pixel"
@@ -275,7 +275,9 @@ void DistortPlugin::render(const OFX::RenderArguments &args)
     int offsetY = 0;
 
     // read image
-    Magick::Image image(width,height,"RGBA",Magick::FloatPixel,(float*)srcImg->getPixelData());
+    Magick::Image image(Magick::Geometry(width,height),Magick::Color("rgba(0,0,0,0)"));
+    if (srcClip_ && srcClip_->isConnected())
+        image.read(width,height,"RGBA",Magick::FloatPixel,(float*)srcImg->getPixelData());
 
     // create empty container
     Magick::Image container(Magick::Geometry(width,height),Magick::Color("rgba(0,0,0,0)"));
@@ -424,8 +426,6 @@ void DistortPlugin::render(const OFX::RenderArguments &args)
         container=image;
 
     // return image
-    if (!container.matte())
-        container.matte(true);
     switch (dstBitDepth) {
     case eBitDepthUByte:
         if (container.depth()>8)
