@@ -170,7 +170,7 @@ else
   MAGICK=$MAGICK_UNIX
 fi
 MAGICK_URL=ftp://ftp.sunet.se/pub/multimedia/graphics/ImageMagick/ImageMagick-$MAGICK.tar.gz
-if [ ! -f ${PREFIX}/lib/libMagick++-6.Q16HDRI.a ]; then
+if [ ! -f ${PREFIX}/lib/libMagick++-6.Q32HDRI.a ]; then
   if [ ! -f $CWD/3rdparty/ImageMagick-$MAGICK.tar.gz ]; then
     wget $MAGICK_URL -O $CWD/3rdparty/ImageMagick-$MAGICK.tar.gz || exit 1
   fi
