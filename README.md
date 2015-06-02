@@ -6,7 +6,7 @@ A set of visual effect plugins (OFX) for Natron.
 Build
 =====
 
-Requires ImageMagick (MagickCore/Magick++ Q16-HDRI with fontconfig, freetype, libpng and zlib support, version 6.9.1-4 + patches in 3rdparty folder) installed prior to build. Also see 'deploy.sh' for more information.
+Requires ImageMagick (MagickCore/Magick++ Q32-HDRI with fontconfig, freetype, libpng and zlib support, version 6.9.1-4 + patches in 3rdparty folder) installed prior to build. Also see 'deploy.sh' for more information.
 
 **Make on Linux**
 ```
