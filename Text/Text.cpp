@@ -86,11 +86,11 @@
 #define kPluginDescription  "A simple text generator."
 
 #define kPluginIdentifier "net.fxarena.openfx.Text"
-#define kPluginVersionMajor 2
-#define kPluginVersionMinor 1
+#define kPluginVersionMajor 3
+#define kPluginVersionMinor 0
 
 #define kSupportsTiles 0
-#define kSupportsMultiResolution 1
+#define kSupportsMultiResolution 0
 #define kSupportsRenderScale 1
 #define kRenderThreadSafety eRenderInstanceSafe
 
@@ -186,6 +186,7 @@ public:
 
 private:
     // do not need to delete these, the ImageEffect is managing them for us
+    OFX::Clip *srcClip_;
     OFX::Clip *dstClip_;
     OFX::Double2DParam *position_;
     OFX::StringParam *text_;
@@ -207,11 +208,15 @@ private:
 TextPlugin::TextPlugin(OfxImageEffectHandle handle)
 : OFX::ImageEffect(handle)
 , dstClip_(0)
+, srcClip_(0)
 {
     Magick::InitializeMagick(NULL);
 
     dstClip_ = fetchClip(kOfxImageEffectOutputClipName);
-    assert(dstClip_ && (dstClip_->getPixelComponents() == OFX::ePixelComponentRGBA || dstClip_->getPixelComponents() == OFX::ePixelComponentRGB));
+    assert(dstClip_ && dstClip_->getPixelComponents() == OFX::ePixelComponentRGBA);
+
+    srcClip_ = fetchClip(kOfxImageEffectSimpleSourceClipName);
+    assert(!srcClip_ || srcClip_->getPixelComponents() == OFX::ePixelComponentRGBA);
 
     position_ = fetchDouble2DParam(kParamPosition);
     text_ = fetchStringParam(kParamText);
@@ -275,19 +280,6 @@ void TextPlugin::render(const OFX::RenderArguments &args)
         return;
     }
 
-    std::string channels;
-    switch (dstComponents) {
-    case ePixelComponentRGBA:
-        channels = "RGBA";
-        break;
-    case ePixelComponentRGB:
-        channels = "RGB";
-        break;
-    case ePixelComponentAlpha:
-        channels = "A";
-        break;
-    }
-
     // are we in the image bounds
     OfxRectI dstBounds = dstImg->getBounds();
     OfxRectI dstRod = dstImg->getRegionOfDefinition();
@@ -331,9 +323,12 @@ void TextPlugin::render(const OFX::RenderArguments &args)
     int height = dstRod.y2-dstRod.y1;
     Magick::Image image(Magick::Geometry(width,height),Magick::Color("rgba(0,0,0,0)"));
 
-    // if rgb set background
-    if (channels=="RGB" && !use_bg)
-        image.backgroundColor("black");
+    // src?
+    if (srcClip_ && srcClip_->isConnected()) {
+        std::auto_ptr<const OFX::Image> srcImg(srcClip_->fetchImage(args.time));
+            if (srcImg.get())
+                image.read(width,height,"RGBA",Magick::FloatPixel,(float*)srcImg->getPixelData());
+    }
 
     // Set font size
     if (fontSize>0)
@@ -358,27 +353,15 @@ void TextPlugin::render(const OFX::RenderArguments &args)
     int a_bI = ((uint8_t)(255.0f *CLAMP(a_b, 0.0, 1.0)));
 
     std::ostringstream rgba;
-    if (channels=="RGBA")
-        rgba << "rgba(" << rI <<"," << gI << "," << bI << "," << aI << ")";
-    else if (channels=="RGB")
-        rgba << "rgb(" << rI <<"," << gI << "," << bI << ")";
-
+    rgba << "rgba(" << rI <<"," << gI << "," << bI << "," << aI << ")";
     std::string textRGBA = rgba.str();
 
     std::ostringstream rgba_s;
-    if (channels=="RGBA")
-        rgba_s << "rgba(" << r_sI <<"," << g_sI << "," << b_sI << "," << a_sI << ")";
-    else if (channels=="RGB")
-        rgba_s << "rgb(" << r_sI <<"," << g_sI << "," << b_sI << ")";
-
+    rgba_s << "rgba(" << r_sI <<"," << g_sI << "," << b_sI << "," << a_sI << ")";
     std::string strokeRGBA = rgba_s.str();
 
     std::ostringstream rgba_b;
-    if (channels=="RGBA")
-        rgba_b << "rgba(" << r_bI <<"," << g_bI << "," << b_bI << "," << a_bI << ")";
-    else if (channels=="RGB")
-        rgba_b << "rgb(" << r_bI <<"," << g_bI << "," << b_bI << ")";
-
+    rgba_b << "rgba(" << r_bI <<"," << g_bI << "," << b_bI << "," << a_bI << ")";
     std::string bgRGBA = rgba_b.str();
 
     // Flip image
@@ -444,22 +427,19 @@ void TextPlugin::render(const OFX::RenderArguments &args)
     image.flip();
 
     // return image
-    if (channels=="RGB" && image.matte())
-        image.matte(false);
-
     switch (dstBitDepth) {
     case eBitDepthUByte:
         if (image.depth()>8)
             image.depth(8);
-        image.write(0,0,width,height,channels,Magick::CharPixel,(float*)dstImg->getPixelData());
+        image.write(0,0,width,height,"RGBA",Magick::CharPixel,(float*)dstImg->getPixelData());
         break;
     case eBitDepthUShort:
         if (image.depth()>16)
             image.depth(16);
-        image.write(0,0,width,height,channels,Magick::ShortPixel,(float*)dstImg->getPixelData());
+        image.write(0,0,width,height,"RGBA",Magick::ShortPixel,(float*)dstImg->getPixelData());
         break;
     case eBitDepthFloat:
-        image.write(0,0,width,height,channels,Magick::FloatPixel,(float*)dstImg->getPixelData());
+        image.write(0,0,width,height,"RGBA",Magick::FloatPixel,(float*)dstImg->getPixelData());
         break;
     }
 }
@@ -509,8 +489,8 @@ void TextPluginFactory::describe(OFX::ImageEffectDescriptor &desc)
     desc.addSupportedContext(eContextGenerator);
 
     // add supported pixel depths
-    desc.addSupportedBitDepth(eBitDepthUByte);
-    desc.addSupportedBitDepth(eBitDepthUShort);
+    //desc.addSupportedBitDepth(eBitDepthUByte);
+    //desc.addSupportedBitDepth(eBitDepthUShort);
     desc.addSupportedBitDepth(eBitDepthFloat);
 
     desc.setSupportsTiles(kSupportsTiles);
@@ -526,7 +506,6 @@ void TextPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, Cont
     // there has to be an input clip, even for generators
     ClipDescriptor* srcClip = desc.defineClip(kOfxImageEffectSimpleSourceClipName);
     srcClip->addSupportedComponent(ePixelComponentRGBA);
-    srcClip->addSupportedComponent(ePixelComponentRGB);
     srcClip->setSupportsTiles(kSupportsTiles);
     srcClip->setOptional(true);
 
