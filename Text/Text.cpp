@@ -326,8 +326,15 @@ void TextPlugin::render(const OFX::RenderArguments &args)
     // src?
     if (srcClip_ && srcClip_->isConnected()) {
         std::auto_ptr<const OFX::Image> srcImg(srcClip_->fetchImage(args.time));
-            if (srcImg.get())
+        if (srcImg.get()) {
+            OfxRectI srcRod = srcImg->getRegionOfDefinition();
+            int srcWidth = srcRod.x2-srcRod.x1;
+            int srcHeight = srcRod.y2-srcRod.y1;
+            if (srcWidth==width && srcHeight==height)
                 image.read(width,height,"RGBA",Magick::FloatPixel,(float*)srcImg->getPixelData());
+            else
+                setPersistentMessage(OFX::Message::eMessageError, "", "Please set project format to same as source, or disconnect source.");
+        }
     }
 
     // Set font size
@@ -427,20 +434,22 @@ void TextPlugin::render(const OFX::RenderArguments &args)
     image.flip();
 
     // return image
-    switch (dstBitDepth) {
-    case eBitDepthUByte:
-        if (image.depth()>8)
-            image.depth(8);
-        image.write(0,0,width,height,"RGBA",Magick::CharPixel,(float*)dstImg->getPixelData());
-        break;
-    case eBitDepthUShort:
-        if (image.depth()>16)
-            image.depth(16);
-        image.write(0,0,width,height,"RGBA",Magick::ShortPixel,(float*)dstImg->getPixelData());
-        break;
-    case eBitDepthFloat:
-        image.write(0,0,width,height,"RGBA",Magick::FloatPixel,(float*)dstImg->getPixelData());
-        break;
+    if (dstClip_ && dstClip_->isConnected()) {
+        switch (dstBitDepth) {
+        case eBitDepthUByte:
+            if (image.depth()>8)
+                image.depth(8);
+            image.write(0,0,width,height,"RGBA",Magick::CharPixel,(float*)dstImg->getPixelData());
+            break;
+        case eBitDepthUShort:
+            if (image.depth()>16)
+                image.depth(16);
+            image.write(0,0,width,height,"RGBA",Magick::ShortPixel,(float*)dstImg->getPixelData());
+            break;
+        case eBitDepthFloat:
+            image.write(0,0,width,height,"RGBA",Magick::FloatPixel,(float*)dstImg->getPixelData());
+            break;
+        }
     }
 }
 
