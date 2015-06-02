@@ -269,13 +269,13 @@ void TextPlugin::render(const OFX::RenderArguments &args)
     }
 
     OFX::BitDepthEnum dstBitDepth = dstImg->getPixelDepth();
-    if (dstBitDepth != OFX::eBitDepthFloat && dstBitDepth != OFX::eBitDepthUShort && dstBitDepth != OFX::eBitDepthUByte) {
+    if (dstBitDepth != OFX::eBitDepthFloat) {
         OFX::throwSuiteStatusException(kOfxStatErrFormat);
         return;
     }
 
     OFX::PixelComponentEnum dstComponents  = dstImg->getPixelComponents();
-    if ((dstComponents != OFX::ePixelComponentRGBA && dstComponents != OFX::ePixelComponentRGB && dstComponents != OFX::ePixelComponentAlpha)) {
+    if (dstComponents != OFX::ePixelComponentRGBA) {
         OFX::throwSuiteStatusException(kOfxStatErrFormat);
         return;
     }
@@ -295,6 +295,7 @@ void TextPlugin::render(const OFX::RenderArguments &args)
     bool use_stroke = false;
     bool use_shadow = false;
     bool use_bg = false;
+    bool has_src = false;
     std::string text, fontOverride, fontName;
 
     position_->getValueAtTime(args.time, x, y);
@@ -330,8 +331,10 @@ void TextPlugin::render(const OFX::RenderArguments &args)
             OfxRectI srcRod = srcImg->getRegionOfDefinition();
             int srcWidth = srcRod.x2-srcRod.x1;
             int srcHeight = srcRod.y2-srcRod.y1;
-            if (srcWidth==width && srcHeight==height)
+            if (srcWidth==width && srcHeight==height) {
+                has_src = true;
                 image.read(width,height,"RGBA",Magick::FloatPixel,(float*)srcImg->getPixelData());
+            }
             else
                 setPersistentMessage(OFX::Message::eMessageError, "", "Please set project format to same as source, or disconnect source.");
         }
@@ -408,7 +411,7 @@ void TextPlugin::render(const OFX::RenderArguments &args)
     image.draw(text_draw_list);
 
     // Shadow
-    if (use_shadow) {
+    if (use_shadow && !has_src) {
         Magick::Image dropShadow;
         dropShadow=image;
         dropShadow.backgroundColor("Black");
@@ -417,9 +420,11 @@ void TextPlugin::render(const OFX::RenderArguments &args)
         dropShadow.composite(image,0,0,Magick::OverCompositeOp);
         image=dropShadow;
     }
+    if (use_shadow && has_src)
+        setPersistentMessage(OFX::Message::eMessageError, "", "Shadow not supported when using source input");
 
     // set bg
-    if (use_bg) {
+    if (use_bg && !has_src) {
         Magick::Image container(Magick::Geometry(width,height),Magick::Color(bgRGBA));
         if (use_shadow && shadowSigma>0) {
             double offset=std::floor(shadowSigma * args.renderScale.x + 0.5);
@@ -429,6 +434,8 @@ void TextPlugin::render(const OFX::RenderArguments &args)
             container.composite(image,0,0,Magick::OverCompositeOp);
         image=container;
     }
+    if (use_bg && has_src)
+        setPersistentMessage(OFX::Message::eMessageError, "", "Background not supported when using source input");
 
     // Flip image
     image.flip();
