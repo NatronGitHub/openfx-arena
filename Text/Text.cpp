@@ -347,16 +347,19 @@ void TextPlugin::render(const OFX::RenderArguments &args)
     int rI = ((uint8_t)(255.0f *CLAMP(r, 0.0, 1.0)));
     int gI = ((uint8_t)(255.0f *CLAMP(g, 0.0, 1.0)));
     int bI = ((uint8_t)(255.0f *CLAMP(b, 0.0, 1.0)));
+    int aI = ((uint8_t)(255.0f *CLAMP(a, 0.0, 1.0)));
     int r_sI = ((uint8_t)(255.0f *CLAMP(r_s, 0.0, 1.0)));
     int g_sI = ((uint8_t)(255.0f *CLAMP(g_s, 0.0, 1.0)));
     int b_sI = ((uint8_t)(255.0f *CLAMP(b_s, 0.0, 1.0)));
+    int a_sI = ((uint8_t)(255.0f *CLAMP(a_s, 0.0, 1.0)));
     int r_bI = ((uint8_t)(255.0f *CLAMP(r_b, 0.0, 1.0)));
     int g_bI = ((uint8_t)(255.0f *CLAMP(g_b, 0.0, 1.0)));
     int b_bI = ((uint8_t)(255.0f *CLAMP(b_b, 0.0, 1.0)));
+    int a_bI = ((uint8_t)(255.0f *CLAMP(a_b, 0.0, 1.0)));
 
     std::ostringstream rgba;
     if (channels=="RGBA")
-        rgba << "rgba(" << rI <<"," << gI << "," << bI << "," << a << ")";
+        rgba << "rgba(" << rI <<"," << gI << "," << bI << "," << aI << ")";
     else if (channels=="RGB")
         rgba << "rgb(" << rI <<"," << gI << "," << bI << ")";
 
@@ -364,7 +367,7 @@ void TextPlugin::render(const OFX::RenderArguments &args)
 
     std::ostringstream rgba_s;
     if (channels=="RGBA")
-        rgba_s << "rgba(" << r_sI <<"," << g_sI << "," << b_sI << "," << a_s << ")";
+        rgba_s << "rgba(" << r_sI <<"," << g_sI << "," << b_sI << "," << a_sI << ")";
     else if (channels=="RGB")
         rgba_s << "rgb(" << r_sI <<"," << g_sI << "," << b_sI << ")";
 
@@ -372,7 +375,7 @@ void TextPlugin::render(const OFX::RenderArguments &args)
 
     std::ostringstream rgba_b;
     if (channels=="RGBA")
-        rgba_b << "rgba(" << r_bI <<"," << g_bI << "," << b_bI << "," << a_b << ")";
+        rgba_b << "rgba(" << r_bI <<"," << g_bI << "," << b_bI << "," << a_bI << ")";
     else if (channels=="RGB")
         rgba_b << "rgb(" << r_bI <<"," << g_bI << "," << b_bI << ")";
 
