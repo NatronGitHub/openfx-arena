@@ -42,17 +42,17 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #define kPluginDescription  "A simple texture generator. \n\nhttps://github.com/olear/openfx-arena"
 
 #define kPluginIdentifier "net.fxarena.openfx.Texture"
-#define kPluginVersionMajor 1
+#define kPluginVersionMajor 2
 #define kPluginVersionMinor 0
 
 #define kSupportsTiles 0
-#define kSupportsMultiResolution 1
+#define kSupportsMultiResolution 0
 #define kSupportsRenderScale 1
 #define kRenderThreadSafety eRenderInstanceSafe
 
-#define kParamEffect "type"
-#define kParamEffectLabel "Type"
-#define kParamEffectHint "Texture type"
+#define kParamEffect "background"
+#define kParamEffectLabel "Background"
+#define kParamEffectHint "Background type"
 #define kParamEffectDefault 6
 
 #define kParamSeed "seed"
@@ -133,19 +133,6 @@ void TexturePlugin::render(const OFX::RenderArguments &args)
         return;
     }
 
-    std::string channels;
-    switch (dstComponents) {
-    case ePixelComponentRGBA:
-        channels = "RGBA";
-        break;
-    case ePixelComponentRGB:
-        channels = "RGB";
-        break;
-    case ePixelComponentAlpha:
-        channels = "A";
-        break;
-    }
-
     // are we in the image bounds
     OfxRectI dstBounds = dstImg->getBounds();
     OfxRectI dstRod = dstImg->getRegionOfDefinition();
@@ -164,10 +151,6 @@ void TexturePlugin::render(const OFX::RenderArguments &args)
     int width = dstRod.x2-dstRod.x1;
     int height = dstRod.y2-dstRod.y1;
     Magick::Image image(Magick::Geometry(width,height),Magick::Color("rgba(0,0,0,0)"));
-
-    // set bg if rgb
-    if (channels=="RGB")
-        image.backgroundColor("black");
 
     // Set seed
     if (seed!=0)
@@ -196,26 +179,40 @@ void TexturePlugin::render(const OFX::RenderArguments &args)
     case 6: // Plasma Fractal
         image.read("plasma:fractal");
         break;
-    case 7: // Noise
+    case 7: // GaussianNoise
         image.addNoise(Magick::GaussianNoise);
+        break;
+    case 8: // ImpulseNoise
+        image.addNoise(Magick::ImpulseNoise);
+        break;
+    case 9: // LaplacianNoise
+        image.addNoise(Magick::LaplacianNoise);
+        break;
+    case 10: // checkerboard
+        image.read("pattern:checkerboard");
+        break;
+    case 11: // bricks
+        image.read("pattern:bricks");
         break;
     }
 
     // return image
-    switch (dstBitDepth) {
-    case eBitDepthUByte:
-        if (image.depth()>8)
-            image.depth(8);
-        image.write(0,0,width,height,channels,Magick::CharPixel,(float*)dstImg->getPixelData());
-        break;
-    case eBitDepthUShort:
-        if (image.depth()>16)
-            image.depth(16);
-        image.write(0,0,width,height,channels,Magick::ShortPixel,(float*)dstImg->getPixelData());
-        break;
-    case eBitDepthFloat:
-        image.write(0,0,width,height,channels,Magick::FloatPixel,(float*)dstImg->getPixelData());
-        break;
+    if (dstClip_ && dstClip_->isConnected()) {
+        switch (dstBitDepth) {
+        case eBitDepthUByte:
+            if (image.depth()>8)
+                image.depth(8);
+            image.write(0,0,width,height,"RGBA",Magick::CharPixel,(float*)dstImg->getPixelData());
+            break;
+        case eBitDepthUShort:
+            if (image.depth()>16)
+                image.depth(16);
+            image.write(0,0,width,height,"RGBA",Magick::ShortPixel,(float*)dstImg->getPixelData());
+            break;
+        case eBitDepthFloat:
+            image.write(0,0,width,height,"RGBA",Magick::FloatPixel,(float*)dstImg->getPixelData());
+            break;
+        }
     }
 }
 
@@ -247,8 +244,8 @@ void TexturePluginFactory::describe(OFX::ImageEffectDescriptor &desc)
     desc.addSupportedContext(eContextGenerator);
 
     // add supported pixel depths
-    desc.addSupportedBitDepth(eBitDepthUByte);
-    desc.addSupportedBitDepth(eBitDepthUShort);
+    /*desc.addSupportedBitDepth(eBitDepthUByte);
+    desc.addSupportedBitDepth(eBitDepthUShort);*/
     desc.addSupportedBitDepth(eBitDepthFloat);
 
     desc.setSupportsTiles(kSupportsTiles);
@@ -262,7 +259,6 @@ void TexturePluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, C
     // there has to be an input clip, even for generators
     ClipDescriptor* srcClip = desc.defineClip(kOfxImageEffectSimpleSourceClipName);
     srcClip->addSupportedComponent(ePixelComponentRGBA);
-    srcClip->addSupportedComponent(ePixelComponentRGB);
     srcClip->setSupportsTiles(kSupportsTiles);
     srcClip->setOptional(true);
 
@@ -284,7 +280,11 @@ void TexturePluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, C
         param->appendOption("Plasma red-blue");
         param->appendOption("Plasma tomato-steelblue");
         param->appendOption("Plasma Fractal");
-        param->appendOption("Noise");
+        param->appendOption("GaussianNoise");
+        param->appendOption("ImpulseNoise");
+        param->appendOption("LaplacianNoise");
+        param->appendOption("Checkerboard");
+        param->appendOption("Bricks");
         param->setDefault(kParamEffectDefault);
         param->setAnimates(true);
         page->addChild(*param);
