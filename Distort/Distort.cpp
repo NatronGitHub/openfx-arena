@@ -660,8 +660,8 @@ void DistortPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, C
         DoubleParamDescriptor *param = desc.defineDoubleParam(kParamRollX);
         param->setLabel(kParamRollXLabel);
         param->setHint(kParamRollXHint);
-        param->setRange(-10000, 10000);
-        param->setDisplayRange(-500, 500);
+        param->setRange(-100000, 100000);
+        param->setDisplayRange(-2000, 2000);
         param->setDefault(kParamRollXDefault);
         param->setParent(*groupRoll);
     }
@@ -669,8 +669,8 @@ void DistortPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, C
         DoubleParamDescriptor *param = desc.defineDoubleParam(kParamRollY);
         param->setLabel(kParamRollYLabel);
         param->setHint(kParamRollYHint);
-        param->setRange(-10000, 10000);
-        param->setDisplayRange(-500, 500);
+        param->setRange(-100000, 100000);
+        param->setDisplayRange(-2000, 2000);
         param->setDefault(kParamRollYDefault);
         param->setParent(*groupRoll);
     }
