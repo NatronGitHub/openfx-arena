@@ -178,10 +178,10 @@ if [ ! -f ${PREFIX}/lib/libMagick++-6.Q32HDRI.a ]; then
     tar xvf $CWD/3rdparty/ImageMagick-$MAGICK.tar.gz -C $CWD/3rdparty/ || exit 1
   fi
   cd $CWD/3rdparty/ImageMagick-$MAGICK || exit 1
-  if [ "$MAGICK" == "6.9.1-4" ]; then
-    patch -p0< $CWD/3rdparty/6.9.1-4_revert.diff || exit 1
-    patch -p0< $CWD/3rdparty/6.9.1-4_more.diff || exit 1
-  fi
+  #if [ "$MAGICK" == "6.9.1-4" ]; then
+  #  patch -p0< $CWD/3rdparty/6.9.1-4_revert.diff || exit 1
+  #  patch -p0< $CWD/3rdparty/6.9.1-4_more.diff || exit 1
+  #fi
   $MAKE distclean
   CFLAGS="-m${BIT} ${BF}" CXXFLAGS="-m${BIT} ${BF} ${BSD} -I${PREFIX}/include" CPPFLAGS="-I${PREFIX}/include -L${PREFIX}/lib" ./configure --libdir=${PREFIX}/lib --prefix=${PREFIX} --disable-deprecated --with-magick-plus-plus=yes --with-quantum-depth=32 --without-dps --without-djvu --without-fftw --without-fpx --without-gslib --without-gvc --without-jbig --without-jpeg --without-lcms --without-lcms2 --without-openjp2 --without-lqr --without-lzma --without-openexr --without-pango --with-png --without-rsvg --without-tiff --without-webp --without-xml --with-zlib --without-bzlib --enable-static --disable-shared --enable-hdri --with-freetype --with-fontconfig --without-x --without-modules || exit 1
   $MAKE -j$JOBS install || exit 1
