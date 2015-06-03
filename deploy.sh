@@ -3,11 +3,32 @@
 #
 # Works on Linux, FreeBSD and Windows
 #
+# Options:
+#
+# CLEAN=1 : Clean tmp folder before build
+# MAGICK_BETA=1 : Build ImageMagick snapshot
+#
 
 CWD=$(pwd)
 
-MAGICK_WIN=6.8.9-10 # higher is broken on mingw, on the TODO
+MAGICK_WIN=6.8.9-10 # higher is broken on mingw
 MAGICK_UNIX=6.9.1-4
+MAGICK_UNIX_BETA_MAJOR=6.9.1-5
+MAGICK_UNIX_BETA_MINOR=beta20150603
+MAGICK_REL_URL=ftp://ftp.sunet.se/pub/multimedia/graphics/ImageMagick
+MAGICK_BETA_URL=http://www.imagemagick.org/download/beta
+
+if [ "$OS" == "Msys" ]; then
+  MAGICK=$MAGICK_WIN
+else
+  if [ "$MAGICK_BETA" == "1" ]; then
+    MAGICK="${MAGICK_UNIX_BETA_MAJOR}~${MAGICK_UNIX_BETA_MINOR}"
+    MAGICK_URL=$MAGICK_BETA_URL/ImageMagick-$MAGICK.tar.gz
+  else
+    MAGICK=$MAGICK_UNIX
+    MAGICK_URL=$MAGICK_REL_URL/ImageMagick-$MAGICK.tar.gz
+  fi
+fi
 
 ZLIB=1.2.8
 ZLIB_URL=http://prdownloads.sourceforge.net/libpng/zlib-${ZLIB}.tar.gz?download
@@ -85,6 +106,9 @@ if [ "$OS" == "FreeBSD" ]; then
   USE_FREEBSD=1
 fi
 
+if [ "$CLEAN" == "1" ]; then
+  rm -rf $PREFIX || exit 1
+fi
 if [ ! -d $PREFIX ]; then
   mkdir -p $PREFIX/{bin,lib,include} || exit 1
 fi
@@ -105,6 +129,10 @@ if [ ! -f ${PREFIX}/lib/libz.a ] && [ "$OS" == "Msys" ]; then
   CFLAGS="-m${BIT} ${BF}" CXXFLAGS="-m${BIT} ${BF} -I${PREFIX}/include" CPPFLAGS="-I${PREFIX}/include -L${PREFIX}/lib" make -f win32/Makefile.gcc || exit 1
   cp libz.a ${PREFIX}/lib/
   cp *.h ${PREFIX}/include/
+  mkdir -p $PREFIX/share/doc/zlib/ || exit 1
+  cp README $PREFIX/share/doc/zlib/ || exit 1
+  cd .. || exit 1
+  rm -rf zlib-$ZLIB || exit 1
 fi
 
 # libpng
@@ -119,6 +147,10 @@ if [ ! -f ${PREFIX}/lib/libpng.a ]; then
   $MAKE distclean
   CFLAGS="-m${BIT} ${BF}" CXXFLAGS="-m${BIT} ${BF} ${BSD} -I${PREFIX}/include" CPPFLAGS="-I${PREFIX}/include -L${PREFIX}/lib" ./configure --prefix=$PREFIX --enable-static --disable-shared || exit 1
   $MAKE -j$JOBS install || exit 1
+  mkdir -p $PREFIX/share/doc/libpng/ || exit 1
+  cp LICENSE $PREFIX/share/doc/libpng/ || exit 1
+  cd .. || exit 1
+  rm -rf libpng-$PNG || exit 1
 fi
 
 # expat
@@ -133,6 +165,10 @@ if [ ! -f ${PREFIX}/lib/libexpat.a ] && [ "$OS" == "Msys" ]; then
   make distclean
   CFLAGS="-m${BIT} ${BF}" CXXFLAGS="-m${BIT} ${BF} -I${PREFIX}/include" CPPFLAGS="-I${PREFIX}/include -L${PREFIX}/lib" ./configure --libdir=${PREFIX}/lib --prefix=${PREFIX} --enable-static --disable-shared || exit 1
   make -j$JOBS install || exit 1
+  mkdir -p $PREFIX/share/doc/expat/ || exit 1
+  cp COPYING $PREFIX/share/doc/expat/ || exit 1
+  cd .. || exit 1
+  rm -rf expat-$EXPAT || exit 1
 fi
 
 # freetype
@@ -147,6 +183,10 @@ if [ ! -f ${PREFIX}/lib/libfreetype.a ] && [ "$OS" == "Msys" ]; then
   make distclean
   CFLAGS="-m${BIT} ${BF}" CXXFLAGS="-m${BIT} ${BF} -I${PREFIX}/include" CPPFLAGS="-I${PREFIX}/include -L${PREFIX}/lib -lexpat -lz" ./configure --libdir=${PREFIX}/lib --prefix=${PREFIX} --enable-static --disable-shared || exit 1
   make -j$JOBS install || exit 1
+  mkdir -p $PREFIX/share/doc/freetype/ || exit 1
+  cp README $PREFIX/share/doc/freetype/ || exit 1
+  cd .. || exit 1
+  rm -rf freetype-$FTYPE || exit 1
 fi
 
 # fontconfig
@@ -161,15 +201,13 @@ if [ ! -f ${PREFIX}/lib/libfontconfig.a ] && [ "$OS" == "Msys" ]; then
   make distclean
   CFLAGS="-m${BIT} ${BF}" CXXFLAGS="-m${BIT} ${BF} -I${PREFIX}/include" CPPFLAGS="-I${PREFIX}/include -L${PREFIX}/lib -lfreetype -lexpat -lz" ./configure --bindir=${PREFIX} --libdir=${PREFIX}/lib --prefix=${PREFIX} --disable-docs --enable-static --disable-shared || exit 1
   make -j$JOBS install || exit 1
+  mkdir -p $PREFIX/share/doc/fontconfig/ || exit 1
+  cp COPYING $PREFIX/share/doc/fontconfig/ || exit 1
+  cd .. || exit 1
+  rm -rf fontconfig-$FCONFIG || exit 1
 fi
 
 # magick
-if [ "$OS" == "Msys" ]; then
-  MAGICK=$MAGICK_WIN
-else
-  MAGICK=$MAGICK_UNIX
-fi
-MAGICK_URL=ftp://ftp.sunet.se/pub/multimedia/graphics/ImageMagick/ImageMagick-$MAGICK.tar.gz
 if [ ! -f ${PREFIX}/lib/libMagick++-6.Q32HDRI.a ]; then
   if [ ! -f $CWD/3rdparty/ImageMagick-$MAGICK.tar.gz ]; then
     wget $MAGICK_URL -O $CWD/3rdparty/ImageMagick-$MAGICK.tar.gz || exit 1
@@ -177,14 +215,26 @@ if [ ! -f ${PREFIX}/lib/libMagick++-6.Q32HDRI.a ]; then
   if [ ! -d $CWD/3rdparty/ImageMagick-$MAGICK ]; then
     tar xvf $CWD/3rdparty/ImageMagick-$MAGICK.tar.gz -C $CWD/3rdparty/ || exit 1
   fi
-  cd $CWD/3rdparty/ImageMagick-$MAGICK || exit 1
+  if [ "$MAGICK_BETA" == "1" ]; then
+    cd $CWD/3rdparty/ImageMagick-$MAGICK_UNIX_BETA_MAJOR || exit 1
+  else
+    cd $CWD/3rdparty/ImageMagick-$MAGICK || exit 1
+  fi
+  #if [ "$MAGICK" == "6.8.9-10" ]; then
+  #fi
   #if [ "$MAGICK" == "6.9.1-4" ]; then
-  #  patch -p0< $CWD/3rdparty/6.9.1-4_revert.diff || exit 1
-  #  patch -p0< $CWD/3rdparty/6.9.1-4_more.diff || exit 1
   #fi
   $MAKE distclean
-  CFLAGS="-m${BIT} ${BF}" CXXFLAGS="-m${BIT} ${BF} ${BSD} -I${PREFIX}/include" CPPFLAGS="-I${PREFIX}/include -L${PREFIX}/lib" ./configure --libdir=${PREFIX}/lib --prefix=${PREFIX} --disable-deprecated --with-magick-plus-plus=yes --with-quantum-depth=32 --without-dps --without-djvu --without-fftw --without-fpx --without-gslib --without-gvc --without-jbig --without-jpeg --without-lcms --without-lcms2 --without-openjp2 --without-lqr --without-lzma --without-openexr --without-pango --with-png --without-rsvg --without-tiff --without-webp --without-xml --with-zlib --without-bzlib --enable-static --disable-shared --enable-hdri --with-freetype --with-fontconfig --without-x --without-modules || exit 1
+  CFLAGS="-m${BIT} ${BF}" CXXFLAGS="-m${BIT} ${BF} ${BSD} -I${PREFIX}/include" CPPFLAGS="-I${PREFIX}/include -L${PREFIX}/lib" ./configure --libdir=${PREFIX}/lib --prefix=${PREFIX} --disable-docs --disable-deprecated --with-magick-plus-plus=yes --with-quantum-depth=32 --without-dps --without-djvu --without-fftw --without-fpx --without-gslib --without-gvc --without-jbig --without-jpeg --without-lcms --without-lcms2 --without-openjp2 --without-lqr --without-lzma --without-openexr --without-pango --with-png --without-rsvg --without-tiff --without-webp --without-xml --with-zlib --without-bzlib --enable-static --disable-shared --enable-hdri --with-freetype --with-fontconfig --without-x --without-modules || exit 1
   $MAKE -j$JOBS install || exit 1
+  mkdir -p $PREFIX/share/doc/ImageMagick/ || exit 1
+  cp LICENSE $PREFIX/share/doc/ImageMagick/ || exit 1
+  cd .. || exit 1
+  if [ "$MAGICK_BETA" == "1" ]; then
+    rm -rf ImageMagick-$MAGICK_UNIX_BETA_MAJOR || exit 1
+  else
+    rm -rf ImageMagick-$MAGICK || exit 1
+  fi
 fi
 
 cd $CWD || exit 1
@@ -207,15 +257,15 @@ if [ -d $PKG ]; then
 fi
 mkdir $CWD/$PKG || exit 1
 cp LICENSE README.md $CWD/$PKG/ || exit 1
-cp $PREFIX/share/doc/ImageMagick-6/LICENSE $CWD/$PKG/LICENSE.ImageMagick || exit 1
+cp $PREFIX/share/doc/ImageMagick/LICENSE $CWD/$PKG/LICENSE.ImageMagick || exit 1
 cp OpenFX/Support/LICENSE $CWD/$PKG/LICENSE.OpenFX || exit 1
-cp $CWD/3rdparty/libpng-*/LICENSE $CWD/$PKG/LICENSE.libpng || exit 1
+cp $PREFIX/share/doc/libpng/LICENSE $CWD/$PKG/LICENSE.libpng || exit 1
 
 if [ "$OS" == "Msys" ]; then
-  cp $CWD/3rdparty/zlib-*/README $CWD/$PKG/LICENSE.zlib || exit 1
-  cp $CWD/3rdparty/expat-*/COPYING $CWD/$PKG/LICENSE.expat || exit 1
-  cp $CWD/3rdparty/fontconfig-*/COPYING $CWD/$PKG/LICENSE.fontconfig || exit 1
-  cp $CWD/3rdparty/freetype-*/README $CWD/$PKG/LICENSE.freetype || exit 1
+  cp $PREFIX/share/doc/zlib/README $CWD/$PKG/LICENSE.zlib || exit 1
+  cp $PREFIX/share/doc/expat/COPYING $CWD/$PKG/LICENSE.expat || exit 1
+  cp $PREFIX/share/doc/fontconfig/COPYING $CWD/$PKG/LICENSE.fontconfig || exit 1
+  cp $PREFIX/share/doc/freetype/README $CWD/$PKG/LICENSE.freetype || exit 1
 fi
 
 # Strip and copy
