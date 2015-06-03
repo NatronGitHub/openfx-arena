@@ -87,7 +87,7 @@
 
 #define kPluginIdentifier "net.fxarena.openfx.Text"
 #define kPluginVersionMajor 3
-#define kPluginVersionMinor 0
+#define kPluginVersionMinor 1
 
 #define kSupportsTiles 0
 #define kSupportsMultiResolution 0
@@ -167,6 +167,11 @@
 #define kParamBackgroundColorLabel "Background color"
 #define kParamBackgroundColorHint "Adjust background color"
 
+#define kParamSrc "source"
+#define kParamSrcLabel "View source"
+#define kParamSrcHint "Enable or disable source input"
+#define kParamSrcDefault true
+
 using namespace OFX;
 
 class TextPlugin : public OFX::ImageEffect
@@ -203,6 +208,7 @@ private:
     OFX::DoubleParam *shadowSigma_;
     OFX::BooleanParam *bgColorEnabled_;
     OFX::RGBAParam *bgColor_;
+    OFX::BooleanParam *srcEnabled_;
 };
 
 TextPlugin::TextPlugin(OfxImageEffectHandle handle)
@@ -233,7 +239,8 @@ TextPlugin::TextPlugin(OfxImageEffectHandle handle)
     shadowSigma_ = fetchDoubleParam(kParamShadowSigma);
     bgColorEnabled_ = fetchBooleanParam(kParamBackgroundColorCheck);
     bgColor_ = fetchRGBAParam(kParamBackgroundColor);
-    assert(position_ && text_ && fontSize_ && fontName_ && textColor_ && fontDecor_ && strokeColor_ && strokeEnabled_ && strokeWidth_ && fontOverride_ && shadowEnabled_ && shadowOpacity_ && shadowSigma_ && bgColorEnabled_ && bgColor_);
+    srcEnabled_ = fetchBooleanParam(kParamSrc);
+    assert(position_ && text_ && fontSize_ && fontName_ && textColor_ && fontDecor_ && strokeColor_ && strokeEnabled_ && strokeWidth_ && fontOverride_ && shadowEnabled_ && shadowOpacity_ && shadowSigma_ && bgColorEnabled_ && bgColor_ && srcEnabled_);
 }
 
 TextPlugin::~TextPlugin()
@@ -296,6 +303,7 @@ void TextPlugin::render(const OFX::RenderArguments &args)
     bool use_shadow = false;
     bool use_bg = false;
     bool has_src = false;
+    bool srcEnabled = false;
     std::string text, fontOverride, fontName;
 
     position_->getValueAtTime(args.time, x, y);
@@ -313,6 +321,7 @@ void TextPlugin::render(const OFX::RenderArguments &args)
     shadowSigma_->getValueAtTime(args.time, shadowSigma);
     bgColorEnabled_->getValueAtTime(args.time, use_bg);
     bgColor_->getValueAtTime(args.time, r_b, g_b, b_b, a_b);
+    srcEnabled_->getValueAtTime(args.time, srcEnabled);
     fontName_->getOption(fontID,fontName);
 
     // use custom font
@@ -325,7 +334,7 @@ void TextPlugin::render(const OFX::RenderArguments &args)
     Magick::Image image(Magick::Geometry(width,height),Magick::Color("rgba(0,0,0,0)"));
 
     // src?
-    if (srcClip_ && srcClip_->isConnected()) {
+    if (srcClip_ && srcClip_->isConnected() && srcEnabled) {
         std::auto_ptr<const OFX::Image> srcImg(srcClip_->fetchImage(args.time));
         if (srcImg.get()) {
             OfxRectI srcRod = srcImg->getRegionOfDefinition();
@@ -420,7 +429,7 @@ void TextPlugin::render(const OFX::RenderArguments &args)
         dropShadow.composite(image,0,0,Magick::OverCompositeOp);
         image=dropShadow;
     }
-    if (use_shadow && has_src)
+    if (use_shadow && has_src && srcEnabled)
         setPersistentMessage(OFX::Message::eMessageError, "", "Shadow not supported when using source input");
 
     // set bg
@@ -434,7 +443,7 @@ void TextPlugin::render(const OFX::RenderArguments &args)
             container.composite(image,0,0,Magick::OverCompositeOp);
         image=container;
     }
-    if (use_bg && has_src)
+    if (use_bg && has_src && srcEnabled)
         setPersistentMessage(OFX::Message::eMessageError, "", "Background not supported when using source input");
 
     // Flip image
@@ -701,6 +710,15 @@ void TextPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, Cont
         param->setLabel(kParamBackgroundColorLabel);
         param->setHint(kParamBackgroundColorHint);
         param->setDefault(0., 0., 0., 1.);
+        param->setAnimates(true);
+        page->addChild(*param);
+    }
+    {
+        BooleanParamDescriptor* param = desc.defineBooleanParam(kParamSrc);
+        param->setLabel(kParamSrcLabel);
+        param->setHint(kParamSrcHint);
+        param->setEvaluateOnChange(true);
+        param->setDefault(kParamSrcDefault);
         param->setAnimates(true);
         page->addChild(*param);
     }
