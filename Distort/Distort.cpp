@@ -48,8 +48,8 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #define kPluginDescription "Distort image using varius techniques."
 
 #define kPluginIdentifier "net.fxarena.openfx.Distort"
-#define kPluginVersionMajor 2
-#define kPluginVersionMinor 3
+#define kPluginVersionMajor 3
+#define kPluginVersionMinor 0
 
 #define kParamVPixel "virtualPixelMethod"
 #define kParamVPixelLabel "Virtual Pixel"
@@ -116,6 +116,16 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #define kParamWaveLengthHint "Adjust wave length"
 #define kParamWaveLengthDefault 150
 
+#define kParamRollX "rollX"
+#define kParamRollXLabel "X"
+#define kParamRollXHint "Adjust roll X"
+#define kParamRollXDefault 0
+
+#define kParamRollY "rollY"
+#define kParamRollYLabel "Y"
+#define kParamRollYHint "Adjust roll Y"
+#define kParamRollYDefault 0
+
 #define kSupportsTiles 0
 #define kSupportsMultiResolution 0
 #define kSupportsRenderScale 1
@@ -148,6 +158,8 @@ private:
     OFX::DoubleParam *waveAmp_;
     OFX::DoubleParam *waveLength_;
     OFX::StringParam *sublabel_;
+    OFX::DoubleParam *rollX_;
+    OFX::DoubleParam *rollY_;
 };
 
 DistortPlugin::DistortPlugin(OfxImageEffectHandle handle)
@@ -175,7 +187,9 @@ DistortPlugin::DistortPlugin(OfxImageEffectHandle handle)
     waveAmp_ = fetchDoubleParam(kParamWaveAmp);
     waveLength_ = fetchDoubleParam(kParamWaveLength);
     sublabel_ = fetchStringParam(kNatronOfxParamStringSublabelName);
-    assert(vpixel_ && distort_ && arcAngle_ && arcRotate_ && arcTopRadius_&& arcBottomRadius_ && swirlDegree_ && implode_ && edge_ && embossRadius_ && embossSigma_ && waveAmp_ && waveLength_ && sublabel_);
+    rollX_ = fetchDoubleParam(kParamRollX);
+    rollY_ = fetchDoubleParam(kParamRollY);
+    assert(vpixel_ && distort_ && arcAngle_ && arcRotate_ && arcTopRadius_&& arcBottomRadius_ && swirlDegree_ && implode_ && edge_ && embossRadius_ && embossSigma_ && waveAmp_ && waveLength_ && sublabel_ && rollX_ && rollY_);
 }
 
 DistortPlugin::~DistortPlugin()
@@ -253,7 +267,7 @@ void DistortPlugin::render(const OFX::RenderArguments &args)
 
     // get params
     int vpixel,distort;
-    double arcAngle,arcRotate,arcTopRadius,arcBottomRadius,swirlDegree,implode,edge,embossRadius,embossSigma,waveAmp,waveLength;
+    double arcAngle,arcRotate,arcTopRadius,arcBottomRadius,swirlDegree,implode,edge,embossRadius,embossSigma,waveAmp,waveLength,rollX,rollY;
     vpixel_->getValueAtTime(args.time, vpixel);
     distort_->getValueAtTime(args.time, distort);
     arcAngle_->getValueAtTime(args.time, arcAngle);
@@ -267,6 +281,8 @@ void DistortPlugin::render(const OFX::RenderArguments &args)
     embossSigma_->getValueAtTime(args.time, embossSigma);
     waveAmp_->getValueAtTime(args.time, waveAmp);
     waveLength_->getValueAtTime(args.time, waveLength);
+    rollX_->getValueAtTime(args.time, rollX);
+    rollY_->getValueAtTime(args.time, rollY);
 
     // setup
     int width = srcRod.x2-srcRod.x1;
@@ -401,6 +417,9 @@ void DistortPlugin::render(const OFX::RenderArguments &args)
         image.backgroundColor(Magick::Color("rgba(0,0,0,0)"));
         image.wave(std::floor(waveAmp * args.renderScale.x + 0.5),std::floor(waveLength * args.renderScale.x + 0.5));
         break;
+    case 8: // Roll
+        image.roll(std::floor(rollX * args.renderScale.x + 0.5),std::floor(rollY * args.renderScale.x + 0.5));
+        break;
     }
 
     // flip and extent, if distort 0,1,2
@@ -502,6 +521,7 @@ void DistortPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, C
     GroupParamDescriptor *groupEdge = desc.defineGroupParam("Edge");
     GroupParamDescriptor *groupEmboss = desc.defineGroupParam("Emboss");
     GroupParamDescriptor *groupWave = desc.defineGroupParam("Wave");
+    GroupParamDescriptor *groupRoll = desc.defineGroupParam("Roll");
     {
         StringParamDescriptor* param = desc.defineStringParam(kNatronOfxParamStringSublabelName);
         param->setIsSecret(true);
@@ -523,6 +543,7 @@ void DistortPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, C
         param->appendOption("Edge");
         param->appendOption("Emboss");
         param->appendOption("Wave");
+        param->appendOption("Roll");
         param->setDefault(kParamDistortDefault);
         param->setAnimates(true);
         page->addChild(*param);
@@ -534,6 +555,7 @@ void DistortPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, C
         page->addChild(*groupImplode);
         page->addChild(*groupSwirl);
         page->addChild(*groupWave);
+        page->addChild(*groupRoll);
     }
     {
         DoubleParamDescriptor *param = desc.defineDoubleParam(kParamArcAngle);
@@ -633,6 +655,24 @@ void DistortPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, C
         param->setDisplayRange(0, 500);
         param->setDefault(kParamWaveLengthDefault);
         param->setParent(*groupWave);
+    }
+    {
+        DoubleParamDescriptor *param = desc.defineDoubleParam(kParamRollX);
+        param->setLabel(kParamRollXLabel);
+        param->setHint(kParamRollXHint);
+        param->setRange(-10000, 10000);
+        param->setDisplayRange(-500, 500);
+        param->setDefault(kParamRollXDefault);
+        param->setParent(*groupRoll);
+    }
+    {
+        DoubleParamDescriptor *param = desc.defineDoubleParam(kParamRollY);
+        param->setLabel(kParamRollYLabel);
+        param->setHint(kParamRollYHint);
+        param->setRange(-10000, 10000);
+        param->setDisplayRange(-500, 500);
+        param->setDefault(kParamRollYDefault);
+        param->setParent(*groupRoll);
     }
     {
         ChoiceParamDescriptor *param = desc.defineChoiceParam(kParamVPixel);
