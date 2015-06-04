@@ -1,7 +1,26 @@
-OpenFX Arena [![Build Status](https://travis-ci.org/olear/openfx-arena.svg)](https://travis-ci.org/olear/openfx-arena) [![GitHub issues](https://img.shields.io/github/issues/olear/openfx-arena.svg)](https://github.com/olear/openfx-arena/issues)
+OpenFX-Arena [![Build Status](https://travis-ci.org/olear/openfx-arena.svg)](https://travis-ci.org/olear/openfx-arena)
 ============
 
-A set of visual effect plugins (OFX) for Natron.
+A set of visual effect plugins (OpenFX/OFX) for Natron VFX.
+
+Plugins
+======
+
+ * Draw/Text
+ * Draw/Texture
+ * Filter/Distort
+    * Polar
+    * DePolar
+    * Arc
+    * Swirl
+    * Implode
+    * Edge
+    * Emboss
+    * Wave
+    * Roll
+ * Filter/Mirror
+ * Filter/Reflection
+ * Filter/Tile
 
 Download
 ========
