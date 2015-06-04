@@ -63,7 +63,7 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 #define kSupportsTiles 0
 #define kSupportsMultiResolution 0
-#define kSupportsRenderScale 1
+#define kSupportsRenderScale 0 // TODO?
 #define kRenderThreadSafety eRenderInstanceSafe
 
 using namespace OFX;
