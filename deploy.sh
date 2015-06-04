@@ -14,7 +14,7 @@ CWD=$(pwd)
 MAGICK_WIN=6.8.9-10 # higher is broken on mingw
 MAGICK_UNIX=6.9.1-4
 MAGICK_UNIX_BETA_MAJOR=6.9.1-5
-MAGICK_UNIX_BETA_MINOR=beta20150603
+MAGICK_UNIX_BETA_MINOR=beta20150603 #beta20150604 does not fix anything
 MAGICK_REL_URL=ftp://ftp.sunet.se/pub/multimedia/graphics/ImageMagick
 MAGICK_BETA_URL=http://www.imagemagick.org/download/beta
 

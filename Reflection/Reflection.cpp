@@ -43,7 +43,7 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 #define kPluginIdentifier "net.fxarena.openfx.Reflection"
 #define kPluginVersionMajor 2
-#define kPluginVersionMinor 0
+#define kPluginVersionMinor 1
 
 #define kParamSpace "spacing"
 #define kParamSpaceLabel "Spacing"
@@ -85,9 +85,9 @@ ReflectionPlugin::ReflectionPlugin(OfxImageEffectHandle handle)
 {
     Magick::InitializeMagick(NULL);
     dstClip_ = fetchClip(kOfxImageEffectOutputClipName);
-    assert(dstClip_ && dstClip_->getPixelComponents() == OFX::ePixelComponentRGB);
+    assert(dstClip_ && dstClip_->getPixelComponents() == OFX::ePixelComponentRGBA);
     srcClip_ = fetchClip(kOfxImageEffectSimpleSourceClipName);
-    assert(srcClip_ && srcClip_->getPixelComponents() == OFX::ePixelComponentRGB);
+    assert(srcClip_ && srcClip_->getPixelComponents() == OFX::ePixelComponentRGBA);
     maskClip_ = getContext() == OFX::eContextFilter ? NULL : fetchClip(getContext() == OFX::eContextPaint ? "Brush" : "Mask");
     assert(!maskClip_ || maskClip_->getPixelComponents() == OFX::ePixelComponentAlpha);
     spacing_ = fetchIntParam(kParamSpace);
@@ -161,7 +161,7 @@ void ReflectionPlugin::render(const OFX::RenderArguments &args)
 
     // get pixel component
     OFX::PixelComponentEnum dstComponents  = dstImg->getPixelComponents();
-    if (dstComponents != OFX::ePixelComponentRGB || (srcImg.get() && (dstComponents != srcImg->getPixelComponents()))) {
+    if (dstComponents != OFX::ePixelComponentRGBA || (srcImg.get() && (dstComponents != srcImg->getPixelComponents()))) {
         OFX::throwSuiteStatusException(kOfxStatErrFormat);
         return;
     }
@@ -186,15 +186,11 @@ void ReflectionPlugin::render(const OFX::RenderArguments &args)
     int mirrorHeight = srcHeight/2;
     Magick::Image image;
     Magick::Image image1;
-    Magick::Image container;
 
     // read source image
-    image.read(srcWidth,srcHeight,"RGB",Magick::FloatPixel,(float*)srcImg->getPixelData());
-    //image.matte(false);
-
-    // setup container
-    container.size(Magick::Geometry(srcWidth,srcHeight));
-    container.backgroundColor("black");
+    Magick::Image container(Magick::Geometry(srcWidth,srcHeight),Magick::Color("rgba(0,0,0,0)"));
+    if (srcClip_ && srcClip_->isConnected())
+        image.read(srcWidth,srcHeight,"RGBA",Magick::FloatPixel,(float*)srcImg->getPixelData());
 
     // proc images
     image1 = image;
@@ -208,8 +204,7 @@ void ReflectionPlugin::render(const OFX::RenderArguments &args)
         int maskHeight = maskRod.y2-maskRod.y1;
         if (maskWidth>0&&maskHeight>0) {
             Magick::Image mask(maskWidth,maskHeight,"A",Magick::FloatPixel,(float*)maskImg->getPixelData());
-            //mask.matte(false);
-            mask.negate();
+            //mask.negate();
             image1.composite(mask,0,0,Magick::CopyOpacityCompositeOp);
         }
     }
@@ -219,20 +214,22 @@ void ReflectionPlugin::render(const OFX::RenderArguments &args)
     container.composite(image,0,mirrorHeight-offset,Magick::OverCompositeOp);
 
     // return image
-    switch (dstBitDepth) {
-    case eBitDepthUByte: // 8bit
-        if (image.depth()>8)
-            image.depth(8);
-        container.write(0,0,srcWidth,srcHeight,"RGB",Magick::CharPixel,(float*)dstImg->getPixelData());
-        break;
-    case eBitDepthUShort: // 16bit
-        if (image.depth()>16)
-            image.depth(16);
-        container.write(0,0,srcWidth,srcHeight,"RGB",Magick::ShortPixel,(float*)dstImg->getPixelData());
-        break;
-    case eBitDepthFloat: // 32bit
-        container.write(0,0,srcWidth,srcHeight,"RGB",Magick::FloatPixel,(float*)dstImg->getPixelData());
-        break;
+    if (dstClip_ && dstClip_->isConnected() && srcClip_ && srcClip_->isConnected()) {
+        switch (dstBitDepth) {
+        case eBitDepthUByte: // 8bit
+            if (container.depth()>8)
+                container.depth(8);
+            container.write(0,0,srcWidth,srcHeight,"RGBA",Magick::CharPixel,(float*)dstImg->getPixelData());
+            break;
+        case eBitDepthUShort: // 16bit
+            if (container.depth()>16)
+                container.depth(16);
+            container.write(0,0,srcWidth,srcHeight,"RGBA",Magick::ShortPixel,(float*)dstImg->getPixelData());
+            break;
+        case eBitDepthFloat: // 32bit
+            container.write(0,0,srcWidth,srcHeight,"RGBA",Magick::FloatPixel,(float*)dstImg->getPixelData());
+            break;
+        }
     }
 }
 
@@ -281,7 +278,7 @@ void ReflectionPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc
 {
     // create the mandated source clip
     ClipDescriptor *srcClip = desc.defineClip(kOfxImageEffectSimpleSourceClipName);
-    srcClip->addSupportedComponent(ePixelComponentRGB);
+    srcClip->addSupportedComponent(ePixelComponentRGBA);
     srcClip->setTemporalClipAccess(false);
     srcClip->setSupportsTiles(kSupportsTiles);
     srcClip->setIsMask(false);
@@ -296,7 +293,7 @@ void ReflectionPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc
 
     // create the mandated output clip
     ClipDescriptor *dstClip = desc.defineClip(kOfxImageEffectOutputClipName);
-    dstClip->addSupportedComponent(ePixelComponentRGB);
+    dstClip->addSupportedComponent(ePixelComponentRGBA);
     dstClip->setSupportsTiles(kSupportsTiles);
 
     // make pages and params
