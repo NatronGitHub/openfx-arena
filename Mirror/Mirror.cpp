@@ -270,13 +270,13 @@ void MirrorPlugin::render(const OFX::RenderArguments &args)
     if (dstClip_ && dstClip_->isConnected() && srcClip_ && srcClip_->isConnected()) {
         switch (dstBitDepth) {
         case eBitDepthUByte: // 8bit
-            if (image.depth()>8)
-                image.depth(8);
+            if (container.depth()>8)
+                container.depth(8);
             container.write(0,0,srcWidth,srcHeight,"RGBA",Magick::CharPixel,(float*)dstImg->getPixelData());
             break;
         case eBitDepthUShort: // 16bit
-            if (image.depth()>16)
-                image.depth(16);
+            if (container.depth()>16)
+                container.depth(16);
             container.write(0,0,srcWidth,srcHeight,"RGBA",Magick::ShortPixel,(float*)dstImg->getPixelData());
             break;
         case eBitDepthFloat: // 32bit
