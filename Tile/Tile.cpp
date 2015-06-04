@@ -44,7 +44,7 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 #define kPluginIdentifier "net.fxarena.openfx.Tile"
 #define kPluginVersionMajor 2
-#define kPluginVersionMinor 0
+#define kPluginVersionMinor 1
 
 #define kParamRows "rows"
 #define kParamRowsLabel "Rows"
@@ -90,9 +90,9 @@ TilePlugin::TilePlugin(OfxImageEffectHandle handle)
 {
     Magick::InitializeMagick(NULL);
     dstClip_ = fetchClip(kOfxImageEffectOutputClipName);
-    assert(dstClip_ && dstClip_->getPixelComponents() == OFX::ePixelComponentRGB);
+    assert(dstClip_ && dstClip_->getPixelComponents() == OFX::ePixelComponentRGBA);
     srcClip_ = fetchClip(kOfxImageEffectSimpleSourceClipName);
-    assert(srcClip_ && srcClip_->getPixelComponents() == OFX::ePixelComponentRGB);
+    assert(srcClip_ && srcClip_->getPixelComponents() == OFX::ePixelComponentRGBA);
     rows_ = fetchIntParam(kParamRows);
     cols_ = fetchIntParam(kParamCols);
     offset_ = fetchIntParam(kParamTileTimeOffset);
@@ -159,7 +159,7 @@ void TilePlugin::render(const OFX::RenderArguments &args)
 
     // get pixel component
     OFX::PixelComponentEnum dstComponents  = dstImg->getPixelComponents();
-    if (dstComponents != OFX::ePixelComponentRGB || (srcImg.get() && (dstComponents != srcImg->getPixelComponents()))) {
+    if (dstComponents != OFX::ePixelComponentRGBA || (srcImg.get() && (dstComponents != srcImg->getPixelComponents()))) {
         OFX::throwSuiteStatusException(kOfxStatErrFormat);
         return;
     }
@@ -196,16 +196,13 @@ void TilePlugin::render(const OFX::RenderArguments &args)
     grid = makeGrid.str();
     std::list<Magick::Image> montagelist;
     std::list<Magick::Image> imageList;
-    Magick::Image container;
     Magick::Image image;
     Magick::Montage montage;
 
     // read source image
-    image.read(srcWidth,srcHeight,"RGB",Magick::FloatPixel,(float*)srcImg->getPixelData());
-
-    // setup container
-    container.size(Magick::Geometry(srcWidth,srcHeight));
-    container.backgroundColor("black");
+    Magick::Image container(Magick::Geometry(srcWidth,srcHeight),Magick::Color("rgba(0,0,0,0)"));
+    if (srcClip_ && srcClip_->isConnected())
+        image.read(srcWidth,srcHeight,"RGBA",Magick::FloatPixel,(float*)srcImg->getPixelData());
 
     // setup montage
     std::string fontFile;
@@ -218,7 +215,7 @@ void TilePlugin::render(const OFX::RenderArguments &args)
 
     montage.font(fontFile); // avoid warn, set default font
     montage.shadow(false);
-    montage.backgroundColor("black");
+    montage.backgroundColor(Magick::Color("rgba(0,0,0,0)"));
     montage.geometry(thumb);
     montage.tile(grid);
 
@@ -238,7 +235,7 @@ void TilePlugin::render(const OFX::RenderArguments &args)
                 int tileWidth = tileRod.x2-tileRod.x1;
                 int tileHeight = tileRod.y2-tileRod.y1;
                 if (tileWidth>0&&tileHeight>0) {
-                    Magick::Image tmpTile(tileWidth,tileHeight,"RGB",Magick::FloatPixel,(float*)tileImg->getPixelData());
+                    Magick::Image tmpTile(tileWidth,tileHeight,"RGBA",Magick::FloatPixel,(float*)tileImg->getPixelData());
                     if (tmpTile.columns()==tileWidth&&tmpTile.rows()==tileHeight)
                         imageList.push_back(tmpTile);
                 }
@@ -254,20 +251,22 @@ void TilePlugin::render(const OFX::RenderArguments &args)
     Magick::appendImages(&container,montagelist.begin(),montagelist.end());
 
     // return image
-    switch (dstBitDepth) {
-    case eBitDepthUByte: // 8bit
-        if (image.depth()>8)
-            image.depth(8);
-        container.write(0,0,srcWidth,srcHeight,"RGB",Magick::CharPixel,(float*)dstImg->getPixelData());
-        break;
-    case eBitDepthUShort: // 16bit
-        if (image.depth()>16)
-            image.depth(16);
-        container.write(0,0,srcWidth,srcHeight,"RGB",Magick::ShortPixel,(float*)dstImg->getPixelData());
-        break;
-    case eBitDepthFloat: // 32bit
-        container.write(0,0,srcWidth,srcHeight,"RGB",Magick::FloatPixel,(float*)dstImg->getPixelData());
-        break;
+    if (dstClip_ && dstClip_->isConnected() && srcClip_ && srcClip_->isConnected()) {
+        switch (dstBitDepth) {
+        case eBitDepthUByte: // 8bit
+            if (container.depth()>8)
+                container.depth(8);
+            container.write(0,0,srcWidth,srcHeight,"RGBA",Magick::CharPixel,(float*)dstImg->getPixelData());
+            break;
+        case eBitDepthUShort: // 16bit
+            if (container.depth()>16)
+                container.depth(16);
+            container.write(0,0,srcWidth,srcHeight,"RGBA",Magick::ShortPixel,(float*)dstImg->getPixelData());
+            break;
+        case eBitDepthFloat: // 32bit
+            container.write(0,0,srcWidth,srcHeight,"RGBA",Magick::FloatPixel,(float*)dstImg->getPixelData());
+            break;
+        }
     }
 }
 
@@ -316,14 +315,14 @@ void TilePluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, Cont
 {
     // create the mandated source clip
     ClipDescriptor *srcClip = desc.defineClip(kOfxImageEffectSimpleSourceClipName);
-    srcClip->addSupportedComponent(ePixelComponentRGB);
+    srcClip->addSupportedComponent(ePixelComponentRGBA);
     srcClip->setTemporalClipAccess(false);
     srcClip->setSupportsTiles(kSupportsTiles);
     srcClip->setIsMask(false);
 
     // create the mandated output clip
     ClipDescriptor *dstClip = desc.defineClip(kOfxImageEffectOutputClipName);
-    dstClip->addSupportedComponent(ePixelComponentRGB);
+    dstClip->addSupportedComponent(ePixelComponentRGBA);
     dstClip->setSupportsTiles(kSupportsTiles);
 
     // make pages and params
