@@ -43,7 +43,7 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 #define kPluginIdentifier "net.fxarena.openfx.Mirror"
 #define kPluginVersionMajor 3
-#define kPluginVersionMinor 0
+#define kPluginVersionMinor 1
 
 #define kParamMirror "mirrorType"
 #define kParamMirrorLabel "Type"
@@ -77,9 +77,9 @@ MirrorPlugin::MirrorPlugin(OfxImageEffectHandle handle)
 {
     Magick::InitializeMagick(NULL);
     dstClip_ = fetchClip(kOfxImageEffectOutputClipName);
-    assert(dstClip_ && dstClip_->getPixelComponents() == OFX::ePixelComponentRGB);
+    assert(dstClip_ && dstClip_->getPixelComponents() == OFX::ePixelComponentRGBA);
     srcClip_ = fetchClip(kOfxImageEffectSimpleSourceClipName);
-    assert(srcClip_ && srcClip_->getPixelComponents() == OFX::ePixelComponentRGB);
+    assert(srcClip_ && srcClip_->getPixelComponents() == OFX::ePixelComponentRGBA);
     mirror_ = fetchChoiceParam(kParamMirror);
     assert(mirror_);
 }
@@ -144,7 +144,7 @@ void MirrorPlugin::render(const OFX::RenderArguments &args)
 
     // get pixel component
     OFX::PixelComponentEnum dstComponents  = dstImg->getPixelComponents();
-    if (dstComponents != OFX::ePixelComponentRGB || (srcImg.get() && (dstComponents != srcImg->getPixelComponents()))) {
+    if (dstComponents != OFX::ePixelComponentRGBA || (srcImg.get() && (dstComponents != srcImg->getPixelComponents()))) {
         OFX::throwSuiteStatusException(kOfxStatErrFormat);
         return;
     }
@@ -166,7 +166,6 @@ void MirrorPlugin::render(const OFX::RenderArguments &args)
     int srcHeight = srcRod.y2-srcRod.y1;
     int mirrorWidth = srcWidth/2;
     int mirrorHeight = srcHeight/2;
-    Magick::Image container;
     Magick::Image image;
     Magick::Image image1;
     Magick::Image image2;
@@ -174,11 +173,9 @@ void MirrorPlugin::render(const OFX::RenderArguments &args)
     Magick::Image image4;
 
     // read source image
-    image.read(srcWidth,srcHeight,"RGB",Magick::FloatPixel,(float*)srcImg->getPixelData());
-
-    // setup container
-    container.size(Magick::Geometry(srcWidth,srcHeight));
-    container.backgroundColor("black");
+    Magick::Image container(Magick::Geometry(srcWidth,srcHeight),Magick::Color("rgba(0,0,0,0)"));
+    if (srcClip_ && srcClip_->isConnected())
+        image.read(srcWidth,srcHeight,"RGBA",Magick::FloatPixel,(float*)srcImg->getPixelData());
 
     // proc image(s)
     switch(mirror) {
@@ -270,20 +267,22 @@ void MirrorPlugin::render(const OFX::RenderArguments &args)
     }
 
     // return image
-    switch (dstBitDepth) {
-    case eBitDepthUByte: // 8bit
-        if (image.depth()>8)
-            image.depth(8);
-        container.write(0,0,srcWidth,srcHeight,"RGB",Magick::CharPixel,(float*)dstImg->getPixelData());
-        break;
-    case eBitDepthUShort: // 16bit
-        if (image.depth()>16)
-            image.depth(16);
-        container.write(0,0,srcWidth,srcHeight,"RGB",Magick::ShortPixel,(float*)dstImg->getPixelData());
-        break;
-    case eBitDepthFloat: // 32bit
-        container.write(0,0,srcWidth,srcHeight,"RGB",Magick::FloatPixel,(float*)dstImg->getPixelData());
-        break;
+    if (dstClip_ && dstClip_->isConnected() && srcClip_ && srcClip_->isConnected()) {
+        switch (dstBitDepth) {
+        case eBitDepthUByte: // 8bit
+            if (image.depth()>8)
+                image.depth(8);
+            container.write(0,0,srcWidth,srcHeight,"RGBA",Magick::CharPixel,(float*)dstImg->getPixelData());
+            break;
+        case eBitDepthUShort: // 16bit
+            if (image.depth()>16)
+                image.depth(16);
+            container.write(0,0,srcWidth,srcHeight,"RGBA",Magick::ShortPixel,(float*)dstImg->getPixelData());
+            break;
+        case eBitDepthFloat: // 32bit
+            container.write(0,0,srcWidth,srcHeight,"RGBA",Magick::FloatPixel,(float*)dstImg->getPixelData());
+            break;
+        }
     }
 }
 
@@ -332,14 +331,14 @@ void MirrorPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, Co
 {
     // create the mandated source clip
     ClipDescriptor *srcClip = desc.defineClip(kOfxImageEffectSimpleSourceClipName);
-    srcClip->addSupportedComponent(ePixelComponentRGB);
+    srcClip->addSupportedComponent(ePixelComponentRGBA);
     srcClip->setTemporalClipAccess(false);
     srcClip->setSupportsTiles(kSupportsTiles);
     srcClip->setIsMask(false);
 
     // create the mandated output clip
     ClipDescriptor *dstClip = desc.defineClip(kOfxImageEffectOutputClipName);
-    dstClip->addSupportedComponent(ePixelComponentRGB);
+    dstClip->addSupportedComponent(ePixelComponentRGBA);
     dstClip->setSupportsTiles(kSupportsTiles);
 
     // make pages and params
