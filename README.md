@@ -3,10 +3,22 @@ OpenFX Arena [![Build Status](https://travis-ci.org/olear/openfx-arena.svg)](htt
 
 A set of visual effect plugins (OFX) for Natron.
 
+Download
+========
+
+Download latest release from:
+
+ * https://github.com/olear/openfx-arena/releases
+ * http://openfx.fxarena.net/releases/
+
+Download latest snapshot from:
+
+ * http://openfx.fxarena.net/snapshots/
+
 Build
 =====
 
-Requires ImageMagick (MagickCore/Magick++ Q32-HDRI with fontconfig, freetype, libpng and zlib support, version 6.9.1-4 + patches in 3rdparty folder) installed prior to build. Also see 'deploy.sh' for more information.
+Requires ImageMagick (MagickCore/Magick++ Q32-HDRI with fontconfig, freetype, libpng and zlib support, version 6.9.1-5) installed prior to build. Also see 'deploy.sh' for more information.
 
 **Make on Linux**
 ```
