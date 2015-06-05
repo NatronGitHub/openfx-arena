@@ -49,12 +49,17 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 #define kPluginIdentifier "net.fxarena.openfx.Distort"
 #define kPluginVersionMajor 3
-#define kPluginVersionMinor 0
+#define kPluginVersionMinor 1
 
 #define kParamVPixel "virtualPixelMethod"
 #define kParamVPixelLabel "Virtual Pixel"
 #define kParamVPixelHint "Virtual Pixel Method. Affects (De)Polar/Arc"
 #define kParamVPixelDefault 12
+
+#define kParamPolarRotate "polarRotate"
+#define kParamPolarRotateLabel "Rotate"
+#define kParamPolarRotateHint "Polar rotate"
+#define kParamPolarRotateDefault 0
 
 #define kParamDistort "distort"
 #define kParamDistortLabel "Distort"
@@ -145,6 +150,7 @@ private:
     OFX::Clip *dstClip_;
     OFX::Clip *srcClip_;
     OFX::ChoiceParam *vpixel_;
+    OFX::DoubleParam *polarRotate_;
     OFX::ChoiceParam *distort_;
     OFX::DoubleParam *arcAngle_;
     OFX::DoubleParam *arcRotate_;
@@ -175,6 +181,7 @@ DistortPlugin::DistortPlugin(OfxImageEffectHandle handle)
 
     vpixel_ = fetchChoiceParam(kParamVPixel);
     distort_ = fetchChoiceParam(kParamDistort);
+    polarRotate_ = fetchDoubleParam(kParamPolarRotate);
     arcAngle_ = fetchDoubleParam(kParamArcAngle);
     arcRotate_ = fetchDoubleParam(kParamArcRotate);
     arcTopRadius_ = fetchDoubleParam(kParamArcTopRadius);
@@ -189,7 +196,7 @@ DistortPlugin::DistortPlugin(OfxImageEffectHandle handle)
     sublabel_ = fetchStringParam(kNatronOfxParamStringSublabelName);
     rollX_ = fetchDoubleParam(kParamRollX);
     rollY_ = fetchDoubleParam(kParamRollY);
-    assert(vpixel_ && distort_ && arcAngle_ && arcRotate_ && arcTopRadius_&& arcBottomRadius_ && swirlDegree_ && implode_ && edge_ && embossRadius_ && embossSigma_ && waveAmp_ && waveLength_ && sublabel_ && rollX_ && rollY_);
+    assert(vpixel_ && distort_ && polarRotate_ && arcAngle_ && arcRotate_ && arcTopRadius_&& arcBottomRadius_ && swirlDegree_ && implode_ && edge_ && embossRadius_ && embossSigma_ && waveAmp_ && waveLength_ && sublabel_ && rollX_ && rollY_);
 }
 
 DistortPlugin::~DistortPlugin()
@@ -267,9 +274,10 @@ void DistortPlugin::render(const OFX::RenderArguments &args)
 
     // get params
     int vpixel,distort;
-    double arcAngle,arcRotate,arcTopRadius,arcBottomRadius,swirlDegree,implode,edge,embossRadius,embossSigma,waveAmp,waveLength,rollX,rollY;
+    double polarRotate,arcAngle,arcRotate,arcTopRadius,arcBottomRadius,swirlDegree,implode,edge,embossRadius,embossSigma,waveAmp,waveLength,rollX,rollY;
     vpixel_->getValueAtTime(args.time, vpixel);
     distort_->getValueAtTime(args.time, distort);
+    polarRotate_->getValueAtTime(args.time, polarRotate);
     arcAngle_->getValueAtTime(args.time, arcAngle);
     arcRotate_->getValueAtTime(args.time, arcRotate);
     arcTopRadius_->getValueAtTime(args.time, arcTopRadius);
@@ -361,6 +369,8 @@ void DistortPlugin::render(const OFX::RenderArguments &args)
         image.distort(Magick::PolarDistortion, 0, distortArgs, Magick::MagickTrue);
         if (image.rows()>height)
             image.scale(scaleH.str());
+        if (polarRotate!=0)
+            image.rotate(polarRotate);
         break;
     case 1: // DePolar Distort
         image.backgroundColor(Magick::Color("rgba(0,0,0,0)"));
@@ -515,6 +525,7 @@ void DistortPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, C
 
     // make some pages and to things in
     PageParamDescriptor *page = desc.definePageParam("Distort");
+    GroupParamDescriptor *groupPolar = desc.defineGroupParam("Polar");
     GroupParamDescriptor *groupArc = desc.defineGroupParam("Arc");
     GroupParamDescriptor *groupSwirl = desc.defineGroupParam("Swirl");
     GroupParamDescriptor *groupImplode = desc.defineGroupParam("Implode");
@@ -549,6 +560,7 @@ void DistortPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, C
         page->addChild(*param);
     }
     {
+        page->addChild(*groupPolar);
         page->addChild(*groupArc);
         page->addChild(*groupEdge);
         page->addChild(*groupEmboss);
@@ -556,6 +568,15 @@ void DistortPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, C
         page->addChild(*groupSwirl);
         page->addChild(*groupWave);
         page->addChild(*groupRoll);
+    }
+    {
+        DoubleParamDescriptor *param = desc.defineDoubleParam(kParamPolarRotate);
+        param->setLabel(kParamPolarRotateLabel);
+        param->setHint(kParamPolarRotateHint);
+        param->setRange(-360, 360);
+        param->setDisplayRange(-360, 360);
+        param->setDefault(kParamPolarRotateDefault);
+        param->setParent(*groupPolar);
     }
     {
         DoubleParamDescriptor *param = desc.defineDoubleParam(kParamArcAngle);
