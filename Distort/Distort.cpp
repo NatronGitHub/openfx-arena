@@ -49,7 +49,7 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 #define kPluginIdentifier "net.fxarena.openfx.Distort"
 #define kPluginVersionMajor 3
-#define kPluginVersionMinor 1
+#define kPluginVersionMinor 2
 
 #define kParamVPixel "virtualPixelMethod"
 #define kParamVPixelLabel "Virtual Pixel"
@@ -60,6 +60,11 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #define kParamPolarRotateLabel "Rotate"
 #define kParamPolarRotateHint "Polar rotate"
 #define kParamPolarRotateDefault 0
+
+#define kParamPolarFlip "polarFlip"
+#define kParamPolarFlipLabel "Flip"
+#define kParamPolarFlipHint "Polar Flip"
+#define kParamPolarFlipDefault false
 
 #define kParamDistort "distort"
 #define kParamDistortLabel "Distort"
@@ -151,6 +156,7 @@ private:
     OFX::Clip *srcClip_;
     OFX::ChoiceParam *vpixel_;
     OFX::DoubleParam *polarRotate_;
+    OFX::BooleanParam *polarFlip_;
     OFX::ChoiceParam *distort_;
     OFX::DoubleParam *arcAngle_;
     OFX::DoubleParam *arcRotate_;
@@ -182,6 +188,7 @@ DistortPlugin::DistortPlugin(OfxImageEffectHandle handle)
     vpixel_ = fetchChoiceParam(kParamVPixel);
     distort_ = fetchChoiceParam(kParamDistort);
     polarRotate_ = fetchDoubleParam(kParamPolarRotate);
+    polarFlip_ = fetchBooleanParam(kParamPolarFlip);
     arcAngle_ = fetchDoubleParam(kParamArcAngle);
     arcRotate_ = fetchDoubleParam(kParamArcRotate);
     arcTopRadius_ = fetchDoubleParam(kParamArcTopRadius);
@@ -196,7 +203,7 @@ DistortPlugin::DistortPlugin(OfxImageEffectHandle handle)
     sublabel_ = fetchStringParam(kNatronOfxParamStringSublabelName);
     rollX_ = fetchDoubleParam(kParamRollX);
     rollY_ = fetchDoubleParam(kParamRollY);
-    assert(vpixel_ && distort_ && polarRotate_ && arcAngle_ && arcRotate_ && arcTopRadius_&& arcBottomRadius_ && swirlDegree_ && implode_ && edge_ && embossRadius_ && embossSigma_ && waveAmp_ && waveLength_ && sublabel_ && rollX_ && rollY_);
+    assert(vpixel_ && distort_ && polarRotate_ && polarFlip_ && arcAngle_ && arcRotate_ && arcTopRadius_&& arcBottomRadius_ && swirlDegree_ && implode_ && edge_ && embossRadius_ && embossSigma_ && waveAmp_ && waveLength_ && sublabel_ && rollX_ && rollY_);
 }
 
 DistortPlugin::~DistortPlugin()
@@ -275,9 +282,11 @@ void DistortPlugin::render(const OFX::RenderArguments &args)
     // get params
     int vpixel,distort;
     double polarRotate,arcAngle,arcRotate,arcTopRadius,arcBottomRadius,swirlDegree,implode,edge,embossRadius,embossSigma,waveAmp,waveLength,rollX,rollY;
+    bool polarFlip = false;
     vpixel_->getValueAtTime(args.time, vpixel);
     distort_->getValueAtTime(args.time, distort);
     polarRotate_->getValueAtTime(args.time, polarRotate);
+    polarFlip_->getValueAtTime(args.time, polarFlip);
     arcAngle_->getValueAtTime(args.time, arcAngle);
     arcRotate_->getValueAtTime(args.time, arcRotate);
     arcTopRadius_->getValueAtTime(args.time, arcTopRadius);
@@ -366,6 +375,8 @@ void DistortPlugin::render(const OFX::RenderArguments &args)
     switch (distort) {
     case 0: // Polar Distort
         image.backgroundColor(Magick::Color("rgba(0,0,0,0)"));
+        if (polarFlip)
+            image.flip();
         image.distort(Magick::PolarDistortion, 0, distortArgs, Magick::MagickTrue);
         if (image.rows()>height)
             image.scale(scaleH.str());
@@ -577,6 +588,14 @@ void DistortPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, C
         param->setDisplayRange(-360, 360);
         param->setDefault(kParamPolarRotateDefault);
         param->setParent(*groupPolar);
+    }
+    {
+        BooleanParamDescriptor *param = desc.defineBooleanParam(kParamPolarFlip);
+        param->setLabel(kParamPolarFlipLabel);
+        param->setHint(kParamPolarFlipHint);
+        param->setDefault(kParamPolarFlipDefault);
+        param->setParent(*groupPolar);
+        param->setAnimates(true);
     }
     {
         DoubleParamDescriptor *param = desc.defineDoubleParam(kParamArcAngle);
