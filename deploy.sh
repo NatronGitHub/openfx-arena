@@ -220,8 +220,9 @@ if [ ! -f ${PREFIX}/lib/libMagick++-6.Q32HDRI.a ]; then
   else
     cd $CWD/3rdparty/ImageMagick-$MAGICK || exit 1
   fi
-  #if [ "$MAGICK" == "6.8.9-10" ]; then
-  #fi
+  if [ "$MAGICK" == "6.8.9-10" ]; then
+    cat $CWD/3rdparty/composite-private.h > magick/composite-private.h || exit 1
+  fi
   #if [ "$MAGICK" == "6.9.1-4" ]; then
   #fi
   $MAKE distclean
