@@ -9,29 +9,34 @@ endif
 CXXFLAGS += -DOFX_EXTENSIONS_VEGAS -DOFX_EXTENSIONS_NUKE -DOFX_EXTENSIONS_TUTTLE -DOFX_EXTENSIONS_NATRON -I../SupportExt
 VPATH += ../SupportExt
 
-# Magick++
-ifeq ($(MAGICK),GraphicsMagick)
-  # Only for testing, GM don't support fontconfig so MagickText will not work.
-  MAGICK_CXXFLAGS = `GraphicsMagick++-config --cppflags --cxxflags`
-  MAGICK_LINKFLAGS = `GraphicsMagick++-config --ldflags --libs` 
-else
-  MAGICK_CXXFLAGS = `Magick++-config --cppflags --cxxflags`
-  MAGICK_LINKFLAGS = `Magick++-config --ldflags --libs`
-  ifeq ($(STATIC),1)
-    ifeq ($(OPENCL),1)
-      MAGICK_LINKFLAGS += -lXext -lXt -lSM -lICE -lX11
-    endif
+# GraphicsMagick
+GMAGICK_CXXFLAGS = `GraphicsMagick++-config --cppflags --cxxflags`
+GMAGICK_LINKFLAGS = `GraphicsMagick++-config --ldflags --libs` 
+
+# ImageMagick
+MAGICK_CXXFLAGS = `Magick++-config --cppflags --cxxflags`
+MAGICK_LINKFLAGS = `Magick++-config --ldflags --libs`
+ifeq ($(STATIC),1)
+  ifeq ($(OPENCL),1)
+    MAGICK_LINKFLAGS += -lXext -lXt -lSM -lICE -lX11
   endif
 endif
+
+# MinGW
 ifeq ($(MINGW),1)
   MAGICK_LINKFLAGS += -lgdi32
+  GMAGICK_LINKFLAGS += -lgdi32
 endif
+
+# Static
 ifeq ($(STATIC),1)
   MAGICK_LINKFLAGS += -lgomp -lm -lpthread
+  GMAGICK_LINKFLAGS += -lgomp -lm -lpthread
   ifeq ($(MINGW),1)
     MAGICK_LINKFLAGS += -lfontconfig -lfreetype -lexpat -lpng -lz
   endif
 endif
+
 # FreeBSD
 ifeq ($(FREEBSD),1)
   CXXFLAGS += -I/usr/local/include -std=c++11
