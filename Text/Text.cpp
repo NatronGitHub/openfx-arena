@@ -117,10 +117,6 @@
 #define kParamFontNameDefault "Arial"
 #define kParamFontNameAltDefault "DejaVu-Sans" // failsafe on Linux/BSD
 
-/*#define kParamFontDecor "fontDecor"
-#define kParamFontDecorLabel "Decoration"
-#define kParamFontDecorHint "Font decoration."*/
-
 #define kParamTextColor "textColor"
 #define kParamTextColorLabel "Fill Color"
 #define kParamTextColorHint "The fill color of the text to render"
@@ -163,15 +159,6 @@
 #define kParamBackgroundColorCheckHint "Enable or disable background color"
 #define kParamBackgroundColorCheckDefault false
 
-#define kParamBackgroundColor "backgroundColor"
-#define kParamBackgroundColorLabel "Background color"
-#define kParamBackgroundColorHint "Adjust background color"
-
-/*#define kParamSrc "source"
-#define kParamSrcLabel "View source"
-#define kParamSrcHint "Enable or disable source input"
-#define kParamSrcDefault true*/
-
 using namespace OFX;
 
 class TextPlugin : public OFX::ImageEffect
@@ -197,7 +184,6 @@ private:
     OFX::StringParam *text_;
     OFX::IntParam *fontSize_;
     OFX::ChoiceParam *fontName_;
-    //OFX::ChoiceParam *fontDecor_;
     OFX::RGBAParam *textColor_;
     OFX::RGBAParam *strokeColor_;
     OFX::BooleanParam *strokeEnabled_;
@@ -206,29 +192,21 @@ private:
     OFX::BooleanParam *shadowEnabled_;
     OFX::DoubleParam *shadowOpacity_;
     OFX::DoubleParam *shadowSigma_;
-    OFX::BooleanParam *bgColorEnabled_;
-    OFX::RGBAParam *bgColor_;
-    //OFX::BooleanParam *srcEnabled_;
 };
 
 TextPlugin::TextPlugin(OfxImageEffectHandle handle)
 : OFX::ImageEffect(handle)
 , dstClip_(0)
-/*, srcClip_(0)*/
 {
     Magick::InitializeMagick(NULL);
 
     dstClip_ = fetchClip(kOfxImageEffectOutputClipName);
     assert(dstClip_ && dstClip_->getPixelComponents() == OFX::ePixelComponentRGBA);
 
-    /*srcClip_ = fetchClip(kOfxImageEffectSimpleSourceClipName);
-    assert(!srcClip_ || srcClip_->getPixelComponents() == OFX::ePixelComponentRGBA);*/
-
     position_ = fetchDouble2DParam(kParamPosition);
     text_ = fetchStringParam(kParamText);
     fontSize_ = fetchIntParam(kParamFontSize);
     fontName_ = fetchChoiceParam(kParamFontName);
-    //fontDecor_ = fetchChoiceParam(kParamFontDecor);
     textColor_ = fetchRGBAParam(kParamTextColor);
     strokeColor_ = fetchRGBAParam(kParamStrokeColor);
     strokeEnabled_ = fetchBooleanParam(kParamStrokeCheck);
@@ -237,10 +215,7 @@ TextPlugin::TextPlugin(OfxImageEffectHandle handle)
     shadowEnabled_ = fetchBooleanParam(kParamShadowCheck);
     shadowOpacity_ = fetchDoubleParam(kParamShadowOpacity);
     shadowSigma_ = fetchDoubleParam(kParamShadowSigma);
-    bgColorEnabled_ = fetchBooleanParam(kParamBackgroundColorCheck);
-    bgColor_ = fetchRGBAParam(kParamBackgroundColor);
-    //srcEnabled_ = fetchBooleanParam(kParamSrc);
-    assert(position_ && text_ && fontSize_ && fontName_ && textColor_ /*&& fontDecor_*/ && strokeColor_ && strokeEnabled_ && strokeWidth_ && fontOverride_ && shadowEnabled_ && shadowOpacity_ && shadowSigma_ && bgColorEnabled_ && bgColor_ /*&& srcEnabled_*/ );
+    assert(position_ && text_ && fontSize_ && fontName_ && textColor_ && strokeColor_ && strokeEnabled_ && strokeWidth_ && fontOverride_ && shadowEnabled_ && shadowOpacity_ && shadowSigma_);
 }
 
 TextPlugin::~TextPlugin()
@@ -297,19 +272,16 @@ void TextPlugin::render(const OFX::RenderArguments &args)
     }
 
     // Get params
-    double x, y, r, g, b, a, r_s, g_s, b_s, a_s, strokeWidth,shadowOpacity,shadowSigma,r_b, g_b, b_b, a_b;
-    int fontSize, fontID/*, fontDecor*/;
+    double x, y, r, g, b, a, r_s, g_s, b_s, a_s, strokeWidth,shadowOpacity,shadowSigma;
+    int fontSize, fontID;
     bool use_stroke = false;
     bool use_shadow = false;
-    bool use_bg = false;
-    //bool srcEnabled = false;
     std::string text, fontOverride, fontName;
 
     position_->getValueAtTime(args.time, x, y);
     text_->getValueAtTime(args.time, text);
     fontSize_->getValueAtTime(args.time, fontSize);
     fontName_->getValueAtTime(args.time, fontID);
-    //fontDecor_->getValueAtTime(args.time, fontDecor);
     strokeEnabled_->getValueAtTime(args.time, use_stroke);
     strokeWidth_->getValueAtTime(args.time, strokeWidth);
     fontOverride_->getValueAtTime(args.time, fontOverride);
@@ -318,9 +290,6 @@ void TextPlugin::render(const OFX::RenderArguments &args)
     shadowEnabled_->getValueAtTime(args.time, use_shadow);
     shadowOpacity_->getValueAtTime(args.time, shadowOpacity);
     shadowSigma_->getValueAtTime(args.time, shadowSigma);
-    bgColorEnabled_->getValueAtTime(args.time, use_bg);
-    bgColor_->getValueAtTime(args.time, r_b, g_b, b_b, a_b);
-    //srcEnabled_->getValueAtTime(args.time, srcEnabled);
     fontName_->getOption(fontID,fontName);
 
     // use custom font
@@ -351,11 +320,6 @@ void TextPlugin::render(const OFX::RenderArguments &args)
     int b_sI = ((uint8_t)(255.0f *CLAMP(b_s, 0.0, 1.0)));
     /*int a_sI = ((uint8_t)(255.0f *CLAMP(a_s, 0.0, 1.0))); // enable on IM 6.9.1-3+
     a_s=a_sI;*/
-    int r_bI = ((uint8_t)(255.0f *CLAMP(r_b, 0.0, 1.0)));
-    int g_bI = ((uint8_t)(255.0f *CLAMP(g_b, 0.0, 1.0)));
-    int b_bI = ((uint8_t)(255.0f *CLAMP(b_b, 0.0, 1.0)));
-    /*int a_bI = ((uint8_t)(255.0f *CLAMP(a_b, 0.0, 1.0))); // enable on IM 6.9.1-3+
-    a_b=a_bI;*/
 
     std::ostringstream rgba;
     rgba << "rgba(" << rI <<"," << gI << "," << bI << "," << a << ")";
@@ -364,10 +328,6 @@ void TextPlugin::render(const OFX::RenderArguments &args)
     std::ostringstream rgba_s;
     rgba_s << "rgba(" << r_sI <<"," << g_sI << "," << b_sI << "," << a_s << ")";
     std::string strokeRGBA = rgba_s.str();
-
-    std::ostringstream rgba_b;
-    rgba_b << "rgba(" << r_bI <<"," << g_bI << "," << b_bI << "," << a_b << ")";
-    std::string bgRGBA = rgba_b.str();
 
     // Flip image
     image.flip();
@@ -387,21 +347,6 @@ void TextPlugin::render(const OFX::RenderArguments &args)
     if (use_stroke)
         text_draw_list.push_back(Magick::DrawableStrokeColor(strokeRGBA));
 
-    // Text decoration
-    /*if (fontDecor>0) {
-        switch(fontDecor) {
-        case 1:
-            text_draw_list.push_back(Magick::DrawableTextDecoration(Magick::UnderlineDecoration));
-            break;
-        case 2:
-            text_draw_list.push_back(Magick::DrawableTextDecoration(Magick::OverlineDecoration));
-            break;
-        case 3:
-            text_draw_list.push_back(Magick::DrawableTextDecoration(Magick::LineThroughDecoration));
-            break;
-        }
-    }*/
-
     // Draw
     image.draw(text_draw_list);
 
@@ -415,36 +360,6 @@ void TextPlugin::render(const OFX::RenderArguments &args)
         dropShadow.composite(image,0,0,Magick::OverCompositeOp);
         image=dropShadow;
     }
-
-    // set bg
-    if (use_bg) {
-        Magick::Image container(Magick::Geometry(width,height),Magick::Color(bgRGBA));
-        if (use_shadow && shadowSigma>0) {
-            double offset=std::floor(shadowSigma * args.renderScale.x + 0.5);
-            container.composite(image,0,-offset*4,Magick::OverCompositeOp);
-        }
-        else
-            container.composite(image,0,0,Magick::OverCompositeOp);
-        image=container;
-    }
-
-    // src? // currently buggy with different IM versions
-    /*if (srcClip_ && srcClip_->isConnected() && srcEnabled) {
-        std::auto_ptr<const OFX::Image> srcImg(srcClip_->fetchImage(args.time));
-        if (srcImg.get()) {
-            OfxRectI srcRod = srcImg->getRegionOfDefinition();
-            int srcWidth = srcRod.x2-srcRod.x1;
-            int srcHeight = srcRod.y2-srcRod.y1;
-            if (srcWidth==width && srcHeight==height) {
-                Magick::Image image1(width,height,"RGBA",Magick::FloatPixel,(float*)srcImg->getPixelData());
-                image1.flip();
-                image1.composite(image,0,0,Magick::BlendCompositeOp);
-                image=image1;
-            }
-            else
-                setPersistentMessage(OFX::Message::eMessageError, "", "Please set project format to same as source, or disconnect source.");
-        }
-    }*/
 
     // Flip image
     image.flip();
@@ -514,8 +429,6 @@ void TextPluginFactory::describe(OFX::ImageEffectDescriptor &desc)
     desc.addSupportedContext(eContextGenerator);
 
     // add supported pixel depths
-    //desc.addSupportedBitDepth(eBitDepthUByte);
-    //desc.addSupportedBitDepth(eBitDepthUShort);
     desc.addSupportedBitDepth(eBitDepthFloat);
 
     desc.setSupportsTiles(kSupportsTiles);
@@ -624,17 +537,6 @@ void TextPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, Cont
         param->setAnimates(true);
         page->addChild(*param);
     }
-    /*{
-        ChoiceParamDescriptor *param = desc.defineChoiceParam(kParamFontDecor);
-        param->setLabel(kParamFontDecorLabel);
-        param->setHint(kParamFontDecorHint);
-        param->appendOption("None");
-        param->appendOption("Underline");
-        param->appendOption("Overline");
-        param->appendOption("Strike-through");
-        param->setAnimates(true);
-        page->addChild(*param);
-    }*/
     {
         RGBAParamDescriptor* param = desc.defineRGBAParam(kParamTextColor);
         param->setLabel(kParamTextColorLabel);
@@ -696,32 +598,6 @@ void TextPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, Cont
         param->setDefault(kParamShadowSigmaDefault);
         page->addChild(*param);
     }
-    {
-        BooleanParamDescriptor* param = desc.defineBooleanParam(kParamBackgroundColorCheck);
-        param->setLabel(kParamBackgroundColorCheckLabel);
-        param->setHint(kParamBackgroundColorCheckHint);
-        param->setEvaluateOnChange(true);
-        param->setDefault(kParamBackgroundColorCheckDefault);
-        param->setAnimates(true);
-        page->addChild(*param);
-    }
-    {
-        RGBAParamDescriptor* param = desc.defineRGBAParam(kParamBackgroundColor);
-        param->setLabel(kParamBackgroundColorLabel);
-        param->setHint(kParamBackgroundColorHint);
-        param->setDefault(0., 0., 0., 1.);
-        param->setAnimates(true);
-        page->addChild(*param);
-    }
-    /*{
-        BooleanParamDescriptor* param = desc.defineBooleanParam(kParamSrc);
-        param->setLabel(kParamSrcLabel);
-        param->setHint(kParamSrcHint);
-        param->setEvaluateOnChange(true);
-        param->setDefault(kParamSrcDefault);
-        param->setAnimates(true);
-        page->addChild(*param);
-    }*/
 }
 
 /** @brief The create instance function, the plugin must return an object derived from the \ref OFX::ImageEffect class */
