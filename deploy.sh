@@ -26,8 +26,13 @@ MAGICK_UNIX_BETA_MAJOR=6.9.1-5
 MAGICK_UNIX_BETA_MINOR=beta20150607
 MAGICK_REL_URL=ftp://ftp.sunet.se/pub/multimedia/graphics/ImageMagick
 MAGICK_BETA_URL=http://www.imagemagick.org/download/beta
-MAGICK_DEF_OPT="--disable-docs --disable-deprecated --with-magick-plus-plus=yes --with-quantum-depth=32 --without-dps --without-djvu --without-fftw --without-fpx --without-gslib --without-gvc --without-jbig --without-jpeg --without-lcms --without-lcms2 --without-openjp2 --without-lqr --without-lzma --without-openexr --without-pango --with-png --without-rsvg --without-tiff --without-webp --without-xml --with-zlib --without-bzlib --enable-static --disable-shared --enable-hdri --with-freetype --with-fontconfig --without-x --without-modules"
-MAGICK_STRIP_OPT="--disable-docs --disable-deprecated --with-magick-plus-plus=yes --with-quantum-depth=32 --without-dps --without-djvu --without-fftw --without-fpx --without-gslib --without-gvc --without-jbig --without-jpeg --without-lcms --without-lcms2 --without-openjp2 --without-lqr --without-lzma --without-openexr --without-pango --without-png --without-rsvg --without-tiff --without-webp --without-xml --without-zlib --without-bzlib --enable-static --disable-shared --enable-hdri --without-freetype --without-fontconfig --without-x --without-modules"
+if [ -z "$QUANTUM" ]; then
+  Q=32
+else
+  Q=$QUANTUM
+fi
+MAGICK_DEF_OPT="--disable-docs --disable-deprecated --with-magick-plus-plus=yes --with-quantum-depth=${Q} --without-dps --without-djvu --without-fftw --without-fpx --without-gslib --without-gvc --without-jbig --without-jpeg --without-lcms --without-lcms2 --without-openjp2 --without-lqr --without-lzma --without-openexr --without-pango --with-png --without-rsvg --without-tiff --without-webp --without-xml --with-zlib --without-bzlib --enable-static --disable-shared --enable-hdri --with-freetype --with-fontconfig --without-x --without-modules"
+MAGICK_STRIP_OPT="--disable-docs --disable-deprecated --with-magick-plus-plus=yes --with-quantum-depth=${Q} --without-dps --without-djvu --without-fftw --without-fpx --without-gslib --without-gvc --without-jbig --without-jpeg --without-lcms --without-lcms2 --without-openjp2 --without-lqr --without-lzma --without-openexr --without-pango --without-png --without-rsvg --without-tiff --without-webp --without-xml --without-zlib --without-bzlib --enable-static --disable-shared --enable-hdri --without-freetype --without-fontconfig --without-x --without-modules"
 
 if [ "$MAGICK_STRIP" == "1" ]; then
   MAGICK_OPT=$MAGICK_STRIP_OPT
@@ -212,7 +217,7 @@ fi
 if [ "$CLEAN" == "1" ]; then
   rm -rf $CWD/3rdparty/ImageMagick-$MAGICK
 fi
-if [ ! -f ${PREFIX}/lib/libMagick++-6.Q32HDRI.a ]; then
+if [ ! -f ${PREFIX}/lib/libMagick++-6.Q${Q}HDRI.a ]; then
   if [ ! -f $CWD/3rdparty/ImageMagick-$MAGICK.tar.gz ]; then
     wget $MAGICK_URL -O $CWD/3rdparty/ImageMagick-$MAGICK.tar.gz || exit 1
   fi
