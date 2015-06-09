@@ -1,71 +1,7 @@
 OpenFX-Arena [![Build Status](https://travis-ci.org/olear/openfx-arena.svg)](https://travis-ci.org/olear/openfx-arena)
 ============
 ![screenshot](https://cloud.githubusercontent.com/assets/7461595/7781564/a34444ce-00f0-11e5-957d-933ac91e0590.png)
-A set of visual effect plugins (OpenFX/OFX) for Natron VFX.
-
-Plugins
-======
-
- * Draw/Text
- * Draw/Texture
- * Filter/Distort
-    * Polar
-    * DePolar
-    * Arc
-    * Swirl
-    * Implode
-    * Edge
-    * Emboss
-    * Wave
-    * Roll
- * Filter/Mirror
- * Filter/Reflection
- * Filter/Tile
-
-Download
-========
-
-Download latest release from:
-
- * https://github.com/olear/openfx-arena/releases
- * http://openfx.fxarena.net/releases/
-
-Download latest snapshot from:
-
- * http://openfx.fxarena.net/snapshots/
-
-Build
-=====
-
-Requires ImageMagick (MagickCore/Magick++ Q32-HDRI with fontconfig, freetype, libpng and zlib support, version 6.9.1-5) installed prior to build. Also see 'deploy.sh' for more information.
-
-**Make on Linux**
-```
-make CONFIG=release
-```
-
-**Make on FreeBSD**
-```
-gmake FREEBSD=1 CONFIG=release
-```
-
-**Make on Windows (MinGW)**
-
-Download and install MinGW64, MSYS, pkgconfig. Then build zlib, libpng, expat, freetype, fontconfig and ImageMagick. see 'deploy.sh' for recommended build options.
-
-```
-make STATIC=1 MINGW=1 BIT=64 CONFIG=release
-```
-
-**Install on Linux/FreeBSD**
-```
-cp -a Bundle/*-*-*/Arena.ofx.bundle /usr/OFX/Plugins/
-```
-
-**Install on Windows**
-```
-cp -a Bundle/*-*-*/Arena.ofx.bundle "/c/Program Files/Common Files/OFX/Plugins/"
-```
+A set of visual effect (OpenFX) plugins designed for Natron VFX.
 
 License
 =======
