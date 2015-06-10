@@ -171,7 +171,7 @@
 
 #define kParamPango "pango"
 #define kParamPangoLabel "Pango markup"
-#define kParamPangoHint "Enable/Disable Pango Markup Language"
+#define kParamPangoHint "Enable/Disable Pango Markup Language.\n\n http://www.imagemagick.org/Usage/text/#pango"
 #define kParamPangoDefault false
 
 using namespace OFX;
@@ -405,7 +405,7 @@ void TextPlugin::render(const OFX::RenderArguments &args)
         image.draw(text_draw_list);
 
     // Shadow
-    if (use_shadow && !use_pango) {
+    if (use_shadow) {
         Magick::Image dropShadow;
         dropShadow=image;
         dropShadow.backgroundColor("Black");
