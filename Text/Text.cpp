@@ -164,9 +164,9 @@
 #define kParamInterwordSpacingHint "Spacing between words"
 #define kParamInterwordSpacingDefault 0
 
-#define kParamTextSpacing "textKerning"
-#define kParamTextSpacingLabel "Text kerning"
-#define kParamTextSpacingHint "Adjust text kerning"
+#define kParamTextSpacing "letterSpacing"
+#define kParamTextSpacingLabel "Letter spacing"
+#define kParamTextSpacingHint "Spacing between letters"
 #define kParamTextSpacingDefault 0
 
 using namespace OFX;
@@ -363,14 +363,11 @@ void TextPlugin::render(const OFX::RenderArguments &args)
     text_draw_list.push_back(Magick::DrawableFont(fontName));
     text_draw_list.push_back(Magick::DrawableText(xtext, ytext, text));
     text_draw_list.push_back(Magick::DrawableFillColor(textRGBA));
+    text_draw_list.push_back(Magick::DrawableTextInterlineSpacing(std::floor(interlineSpacing * args.renderScale.x + 0.5)));
+    text_draw_list.push_back(Magick::DrawableTextInterwordSpacing(std::floor(interwordSpacing * args.renderScale.x + 0.5)));
+    text_draw_list.push_back(Magick::DrawableTextKerning(std::floor(textSpacing * args.renderScale.x + 0.5)));
     if (use_stroke)
         text_draw_list.push_back(Magick::DrawableStrokeColor(strokeRGBA));
-    if (interlineSpacing!=0)
-        text_draw_list.push_back(Magick::DrawableTextInterlineSpacing(std::floor(interlineSpacing * args.renderScale.x + 0.5)));
-    if (interwordSpacing!=0)
-        text_draw_list.push_back(Magick::DrawableTextInterwordSpacing(std::floor(interwordSpacing * args.renderScale.x + 0.5)));
-    if (textSpacing!=0)
-        text_draw_list.push_back(Magick::DrawableTextKerning(std::floor(textSpacing * args.renderScale.x + 0.5)));
 
     // Draw
     image.draw(text_draw_list);
@@ -508,6 +505,33 @@ void TextPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, Cont
         }
     }
     {
+        DoubleParamDescriptor *param = desc.defineDoubleParam(kParamTextSpacing);
+        param->setLabel(kParamTextSpacingLabel);
+        param->setHint(kParamTextSpacingHint);
+        param->setRange(-1000, 1000);
+        param->setDisplayRange(-100, 100);
+        param->setDefault(kParamTextSpacingDefault);
+        page->addChild(*param);
+    }
+    {
+        DoubleParamDescriptor *param = desc.defineDoubleParam(kParamInterwordSpacing);
+        param->setLabel(kParamInterwordSpacingLabel);
+        param->setHint(kParamInterwordSpacingHint);
+        param->setRange(-1000, 1000);
+        param->setDisplayRange(-100, 100);
+        param->setDefault(kParamInterwordSpacingDefault);
+        page->addChild(*param);
+    }
+    {
+        DoubleParamDescriptor *param = desc.defineDoubleParam(kParamInterlineSpacing);
+        param->setLabel(kParamInterlineSpacingLabel);
+        param->setHint(kParamInterlineSpacingHint);
+        param->setRange(-1000, 1000);
+        param->setDisplayRange(-100, 100);
+        param->setDefault(kParamInterlineSpacingDefault);
+        page->addChild(*param);
+    }
+    {
         StringParamDescriptor* param = desc.defineStringParam(kParamText);
         param->setLabel(kParamTextLabel);
         param->setHint(kParamTextHint);
@@ -621,33 +645,6 @@ void TextPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, Cont
         param->setRange(0, 100);
         param->setDisplayRange(0, 10);
         param->setDefault(kParamShadowSigmaDefault);
-        page->addChild(*param);
-    }
-    {
-        DoubleParamDescriptor *param = desc.defineDoubleParam(kParamInterlineSpacing);
-        param->setLabel(kParamInterlineSpacingLabel);
-        param->setHint(kParamInterlineSpacingHint);
-        param->setRange(-1000, 1000);
-        param->setDisplayRange(-100, 100);
-        param->setDefault(kParamInterlineSpacingDefault);
-        page->addChild(*param);
-    }
-    {
-        DoubleParamDescriptor *param = desc.defineDoubleParam(kParamInterwordSpacing);
-        param->setLabel(kParamInterwordSpacingLabel);
-        param->setHint(kParamInterwordSpacingHint);
-        param->setRange(-1000, 1000);
-        param->setDisplayRange(-100, 100);
-        param->setDefault(kParamInterwordSpacingDefault);
-        page->addChild(*param);
-    }
-    {
-        DoubleParamDescriptor *param = desc.defineDoubleParam(kParamTextSpacing);
-        param->setLabel(kParamTextSpacingLabel);
-        param->setHint(kParamTextSpacingHint);
-        param->setRange(-1000, 1000);
-        param->setDisplayRange(-100, 100);
-        param->setDefault(kParamTextSpacingDefault);
         page->addChild(*param);
     }
 }
