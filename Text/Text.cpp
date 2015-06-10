@@ -164,6 +164,11 @@
 #define kParamInterwordSpacingHint "Spacing between words"
 #define kParamInterwordSpacingDefault 0
 
+#define kParamTextSpacing "textKerning"
+#define kParamTextSpacingLabel "Text kerning"
+#define kParamTextSpacingHint "Adjust text kerning"
+#define kParamTextSpacingDefault 0
+
 using namespace OFX;
 
 class TextPlugin : public OFX::ImageEffect
@@ -199,6 +204,7 @@ private:
     OFX::DoubleParam *shadowSigma_;
     OFX::DoubleParam *interlineSpacing_;
     OFX::DoubleParam *interwordSpacing_;
+    OFX::DoubleParam *textSpacing_;
 };
 
 TextPlugin::TextPlugin(OfxImageEffectHandle handle)
@@ -224,7 +230,8 @@ TextPlugin::TextPlugin(OfxImageEffectHandle handle)
     shadowSigma_ = fetchDoubleParam(kParamShadowSigma);
     interlineSpacing_ = fetchDoubleParam(kParamInterlineSpacing);
     interwordSpacing_ = fetchDoubleParam(kParamInterwordSpacing);
-    assert(position_ && text_ && fontSize_ && fontName_ && textColor_ && strokeColor_ && strokeEnabled_ && strokeWidth_ && fontOverride_ && shadowEnabled_ && shadowOpacity_ && shadowSigma_ && interlineSpacing_ && interwordSpacing_);
+    textSpacing_ = fetchDoubleParam(kParamTextSpacing);
+    assert(position_ && text_ && fontSize_ && fontName_ && textColor_ && strokeColor_ && strokeEnabled_ && strokeWidth_ && fontOverride_ && shadowEnabled_ && shadowOpacity_ && shadowSigma_ && interlineSpacing_ && interwordSpacing_ && textSpacing_);
 }
 
 TextPlugin::~TextPlugin()
@@ -281,7 +288,7 @@ void TextPlugin::render(const OFX::RenderArguments &args)
     }
 
     // Get params
-    double x, y, r, g, b, a, r_s, g_s, b_s, a_s, strokeWidth,shadowOpacity,shadowSigma,interlineSpacing,interwordSpacing;
+    double x, y, r, g, b, a, r_s, g_s, b_s, a_s, strokeWidth,shadowOpacity,shadowSigma,interlineSpacing,interwordSpacing,textSpacing;
     int fontSize, fontID;
     bool use_stroke = false;
     bool use_shadow = false;
@@ -301,6 +308,7 @@ void TextPlugin::render(const OFX::RenderArguments &args)
     shadowSigma_->getValueAtTime(args.time, shadowSigma);
     interlineSpacing_->getValueAtTime(args.time, interlineSpacing);
     interwordSpacing_->getValueAtTime(args.time, interwordSpacing);
+    textSpacing_->getValueAtTime(args.time, textSpacing);
     fontName_->getOption(fontID,fontName);
 
     // use custom font
@@ -361,6 +369,8 @@ void TextPlugin::render(const OFX::RenderArguments &args)
         text_draw_list.push_back(Magick::DrawableTextInterlineSpacing(std::floor(interlineSpacing * args.renderScale.x + 0.5)));
     if (interwordSpacing!=0)
         text_draw_list.push_back(Magick::DrawableTextInterwordSpacing(std::floor(interwordSpacing * args.renderScale.x + 0.5)));
+    if (textSpacing!=0)
+        text_draw_list.push_back(Magick::DrawableTextKerning(std::floor(textSpacing * args.renderScale.x + 0.5)));
 
     // Draw
     image.draw(text_draw_list);
@@ -629,6 +639,15 @@ void TextPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, Cont
         param->setRange(-1000, 1000);
         param->setDisplayRange(-100, 100);
         param->setDefault(kParamInterwordSpacingDefault);
+        page->addChild(*param);
+    }
+    {
+        DoubleParamDescriptor *param = desc.defineDoubleParam(kParamTextSpacing);
+        param->setLabel(kParamTextSpacingLabel);
+        param->setHint(kParamTextSpacingHint);
+        param->setRange(-1000, 1000);
+        param->setDisplayRange(-100, 100);
+        param->setDefault(kParamTextSpacingDefault);
         page->addChild(*param);
     }
 }
