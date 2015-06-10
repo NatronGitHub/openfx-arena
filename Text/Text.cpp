@@ -86,8 +86,8 @@
 #define kPluginDescription  "A simple text generator."
 
 #define kPluginIdentifier "net.fxarena.openfx.Text"
-#define kPluginVersionMajor 3
-#define kPluginVersionMinor 2
+#define kPluginVersionMajor 4
+#define kPluginVersionMinor 0
 
 #define kSupportsTiles 0
 #define kSupportsMultiResolution 0
@@ -159,6 +159,11 @@
 #define kParamBackgroundColorCheckHint "Enable or disable background color"
 #define kParamBackgroundColorCheckDefault false
 
+#define kParamInterlineSpacing "lineSpacing"
+#define kParamInterlineSpacingLabel "Line spacing"
+#define kParamInterlineSpacingHint "Spacing between lines"
+#define kParamInterlineSpacingDefault 0
+
 using namespace OFX;
 
 class TextPlugin : public OFX::ImageEffect
@@ -192,6 +197,7 @@ private:
     OFX::BooleanParam *shadowEnabled_;
     OFX::DoubleParam *shadowOpacity_;
     OFX::DoubleParam *shadowSigma_;
+    OFX::DoubleParam *interlineSpacing_;
 };
 
 TextPlugin::TextPlugin(OfxImageEffectHandle handle)
@@ -215,7 +221,8 @@ TextPlugin::TextPlugin(OfxImageEffectHandle handle)
     shadowEnabled_ = fetchBooleanParam(kParamShadowCheck);
     shadowOpacity_ = fetchDoubleParam(kParamShadowOpacity);
     shadowSigma_ = fetchDoubleParam(kParamShadowSigma);
-    assert(position_ && text_ && fontSize_ && fontName_ && textColor_ && strokeColor_ && strokeEnabled_ && strokeWidth_ && fontOverride_ && shadowEnabled_ && shadowOpacity_ && shadowSigma_);
+    interlineSpacing_ = fetchDoubleParam(kParamInterlineSpacing);
+    assert(position_ && text_ && fontSize_ && fontName_ && textColor_ && strokeColor_ && strokeEnabled_ && strokeWidth_ && fontOverride_ && shadowEnabled_ && shadowOpacity_ && shadowSigma_ && interlineSpacing_);
 }
 
 TextPlugin::~TextPlugin()
@@ -272,7 +279,7 @@ void TextPlugin::render(const OFX::RenderArguments &args)
     }
 
     // Get params
-    double x, y, r, g, b, a, r_s, g_s, b_s, a_s, strokeWidth,shadowOpacity,shadowSigma;
+    double x, y, r, g, b, a, r_s, g_s, b_s, a_s, strokeWidth,shadowOpacity,shadowSigma,interlineSpacing;
     int fontSize, fontID;
     bool use_stroke = false;
     bool use_shadow = false;
@@ -290,6 +297,7 @@ void TextPlugin::render(const OFX::RenderArguments &args)
     shadowEnabled_->getValueAtTime(args.time, use_shadow);
     shadowOpacity_->getValueAtTime(args.time, shadowOpacity);
     shadowSigma_->getValueAtTime(args.time, shadowSigma);
+    interlineSpacing_->getValueAtTime(args.time, interlineSpacing);
     fontName_->getOption(fontID,fontName);
 
     // use custom font
@@ -346,6 +354,8 @@ void TextPlugin::render(const OFX::RenderArguments &args)
     text_draw_list.push_back(Magick::DrawableFillColor(textRGBA));
     if (use_stroke)
         text_draw_list.push_back(Magick::DrawableStrokeColor(strokeRGBA));
+    if (interlineSpacing!=0)
+        text_draw_list.push_back(Magick::DrawableTextInterlineSpacing(interlineSpacing));
 
     // Draw
     image.draw(text_draw_list);
@@ -596,6 +606,15 @@ void TextPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, Cont
         param->setRange(0, 100);
         param->setDisplayRange(0, 10);
         param->setDefault(kParamShadowSigmaDefault);
+        page->addChild(*param);
+    }
+    {
+        DoubleParamDescriptor *param = desc.defineDoubleParam(kParamInterlineSpacing);
+        param->setLabel(kParamInterlineSpacingLabel);
+        param->setHint(kParamInterlineSpacingHint);
+        param->setRange(-1000, 1000);
+        param->setDisplayRange(-100, 100);
+        param->setDefault(kParamInterlineSpacingDefault);
         page->addChild(*param);
     }
 }
