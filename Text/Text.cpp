@@ -399,10 +399,13 @@ void TextPlugin::render(const OFX::RenderArguments &args)
         text_draw_list.push_back(Magick::DrawableStrokeColor(strokeRGBA));
 
     // Draw
-    image.draw(text_draw_list);
+    if (has_pango && use_pango)
+        image.read("pango:"+text);
+    else
+        image.draw(text_draw_list);
 
     // Shadow
-    if (use_shadow) {
+    if (use_shadow && !use_pango) {
         Magick::Image dropShadow;
         dropShadow=image;
         dropShadow.backgroundColor("Black");
