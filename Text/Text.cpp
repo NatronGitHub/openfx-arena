@@ -169,6 +169,11 @@
 #define kParamTextSpacingHint "Spacing between letters"
 #define kParamTextSpacingDefault 0
 
+#define kParamPango "pango"
+#define kParamPangoLabel "Pango markup"
+#define kParamPangoHint "Enable/Disable Pango Markup Language"
+#define kParamPangoDefault false
+
 using namespace OFX;
 
 class TextPlugin : public OFX::ImageEffect
@@ -188,7 +193,6 @@ public:
 
 private:
     // do not need to delete these, the ImageEffect is managing them for us
-    //OFX::Clip *srcClip_;
     OFX::Clip *dstClip_;
     OFX::Double2DParam *position_;
     OFX::StringParam *text_;
@@ -205,6 +209,10 @@ private:
     OFX::DoubleParam *interlineSpacing_;
     OFX::DoubleParam *interwordSpacing_;
     OFX::DoubleParam *textSpacing_;
+    OFX::BooleanParam *use_pango_;
+    bool has_pango;
+    bool has_fontconfig;
+    bool has_freetype;
 };
 
 TextPlugin::TextPlugin(OfxImageEffectHandle handle)
@@ -212,6 +220,18 @@ TextPlugin::TextPlugin(OfxImageEffectHandle handle)
 , dstClip_(0)
 {
     Magick::InitializeMagick(NULL);
+
+    has_pango = false;
+    has_fontconfig = false;
+    has_freetype = false;
+
+    std::string delegates = MagickCore::GetMagickDelegates();
+    if (delegates.find("fontconfig") != std::string::npos)
+        has_fontconfig = true;
+    if (delegates.find("freetype") != std::string::npos)
+        has_freetype = true;
+    if (delegates.find("pango") != std::string::npos)
+        has_pango = true;
 
     dstClip_ = fetchClip(kOfxImageEffectOutputClipName);
     assert(dstClip_ && dstClip_->getPixelComponents() == OFX::ePixelComponentRGBA);
@@ -231,7 +251,8 @@ TextPlugin::TextPlugin(OfxImageEffectHandle handle)
     interlineSpacing_ = fetchDoubleParam(kParamInterlineSpacing);
     interwordSpacing_ = fetchDoubleParam(kParamInterwordSpacing);
     textSpacing_ = fetchDoubleParam(kParamTextSpacing);
-    assert(position_ && text_ && fontSize_ && fontName_ && textColor_ && strokeColor_ && strokeEnabled_ && strokeWidth_ && fontOverride_ && shadowEnabled_ && shadowOpacity_ && shadowSigma_ && interlineSpacing_ && interwordSpacing_ && textSpacing_);
+    use_pango_ = fetchBooleanParam(kParamPango);
+    assert(position_ && text_ && fontSize_ && fontName_ && textColor_ && strokeColor_ && strokeEnabled_ && strokeWidth_ && fontOverride_ && shadowEnabled_ && shadowOpacity_ && shadowSigma_ && interlineSpacing_ && interwordSpacing_ && textSpacing_ && use_pango_);
 }
 
 TextPlugin::~TextPlugin()
@@ -254,6 +275,12 @@ void TextPlugin::render(const OFX::RenderArguments &args)
 
     std::auto_ptr<OFX::Image> dstImg(dstClip_->fetchImage(args.time));
     if (!dstImg.get()) {
+        OFX::throwSuiteStatusException(kOfxStatFailed);
+        return;
+    }
+
+    if (!has_fontconfig||!has_freetype) {
+        setPersistentMessage(OFX::Message::eMessageError, "", "Fontconfig and/or Freetype missing");
         OFX::throwSuiteStatusException(kOfxStatFailed);
         return;
     }
@@ -292,6 +319,7 @@ void TextPlugin::render(const OFX::RenderArguments &args)
     int fontSize, fontID;
     bool use_stroke = false;
     bool use_shadow = false;
+    bool use_pango = false;
     std::string text, fontOverride, fontName;
 
     position_->getValueAtTime(args.time, x, y);
@@ -309,6 +337,7 @@ void TextPlugin::render(const OFX::RenderArguments &args)
     interlineSpacing_->getValueAtTime(args.time, interlineSpacing);
     interwordSpacing_->getValueAtTime(args.time, interwordSpacing);
     textSpacing_->getValueAtTime(args.time, textSpacing);
+    use_pango_->getValueAtTime(args.time, use_pango);
     fontName_->getOption(fontID,fontName);
 
     // use custom font
@@ -474,7 +503,7 @@ void TextPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, Cont
     dstClip->addSupportedComponent(ePixelComponentRGBA);
     dstClip->setSupportsTiles(kSupportsTiles);
 
-    // make some pages and to things in
+    // make some pages
     PageParamDescriptor *page = desc.definePageParam(kPluginName);
 
     bool hostHasNativeOverlayForPosition;
@@ -530,6 +559,20 @@ void TextPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, Cont
         param->setDisplayRange(-100, 100);
         param->setDefault(kParamInterlineSpacingDefault);
         page->addChild(*param);
+    }
+    {
+        BooleanParamDescriptor* param = desc.defineBooleanParam(kParamPango);
+        param->setLabel(kParamPangoLabel);
+        param->setHint(kParamPangoHint);
+        param->setDefault(kParamPangoDefault);
+        param->setAnimates(true);
+        page->addChild(*param);
+
+        std::string delegates = MagickCore::GetMagickDelegates();
+        if (delegates.find("pango") != std::string::npos)
+            param->setIsSecret(false);
+        else
+            param->setIsSecret(true);
     }
     {
         StringParamDescriptor* param = desc.defineStringParam(kParamText);
