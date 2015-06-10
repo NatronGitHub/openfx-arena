@@ -171,7 +171,7 @@
 
 #define kParamPango "pango"
 #define kParamPangoLabel "Pango markup"
-#define kParamPangoHint "Enable/Disable Pango Markup Language"
+#define kParamPangoHint "Enable/Disable Pango Markup Language.\n\n http://www.imagemagick.org/Usage/text/#pango"
 #define kParamPangoDefault false
 
 using namespace OFX;
@@ -399,7 +399,10 @@ void TextPlugin::render(const OFX::RenderArguments &args)
         text_draw_list.push_back(Magick::DrawableStrokeColor(strokeRGBA));
 
     // Draw
-    image.draw(text_draw_list);
+    if (has_pango && use_pango)
+        image.read("pango:"+text);
+    else
+        image.draw(text_draw_list);
 
     // Shadow
     if (use_shadow) {
