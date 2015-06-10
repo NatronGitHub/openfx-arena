@@ -83,7 +83,6 @@
 
 #define kPluginName "Text"
 #define kPluginGrouping "Draw"
-#define kPluginDescription  "A simple text generator."
 
 #define kPluginIdentifier "net.fxarena.openfx.Text"
 #define kPluginVersionMajor 4
@@ -476,7 +475,8 @@ void TextPluginFactory::describe(OFX::ImageEffectDescriptor &desc)
     // basic labels
     desc.setLabel(kPluginName);
     desc.setPluginGrouping(kPluginGrouping);
-    desc.setPluginDescription(kPluginDescription);
+    std::string magickV = MagickCore::GetMagickVersion(NULL);
+    desc.setPluginDescription("Text generator for Natron.\n\nWritten by Ole-André Rodlie <olear@fxarena.net>\n\n Powered by "+magickV);
 
     // add the supported contexts
     desc.addSupportedContext(eContextGeneral);
