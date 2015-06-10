@@ -154,11 +154,6 @@
 #define kParamShadowSigmaHint "Adjust shadow offset"
 #define kParamShadowSigmaDefault 5
 
-#define kParamBackgroundColorCheck "background"
-#define kParamBackgroundColorCheckLabel "Background"
-#define kParamBackgroundColorCheckHint "Enable or disable background color"
-#define kParamBackgroundColorCheckDefault false
-
 #define kParamInterlineSpacing "lineSpacing"
 #define kParamInterlineSpacingLabel "Line spacing"
 #define kParamInterlineSpacingHint "Spacing between lines"
@@ -355,7 +350,7 @@ void TextPlugin::render(const OFX::RenderArguments &args)
     if (use_stroke)
         text_draw_list.push_back(Magick::DrawableStrokeColor(strokeRGBA));
     if (interlineSpacing!=0)
-        text_draw_list.push_back(Magick::DrawableTextInterlineSpacing(interlineSpacing));
+        text_draw_list.push_back(Magick::DrawableTextInterlineSpacing(std::floor(interlineSpacing * args.renderScale.x + 0.5)));
 
     // Draw
     image.draw(text_draw_list);
