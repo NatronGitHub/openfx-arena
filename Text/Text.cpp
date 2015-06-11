@@ -72,6 +72,7 @@
 #include "Text.h"
 #include "ofxsPositionInteract.h"
 #include "ofxsMacros.h"
+#include "ofxNatron.h"
 #include <Magick++.h>
 #include <sstream>
 #include <iostream>
@@ -86,7 +87,7 @@
 
 #define kPluginIdentifier "net.fxarena.openfx.Text"
 #define kPluginVersionMajor 4
-#define kPluginVersionMinor 0
+#define kPluginVersionMinor 1
 
 #define kSupportsTiles 0
 #define kSupportsMultiResolution 0
@@ -141,7 +142,7 @@
 #define kParamShadowSigma "shadowOffset"
 #define kParamShadowSigmaLabel "Shadow offset"
 #define kParamShadowSigmaHint "Adjust shadow offset"
-#define kParamShadowSigmaDefault 5
+#define kParamShadowSigmaDefault 0
 
 #define kParamInterlineSpacing "lineSpacing"
 #define kParamInterlineSpacingLabel "Line spacing"
@@ -164,6 +165,7 @@
 #define kParamPangoDefault false
 
 using namespace OFX;
+static bool gHostIsNatron = false;
 
 class TextPlugin : public OFX::ImageEffect
 {
@@ -320,6 +322,10 @@ void TextPlugin::render(const OFX::RenderArguments &args)
     textSpacing_->getValueAtTime(args.time, textSpacing);
     use_pango_->getValueAtTime(args.time, use_pango);
     fontName_->getOption(fontID,fontName);
+
+    // cascade menu
+    if (gHostIsNatron)
+        fontName.erase(0,2);
 
     // use custom font
     if (!fontOverride.empty())
@@ -478,6 +484,8 @@ void TextPluginFactory::describe(OFX::ImageEffectDescriptor &desc)
 /** @brief The describe in context function, passed a plugin descriptor and a context */
 void TextPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, ContextEnum /*context*/)
 {   
+    gHostIsNatron = (OFX::getImageEffectHostDescription()->hostName == kNatronOfxHostName);
+
     // there has to be an input clip, even for generators
     ClipDescriptor* srcClip = desc.defineClip(kOfxImageEffectSimpleSourceClipName);
     srcClip->addSupportedComponent(ePixelComponentRGBA);
@@ -546,6 +554,8 @@ void TextPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, Cont
         ChoiceParamDescriptor *param = desc.defineChoiceParam(kParamFontName);
         param->setLabel(kParamFontNameLabel);
         param->setHint(kParamFontNameHint);
+        if (gHostIsNatron)
+            param->setCascading(OFX::getImageEffectHostDescription()->supportsCascadingChoices);
 
         // Get all fonts
         int defaultFont = 0;
@@ -554,13 +564,22 @@ void TextPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, Cont
         std::size_t fontList;
         fonts=MagickCore::MagickQueryFonts("*",&fontList);
         for (size_t i=0;i<fontList;i++) {
-          param->appendOption(fonts[i]);
-          if (std::strcmp(fonts[i],kParamFontNameDefault)==0)
-              defaultFont=i;
-          if (std::strcmp(fonts[i],kParamFontNameAltDefault)==0)
-              altFont=i;
-        }
+            std::string fontItem;
+            std::string fontName = fonts[i];
+            if (gHostIsNatron) {
+                fontItem=fontName[0];
+                fontItem.append("/"+fontName);
+            }
+            else
+                fontItem=fontName;
 
+            param->appendOption(fontItem);
+
+            if (std::strcmp(fonts[i],kParamFontNameDefault)==0)
+                defaultFont=i;
+            if (std::strcmp(fonts[i],kParamFontNameAltDefault)==0)
+                altFont=i;
+        }
         for (size_t i = 0; i < fontList; i++)
             free(fonts[i]);
 
