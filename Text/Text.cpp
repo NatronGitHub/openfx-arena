@@ -121,12 +121,12 @@
 #define kParamTextColorHint "The fill color of the text to render"
 
 #define kParamStrokeColor "strokeColor"
-#define kParamStrokeColorLabel "Outline Color"
+#define kParamStrokeColorLabel "Stroke Color"
 #define kParamStrokeColorHint "The stroke color of the text to render"
 
 #define kParamStroke "stroke"
-#define kParamStrokeLabel "Outline Width"
-#define kParamStrokeHint "Adjust stroke width for outline"
+#define kParamStrokeLabel "Stroke Width"
+#define kParamStrokeHint "Adjust stroke width"
 #define kParamStrokeDefault 0
 
 #define kParamFontOverride "customFont"
