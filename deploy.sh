@@ -6,18 +6,39 @@
 # Options:
 #
 # CLEAN=1 : Clean tmp folder before build
-# MAGICK_BETA=1 : Build ImageMagick snapshot
+# MAGICK_BETA=1 : Build ImageMagick snapshot/beta
+# MAGICK_STRIP=1 : Build ImageMagick without font stuff
+# MAGICK_MOD=1 : Apply ImageMagick mod
+# MAGICK_LEGACY=1 : Build against ImageMagick 6.8 (recommended)
+# PACKAGE=foo : Only build one plugin, not bundle
+# VERSION=foo : Override package version
 #
 
 CWD=$(pwd)
 
 MAGICK_WIN=6.8.9-10 # higher is broken on mingw
-MAGICK_UNIX=6.9.1-4
+if [ "$MAGICK_LEGACY" == "1" ]; then
+  MAGICK_UNIX=$MAGICK_WIN
+else
+  MAGICK_UNIX=6.9.1-4
+fi
 MAGICK_UNIX_BETA_MAJOR=6.9.1-5
-MAGICK_UNIX_BETA_MINOR=beta20150603 #beta20150604 does not fix anything
+MAGICK_UNIX_BETA_MINOR=beta20150607
 MAGICK_REL_URL=ftp://ftp.sunet.se/pub/multimedia/graphics/ImageMagick
 MAGICK_BETA_URL=http://www.imagemagick.org/download/beta
+if [ -z "$QUANTUM" ]; then
+  Q=32
+else
+  Q=$QUANTUM
+fi
+MAGICK_DEF_OPT="--disable-docs --disable-deprecated --with-magick-plus-plus=yes --with-quantum-depth=${Q} --without-dps --without-djvu --without-fftw --without-fpx --without-gslib --without-gvc --without-jbig --without-jpeg --without-lcms --without-lcms2 --without-openjp2 --without-lqr --without-lzma --without-openexr --without-pango --with-png --without-rsvg --without-tiff --without-webp --without-xml --with-zlib --without-bzlib --enable-static --disable-shared --enable-hdri --with-freetype --with-fontconfig --without-x --without-modules"
+MAGICK_STRIP_OPT="--disable-docs --disable-deprecated --with-magick-plus-plus=yes --with-quantum-depth=${Q} --without-dps --without-djvu --without-fftw --without-fpx --without-gslib --without-gvc --without-jbig --without-jpeg --without-lcms --without-lcms2 --without-openjp2 --without-lqr --without-lzma --without-openexr --without-pango --without-png --without-rsvg --without-tiff --without-webp --without-xml --without-zlib --without-bzlib --enable-static --disable-shared --enable-hdri --without-freetype --without-fontconfig --without-x --without-modules"
 
+if [ "$MAGICK_STRIP" == "1" ]; then
+  MAGICK_OPT=$MAGICK_STRIP_OPT
+else
+  MAGICK_OPT=$MAGICK_DEF_OPT
+fi
 if [ "$OS" == "Msys" ]; then
   MAGICK=$MAGICK_WIN
 else
@@ -30,28 +51,13 @@ else
   fi
 fi
 
-ZLIB=1.2.8
-ZLIB_URL=http://prdownloads.sourceforge.net/libpng/zlib-${ZLIB}.tar.gz?download
-
-PNG=1.2.52
-PNG_URL=http://prdownloads.sourceforge.net/libpng/libpng-${PNG}.tar.gz?download
-
-EXPAT=2.1.0
-EXPAT_URL=http://sourceforge.net/projects/expat/files/expat/${EXPAT}/expat-${EXPAT}.tar.gz/download
-
-FCONFIG=2.10.2
-FCONFIG_URL=http://www.freedesktop.org/software/fontconfig/release/fontconfig-${FCONFIG}.tar.gz
-
-FTYPE=2.4.11
-FTYPE_URL=http://sourceforge.net/projects/freetype/files/freetype2/${FTYPE}/freetype-${FTYPE}.tar.gz/download
-
 if [ -z "$VERSION" ]; then
-  ARENA=0.7
+  ARENA=1.0
 else
   ARENA=$VERSION
 fi
 if [ -z "$PACKAGE" ]; then
-  PKGNAME=Arena
+  PKGNAME=Extra
 else
   PKGNAME=$PACKAGE
 fi
@@ -136,7 +142,7 @@ if [ ! -f ${PREFIX}/lib/libz.a ] && [ "$OS" == "Msys" ]; then
 fi
 
 # libpng
-if [ ! -f ${PREFIX}/lib/libpng.a ]; then
+if [ ! -f ${PREFIX}/lib/libpng.a ] && [ "$MAGICK_STRIP" != "1" ]; then
   if [ ! -f $CWD/3rdparty/libpng-$PNG.tar.gz ]; then
     wget $PNG_URL -O $CWD/3rdparty/libpng-$PNG.tar.gz || exit 1
   fi
@@ -208,7 +214,10 @@ if [ ! -f ${PREFIX}/lib/libfontconfig.a ] && [ "$OS" == "Msys" ]; then
 fi
 
 # magick
-if [ ! -f ${PREFIX}/lib/libMagick++-6.Q32HDRI.a ]; then
+if [ "$CLEAN" == "1" ]; then
+  rm -rf $CWD/3rdparty/ImageMagick-$MAGICK
+fi
+if [ ! -f ${PREFIX}/lib/libMagick++-6.Q${Q}HDRI.a ]; then
   if [ ! -f $CWD/3rdparty/ImageMagick-$MAGICK.tar.gz ]; then
     wget $MAGICK_URL -O $CWD/3rdparty/ImageMagick-$MAGICK.tar.gz || exit 1
   fi
@@ -220,13 +229,11 @@ if [ ! -f ${PREFIX}/lib/libMagick++-6.Q32HDRI.a ]; then
   else
     cd $CWD/3rdparty/ImageMagick-$MAGICK || exit 1
   fi
-  if [ "$MAGICK" == "6.8.9-10" ]; then
+  if [ "$MAGICK_MOD" == "1" ]; then
     cat $CWD/3rdparty/composite-private.h > magick/composite-private.h || exit 1
   fi
-  #if [ "$MAGICK" == "6.9.1-4" ]; then
-  #fi
   $MAKE distclean
-  CFLAGS="-m${BIT} ${BF}" CXXFLAGS="-m${BIT} ${BF} ${BSD} -I${PREFIX}/include" CPPFLAGS="-I${PREFIX}/include -L${PREFIX}/lib" ./configure --libdir=${PREFIX}/lib --prefix=${PREFIX} --disable-docs --disable-deprecated --with-magick-plus-plus=yes --with-quantum-depth=32 --without-dps --without-djvu --without-fftw --without-fpx --without-gslib --without-gvc --without-jbig --without-jpeg --without-lcms --without-lcms2 --without-openjp2 --without-lqr --without-lzma --without-openexr --without-pango --with-png --without-rsvg --without-tiff --without-webp --without-xml --with-zlib --without-bzlib --enable-static --disable-shared --enable-hdri --with-freetype --with-fontconfig --without-x --without-modules || exit 1
+  CFLAGS="-m${BIT} ${BF}" CXXFLAGS="-m${BIT} ${BF} ${BSD} -I${PREFIX}/include" CPPFLAGS="-I${PREFIX}/include -L${PREFIX}/lib" ./configure --libdir=${PREFIX}/lib --prefix=${PREFIX} $MAGICK_OPT || exit 1
   $MAKE -j$JOBS install || exit 1
   mkdir -p $PREFIX/share/doc/ImageMagick/ || exit 1
   cp LICENSE $PREFIX/share/doc/ImageMagick/ || exit 1
@@ -260,7 +267,10 @@ mkdir $CWD/$PKG || exit 1
 cp LICENSE README.md $CWD/$PKG/ || exit 1
 cp $PREFIX/share/doc/ImageMagick/LICENSE $CWD/$PKG/LICENSE.ImageMagick || exit 1
 cp OpenFX/Support/LICENSE $CWD/$PKG/LICENSE.OpenFX || exit 1
-cp $PREFIX/share/doc/libpng/LICENSE $CWD/$PKG/LICENSE.libpng || exit 1
+
+if [ "$MAGICK_STRIP" != "1" ]; then
+  cp $PREFIX/share/doc/libpng/LICENSE $CWD/$PKG/LICENSE.libpng || exit 1
+fi
 
 if [ "$OS" == "Msys" ]; then
   cp $PREFIX/share/doc/zlib/README $CWD/$PKG/LICENSE.zlib || exit 1
@@ -270,10 +280,10 @@ if [ "$OS" == "Msys" ]; then
 fi
 
 # Strip and copy
-if [ "$PKGNAME" != "Arena" ]; then
+if [ "$PKGNAME" != "Extra" ]; then
   PKGSRC=$PKGNAME
 else
-  PKGSRC=Bundle
+  PKGSRC=Extra
 fi
 if [ "$BIT" == "64" ]; then
   PKGBIT=x86-$BIT

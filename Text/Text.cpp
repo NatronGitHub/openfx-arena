@@ -72,6 +72,7 @@
 #include "Text.h"
 #include "ofxsPositionInteract.h"
 #include "ofxsMacros.h"
+#include "ofxNatron.h"
 #include <Magick++.h>
 #include <sstream>
 #include <iostream>
@@ -83,10 +84,9 @@
 
 #define kPluginName "Text"
 #define kPluginGrouping "Draw"
-#define kPluginDescription  "A simple text generator."
 
 #define kPluginIdentifier "net.fxarena.openfx.Text"
-#define kPluginVersionMajor 3
+#define kPluginVersionMajor 4
 #define kPluginVersionMinor 1
 
 #define kSupportsTiles 0
@@ -117,62 +117,55 @@
 #define kParamFontNameDefault "Arial"
 #define kParamFontNameAltDefault "DejaVu-Sans" // failsafe on Linux/BSD
 
-#define kParamFontDecor "fontDecor"
-#define kParamFontDecorLabel "Decoration"
-#define kParamFontDecorHint "Font decoration."
-
 #define kParamTextColor "textColor"
 #define kParamTextColorLabel "Fill Color"
 #define kParamTextColorHint "The fill color of the text to render"
 
-#define kParamStrokeCheck "strokeCheck"
-#define kParamStrokeCheckLabel "Outline"
-#define kParamStrokeCheckHint "Enable or disable outline"
-#define kParamStrokeCheckDefault false
-
 #define kParamStrokeColor "strokeColor"
-#define kParamStrokeColorLabel "Outline Color"
+#define kParamStrokeColorLabel "Stroke Color"
 #define kParamStrokeColorHint "The stroke color of the text to render"
 
 #define kParamStroke "stroke"
-#define kParamStrokeLabel "Outline Width"
-#define kParamStrokeHint "Adjust stroke width for outline"
-#define kParamStrokeDefault 1
+#define kParamStrokeLabel "Stroke Width"
+#define kParamStrokeHint "Adjust stroke width"
+#define kParamStrokeDefault 0
 
 #define kParamFontOverride "customFont"
 #define kParamFontOverrideLabel "Custom Font"
 #define kParamFontOverrideHint "Override the font list. You can use font name or direct path"
 
-#define kParamShadowCheck "shadow"
-#define kParamShadowCheckLabel "Shadow"
-#define kParamShadowCheckHint "Enable or disable drop shadow"
-#define kParamShadowCheckDefault false
-
 #define kParamShadowOpacity "shadowOpacity"
 #define kParamShadowOpacityLabel "Shadow opacity"
 #define kParamShadowOpacityHint "Adjust shadow opacity"
-#define kParamShadowOpacityDefault 60
+#define kParamShadowOpacityDefault 0
 
 #define kParamShadowSigma "shadowOffset"
 #define kParamShadowSigmaLabel "Shadow offset"
 #define kParamShadowSigmaHint "Adjust shadow offset"
-#define kParamShadowSigmaDefault 5
+#define kParamShadowSigmaDefault 0
 
-#define kParamBackgroundColorCheck "background"
-#define kParamBackgroundColorCheckLabel "Background"
-#define kParamBackgroundColorCheckHint "Enable or disable background color"
-#define kParamBackgroundColorCheckDefault false
+#define kParamInterlineSpacing "lineSpacing"
+#define kParamInterlineSpacingLabel "Line spacing"
+#define kParamInterlineSpacingHint "Spacing between lines"
+#define kParamInterlineSpacingDefault 0
 
-#define kParamBackgroundColor "backgroundColor"
-#define kParamBackgroundColorLabel "Background color"
-#define kParamBackgroundColorHint "Adjust background color"
+#define kParamInterwordSpacing "wordSpacing"
+#define kParamInterwordSpacingLabel "Word spacing"
+#define kParamInterwordSpacingHint "Spacing between words"
+#define kParamInterwordSpacingDefault 0
 
-#define kParamSrc "source"
-#define kParamSrcLabel "View source"
-#define kParamSrcHint "Enable or disable source input"
-#define kParamSrcDefault true
+#define kParamTextSpacing "letterSpacing"
+#define kParamTextSpacingLabel "Letter spacing"
+#define kParamTextSpacingHint "Spacing between letters"
+#define kParamTextSpacingDefault 0
+
+#define kParamPango "pango"
+#define kParamPangoLabel "Pango markup"
+#define kParamPangoHint "Enable/Disable Pango Markup Language.\n\n http://www.imagemagick.org/Usage/text/#pango"
+#define kParamPangoDefault false
 
 using namespace OFX;
+static bool gHostIsNatron = false;
 
 class TextPlugin : public OFX::ImageEffect
 {
@@ -191,56 +184,62 @@ public:
 
 private:
     // do not need to delete these, the ImageEffect is managing them for us
-    OFX::Clip *srcClip_;
     OFX::Clip *dstClip_;
     OFX::Double2DParam *position_;
     OFX::StringParam *text_;
     OFX::IntParam *fontSize_;
     OFX::ChoiceParam *fontName_;
-    OFX::ChoiceParam *fontDecor_;
     OFX::RGBAParam *textColor_;
     OFX::RGBAParam *strokeColor_;
-    OFX::BooleanParam *strokeEnabled_;
     OFX::DoubleParam *strokeWidth_;
     OFX::StringParam *fontOverride_;
-    OFX::BooleanParam *shadowEnabled_;
     OFX::DoubleParam *shadowOpacity_;
     OFX::DoubleParam *shadowSigma_;
-    OFX::BooleanParam *bgColorEnabled_;
-    OFX::RGBAParam *bgColor_;
-    OFX::BooleanParam *srcEnabled_;
+    OFX::DoubleParam *interlineSpacing_;
+    OFX::DoubleParam *interwordSpacing_;
+    OFX::DoubleParam *textSpacing_;
+    OFX::BooleanParam *use_pango_;
+    bool has_pango;
+    bool has_fontconfig;
+    bool has_freetype;
 };
 
 TextPlugin::TextPlugin(OfxImageEffectHandle handle)
 : OFX::ImageEffect(handle)
 , dstClip_(0)
-, srcClip_(0)
 {
     Magick::InitializeMagick(NULL);
 
+    has_pango = false;
+    has_fontconfig = false;
+    has_freetype = false;
+
+    std::string delegates = MagickCore::GetMagickDelegates();
+    if (delegates.find("fontconfig") != std::string::npos)
+        has_fontconfig = true;
+    if (delegates.find("freetype") != std::string::npos)
+        has_freetype = true;
+    if (delegates.find("pango") != std::string::npos)
+        has_pango = true;
+
     dstClip_ = fetchClip(kOfxImageEffectOutputClipName);
     assert(dstClip_ && dstClip_->getPixelComponents() == OFX::ePixelComponentRGBA);
-
-    srcClip_ = fetchClip(kOfxImageEffectSimpleSourceClipName);
-    assert(!srcClip_ || srcClip_->getPixelComponents() == OFX::ePixelComponentRGBA);
 
     position_ = fetchDouble2DParam(kParamPosition);
     text_ = fetchStringParam(kParamText);
     fontSize_ = fetchIntParam(kParamFontSize);
     fontName_ = fetchChoiceParam(kParamFontName);
-    fontDecor_ = fetchChoiceParam(kParamFontDecor);
     textColor_ = fetchRGBAParam(kParamTextColor);
     strokeColor_ = fetchRGBAParam(kParamStrokeColor);
-    strokeEnabled_ = fetchBooleanParam(kParamStrokeCheck);
     strokeWidth_ = fetchDoubleParam(kParamStroke);
     fontOverride_ = fetchStringParam(kParamFontOverride);
-    shadowEnabled_ = fetchBooleanParam(kParamShadowCheck);
     shadowOpacity_ = fetchDoubleParam(kParamShadowOpacity);
     shadowSigma_ = fetchDoubleParam(kParamShadowSigma);
-    bgColorEnabled_ = fetchBooleanParam(kParamBackgroundColorCheck);
-    bgColor_ = fetchRGBAParam(kParamBackgroundColor);
-    srcEnabled_ = fetchBooleanParam(kParamSrc);
-    assert(position_ && text_ && fontSize_ && fontName_ && textColor_ && fontDecor_ && strokeColor_ && strokeEnabled_ && strokeWidth_ && fontOverride_ && shadowEnabled_ && shadowOpacity_ && shadowSigma_ && bgColorEnabled_ && bgColor_ && srcEnabled_);
+    interlineSpacing_ = fetchDoubleParam(kParamInterlineSpacing);
+    interwordSpacing_ = fetchDoubleParam(kParamInterwordSpacing);
+    textSpacing_ = fetchDoubleParam(kParamTextSpacing);
+    use_pango_ = fetchBooleanParam(kParamPango);
+    assert(position_ && text_ && fontSize_ && fontName_ && textColor_ && strokeColor_ && strokeWidth_ && fontOverride_ && shadowOpacity_ && shadowSigma_ && interlineSpacing_ && interwordSpacing_ && textSpacing_ && use_pango_);
 }
 
 TextPlugin::~TextPlugin()
@@ -263,6 +262,12 @@ void TextPlugin::render(const OFX::RenderArguments &args)
 
     std::auto_ptr<OFX::Image> dstImg(dstClip_->fetchImage(args.time));
     if (!dstImg.get()) {
+        OFX::throwSuiteStatusException(kOfxStatFailed);
+        return;
+    }
+
+    if (!has_fontconfig||!has_freetype) {
+        setPersistentMessage(OFX::Message::eMessageError, "", "Fontconfig and/or Freetype missing");
         OFX::throwSuiteStatusException(kOfxStatFailed);
         return;
     }
@@ -297,32 +302,30 @@ void TextPlugin::render(const OFX::RenderArguments &args)
     }
 
     // Get params
-    double x, y, r, g, b, a, r_s, g_s, b_s, a_s, strokeWidth,shadowOpacity,shadowSigma,r_b, g_b, b_b, a_b;
-    int fontSize, fontID, fontDecor;
-    bool use_stroke = false;
-    bool use_shadow = false;
-    bool use_bg = false;
-    bool has_src = false;
-    bool srcEnabled = false;
+    double x, y, r, g, b, a, r_s, g_s, b_s, a_s, strokeWidth,shadowOpacity,shadowSigma,interlineSpacing,interwordSpacing,textSpacing;
+    int fontSize, fontID;
+    bool use_pango = false;
     std::string text, fontOverride, fontName;
 
     position_->getValueAtTime(args.time, x, y);
     text_->getValueAtTime(args.time, text);
     fontSize_->getValueAtTime(args.time, fontSize);
     fontName_->getValueAtTime(args.time, fontID);
-    fontDecor_->getValueAtTime(args.time, fontDecor);
-    strokeEnabled_->getValueAtTime(args.time, use_stroke);
     strokeWidth_->getValueAtTime(args.time, strokeWidth);
     fontOverride_->getValueAtTime(args.time, fontOverride);
     textColor_->getValueAtTime(args.time, r, g, b, a);
     strokeColor_->getValueAtTime(args.time, r_s, g_s, b_s, a_s);
-    shadowEnabled_->getValueAtTime(args.time, use_shadow);
     shadowOpacity_->getValueAtTime(args.time, shadowOpacity);
     shadowSigma_->getValueAtTime(args.time, shadowSigma);
-    bgColorEnabled_->getValueAtTime(args.time, use_bg);
-    bgColor_->getValueAtTime(args.time, r_b, g_b, b_b, a_b);
-    srcEnabled_->getValueAtTime(args.time, srcEnabled);
+    interlineSpacing_->getValueAtTime(args.time, interlineSpacing);
+    interwordSpacing_->getValueAtTime(args.time, interwordSpacing);
+    textSpacing_->getValueAtTime(args.time, textSpacing);
+    use_pango_->getValueAtTime(args.time, use_pango);
     fontName_->getOption(fontID,fontName);
+
+    // cascade menu
+    if (gHostIsNatron)
+        fontName.erase(0,2);
 
     // use custom font
     if (!fontOverride.empty())
@@ -333,55 +336,33 @@ void TextPlugin::render(const OFX::RenderArguments &args)
     int height = dstRod.y2-dstRod.y1;
     Magick::Image image(Magick::Geometry(width,height),Magick::Color("rgba(0,0,0,0)"));
 
-    // src?
-    if (srcClip_ && srcClip_->isConnected() && srcEnabled) {
-        std::auto_ptr<const OFX::Image> srcImg(srcClip_->fetchImage(args.time));
-        if (srcImg.get()) {
-            OfxRectI srcRod = srcImg->getRegionOfDefinition();
-            int srcWidth = srcRod.x2-srcRod.x1;
-            int srcHeight = srcRod.y2-srcRod.y1;
-            if (srcWidth==width && srcHeight==height) {
-                has_src = true;
-                image.read(width,height,"RGBA",Magick::FloatPixel,(float*)srcImg->getPixelData());
-            }
-            else
-                setPersistentMessage(OFX::Message::eMessageError, "", "Please set project format to same as source, or disconnect source.");
-        }
-    }
-
     // Set font size
     if (fontSize>0)
         image.fontPointsize(std::floor(fontSize * args.renderScale.x + 0.5));
 
     // Set stroke width
-    if (use_stroke)
+    if (strokeWidth>0)
         image.strokeWidth(std::floor(strokeWidth * args.renderScale.x + 0.5));
 
     // Convert colors to int
     int rI = ((uint8_t)(255.0f *CLAMP(r, 0.0, 1.0)));
     int gI = ((uint8_t)(255.0f *CLAMP(g, 0.0, 1.0)));
     int bI = ((uint8_t)(255.0f *CLAMP(b, 0.0, 1.0)));
-    int aI = ((uint8_t)(255.0f *CLAMP(a, 0.0, 1.0)));
+    /*int aI = ((uint8_t)(255.0f *CLAMP(a, 0.0, 1.0))); // enable on IM 6.9.1-3+
+    a=aI;*/
     int r_sI = ((uint8_t)(255.0f *CLAMP(r_s, 0.0, 1.0)));
     int g_sI = ((uint8_t)(255.0f *CLAMP(g_s, 0.0, 1.0)));
     int b_sI = ((uint8_t)(255.0f *CLAMP(b_s, 0.0, 1.0)));
-    int a_sI = ((uint8_t)(255.0f *CLAMP(a_s, 0.0, 1.0)));
-    int r_bI = ((uint8_t)(255.0f *CLAMP(r_b, 0.0, 1.0)));
-    int g_bI = ((uint8_t)(255.0f *CLAMP(g_b, 0.0, 1.0)));
-    int b_bI = ((uint8_t)(255.0f *CLAMP(b_b, 0.0, 1.0)));
-    int a_bI = ((uint8_t)(255.0f *CLAMP(a_b, 0.0, 1.0)));
+    /*int a_sI = ((uint8_t)(255.0f *CLAMP(a_s, 0.0, 1.0))); // enable on IM 6.9.1-3+
+    a_s=a_sI;*/
 
     std::ostringstream rgba;
-    rgba << "rgba(" << rI <<"," << gI << "," << bI << "," << aI << ")";
+    rgba << "rgba(" << rI <<"," << gI << "," << bI << "," << a << ")";
     std::string textRGBA = rgba.str();
 
     std::ostringstream rgba_s;
-    rgba_s << "rgba(" << r_sI <<"," << g_sI << "," << b_sI << "," << a_sI << ")";
+    rgba_s << "rgba(" << r_sI <<"," << g_sI << "," << b_sI << "," << a_s << ")";
     std::string strokeRGBA = rgba_s.str();
-
-    std::ostringstream rgba_b;
-    rgba_b << "rgba(" << r_bI <<"," << g_bI << "," << b_bI << "," << a_bI << ")";
-    std::string bgRGBA = rgba_b.str();
 
     // Flip image
     image.flip();
@@ -398,29 +379,20 @@ void TextPlugin::render(const OFX::RenderArguments &args)
     text_draw_list.push_back(Magick::DrawableFont(fontName));
     text_draw_list.push_back(Magick::DrawableText(xtext, ytext, text));
     text_draw_list.push_back(Magick::DrawableFillColor(textRGBA));
-    if (use_stroke)
+    text_draw_list.push_back(Magick::DrawableTextInterlineSpacing(std::floor(interlineSpacing * args.renderScale.x + 0.5)));
+    text_draw_list.push_back(Magick::DrawableTextInterwordSpacing(std::floor(interwordSpacing * args.renderScale.x + 0.5)));
+    text_draw_list.push_back(Magick::DrawableTextKerning(std::floor(textSpacing * args.renderScale.x + 0.5)));
+    if (strokeWidth>0)
         text_draw_list.push_back(Magick::DrawableStrokeColor(strokeRGBA));
 
-    // Text decoration
-    if (fontDecor>0) {
-        switch(fontDecor) {
-        case 1:
-            text_draw_list.push_back(Magick::DrawableTextDecoration(Magick::UnderlineDecoration));
-            break;
-        case 2:
-            text_draw_list.push_back(Magick::DrawableTextDecoration(Magick::OverlineDecoration));
-            break;
-        case 3:
-            text_draw_list.push_back(Magick::DrawableTextDecoration(Magick::LineThroughDecoration));
-            break;
-        }
-    }
-
     // Draw
-    image.draw(text_draw_list);
+    if (has_pango && use_pango)
+        image.read("pango:"+text);
+    else
+        image.draw(text_draw_list);
 
     // Shadow
-    if (use_shadow && !has_src) {
+    if (shadowOpacity>0) {
         Magick::Image dropShadow;
         dropShadow=image;
         dropShadow.backgroundColor("Black");
@@ -429,22 +401,6 @@ void TextPlugin::render(const OFX::RenderArguments &args)
         dropShadow.composite(image,0,0,Magick::OverCompositeOp);
         image=dropShadow;
     }
-    if (use_shadow && has_src && srcEnabled)
-        setPersistentMessage(OFX::Message::eMessageError, "", "Shadow not supported when using source input");
-
-    // set bg
-    if (use_bg && !has_src) {
-        Magick::Image container(Magick::Geometry(width,height),Magick::Color(bgRGBA));
-        if (use_shadow && shadowSigma>0) {
-            double offset=std::floor(shadowSigma * args.renderScale.x + 0.5);
-            container.composite(image,0,-offset*4,Magick::OverCompositeOp);
-        }
-        else
-            container.composite(image,0,0,Magick::OverCompositeOp);
-        image=container;
-    }
-    if (use_bg && has_src && srcEnabled)
-        setPersistentMessage(OFX::Message::eMessageError, "", "Background not supported when using source input");
 
     // Flip image
     image.flip();
@@ -507,15 +463,15 @@ void TextPluginFactory::describe(OFX::ImageEffectDescriptor &desc)
     // basic labels
     desc.setLabel(kPluginName);
     desc.setPluginGrouping(kPluginGrouping);
-    desc.setPluginDescription(kPluginDescription);
+    std::string magickV = MagickCore::GetMagickVersion(NULL);
+    std::string delegates = MagickCore::GetMagickDelegates();
+    desc.setPluginDescription("Text generator for Natron.\n\nWritten by Ole-André Rodlie <olear@fxarena.net>\n\n Powered by "+magickV+"\n\nFeatures: "+delegates);
 
     // add the supported contexts
     desc.addSupportedContext(eContextGeneral);
     desc.addSupportedContext(eContextGenerator);
 
     // add supported pixel depths
-    //desc.addSupportedBitDepth(eBitDepthUByte);
-    //desc.addSupportedBitDepth(eBitDepthUShort);
     desc.addSupportedBitDepth(eBitDepthFloat);
 
     desc.setSupportsTiles(kSupportsTiles);
@@ -528,6 +484,8 @@ void TextPluginFactory::describe(OFX::ImageEffectDescriptor &desc)
 /** @brief The describe in context function, passed a plugin descriptor and a context */
 void TextPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, ContextEnum /*context*/)
 {   
+    gHostIsNatron = (OFX::getImageEffectHostDescription()->hostName == kNatronOfxHostName);
+
     // there has to be an input clip, even for generators
     ClipDescriptor* srcClip = desc.defineClip(kOfxImageEffectSimpleSourceClipName);
     srcClip->addSupportedComponent(ePixelComponentRGBA);
@@ -539,7 +497,7 @@ void TextPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, Cont
     dstClip->addSupportedComponent(ePixelComponentRGBA);
     dstClip->setSupportsTiles(kSupportsTiles);
 
-    // make some pages and to things in
+    // make some pages
     PageParamDescriptor *page = desc.definePageParam(kPluginName);
 
     bool hostHasNativeOverlayForPosition;
@@ -570,6 +528,20 @@ void TextPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, Cont
         }
     }
     {
+        BooleanParamDescriptor* param = desc.defineBooleanParam(kParamPango);
+        param->setLabel(kParamPangoLabel);
+        param->setHint(kParamPangoHint);
+        param->setDefault(kParamPangoDefault);
+        param->setAnimates(true);
+        page->addChild(*param);
+
+        std::string delegates = MagickCore::GetMagickDelegates();
+        if (delegates.find("pango") != std::string::npos)
+            param->setIsSecret(false);
+        else
+            param->setIsSecret(true);
+    }
+    {
         StringParamDescriptor* param = desc.defineStringParam(kParamText);
         param->setLabel(kParamTextLabel);
         param->setHint(kParamTextHint);
@@ -579,17 +551,11 @@ void TextPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, Cont
         page->addChild(*param);
     }
     {
-        IntParamDescriptor* param = desc.defineIntParam(kParamFontSize);
-        param->setLabel(kParamFontSizeLabel);
-        param->setHint(kParamFontSizeHint);
-        param->setDefault(kParamFontSizeDefault);
-        param->setAnimates(true);
-        page->addChild(*param);
-    }
-    {
         ChoiceParamDescriptor *param = desc.defineChoiceParam(kParamFontName);
         param->setLabel(kParamFontNameLabel);
         param->setHint(kParamFontNameHint);
+        if (gHostIsNatron)
+            param->setCascading(OFX::getImageEffectHostDescription()->supportsCascadingChoices);
 
         // Get all fonts
         int defaultFont = 0;
@@ -598,13 +564,22 @@ void TextPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, Cont
         std::size_t fontList;
         fonts=MagickCore::MagickQueryFonts("*",&fontList);
         for (size_t i=0;i<fontList;i++) {
-          param->appendOption(fonts[i]);
-          if (std::strcmp(fonts[i],kParamFontNameDefault)==0)
-              defaultFont=i;
-          if (std::strcmp(fonts[i],kParamFontNameAltDefault)==0)
-              altFont=i;
-        }
+            std::string fontItem;
+            std::string fontName = fonts[i];
+            if (gHostIsNatron) {
+                fontItem=fontName[0];
+                fontItem.append("/"+fontName);
+            }
+            else
+                fontItem=fontName;
 
+            param->appendOption(fontItem);
+
+            if (std::strcmp(fonts[i],kParamFontNameDefault)==0)
+                defaultFont=i;
+            if (std::strcmp(fonts[i],kParamFontNameAltDefault)==0)
+                altFont=i;
+        }
         for (size_t i = 0; i < fontList; i++)
             free(fonts[i]);
 
@@ -625,14 +600,40 @@ void TextPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, Cont
         page->addChild(*param);
     }
     {
-        ChoiceParamDescriptor *param = desc.defineChoiceParam(kParamFontDecor);
-        param->setLabel(kParamFontDecorLabel);
-        param->setHint(kParamFontDecorHint);
-        param->appendOption("None");
-        param->appendOption("Underline");
-        param->appendOption("Overline");
-        param->appendOption("Strike-through");
+        IntParamDescriptor* param = desc.defineIntParam(kParamFontSize);
+        param->setLabel(kParamFontSizeLabel);
+        param->setHint(kParamFontSizeHint);
+        param->setRange(0, 1000);
+        param->setDisplayRange(0, 500);
+        param->setDefault(kParamFontSizeDefault);
         param->setAnimates(true);
+        page->addChild(*param);
+    }
+    {
+        DoubleParamDescriptor *param = desc.defineDoubleParam(kParamTextSpacing);
+        param->setLabel(kParamTextSpacingLabel);
+        param->setHint(kParamTextSpacingHint);
+        param->setRange(-1000, 1000);
+        param->setDisplayRange(-100, 100);
+        param->setDefault(kParamTextSpacingDefault);
+        page->addChild(*param);
+    }
+    {
+        DoubleParamDescriptor *param = desc.defineDoubleParam(kParamInterwordSpacing);
+        param->setLabel(kParamInterwordSpacingLabel);
+        param->setHint(kParamInterwordSpacingHint);
+        param->setRange(-1000, 1000);
+        param->setDisplayRange(-100, 100);
+        param->setDefault(kParamInterwordSpacingDefault);
+        page->addChild(*param);
+    }
+    {
+        DoubleParamDescriptor *param = desc.defineDoubleParam(kParamInterlineSpacing);
+        param->setLabel(kParamInterlineSpacingLabel);
+        param->setHint(kParamInterlineSpacingHint);
+        param->setRange(-1000, 1000);
+        param->setDisplayRange(-100, 100);
+        param->setDefault(kParamInterlineSpacingDefault);
         page->addChild(*param);
     }
     {
@@ -640,15 +641,6 @@ void TextPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, Cont
         param->setLabel(kParamTextColorLabel);
         param->setHint(kParamTextColorHint);
         param->setDefault(1., 1., 1., 1.);
-        param->setAnimates(true);
-        page->addChild(*param);
-    }
-    {
-        BooleanParamDescriptor* param = desc.defineBooleanParam(kParamStrokeCheck);
-        param->setLabel(kParamStrokeCheckLabel);
-        param->setHint(kParamStrokeCheckHint);
-        param->setEvaluateOnChange(true);
-        param->setDefault(kParamStrokeCheckDefault);
         param->setAnimates(true);
         page->addChild(*param);
     }
@@ -664,18 +656,9 @@ void TextPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, Cont
         DoubleParamDescriptor *param = desc.defineDoubleParam(kParamStroke);
         param->setLabel(kParamStrokeLabel);
         param->setHint(kParamStrokeHint);
-        param->setRange(0, 50);
-        param->setDisplayRange(0, 50);
+        param->setRange(0, 100);
+        param->setDisplayRange(0, 10);
         param->setDefault(kParamStrokeDefault);
-        page->addChild(*param);
-    }
-    {
-        BooleanParamDescriptor* param = desc.defineBooleanParam(kParamShadowCheck);
-        param->setLabel(kParamShadowCheckLabel);
-        param->setHint(kParamShadowCheckHint);
-        param->setEvaluateOnChange(true);
-        param->setDefault(kParamShadowCheckDefault);
-        param->setAnimates(true);
         page->addChild(*param);
     }
     {
@@ -694,32 +677,6 @@ void TextPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, Cont
         param->setRange(0, 100);
         param->setDisplayRange(0, 10);
         param->setDefault(kParamShadowSigmaDefault);
-        page->addChild(*param);
-    }
-    {
-        BooleanParamDescriptor* param = desc.defineBooleanParam(kParamBackgroundColorCheck);
-        param->setLabel(kParamBackgroundColorCheckLabel);
-        param->setHint(kParamBackgroundColorCheckHint);
-        param->setEvaluateOnChange(true);
-        param->setDefault(kParamBackgroundColorCheckDefault);
-        param->setAnimates(true);
-        page->addChild(*param);
-    }
-    {
-        RGBAParamDescriptor* param = desc.defineRGBAParam(kParamBackgroundColor);
-        param->setLabel(kParamBackgroundColorLabel);
-        param->setHint(kParamBackgroundColorHint);
-        param->setDefault(0., 0., 0., 1.);
-        param->setAnimates(true);
-        page->addChild(*param);
-    }
-    {
-        BooleanParamDescriptor* param = desc.defineBooleanParam(kParamSrc);
-        param->setLabel(kParamSrcLabel);
-        param->setHint(kParamSrcHint);
-        param->setEvaluateOnChange(true);
-        param->setDefault(kParamSrcDefault);
-        param->setAnimates(true);
         page->addChild(*param);
     }
 }

@@ -44,7 +44,7 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 #define kPluginIdentifier "net.fxarena.openfx.Tile"
 #define kPluginVersionMajor 2
-#define kPluginVersionMinor 1
+#define kPluginVersionMinor 2
 
 #define kParamRows "rows"
 #define kParamRowsLabel "Rows"
@@ -61,9 +61,14 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #define kParamTileTimeOffsetHint "Set a time offset"
 #define kParamTileTimeOffsetDefault 0
 
+#define kParamTileTimeOffsetFirst "timeOffsetFirst"
+#define kParamTileTimeOffsetFirstLabel "Keep first frame"
+#define kParamTileTimeOffsetFirstHint "Stay on first frame is offset"
+#define kParamTileTimeOffsetFirstDefault true
+
 #define kSupportsTiles 0
 #define kSupportsMultiResolution 0
-#define kSupportsRenderScale 0 // TODO?
+#define kSupportsRenderScale 1
 #define kRenderThreadSafety eRenderInstanceSafe
 
 using namespace OFX;
@@ -81,6 +86,7 @@ private:
     OFX::IntParam *rows_;
     OFX::IntParam *cols_;
     OFX::IntParam *offset_;
+    OFX::BooleanParam *firstFrame_;
 };
 
 TilePlugin::TilePlugin(OfxImageEffectHandle handle)
@@ -96,7 +102,8 @@ TilePlugin::TilePlugin(OfxImageEffectHandle handle)
     rows_ = fetchIntParam(kParamRows);
     cols_ = fetchIntParam(kParamCols);
     offset_ = fetchIntParam(kParamTileTimeOffset);
-    assert(rows_ && cols_ && offset_);
+    firstFrame_ = fetchBooleanParam(kParamTileTimeOffsetFirst);
+    assert(rows_ && cols_ && offset_ && firstFrame_);
 }
 
 TilePlugin::~TilePlugin()
@@ -176,9 +183,11 @@ void TilePlugin::render(const OFX::RenderArguments &args)
     int rows = 0;
     int cols = 0;
     int offset = 0;
+    bool firstFrame = false;
     rows_->getValueAtTime(args.time, rows);
     cols_->getValueAtTime(args.time, cols);
     offset_->getValueAtTime(args.time, offset);
+    firstFrame_->getValueAtTime(args.time, firstFrame);
 
     // setup
     int srcWidth = srcRod.x2-srcRod.x1;
@@ -225,9 +234,15 @@ void TilePlugin::render(const OFX::RenderArguments &args)
             imageList.push_back(image);
     }
     else { // time offset
-        imageList.push_back(image);
+        int counter;
+        if (firstFrame) {
+            imageList.push_back(image);
+            counter=thumbs-1;
+        }
+        else
+            counter=thumbs;
         int frame = args.time+offset;
-        for(int y = 0; y < thumbs-1; y++) {
+        for(int y = 0; y < counter; y++) {
             std::auto_ptr<const OFX::Image> tileImg(srcClip_->fetchImage(frame));
             if (tileImg.get()) {
                 OfxRectI tileRod;
@@ -352,6 +367,14 @@ void TilePluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, Cont
         param->setRange(0, 10000);
         param->setDisplayRange(0, 100);
         param->setDefault(kParamTileTimeOffsetDefault);
+        page->addChild(*param);
+    }
+    {
+        BooleanParamDescriptor *param = desc.defineBooleanParam(kParamTileTimeOffsetFirst);
+        param->setLabel(kParamTileTimeOffsetFirstLabel);
+        param->setHint(kParamTileTimeOffsetFirstHint);
+        param->setAnimates(true);
+        param->setDefault(kParamTileTimeOffsetFirstDefault);
         page->addChild(*param);
     }
 }
