@@ -30,28 +30,13 @@ else
   fi
 fi
 
-ZLIB=1.2.8
-ZLIB_URL=http://prdownloads.sourceforge.net/libpng/zlib-${ZLIB}.tar.gz?download
-
-PNG=1.2.52
-PNG_URL=http://prdownloads.sourceforge.net/libpng/libpng-${PNG}.tar.gz?download
-
-EXPAT=2.1.0
-EXPAT_URL=http://sourceforge.net/projects/expat/files/expat/${EXPAT}/expat-${EXPAT}.tar.gz/download
-
-FCONFIG=2.10.2
-FCONFIG_URL=http://www.freedesktop.org/software/fontconfig/release/fontconfig-${FCONFIG}.tar.gz
-
-FTYPE=2.4.11
-FTYPE_URL=http://sourceforge.net/projects/freetype/files/freetype2/${FTYPE}/freetype-${FTYPE}.tar.gz/download
-
 if [ -z "$VERSION" ]; then
-  ARENA=0.7
+  ARENA=1.0
 else
   ARENA=$VERSION
 fi
 if [ -z "$PACKAGE" ]; then
-  PKGNAME=Arena
+  PKGNAME=Extra
 else
   PKGNAME=$PACKAGE
 fi
@@ -111,100 +96,6 @@ if [ "$CLEAN" == "1" ]; then
 fi
 if [ ! -d $PREFIX ]; then
   mkdir -p $PREFIX/{bin,lib,include} || exit 1
-fi
-
-# zlib
-if [ ! -f ${PREFIX}/lib/libz.a ] && [ "$OS" == "Msys" ]; then
-  if [ ! -f $CWD/3rdparty/zlib-$ZLIB.tar.gz ]; then
-    wget $ZLIB_URL -O $CWD/3rdparty/zlib-$ZLIB.tar.gz || exit 1
-  fi
-  if [ ! -d $CWD/3rdparty/zlib-$ZLIB ]; then
-    tar xvf $CWD/3rdparty/zlib-$ZLIB.tar.gz -C $CWD/3rdparty/ || exit 1
-  fi
-  cd $CWD/3rdparty/zlib-$ZLIB || exit 1
-  if [ -f $CWD/3rdparty/Makefile.zlib ] && [ "$BIT" == "64" ]; then
-    cat $CWD/3rdparty/Makefile.zlib > win32/Makefile.gcc || exit 1
-  fi
-  make distclean
-  CFLAGS="-m${BIT} ${BF}" CXXFLAGS="-m${BIT} ${BF} -I${PREFIX}/include" CPPFLAGS="-I${PREFIX}/include -L${PREFIX}/lib" make -f win32/Makefile.gcc || exit 1
-  cp libz.a ${PREFIX}/lib/
-  cp *.h ${PREFIX}/include/
-  mkdir -p $PREFIX/share/doc/zlib/ || exit 1
-  cp README $PREFIX/share/doc/zlib/ || exit 1
-  cd .. || exit 1
-  rm -rf zlib-$ZLIB || exit 1
-fi
-
-# libpng
-if [ ! -f ${PREFIX}/lib/libpng.a ]; then
-  if [ ! -f $CWD/3rdparty/libpng-$PNG.tar.gz ]; then
-    wget $PNG_URL -O $CWD/3rdparty/libpng-$PNG.tar.gz || exit 1
-  fi
-  if [ ! -d $CWD/3rdparty/libpng-$PNG ]; then
-    tar xvf $CWD/3rdparty/libpng-$PNG.tar.gz -C $CWD/3rdparty/ || exit 1
-  fi
-  cd $CWD/3rdparty/libpng-$PNG || exit 1
-  $MAKE distclean
-  CFLAGS="-m${BIT} ${BF}" CXXFLAGS="-m${BIT} ${BF} ${BSD} -I${PREFIX}/include" CPPFLAGS="-I${PREFIX}/include -L${PREFIX}/lib" ./configure --prefix=$PREFIX --enable-static --disable-shared || exit 1
-  $MAKE -j$JOBS install || exit 1
-  mkdir -p $PREFIX/share/doc/libpng/ || exit 1
-  cp LICENSE $PREFIX/share/doc/libpng/ || exit 1
-  cd .. || exit 1
-  rm -rf libpng-$PNG || exit 1
-fi
-
-# expat
-if [ ! -f ${PREFIX}/lib/libexpat.a ] && [ "$OS" == "Msys" ]; then
-  if [ ! -f $CWD/3rdparty/expat-$EXPAT.tar.gz ]; then
-    wget $EXPAT_URL -O $CWD/3rdparty/expat-$EXPAT.tar.gz || exit 1
-  fi
-  if [ ! -d $CWD/3rdparty/expat-$EXPAT ]; then
-    tar xvf $CWD/3rdparty/expat-$EXPAT.tar.gz -C $CWD/3rdparty/ || exit 1
-  fi
-  cd $CWD/3rdparty/expat-$EXPAT || exit 1
-  make distclean
-  CFLAGS="-m${BIT} ${BF}" CXXFLAGS="-m${BIT} ${BF} -I${PREFIX}/include" CPPFLAGS="-I${PREFIX}/include -L${PREFIX}/lib" ./configure --libdir=${PREFIX}/lib --prefix=${PREFIX} --enable-static --disable-shared || exit 1
-  make -j$JOBS install || exit 1
-  mkdir -p $PREFIX/share/doc/expat/ || exit 1
-  cp COPYING $PREFIX/share/doc/expat/ || exit 1
-  cd .. || exit 1
-  rm -rf expat-$EXPAT || exit 1
-fi
-
-# freetype
-if [ ! -f ${PREFIX}/lib/libfreetype.a ] && [ "$OS" == "Msys" ]; then
-  if [ ! -f $CWD/3rdparty/freetype-$FTYPE.tar.gz ]; then
-    wget $FTYPE_URL -O $CWD/3rdparty/freetype-$FTYPE.tar.gz || exit 1
-  fi
-  if [ ! -d $CWD/3rdparty/freetype-$FTYPE ]; then
-    tar xvf $CWD/3rdparty/freetype-$FTYPE.tar.gz -C $CWD/3rdparty/ || exit 1
-  fi
-  cd $CWD/3rdparty/freetype-$FTYPE || exit 1
-  make distclean
-  CFLAGS="-m${BIT} ${BF}" CXXFLAGS="-m${BIT} ${BF} -I${PREFIX}/include" CPPFLAGS="-I${PREFIX}/include -L${PREFIX}/lib -lexpat -lz" ./configure --libdir=${PREFIX}/lib --prefix=${PREFIX} --enable-static --disable-shared || exit 1
-  make -j$JOBS install || exit 1
-  mkdir -p $PREFIX/share/doc/freetype/ || exit 1
-  cp README $PREFIX/share/doc/freetype/ || exit 1
-  cd .. || exit 1
-  rm -rf freetype-$FTYPE || exit 1
-fi
-
-# fontconfig
-if [ ! -f ${PREFIX}/lib/libfontconfig.a ] && [ "$OS" == "Msys" ]; then
-  if [ ! -f $CWD/3rdparty/fontconfig-$FCONFIG.tar.gz ]; then
-    wget $FCONFIG_URL -O $CWD/3rdparty/fontconfig-$FCONFIG.tar.gz || exit 1
-  fi
-  if [ ! -d $CWD/3rdparty/fontconfig-$FCONFIG ]; then
-    tar xvf $CWD/3rdparty/fontconfig-$FCONFIG.tar.gz -C $CWD/3rdparty/ || exit 1
-  fi
-  cd $CWD/3rdparty/fontconfig-$FCONFIG || exit 1
-  make distclean
-  CFLAGS="-m${BIT} ${BF}" CXXFLAGS="-m${BIT} ${BF} -I${PREFIX}/include" CPPFLAGS="-I${PREFIX}/include -L${PREFIX}/lib -lfreetype -lexpat -lz" ./configure --bindir=${PREFIX} --libdir=${PREFIX}/lib --prefix=${PREFIX} --disable-docs --enable-static --disable-shared || exit 1
-  make -j$JOBS install || exit 1
-  mkdir -p $PREFIX/share/doc/fontconfig/ || exit 1
-  cp COPYING $PREFIX/share/doc/fontconfig/ || exit 1
-  cd .. || exit 1
-  rm -rf fontconfig-$FCONFIG || exit 1
 fi
 
 # magick
@@ -270,10 +161,10 @@ if [ "$OS" == "Msys" ]; then
 fi
 
 # Strip and copy
-if [ "$PKGNAME" != "Arena" ]; then
+if [ "$PKGNAME" != "Extra" ]; then
   PKGSRC=$PKGNAME
 else
-  PKGSRC=Bundle
+  PKGSRC=Extra
 fi
 if [ "$BIT" == "64" ]; then
   PKGBIT=x86-$BIT
