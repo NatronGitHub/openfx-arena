@@ -120,11 +120,6 @@
 #define kParamTextColorLabel "Fill Color"
 #define kParamTextColorHint "The fill color of the text to render"
 
-#define kParamStrokeCheck "strokeCheck"
-#define kParamStrokeCheckLabel "Outline"
-#define kParamStrokeCheckHint "Enable or disable outline"
-#define kParamStrokeCheckDefault false
-
 #define kParamStrokeColor "strokeColor"
 #define kParamStrokeColorLabel "Outline Color"
 #define kParamStrokeColorHint "The stroke color of the text to render"
@@ -132,21 +127,16 @@
 #define kParamStroke "stroke"
 #define kParamStrokeLabel "Outline Width"
 #define kParamStrokeHint "Adjust stroke width for outline"
-#define kParamStrokeDefault 1
+#define kParamStrokeDefault 0
 
 #define kParamFontOverride "customFont"
 #define kParamFontOverrideLabel "Custom Font"
 #define kParamFontOverrideHint "Override the font list. You can use font name or direct path"
 
-#define kParamShadowCheck "shadow"
-#define kParamShadowCheckLabel "Shadow"
-#define kParamShadowCheckHint "Enable or disable drop shadow"
-#define kParamShadowCheckDefault false
-
 #define kParamShadowOpacity "shadowOpacity"
 #define kParamShadowOpacityLabel "Shadow opacity"
 #define kParamShadowOpacityHint "Adjust shadow opacity"
-#define kParamShadowOpacityDefault 60
+#define kParamShadowOpacityDefault 0
 
 #define kParamShadowSigma "shadowOffset"
 #define kParamShadowSigmaLabel "Shadow offset"
@@ -199,10 +189,8 @@ private:
     OFX::ChoiceParam *fontName_;
     OFX::RGBAParam *textColor_;
     OFX::RGBAParam *strokeColor_;
-    OFX::BooleanParam *strokeEnabled_;
     OFX::DoubleParam *strokeWidth_;
     OFX::StringParam *fontOverride_;
-    OFX::BooleanParam *shadowEnabled_;
     OFX::DoubleParam *shadowOpacity_;
     OFX::DoubleParam *shadowSigma_;
     OFX::DoubleParam *interlineSpacing_;
@@ -241,17 +229,15 @@ TextPlugin::TextPlugin(OfxImageEffectHandle handle)
     fontName_ = fetchChoiceParam(kParamFontName);
     textColor_ = fetchRGBAParam(kParamTextColor);
     strokeColor_ = fetchRGBAParam(kParamStrokeColor);
-    strokeEnabled_ = fetchBooleanParam(kParamStrokeCheck);
     strokeWidth_ = fetchDoubleParam(kParamStroke);
     fontOverride_ = fetchStringParam(kParamFontOverride);
-    shadowEnabled_ = fetchBooleanParam(kParamShadowCheck);
     shadowOpacity_ = fetchDoubleParam(kParamShadowOpacity);
     shadowSigma_ = fetchDoubleParam(kParamShadowSigma);
     interlineSpacing_ = fetchDoubleParam(kParamInterlineSpacing);
     interwordSpacing_ = fetchDoubleParam(kParamInterwordSpacing);
     textSpacing_ = fetchDoubleParam(kParamTextSpacing);
     use_pango_ = fetchBooleanParam(kParamPango);
-    assert(position_ && text_ && fontSize_ && fontName_ && textColor_ && strokeColor_ && strokeEnabled_ && strokeWidth_ && fontOverride_ && shadowEnabled_ && shadowOpacity_ && shadowSigma_ && interlineSpacing_ && interwordSpacing_ && textSpacing_ && use_pango_);
+    assert(position_ && text_ && fontSize_ && fontName_ && textColor_ && strokeColor_ && strokeWidth_ && fontOverride_ && shadowOpacity_ && shadowSigma_ && interlineSpacing_ && interwordSpacing_ && textSpacing_ && use_pango_);
 }
 
 TextPlugin::~TextPlugin()
@@ -316,8 +302,6 @@ void TextPlugin::render(const OFX::RenderArguments &args)
     // Get params
     double x, y, r, g, b, a, r_s, g_s, b_s, a_s, strokeWidth,shadowOpacity,shadowSigma,interlineSpacing,interwordSpacing,textSpacing;
     int fontSize, fontID;
-    bool use_stroke = false;
-    bool use_shadow = false;
     bool use_pango = false;
     std::string text, fontOverride, fontName;
 
@@ -325,12 +309,10 @@ void TextPlugin::render(const OFX::RenderArguments &args)
     text_->getValueAtTime(args.time, text);
     fontSize_->getValueAtTime(args.time, fontSize);
     fontName_->getValueAtTime(args.time, fontID);
-    strokeEnabled_->getValueAtTime(args.time, use_stroke);
     strokeWidth_->getValueAtTime(args.time, strokeWidth);
     fontOverride_->getValueAtTime(args.time, fontOverride);
     textColor_->getValueAtTime(args.time, r, g, b, a);
     strokeColor_->getValueAtTime(args.time, r_s, g_s, b_s, a_s);
-    shadowEnabled_->getValueAtTime(args.time, use_shadow);
     shadowOpacity_->getValueAtTime(args.time, shadowOpacity);
     shadowSigma_->getValueAtTime(args.time, shadowSigma);
     interlineSpacing_->getValueAtTime(args.time, interlineSpacing);
@@ -353,7 +335,7 @@ void TextPlugin::render(const OFX::RenderArguments &args)
         image.fontPointsize(std::floor(fontSize * args.renderScale.x + 0.5));
 
     // Set stroke width
-    if (use_stroke)
+    if (strokeWidth>0)
         image.strokeWidth(std::floor(strokeWidth * args.renderScale.x + 0.5));
 
     // Convert colors to int
@@ -394,7 +376,7 @@ void TextPlugin::render(const OFX::RenderArguments &args)
     text_draw_list.push_back(Magick::DrawableTextInterlineSpacing(std::floor(interlineSpacing * args.renderScale.x + 0.5)));
     text_draw_list.push_back(Magick::DrawableTextInterwordSpacing(std::floor(interwordSpacing * args.renderScale.x + 0.5)));
     text_draw_list.push_back(Magick::DrawableTextKerning(std::floor(textSpacing * args.renderScale.x + 0.5)));
-    if (use_stroke)
+    if (strokeWidth>0)
         text_draw_list.push_back(Magick::DrawableStrokeColor(strokeRGBA));
 
     // Draw
@@ -404,7 +386,7 @@ void TextPlugin::render(const OFX::RenderArguments &args)
         image.draw(text_draw_list);
 
     // Shadow
-    if (use_shadow) {
+    if (shadowOpacity>0) {
         Magick::Image dropShadow;
         dropShadow=image;
         dropShadow.backgroundColor("Black");
@@ -538,33 +520,6 @@ void TextPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, Cont
         }
     }
     {
-        DoubleParamDescriptor *param = desc.defineDoubleParam(kParamTextSpacing);
-        param->setLabel(kParamTextSpacingLabel);
-        param->setHint(kParamTextSpacingHint);
-        param->setRange(-1000, 1000);
-        param->setDisplayRange(-100, 100);
-        param->setDefault(kParamTextSpacingDefault);
-        page->addChild(*param);
-    }
-    {
-        DoubleParamDescriptor *param = desc.defineDoubleParam(kParamInterwordSpacing);
-        param->setLabel(kParamInterwordSpacingLabel);
-        param->setHint(kParamInterwordSpacingHint);
-        param->setRange(-1000, 1000);
-        param->setDisplayRange(-100, 100);
-        param->setDefault(kParamInterwordSpacingDefault);
-        page->addChild(*param);
-    }
-    {
-        DoubleParamDescriptor *param = desc.defineDoubleParam(kParamInterlineSpacing);
-        param->setLabel(kParamInterlineSpacingLabel);
-        param->setHint(kParamInterlineSpacingHint);
-        param->setRange(-1000, 1000);
-        param->setDisplayRange(-100, 100);
-        param->setDefault(kParamInterlineSpacingDefault);
-        page->addChild(*param);
-    }
-    {
         BooleanParamDescriptor* param = desc.defineBooleanParam(kParamPango);
         param->setLabel(kParamPangoLabel);
         param->setHint(kParamPangoHint);
@@ -585,14 +540,6 @@ void TextPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, Cont
         param->setStringType(eStringTypeMultiLine);
         param->setAnimates(true);
         param->setDefault("Enter text");
-        page->addChild(*param);
-    }
-    {
-        IntParamDescriptor* param = desc.defineIntParam(kParamFontSize);
-        param->setLabel(kParamFontSizeLabel);
-        param->setHint(kParamFontSizeHint);
-        param->setDefault(kParamFontSizeDefault);
-        param->setAnimates(true);
         page->addChild(*param);
     }
     {
@@ -634,19 +581,47 @@ void TextPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, Cont
         page->addChild(*param);
     }
     {
-        RGBAParamDescriptor* param = desc.defineRGBAParam(kParamTextColor);
-        param->setLabel(kParamTextColorLabel);
-        param->setHint(kParamTextColorHint);
-        param->setDefault(1., 1., 1., 1.);
+        IntParamDescriptor* param = desc.defineIntParam(kParamFontSize);
+        param->setLabel(kParamFontSizeLabel);
+        param->setHint(kParamFontSizeHint);
+        param->setRange(0, 1000);
+        param->setDisplayRange(0, 500);
+        param->setDefault(kParamFontSizeDefault);
         param->setAnimates(true);
         page->addChild(*param);
     }
     {
-        BooleanParamDescriptor* param = desc.defineBooleanParam(kParamStrokeCheck);
-        param->setLabel(kParamStrokeCheckLabel);
-        param->setHint(kParamStrokeCheckHint);
-        param->setEvaluateOnChange(true);
-        param->setDefault(kParamStrokeCheckDefault);
+        DoubleParamDescriptor *param = desc.defineDoubleParam(kParamTextSpacing);
+        param->setLabel(kParamTextSpacingLabel);
+        param->setHint(kParamTextSpacingHint);
+        param->setRange(-1000, 1000);
+        param->setDisplayRange(-100, 100);
+        param->setDefault(kParamTextSpacingDefault);
+        page->addChild(*param);
+    }
+    {
+        DoubleParamDescriptor *param = desc.defineDoubleParam(kParamInterwordSpacing);
+        param->setLabel(kParamInterwordSpacingLabel);
+        param->setHint(kParamInterwordSpacingHint);
+        param->setRange(-1000, 1000);
+        param->setDisplayRange(-100, 100);
+        param->setDefault(kParamInterwordSpacingDefault);
+        page->addChild(*param);
+    }
+    {
+        DoubleParamDescriptor *param = desc.defineDoubleParam(kParamInterlineSpacing);
+        param->setLabel(kParamInterlineSpacingLabel);
+        param->setHint(kParamInterlineSpacingHint);
+        param->setRange(-1000, 1000);
+        param->setDisplayRange(-100, 100);
+        param->setDefault(kParamInterlineSpacingDefault);
+        page->addChild(*param);
+    }
+    {
+        RGBAParamDescriptor* param = desc.defineRGBAParam(kParamTextColor);
+        param->setLabel(kParamTextColorLabel);
+        param->setHint(kParamTextColorHint);
+        param->setDefault(1., 1., 1., 1.);
         param->setAnimates(true);
         page->addChild(*param);
     }
@@ -662,18 +637,9 @@ void TextPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, Cont
         DoubleParamDescriptor *param = desc.defineDoubleParam(kParamStroke);
         param->setLabel(kParamStrokeLabel);
         param->setHint(kParamStrokeHint);
-        param->setRange(0, 50);
-        param->setDisplayRange(0, 50);
+        param->setRange(0, 100);
+        param->setDisplayRange(0, 10);
         param->setDefault(kParamStrokeDefault);
-        page->addChild(*param);
-    }
-    {
-        BooleanParamDescriptor* param = desc.defineBooleanParam(kParamShadowCheck);
-        param->setLabel(kParamShadowCheckLabel);
-        param->setHint(kParamShadowCheckHint);
-        param->setEvaluateOnChange(true);
-        param->setDefault(kParamShadowCheckDefault);
-        param->setAnimates(true);
         page->addChild(*param);
     }
     {
