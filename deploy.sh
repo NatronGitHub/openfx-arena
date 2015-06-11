@@ -20,7 +20,7 @@ MAGICK_WIN=6.8.9-10 # higher is broken on mingw
 if [ "$MAGICK_LEGACY" == "1" ]; then
   MAGICK_UNIX=$MAGICK_WIN
 else
-  MAGICK_UNIX=6.9.1-4
+  MAGICK_UNIX=6.8.9-10 #6.9.1-4
 fi
 MAGICK_UNIX_BETA_MAJOR=6.9.1-5
 MAGICK_UNIX_BETA_MINOR=beta20150607
@@ -67,12 +67,12 @@ FTYPE=2.4.11
 FTYPE_URL=http://sourceforge.net/projects/freetype/files/freetype2/${FTYPE}/freetype-${FTYPE}.tar.gz/download
 
 if [ -z "$VERSION" ]; then
-  ARENA=0.7
+  ARENA=4.1
 else
   ARENA=$VERSION
 fi
 if [ -z "$PACKAGE" ]; then
-  PKGNAME=Arena
+  PKGNAME=Text
 else
   PKGNAME=$PACKAGE
 fi
@@ -244,9 +244,7 @@ if [ ! -f ${PREFIX}/lib/libMagick++-6.Q${Q}HDRI.a ]; then
   else
     cd $CWD/3rdparty/ImageMagick-$MAGICK || exit 1
   fi
-  if [ "$MAGICK_MOD" == "1" ]; then
-    cat $CWD/3rdparty/composite-private.h > magick/composite-private.h || exit 1
-  fi
+  cat $CWD/3rdparty/composite-private.h > magick/composite-private.h || exit 1
   $MAKE distclean
   CFLAGS="-m${BIT} ${BF}" CXXFLAGS="-m${BIT} ${BF} ${BSD} -I${PREFIX}/include" CPPFLAGS="-I${PREFIX}/include -L${PREFIX}/lib" ./configure --libdir=${PREFIX}/lib --prefix=${PREFIX} $MAGICK_OPT || exit 1
   $MAKE -j$JOBS install || exit 1
@@ -262,7 +260,7 @@ fi
 
 cd $CWD || exit 1
 
-if [ "$PKGNAME" != "Arena" ]; then
+if [ "$PKGNAME" != "Arena" ]||[ "$PKGNAME" != "Text" ]; then
   cd $PKGNAME || exit 1
 fi
 

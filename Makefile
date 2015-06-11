@@ -1,7 +1,5 @@
 # build a combined plugin that reads all formats
-SUBDIRS = Bundle
-
-SUBDIRS_NOMULTI = Mirror Text Distort
+SUBDIRS = Text
 
 all: subdirs
 
