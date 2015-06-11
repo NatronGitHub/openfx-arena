@@ -51,8 +51,23 @@ else
   fi
 fi
 
+ZLIB=1.2.8
+ZLIB_URL=http://prdownloads.sourceforge.net/libpng/zlib-${ZLIB}.tar.gz?download
+
+PNG=1.2.52
+PNG_URL=http://prdownloads.sourceforge.net/libpng/libpng-${PNG}.tar.gz?download
+
+EXPAT=2.1.0
+EXPAT_URL=http://sourceforge.net/projects/expat/files/expat/${EXPAT}/expat-${EXPAT}.tar.gz/download
+
+FCONFIG=2.10.2
+FCONFIG_URL=http://www.freedesktop.org/software/fontconfig/release/fontconfig-${FCONFIG}.tar.gz
+
+FTYPE=2.4.11
+FTYPE_URL=http://sourceforge.net/projects/freetype/files/freetype2/${FTYPE}/freetype-${FTYPE}.tar.gz/download
+
 if [ -z "$VERSION" ]; then
-  ARENA=1.0
+  ARENA=4.1
 else
   ARENA=$VERSION
 fi
@@ -229,9 +244,7 @@ if [ ! -f ${PREFIX}/lib/libMagick++-6.Q${Q}HDRI.a ]; then
   else
     cd $CWD/3rdparty/ImageMagick-$MAGICK || exit 1
   fi
-  if [ "$MAGICK_MOD" == "1" ]; then
-    cat $CWD/3rdparty/composite-private.h > magick/composite-private.h || exit 1
-  fi
+  cat $CWD/3rdparty/composite-private.h > magick/composite-private.h || exit 1
   $MAKE distclean
   CFLAGS="-m${BIT} ${BF}" CXXFLAGS="-m${BIT} ${BF} ${BSD} -I${PREFIX}/include" CPPFLAGS="-I${PREFIX}/include -L${PREFIX}/lib" ./configure --libdir=${PREFIX}/lib --prefix=${PREFIX} $MAGICK_OPT || exit 1
   $MAKE -j$JOBS install || exit 1
@@ -247,7 +260,7 @@ fi
 
 cd $CWD || exit 1
 
-if [ "$PKGNAME" != "Arena" ]; then
+if [ "$PKGNAME" != "Arena" ]||[ "$PKGNAME" != "Extra" ]; then
   cd $PKGNAME || exit 1
 fi
 
@@ -280,10 +293,10 @@ if [ "$OS" == "Msys" ]; then
 fi
 
 # Strip and copy
-if [ "$PKGNAME" != "Extra" ]; then
+if [ "$PKGNAME" != "Arena" ]; then
   PKGSRC=$PKGNAME
 else
-  PKGSRC=Extra
+  PKGSRC=Bundle
 fi
 if [ "$BIT" == "64" ]; then
   PKGBIT=x86-$BIT
