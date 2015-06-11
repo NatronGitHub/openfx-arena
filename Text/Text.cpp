@@ -476,7 +476,8 @@ void TextPluginFactory::describe(OFX::ImageEffectDescriptor &desc)
     desc.setLabel(kPluginName);
     desc.setPluginGrouping(kPluginGrouping);
     std::string magickV = MagickCore::GetMagickVersion(NULL);
-    desc.setPluginDescription("Text generator for Natron.\n\nWritten by Ole-André Rodlie <olear@fxarena.net>\n\n Powered by "+magickV);
+    std::string delegates = MagickCore::GetMagickDelegates();
+    desc.setPluginDescription("Text generator for Natron.\n\nWritten by Ole-André Rodlie <olear@fxarena.net>\n\n Powered by "+magickV+"\n\nFeatures: "+delegates);
 
     // add the supported contexts
     desc.addSupportedContext(eContextGeneral);
