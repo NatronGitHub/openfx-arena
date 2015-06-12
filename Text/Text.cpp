@@ -139,9 +139,9 @@
 #define kParamShadowOpacityHint "Adjust shadow opacity"
 #define kParamShadowOpacityDefault 0
 
-#define kParamShadowSigma "shadowOffset"
-#define kParamShadowSigmaLabel "Shadow offset"
-#define kParamShadowSigmaHint "Adjust shadow offset"
+#define kParamShadowSigma "shadowSigma"
+#define kParamShadowSigmaLabel "Shadow sigma"
+#define kParamShadowSigmaHint "Adjust shadow sigma"
 #define kParamShadowSigmaDefault 5
 
 #define kParamInterlineSpacing "lineSpacing"
@@ -402,17 +402,18 @@ void TextPlugin::render(const OFX::RenderArguments &args)
 
     // Draw
     if (has_pango && use_pango)
-        image.read("pango:"+text);
+        image.read("pango:"+text); // mostly untested
     else
         image.draw(text_draw_list);
 
     // Shadow
     if (shadowOpacity>0 && shadowSigma>0) {
+        double renderSigma = std::floor(shadowSigma * args.renderScale.x + 0.5);
         Magick::Image dropShadow;
         dropShadow=image;
         dropShadow.backgroundColor(shadowRGB);
         dropShadow.virtualPixelMethod(Magick::TransparentVirtualPixelMethod);
-        dropShadow.shadow(shadowOpacity,std::floor(shadowSigma * args.renderScale.x + 0.5),0,0);
+        dropShadow.shadow(shadowOpacity,renderSigma,0,0);
         dropShadow.composite(image,0,0,Magick::OverCompositeOp);
         image=dropShadow;
     }
