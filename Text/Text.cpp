@@ -409,13 +409,15 @@ void TextPlugin::render(const OFX::RenderArguments &args)
     // Shadow
     if (shadowOpacity>0 && shadowSigma>0) {
         double renderSigma = std::floor(shadowSigma * args.renderScale.x + 0.5);
+        Magick::Image shadowContainer(Magick::Geometry(width,height),Magick::Color("rgba(0,0,0,0)"));
         Magick::Image dropShadow;
         dropShadow=image;
         dropShadow.backgroundColor(shadowRGB);
         dropShadow.virtualPixelMethod(Magick::TransparentVirtualPixelMethod);
         dropShadow.shadow(shadowOpacity,renderSigma,0,0);
-        dropShadow.composite(image,0,0,Magick::OverCompositeOp);
-        image=dropShadow;
+        shadowContainer.composite(dropShadow,0,0,Magick::OverCompositeOp);
+        shadowContainer.composite(image,0,0,Magick::OverCompositeOp);
+        image=shadowContainer;
     }
 
     // Flip image
