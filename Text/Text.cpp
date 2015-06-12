@@ -142,7 +142,21 @@
 #define kParamShadowSigma "shadowSigma"
 #define kParamShadowSigmaLabel "Shadow sigma"
 #define kParamShadowSigmaHint "Adjust shadow sigma"
-#define kParamShadowSigmaDefault 5
+#define kParamShadowSigmaDefault 0.5
+
+#define kParamShadowColor "shadowColor"
+#define kParamShadowColorLabel "Shadow color"
+#define kParamShadowColorHint "The shadow color to render"
+
+#define kParamShadowX "shadowX"
+#define kParamShadowXLabel "Shadow offset X"
+#define kParamShadowXHint "Shadow offset X"
+#define kParamShadowXDefault 0
+
+#define kParamShadowY "shadowY"
+#define kParamShadowYLabel "Shadow offset Y"
+#define kParamShadowYHint "Shadow offset Y"
+#define kParamShadowYDefault 0
 
 #define kParamInterlineSpacing "lineSpacing"
 #define kParamInterlineSpacingLabel "Line spacing"
@@ -163,10 +177,6 @@
 #define kParamPangoLabel "Pango markup"
 #define kParamPangoHint "Enable/Disable Pango Markup Language.\n\n http://www.imagemagick.org/Usage/text/#pango"
 #define kParamPangoDefault false
-
-#define kParamShadowColor "shadowColor"
-#define kParamShadowColorLabel "Shadow Color"
-#define kParamShadowColorHint "The shadow color to render"
 
 using namespace OFX;
 static bool gHostIsNatron = false;
@@ -204,6 +214,8 @@ private:
     OFX::DoubleParam *textSpacing_;
     OFX::BooleanParam *use_pango_;
     OFX::RGBParam *shadowColor_;
+    OFX::IntParam *shadowX_;
+    OFX::IntParam *shadowY_;
     bool has_pango;
     bool has_fontconfig;
     bool has_freetype;
@@ -245,7 +257,9 @@ TextPlugin::TextPlugin(OfxImageEffectHandle handle)
     textSpacing_ = fetchDoubleParam(kParamTextSpacing);
     use_pango_ = fetchBooleanParam(kParamPango);
     shadowColor_ = fetchRGBParam(kParamShadowColor);
-    assert(position_ && text_ && fontSize_ && fontName_ && textColor_ && strokeColor_ && strokeWidth_ && fontOverride_ && shadowOpacity_ && shadowSigma_ && interlineSpacing_ && interwordSpacing_ && textSpacing_ && use_pango_ && shadowColor_);
+    shadowX_ = fetchIntParam(kParamShadowX);
+    shadowY_ = fetchIntParam(kParamShadowY);
+    assert(position_ && text_ && fontSize_ && fontName_ && textColor_ && strokeColor_ && strokeWidth_ && fontOverride_ && shadowOpacity_ && shadowSigma_ && interlineSpacing_ && interwordSpacing_ && textSpacing_ && use_pango_ && shadowColor_ && shadowX_ && shadowY_);
 }
 
 TextPlugin::~TextPlugin()
@@ -309,7 +323,7 @@ void TextPlugin::render(const OFX::RenderArguments &args)
 
     // Get params
     double x, y, r, g, b, a, r_s, g_s, b_s, a_s, strokeWidth,shadowOpacity,shadowSigma,interlineSpacing,interwordSpacing,textSpacing,shadowR,shadowG,shadowB;
-    int fontSize, fontID;
+    int fontSize, fontID, shadowX, shadowY;
     bool use_pango = false;
     std::string text, fontOverride, fontName;
 
@@ -328,6 +342,8 @@ void TextPlugin::render(const OFX::RenderArguments &args)
     textSpacing_->getValueAtTime(args.time, textSpacing);
     use_pango_->getValueAtTime(args.time, use_pango);
     shadowColor_->getValueAtTime(args.time, shadowR, shadowG, shadowB);
+    shadowX_->getValueAtTime(args.time, shadowX);
+    shadowY_->getValueAtTime(args.time, shadowY);
     fontName_->getOption(fontID,fontName);
 
     // cascade menu
@@ -367,17 +383,14 @@ void TextPlugin::render(const OFX::RenderArguments &args)
     int shadowGI = ((uint8_t)(255.0f *CLAMP(shadowG, 0.0, 1.0)));
     int shadowBI = ((uint8_t)(255.0f *CLAMP(shadowB, 0.0, 1.0)));
 
-    std::ostringstream rgba;
-    rgba << "rgba(" << rI <<"," << gI << "," << bI << "," << a << ")";
-    std::string textRGBA = rgba.str();
+    std::ostringstream textRGBA;
+    textRGBA << "rgba(" << rI <<"," << gI << "," << bI << "," << a << ")";
 
-    std::ostringstream rgba_s;
-    rgba_s << "rgba(" << r_sI <<"," << g_sI << "," << b_sI << "," << a_s << ")";
-    std::string strokeRGBA = rgba_s.str();
+    std::ostringstream strokeRGBA;
+    strokeRGBA << "rgba(" << r_sI <<"," << g_sI << "," << b_sI << "," << a_s << ")";
 
-    std::ostringstream shadowRGB_s;
-    shadowRGB_s << "rgb(" << shadowRI <<"," << shadowGI << "," << shadowBI << ")";
-    std::string shadowRGB = shadowRGB_s.str();
+    std::ostringstream shadowRGB;
+    shadowRGB << "rgb(" << shadowRI <<"," << shadowGI << "," << shadowBI << ")";
 
     // Flip image
     image.flip();
@@ -393,12 +406,12 @@ void TextPlugin::render(const OFX::RenderArguments &args)
     std::list<Magick::Drawable> text_draw_list;
     text_draw_list.push_back(Magick::DrawableFont(fontName));
     text_draw_list.push_back(Magick::DrawableText(xtext, ytext, text));
-    text_draw_list.push_back(Magick::DrawableFillColor(textRGBA));
+    text_draw_list.push_back(Magick::DrawableFillColor(textRGBA.str()));
     text_draw_list.push_back(Magick::DrawableTextInterlineSpacing(std::floor(interlineSpacing * args.renderScale.x + 0.5)));
     text_draw_list.push_back(Magick::DrawableTextInterwordSpacing(std::floor(interwordSpacing * args.renderScale.x + 0.5)));
     text_draw_list.push_back(Magick::DrawableTextKerning(std::floor(textSpacing * args.renderScale.x + 0.5)));
     if (strokeWidth>0)
-        text_draw_list.push_back(Magick::DrawableStrokeColor(strokeRGBA));
+        text_draw_list.push_back(Magick::DrawableStrokeColor(strokeRGBA.str()));
 
     // Draw
     if (has_pango && use_pango)
@@ -408,14 +421,13 @@ void TextPlugin::render(const OFX::RenderArguments &args)
 
     // Shadow
     if (shadowOpacity>0 && shadowSigma>0) {
-        double renderSigma = std::floor(shadowSigma * args.renderScale.x + 0.5);
         Magick::Image shadowContainer(Magick::Geometry(width,height),Magick::Color("rgba(0,0,0,0)"));
         Magick::Image dropShadow;
         dropShadow=image;
-        dropShadow.backgroundColor(shadowRGB);
+        dropShadow.backgroundColor(shadowRGB.str());
         dropShadow.virtualPixelMethod(Magick::TransparentVirtualPixelMethod);
-        dropShadow.shadow(shadowOpacity,renderSigma,0,0);
-        shadowContainer.composite(dropShadow,0,0,Magick::OverCompositeOp);
+        dropShadow.shadow(shadowOpacity,std::floor(shadowSigma * args.renderScale.x + 0.5),0,0);
+        shadowContainer.composite(dropShadow,std::floor(shadowX * args.renderScale.x + 0.5),std::floor(shadowY * args.renderScale.x + 0.5),Magick::OverCompositeOp);
         shadowContainer.composite(image,0,0,Magick::OverCompositeOp);
         image=shadowContainer;
     }
@@ -702,6 +714,26 @@ void TextPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, Cont
         param->setLabel(kParamShadowColorLabel);
         param->setHint(kParamShadowColorHint);
         param->setDefault(0., 0., 0.);
+        param->setAnimates(true);
+        page->addChild(*param);
+    }
+    {
+        IntParamDescriptor* param = desc.defineIntParam(kParamShadowX);
+        param->setLabel(kParamShadowXLabel);
+        param->setHint(kParamShadowXHint);
+        param->setRange(-10000, 10000);
+        param->setDisplayRange(-500, 500);
+        param->setDefault(kParamShadowXDefault);
+        param->setAnimates(true);
+        page->addChild(*param);
+    }
+    {
+        IntParamDescriptor* param = desc.defineIntParam(kParamShadowY);
+        param->setLabel(kParamShadowYLabel);
+        param->setHint(kParamShadowYHint);
+        param->setRange(-10000, 10000);
+        param->setDisplayRange(-500, 500);
+        param->setDefault(kParamShadowYDefault);
         param->setAnimates(true);
         page->addChild(*param);
     }
