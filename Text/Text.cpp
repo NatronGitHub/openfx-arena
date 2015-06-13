@@ -178,11 +178,6 @@
 #define kParamPangoHint "Enable/Disable Pango Markup Language.\n\n http://www.imagemagick.org/Usage/text/#pango"
 #define kParamPangoDefault false
 
-#define kParamBackgroundColorCheck "background"
-#define kParamBackgroundColorCheckLabel "Background"
-#define kParamBackgroundColorCheckHint "Enable or disable background color"
-#define kParamBackgroundColorCheckDefault false
-
 #define kParamBackgroundColor "backgroundColor"
 #define kParamBackgroundColorLabel "Background color"
 #define kParamBackgroundColorHint "Adjust background color"
@@ -226,7 +221,6 @@ private:
     OFX::IntParam *shadowX_;
     OFX::IntParam *shadowY_;
     OFX::RGBAParam *bgColor_;
-    OFX::BooleanParam *bgCheck_;
     bool has_pango;
     bool has_fontconfig;
     bool has_freetype;
@@ -270,10 +264,9 @@ TextPlugin::TextPlugin(OfxImageEffectHandle handle)
     shadowColor_ = fetchRGBParam(kParamShadowColor);
     shadowX_ = fetchIntParam(kParamShadowX);
     shadowY_ = fetchIntParam(kParamShadowY);
-    bgCheck_ = fetchBooleanParam(kParamBackgroundColorCheck);
     bgColor_ = fetchRGBAParam(kParamBackgroundColor);
 
-    assert(position_ && text_ && fontSize_ && fontName_ && textColor_ && strokeColor_ && strokeWidth_ && fontOverride_ && shadowOpacity_ && shadowSigma_ && interlineSpacing_ && interwordSpacing_ && textSpacing_ && use_pango_ && shadowColor_ && shadowX_ && shadowY_ && bgCheck_ && bgColor_);
+    assert(position_ && text_ && fontSize_ && fontName_ && textColor_ && strokeColor_ && strokeWidth_ && fontOverride_ && shadowOpacity_ && shadowSigma_ && interlineSpacing_ && interwordSpacing_ && textSpacing_ && use_pango_ && shadowColor_ && shadowX_ && shadowY_ && bgColor_);
 }
 
 TextPlugin::~TextPlugin()
@@ -339,7 +332,6 @@ void TextPlugin::render(const OFX::RenderArguments &args)
     double x, y, r, g, b, a, r_s, g_s, b_s, a_s, strokeWidth,shadowOpacity,shadowSigma,interlineSpacing,interwordSpacing,textSpacing,shadowR,shadowG,shadowB,bgR,bgG, bgB, bgA;
     int fontSize, fontID, shadowX, shadowY;
     bool use_pango = false;
-    bool use_bg = false;
     std::string text, fontOverride, fontName;
 
     position_->getValueAtTime(args.time, x, y);
@@ -359,7 +351,6 @@ void TextPlugin::render(const OFX::RenderArguments &args)
     shadowColor_->getValueAtTime(args.time, shadowR, shadowG, shadowB);
     shadowX_->getValueAtTime(args.time, shadowX);
     shadowY_->getValueAtTime(args.time, shadowY);
-    bgCheck_->getValueAtTime(args.time, use_bg);
     bgColor_->getValueAtTime(args.time, bgR, bgG, bgB, bgA);
     fontName_->getOption(fontID,fontName);
 
@@ -457,7 +448,7 @@ void TextPlugin::render(const OFX::RenderArguments &args)
     }
 
     // Background
-    if (use_bg) {
+    if (bgA>0) {
         Magick::Image bgContainer(Magick::Geometry(width,height),Magick::Color("rgba(0,0,0,0)"));
         Magick::Image background(Magick::Geometry(width,height),Magick::Color(bgRGBA.str()));
         bgContainer.composite(background,0,0,Magick::OverCompositeOp);
@@ -771,19 +762,10 @@ void TextPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, Cont
         page->addChild(*param);
     }
     {
-        BooleanParamDescriptor* param = desc.defineBooleanParam(kParamBackgroundColorCheck);
-        param->setLabel(kParamBackgroundColorCheckLabel);
-        param->setHint(kParamBackgroundColorCheckHint);
-        param->setEvaluateOnChange(true);
-        param->setDefault(kParamBackgroundColorCheckDefault);
-        param->setAnimates(true);
-        page->addChild(*param);
-    }
-    {
         RGBAParamDescriptor* param = desc.defineRGBAParam(kParamBackgroundColor);
         param->setLabel(kParamBackgroundColorLabel);
         param->setHint(kParamBackgroundColorHint);
-        param->setDefault(0., 0., 0., 1.);
+        param->setDefault(0., 0., 0., 0.);
         param->setAnimates(true);
         page->addChild(*param);
     }
