@@ -691,22 +691,6 @@ void TextPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, Cont
         page->addChild(*param);
     }
     {
-        RGBAParamDescriptor* param = desc.defineRGBAParam(kParamTextColor);
-        param->setLabel(kParamTextColorLabel);
-        param->setHint(kParamTextColorHint);
-        param->setDefault(1., 1., 1., 1.);
-        param->setAnimates(true);
-        page->addChild(*param);
-    }
-    {
-        RGBAParamDescriptor* param = desc.defineRGBAParam(kParamStrokeColor);
-        param->setLabel(kParamStrokeColorLabel);
-        param->setHint(kParamStrokeColorHint);
-        param->setDefault(1., 1., 1., 1.);
-        param->setAnimates(true);
-        page->addChild(*param);
-    }
-    {
         DoubleParamDescriptor *param = desc.defineDoubleParam(kParamStroke);
         param->setLabel(kParamStrokeLabel);
         param->setHint(kParamStrokeHint);
@@ -734,14 +718,6 @@ void TextPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, Cont
         page->addChild(*param);
     }
     {
-        RGBParamDescriptor* param = desc.defineRGBParam(kParamShadowColor);
-        param->setLabel(kParamShadowColorLabel);
-        param->setHint(kParamShadowColorHint);
-        param->setDefault(0., 0., 0.);
-        param->setAnimates(true);
-        page->addChild(*param);
-    }
-    {
         IntParamDescriptor* param = desc.defineIntParam(kParamShadowX);
         param->setLabel(kParamShadowXLabel);
         param->setHint(kParamShadowXHint);
@@ -758,6 +734,30 @@ void TextPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, Cont
         param->setRange(-10000, 10000);
         param->setDisplayRange(-500, 500);
         param->setDefault(kParamShadowYDefault);
+        param->setAnimates(true);
+        page->addChild(*param);
+    }
+    {
+        RGBAParamDescriptor* param = desc.defineRGBAParam(kParamTextColor);
+        param->setLabel(kParamTextColorLabel);
+        param->setHint(kParamTextColorHint);
+        param->setDefault(1., 1., 1., 1.);
+        param->setAnimates(true);
+        page->addChild(*param);
+    }
+    {
+        RGBAParamDescriptor* param = desc.defineRGBAParam(kParamStrokeColor);
+        param->setLabel(kParamStrokeColorLabel);
+        param->setHint(kParamStrokeColorHint);
+        param->setDefault(1., 1., 1., 1.);
+        param->setAnimates(true);
+        page->addChild(*param);
+    }
+    {
+        RGBParamDescriptor* param = desc.defineRGBParam(kParamShadowColor);
+        param->setLabel(kParamShadowColorLabel);
+        param->setHint(kParamShadowColorHint);
+        param->setDefault(0., 0., 0.);
         param->setAnimates(true);
         page->addChild(*param);
     }
