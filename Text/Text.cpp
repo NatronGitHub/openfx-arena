@@ -116,20 +116,20 @@
 #define kParamFontNameAltDefault "DejaVu-Sans" // failsafe on Linux/BSD
 
 #define kParamTextColor "textColor"
-#define kParamTextColorLabel "Fill Color"
+#define kParamTextColorLabel "Fill color"
 #define kParamTextColorHint "The fill color of the text to render"
 
 #define kParamStrokeColor "strokeColor"
-#define kParamStrokeColorLabel "Stroke Color"
+#define kParamStrokeColorLabel "Stroke color"
 #define kParamStrokeColorHint "The stroke color of the text to render"
 
 #define kParamStroke "stroke"
-#define kParamStrokeLabel "Stroke Width"
+#define kParamStrokeLabel "Stroke width"
 #define kParamStrokeHint "Adjust stroke width"
 #define kParamStrokeDefault 0
 
 #define kParamFontOverride "customFont"
-#define kParamFontOverrideLabel "Custom Font"
+#define kParamFontOverrideLabel "Custom font"
 #define kParamFontOverrideHint "Override the font list. You can use font name, filename or direct path"
 
 #define kParamShadowOpacity "shadowOpacity"
