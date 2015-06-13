@@ -1,6 +1,5 @@
 /*
 
- MagickText
  openfx-arena - https://github.com/olear/openfx-arena
 
  Copyright (c) 2015, Ole-André Rodlie <olear@fxarena.net>
@@ -33,9 +32,9 @@
  OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 
- Based on https://github.com/MrKepzie/openfx-io/blob/master/OIIO/OIIOText.cpp
+ Based on OIIOText.cpp from openfx-io - https://github.com/MrKepzie/openfx-io
 
- Written by Alexandre Gauthier <https://github.com/MrKepzie>
+ Written by Alexandre Gauthier.
 
  Redistribution and use in source and binary forms, with or without modification,
  are permitted provided that the following conditions are met:
@@ -84,7 +83,6 @@
 
 #define kPluginName "Text"
 #define kPluginGrouping "Draw"
-
 #define kPluginIdentifier "net.fxarena.openfx.Text"
 #define kPluginVersionMajor 4
 #define kPluginVersionMinor 2
@@ -107,12 +105,12 @@
 #define kParamTextHint "The text that will be drawn"
 
 #define kParamFontSize "fontSize"
-#define kParamFontSizeLabel "Size"
+#define kParamFontSizeLabel "Font size"
 #define kParamFontSizeHint "The height of the characters to render in pixels"
 #define kParamFontSizeDefault 64
 
 #define kParamFontName "fontName"
-#define kParamFontNameLabel "Font"
+#define kParamFontNameLabel "Font family"
 #define kParamFontNameHint "The name of the font to be used"
 #define kParamFontNameDefault "Arial"
 #define kParamFontNameAltDefault "DejaVu-Sans" // failsafe on Linux/BSD
@@ -132,7 +130,7 @@
 
 #define kParamFontOverride "customFont"
 #define kParamFontOverrideLabel "Custom Font"
-#define kParamFontOverrideHint "Override the font list. You can use font name or direct path"
+#define kParamFontOverrideHint "Override the font list. You can use font name, filename or direct path"
 
 #define kParamShadowOpacity "shadowOpacity"
 #define kParamShadowOpacityLabel "Shadow opacity"
@@ -276,29 +274,34 @@ TextPlugin::~TextPlugin()
 /* Override the render */
 void TextPlugin::render(const OFX::RenderArguments &args)
 {
+    // renderscale
     if (!kSupportsRenderScale && (args.renderScale.x != 1. || args.renderScale.y != 1.)) {
         OFX::throwSuiteStatusException(kOfxStatFailed);
         return;
     }
 
+    // dstclip
     if (!dstClip_) {
         OFX::throwSuiteStatusException(kOfxStatFailed);
         return;
     }
     assert(dstClip_);
 
+    // get dstclip
     std::auto_ptr<OFX::Image> dstImg(dstClip_->fetchImage(args.time));
     if (!dstImg.get()) {
         OFX::throwSuiteStatusException(kOfxStatFailed);
         return;
     }
 
+    // font support?
     if (!has_fontconfig||!has_freetype) {
         setPersistentMessage(OFX::Message::eMessageError, "", "Fontconfig and/or Freetype missing");
         OFX::throwSuiteStatusException(kOfxStatFailed);
         return;
     }
 
+    // renderscale
     if (dstImg->getRenderScale().x != args.renderScale.x ||
         dstImg->getRenderScale().y != args.renderScale.y ||
         dstImg->getField() != args.fieldToRender) {
@@ -307,12 +310,14 @@ void TextPlugin::render(const OFX::RenderArguments &args)
         return;
     }
 
+    // get bitdepth
     OFX::BitDepthEnum dstBitDepth = dstImg->getPixelDepth();
     if (dstBitDepth != OFX::eBitDepthFloat) {
         OFX::throwSuiteStatusException(kOfxStatErrFormat);
         return;
     }
 
+    // get channels
     OFX::PixelComponentEnum dstComponents  = dstImg->getPixelComponents();
     if (dstComponents != OFX::ePixelComponentRGBA) {
         OFX::throwSuiteStatusException(kOfxStatErrFormat);
@@ -329,7 +334,7 @@ void TextPlugin::render(const OFX::RenderArguments &args)
     }
 
     // Get params
-    double x, y, r, g, b, a, r_s, g_s, b_s, a_s, strokeWidth,shadowOpacity,shadowSigma,interlineSpacing,interwordSpacing,textSpacing,shadowR,shadowG,shadowB,bgR,bgG, bgB, bgA;
+    double x, y, r, g, b, a, r_s, g_s, b_s, a_s, strokeWidth, shadowOpacity, shadowSigma, interlineSpacing, interwordSpacing, textSpacing, shadowR, shadowG, shadowB, bgR, bgG, bgB, bgA;
     int fontSize, fontID, shadowX, shadowY;
     bool use_pango = false;
     std::string text, fontOverride, fontName;
@@ -379,13 +384,10 @@ void TextPlugin::render(const OFX::RenderArguments &args)
     int rI = ((uint8_t)(255.0f *CLAMP(r, 0.0, 1.0)));
     int gI = ((uint8_t)(255.0f *CLAMP(g, 0.0, 1.0)));
     int bI = ((uint8_t)(255.0f *CLAMP(b, 0.0, 1.0)));
-    /*int aI = ((uint8_t)(255.0f *CLAMP(a, 0.0, 1.0))); // enable on IM 6.9.1-3+
-    a=aI;*/
+
     int r_sI = ((uint8_t)(255.0f *CLAMP(r_s, 0.0, 1.0)));
     int g_sI = ((uint8_t)(255.0f *CLAMP(g_s, 0.0, 1.0)));
     int b_sI = ((uint8_t)(255.0f *CLAMP(b_s, 0.0, 1.0)));
-    /*int a_sI = ((uint8_t)(255.0f *CLAMP(a_s, 0.0, 1.0))); // enable on IM 6.9.1-3+
-    a_s=a_sI;*/
 
     int shadowRI = ((uint8_t)(255.0f *CLAMP(shadowR, 0.0, 1.0)));
     int shadowGI = ((uint8_t)(255.0f *CLAMP(shadowG, 0.0, 1.0)));
@@ -460,23 +462,8 @@ void TextPlugin::render(const OFX::RenderArguments &args)
     image.flip();
 
     // return image
-    if (dstClip_ && dstClip_->isConnected()) {
-        switch (dstBitDepth) {
-        case eBitDepthUByte:
-            if (image.depth()>8)
-                image.depth(8);
-            image.write(0,0,width,height,"RGBA",Magick::CharPixel,(float*)dstImg->getPixelData());
-            break;
-        case eBitDepthUShort:
-            if (image.depth()>16)
-                image.depth(16);
-            image.write(0,0,width,height,"RGBA",Magick::ShortPixel,(float*)dstImg->getPixelData());
-            break;
-        case eBitDepthFloat:
-            image.write(0,0,width,height,"RGBA",Magick::FloatPixel,(float*)dstImg->getPixelData());
-            break;
-        }
-    }
+    if (dstClip_ && dstClip_->isConnected())
+        image.write(0,0,width,height,"RGBA",Magick::FloatPixel,(float*)dstImg->getPixelData());
 }
 
 void TextPlugin::changedParam(const OFX::InstanceChangedArgs &args, const std::string &/*paramName*/)
@@ -528,16 +515,17 @@ void TextPluginFactory::describe(OFX::ImageEffectDescriptor &desc)
     // add supported pixel depths
     desc.addSupportedBitDepth(eBitDepthFloat);
 
+    // add other
     desc.setSupportsTiles(kSupportsTiles);
     desc.setSupportsMultiResolution(kSupportsMultiResolution);
     desc.setRenderThreadSafety(kRenderThreadSafety);
-
     desc.setOverlayInteractDescriptor(new PositionOverlayDescriptor<PositionInteractParam>);
 }
 
 /** @brief The describe in context function, passed a plugin descriptor and a context */
 void TextPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, ContextEnum /*context*/)
 {   
+    // natron?
     gHostIsNatron = (OFX::getImageEffectHostDescription()->hostName == kNatronOfxHostName);
 
     // there has to be an input clip, even for generators
@@ -564,9 +552,8 @@ void TextPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, Cont
         param->setDefault(0.5, 0.5);
         param->setAnimates(true);
         hostHasNativeOverlayForPosition = param->getHostHasNativeOverlayHandle();
-        if (hostHasNativeOverlayForPosition) {
+        if (hostHasNativeOverlayForPosition)
             param->setUseHostOverlayHandle(true);
-        }
         page->addChild(*param);
     }
     {
@@ -577,9 +564,8 @@ void TextPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, Cont
         page->addChild(*param);
         
         //Do not show this parameter if the host handles the interact
-        if (hostHasNativeOverlayForPosition) {
+        if (hostHasNativeOverlayForPosition)
             param->setIsSecret(true);
-        }
     }
     {
         BooleanParamDescriptor* param = desc.defineBooleanParam(kParamPango);
