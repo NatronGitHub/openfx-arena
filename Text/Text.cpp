@@ -116,15 +116,15 @@
 #define kParamFontNameAltDefault "DejaVu-Sans" // failsafe on Linux/BSD
 
 #define kParamTextColor "textColor"
-#define kParamTextColorLabel "Fill color"
+#define kParamTextColorLabel "Font color"
 #define kParamTextColorHint "The fill color of the text to render"
 
 #define kParamStrokeColor "strokeColor"
-#define kParamStrokeColorLabel "Stroke color"
+#define kParamStrokeColorLabel "Color"
 #define kParamStrokeColorHint "The stroke color of the text to render"
 
 #define kParamStroke "stroke"
-#define kParamStrokeLabel "Stroke width"
+#define kParamStrokeLabel "Width"
 #define kParamStrokeHint "Adjust stroke width"
 #define kParamStrokeDefault 0
 
@@ -133,41 +133,41 @@
 #define kParamFontOverrideHint "Override the font list. You can use font name, filename or direct path"
 
 #define kParamShadowOpacity "shadowOpacity"
-#define kParamShadowOpacityLabel "Shadow opacity"
+#define kParamShadowOpacityLabel "Opacity"
 #define kParamShadowOpacityHint "Adjust shadow opacity"
 #define kParamShadowOpacityDefault 0
 
 #define kParamShadowSigma "shadowSigma"
-#define kParamShadowSigmaLabel "Shadow sigma"
+#define kParamShadowSigmaLabel "Sigma"
 #define kParamShadowSigmaHint "Adjust shadow sigma"
 #define kParamShadowSigmaDefault 0.5
 
 #define kParamShadowColor "shadowColor"
-#define kParamShadowColorLabel "Shadow color"
+#define kParamShadowColorLabel "Color"
 #define kParamShadowColorHint "The shadow color to render"
 
 #define kParamShadowX "shadowX"
-#define kParamShadowXLabel "Shadow offset X"
+#define kParamShadowXLabel "Offset X"
 #define kParamShadowXHint "Shadow offset X"
 #define kParamShadowXDefault 0
 
 #define kParamShadowY "shadowY"
-#define kParamShadowYLabel "Shadow offset Y"
+#define kParamShadowYLabel "Offset Y"
 #define kParamShadowYHint "Shadow offset Y"
 #define kParamShadowYDefault 0
 
 #define kParamInterlineSpacing "lineSpacing"
-#define kParamInterlineSpacingLabel "Line spacing"
+#define kParamInterlineSpacingLabel "Line"
 #define kParamInterlineSpacingHint "Spacing between lines"
 #define kParamInterlineSpacingDefault 0
 
 #define kParamInterwordSpacing "wordSpacing"
-#define kParamInterwordSpacingLabel "Word spacing"
+#define kParamInterwordSpacingLabel "Word"
 #define kParamInterwordSpacingHint "Spacing between words"
 #define kParamInterwordSpacingDefault 0
 
 #define kParamTextSpacing "letterSpacing"
-#define kParamTextSpacingLabel "Letter spacing"
+#define kParamTextSpacingLabel "Letter"
 #define kParamTextSpacingHint "Spacing between letters"
 #define kParamTextSpacingDefault 0
 
@@ -176,9 +176,6 @@
 #define kParamPangoHint "Enable/Disable Pango Markup Language.\n\n http://www.imagemagick.org/Usage/text/#pango"
 #define kParamPangoDefault false
 
-#define kParamBackgroundColor "backgroundColor"
-#define kParamBackgroundColorLabel "Background color"
-#define kParamBackgroundColorHint "Adjust background color"
 
 using namespace OFX;
 static bool gHostIsNatron = false;
@@ -218,7 +215,6 @@ private:
     OFX::RGBParam *shadowColor_;
     OFX::IntParam *shadowX_;
     OFX::IntParam *shadowY_;
-    //OFX::RGBAParam *bgColor_;
     bool has_pango;
     bool has_fontconfig;
     bool has_freetype;
@@ -262,9 +258,8 @@ TextPlugin::TextPlugin(OfxImageEffectHandle handle)
     shadowColor_ = fetchRGBParam(kParamShadowColor);
     shadowX_ = fetchIntParam(kParamShadowX);
     shadowY_ = fetchIntParam(kParamShadowY);
-    //bgColor_ = fetchRGBAParam(kParamBackgroundColor);
 
-    assert(position_ && text_ && fontSize_ && fontName_ && textColor_ && strokeColor_ && strokeWidth_ && fontOverride_ && shadowOpacity_ && shadowSigma_ && interlineSpacing_ && interwordSpacing_ && textSpacing_ && use_pango_ && shadowColor_ && shadowX_ && shadowY_ /*&& bgColor_*/);
+    assert(position_ && text_ && fontSize_ && fontName_ && textColor_ && strokeColor_ && strokeWidth_ && fontOverride_ && shadowOpacity_ && shadowSigma_ && interlineSpacing_ && interwordSpacing_ && textSpacing_ && use_pango_ && shadowColor_ && shadowX_ && shadowY_);
 }
 
 TextPlugin::~TextPlugin()
@@ -334,7 +329,7 @@ void TextPlugin::render(const OFX::RenderArguments &args)
     }
 
     // Get params
-    double x, y, r, g, b, a, r_s, g_s, b_s, a_s, strokeWidth, shadowOpacity, shadowSigma, interlineSpacing, interwordSpacing, textSpacing, shadowR, shadowG, shadowB; //, bgR, bgG, bgB, bgA;
+    double x, y, r, g, b, a, r_s, g_s, b_s, a_s, strokeWidth, shadowOpacity, shadowSigma, interlineSpacing, interwordSpacing, textSpacing, shadowR, shadowG, shadowB;
     int fontSize, fontID, shadowX, shadowY;
     bool use_pango = false;
     std::string text, fontOverride, fontName;
@@ -356,7 +351,6 @@ void TextPlugin::render(const OFX::RenderArguments &args)
     shadowColor_->getValueAtTime(args.time, shadowR, shadowG, shadowB);
     shadowX_->getValueAtTime(args.time, shadowX);
     shadowY_->getValueAtTime(args.time, shadowY);
-    //bgColor_->getValueAtTime(args.time, bgR, bgG, bgB, bgA);
     fontName_->getOption(fontID,fontName);
 
     // cascade menu
@@ -393,10 +387,6 @@ void TextPlugin::render(const OFX::RenderArguments &args)
     int shadowGI = ((uint8_t)(255.0f *CLAMP(shadowG, 0.0, 1.0)));
     int shadowBI = ((uint8_t)(255.0f *CLAMP(shadowB, 0.0, 1.0)));
 
-    /*int bgRI = ((uint8_t)(255.0f *CLAMP(bgR, 0.0, 1.0)));
-    int bgGI = ((uint8_t)(255.0f *CLAMP(bgG, 0.0, 1.0)));
-    int bgBI = ((uint8_t)(255.0f *CLAMP(bgB, 0.0, 1.0)));*/
-
     std::ostringstream textRGBA;
     textRGBA << "rgba(" << rI <<"," << gI << "," << bI << "," << a << ")";
 
@@ -405,9 +395,6 @@ void TextPlugin::render(const OFX::RenderArguments &args)
 
     std::ostringstream shadowRGB;
     shadowRGB << "rgb(" << shadowRI <<"," << shadowGI << "," << shadowBI << ")";
-
-    //std::ostringstream bgRGBA;
-    //bgRGBA << "rgba(" << bgRI <<"," << bgGI << "," << bgBI << "," << bgA << ")";
 
     // Flip image
     image.flip();
@@ -448,15 +435,6 @@ void TextPlugin::render(const OFX::RenderArguments &args)
         shadowContainer.composite(image,0,0,Magick::OverCompositeOp);
         image=shadowContainer;
     }
-
-    // Background
-    /*if (bgA>0) {
-        Magick::Image bgContainer(Magick::Geometry(width,height),Magick::Color("rgba(0,0,0,0)"));
-        Magick::Image background(Magick::Geometry(width,height),Magick::Color(bgRGBA.str()));
-        bgContainer.composite(background,0,0,Magick::OverCompositeOp);
-        bgContainer.composite(image,0,0,Magick::OverCompositeOp);
-        image=bgContainer;
-    }*/
 
     // Flip image
     image.flip();
@@ -541,6 +519,9 @@ void TextPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, Cont
 
     // make some pages
     PageParamDescriptor *page = desc.definePageParam(kPluginName);
+    GroupParamDescriptor *groupStroke = desc.defineGroupParam("Stroke");
+    GroupParamDescriptor *groupShadow = desc.defineGroupParam("Shadow");
+    GroupParamDescriptor *groupSpace = desc.defineGroupParam("Spacing");
 
     bool hostHasNativeOverlayForPosition;
     {
@@ -656,7 +637,7 @@ void TextPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, Cont
         param->setRange(-1000, 1000);
         param->setDisplayRange(-100, 100);
         param->setDefault(kParamTextSpacingDefault);
-        page->addChild(*param);
+        param->setParent(*groupSpace);
     }
     {
         DoubleParamDescriptor *param = desc.defineDoubleParam(kParamInterwordSpacing);
@@ -665,7 +646,7 @@ void TextPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, Cont
         param->setRange(-1000, 1000);
         param->setDisplayRange(-100, 100);
         param->setDefault(kParamInterwordSpacingDefault);
-        page->addChild(*param);
+        param->setParent(*groupSpace);
     }
     {
         DoubleParamDescriptor *param = desc.defineDoubleParam(kParamInterlineSpacing);
@@ -674,7 +655,7 @@ void TextPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, Cont
         param->setRange(-1000, 1000);
         param->setDisplayRange(-100, 100);
         param->setDefault(kParamInterlineSpacingDefault);
-        page->addChild(*param);
+        param->setParent(*groupSpace);
     }
     {
         DoubleParamDescriptor *param = desc.defineDoubleParam(kParamStroke);
@@ -683,7 +664,7 @@ void TextPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, Cont
         param->setRange(0, 100);
         param->setDisplayRange(0, 10);
         param->setDefault(kParamStrokeDefault);
-        page->addChild(*param);
+        param->setParent(*groupStroke);
     }
     {
         DoubleParamDescriptor *param = desc.defineDoubleParam(kParamShadowOpacity);
@@ -692,7 +673,7 @@ void TextPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, Cont
         param->setRange(0, 100);
         param->setDisplayRange(0, 100);
         param->setDefault(kParamShadowOpacityDefault);
-        page->addChild(*param);
+        param->setParent(*groupShadow);
     }
     {
         DoubleParamDescriptor *param = desc.defineDoubleParam(kParamShadowSigma);
@@ -701,7 +682,7 @@ void TextPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, Cont
         param->setRange(0, 100);
         param->setDisplayRange(0, 10);
         param->setDefault(kParamShadowSigmaDefault);
-        page->addChild(*param);
+        param->setParent(*groupShadow);
     }
     {
         IntParamDescriptor* param = desc.defineIntParam(kParamShadowX);
@@ -711,7 +692,7 @@ void TextPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, Cont
         param->setDisplayRange(-500, 500);
         param->setDefault(kParamShadowXDefault);
         param->setAnimates(true);
-        page->addChild(*param);
+        param->setParent(*groupShadow);
     }
     {
         IntParamDescriptor* param = desc.defineIntParam(kParamShadowY);
@@ -721,7 +702,7 @@ void TextPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, Cont
         param->setDisplayRange(-500, 500);
         param->setDefault(kParamShadowYDefault);
         param->setAnimates(true);
-        page->addChild(*param);
+        param->setParent(*groupShadow);
     }
     {
         RGBAParamDescriptor* param = desc.defineRGBAParam(kParamTextColor);
@@ -737,7 +718,7 @@ void TextPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, Cont
         param->setHint(kParamStrokeColorHint);
         param->setDefault(1., 1., 1., 1.);
         param->setAnimates(true);
-        page->addChild(*param);
+        param->setParent(*groupStroke);
     }
     {
         RGBParamDescriptor* param = desc.defineRGBParam(kParamShadowColor);
@@ -745,16 +726,13 @@ void TextPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, Cont
         param->setHint(kParamShadowColorHint);
         param->setDefault(0., 0., 0.);
         param->setAnimates(true);
-        page->addChild(*param);
+        param->setParent(*groupShadow);
     }
-    /*{
-        RGBAParamDescriptor* param = desc.defineRGBAParam(kParamBackgroundColor);
-        param->setLabel(kParamBackgroundColorLabel);
-        param->setHint(kParamBackgroundColorHint);
-        param->setDefault(0., 0., 0., 0.);
-        param->setAnimates(true);
-        page->addChild(*param);
-    }*/
+    {
+         page->addChild(*groupStroke);
+         page->addChild(*groupShadow);
+         page->addChild(*groupSpace);
+     }
 }
 
 /** @brief The create instance function, the plugin must return an object derived from the \ref OFX::ImageEffect class */
