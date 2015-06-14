@@ -1,5 +1,5 @@
 # build a combined plugin that reads all formats
-SUBDIRS = Extra
+SUBDIRS = Bundle
 
 SUBDIRS_NOMULTI = Mirror Texture Tile
 

@@ -23,7 +23,7 @@ else
   MAGICK_UNIX=6.9.1-4
 fi
 MAGICK_UNIX_BETA_MAJOR=6.9.1-5
-MAGICK_UNIX_BETA_MINOR=beta20150607
+MAGICK_UNIX_BETA_MINOR=beta20150613
 MAGICK_REL_URL=ftp://ftp.sunet.se/pub/multimedia/graphics/ImageMagick
 MAGICK_BETA_URL=http://www.imagemagick.org/download/beta
 if [ -z "$QUANTUM" ]; then
@@ -244,7 +244,9 @@ if [ ! -f ${PREFIX}/lib/libMagick++-6.Q${Q}HDRI.a ]; then
   else
     cd $CWD/3rdparty/ImageMagick-$MAGICK || exit 1
   fi
-  cat $CWD/3rdparty/composite-private.h > magick/composite-private.h || exit 1
+  if [ "$MAGICK_MOD" == "1" ]; then
+    cat $CWD/3rdparty/composite-private.h > magick/composite-private.h || exit 1
+  fi
   if [ "$MAGICK" == "6.8.9-10" ]; then
     patch -p0< $CWD/3rdparty/magick-seed.diff || exit 1
   fi
