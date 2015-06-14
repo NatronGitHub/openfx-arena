@@ -45,11 +45,10 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 #define kPluginName "Distort"
 #define kPluginGrouping "Filter"
-#define kPluginDescription "Distort image using varius techniques."
 
 #define kPluginIdentifier "net.fxarena.openfx.Distort"
 #define kPluginVersionMajor 3
-#define kPluginVersionMinor 2
+#define kPluginVersionMinor 3
 
 #define kParamVPixel "virtualPixelMethod"
 #define kParamVPixelLabel "Virtual Pixel"
@@ -405,11 +404,11 @@ void DistortPlugin::render(const OFX::RenderArguments &args)
             distortOpts++;
         }
         if (arcTopRadius!=0) {
-            distortArgs[distortOpts] = arcTopRadius;
+            distortArgs[distortOpts] = std::floor(arcTopRadius * args.renderScale.x + 0.5);
             distortOpts++;
         }
-        if (arcBottomRadius!=0&&arcTopRadius!=0) {
-            distortArgs[distortOpts] = arcBottomRadius;
+        if (arcBottomRadius!=0 && arcTopRadius!=0) {
+            distortArgs[distortOpts] = std::floor(arcBottomRadius * args.renderScale.x + 0.5);
             distortOpts++;
         }
         image.backgroundColor(Magick::Color("rgba(0,0,0,0)"));
@@ -450,23 +449,8 @@ void DistortPlugin::render(const OFX::RenderArguments &args)
     }
 
     // return image
-    if (dstClip_ && dstClip_->isConnected() && srcClip_ && srcClip_->isConnected()) {
-        switch (dstBitDepth) {
-        case eBitDepthUByte:
-            if (image.depth()>8)
-                image.depth(8);
-            image.write(0,0,width,height,"RGBA",Magick::CharPixel,(float*)dstImg->getPixelData());
-            break;
-        case eBitDepthUShort:
-            if (image.depth()>16)
-                image.depth(16);
-            image.write(0,0,width,height,"RGBA",Magick::ShortPixel,(float*)dstImg->getPixelData());
-            break;
-        case eBitDepthFloat:
-            image.write(0,0,width,height,"RGBA",Magick::FloatPixel,(float*)dstImg->getPixelData());
-            break;
-        }
-    }
+    if (dstClip_ && dstClip_->isConnected() && srcClip_ && srcClip_->isConnected())
+        image.write(0,0,width,height,"RGBA",Magick::FloatPixel,(float*)dstImg->getPixelData());
 }
 
 void DistortPlugin::changedParam(const OFX::InstanceChangedArgs &args, const std::string &paramName)
@@ -503,15 +487,15 @@ void DistortPluginFactory::describe(OFX::ImageEffectDescriptor &desc)
     // basic labels
     desc.setLabel(kPluginName);
     desc.setPluginGrouping(kPluginGrouping);
-    desc.setPluginDescription(kPluginDescription);
+    std::string magickV = MagickCore::GetMagickVersion(NULL);
+    std::string delegates = MagickCore::GetMagickDelegates();
+    desc.setPluginDescription("Distort filter for Natron.\n\nWritten by Ole-André Rodlie <olear@fxarena.net>\n\n Powered by "+magickV+"\n\nFeatures: "+delegates);
 
     // add the supported contexts
     desc.addSupportedContext(eContextGeneral);
     desc.addSupportedContext(eContextFilter);
 
     // add supported pixel depths
-    //desc.addSupportedBitDepth(eBitDepthUByte);
-    //desc.addSupportedBitDepth(eBitDepthUShort);
     desc.addSupportedBitDepth(eBitDepthFloat);
 
     desc.setSupportsTiles(kSupportsTiles);

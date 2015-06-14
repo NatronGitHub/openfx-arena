@@ -67,12 +67,12 @@ FTYPE=2.4.11
 FTYPE_URL=http://sourceforge.net/projects/freetype/files/freetype2/${FTYPE}/freetype-${FTYPE}.tar.gz/download
 
 if [ -z "$VERSION" ]; then
-  ARENA=4.1
+  ARENA=0.7
 else
   ARENA=$VERSION
 fi
 if [ -z "$PACKAGE" ]; then
-  PKGNAME=Extra
+  PKGNAME=Arena
 else
   PKGNAME=$PACKAGE
 fi
@@ -265,7 +265,7 @@ fi
 
 cd $CWD || exit 1
 
-if [ "$PKGNAME" != "Arena" ]||[ "$PKGNAME" != "Extra" ]; then
+if [ "$PKGNAME" != "Arena" ]; then
   cd $PKGNAME || exit 1
 fi
 
