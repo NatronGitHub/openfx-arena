@@ -176,6 +176,10 @@
 #define kParamPangoHint "Enable/Disable Pango Markup Language.\n\n http://www.imagemagick.org/Usage/text/#pango"
 #define kParamPangoDefault false
 
+#define kParamShadowBlur "shadowSoften"
+#define kParamShadowBlurLabel "Soften"
+#define kParamShadowBlurHint "Soften shadow"
+#define kParamShadowBlurDefault 0
 
 using namespace OFX;
 static bool gHostIsNatron = false;
@@ -215,6 +219,7 @@ private:
     OFX::RGBParam *shadowColor_;
     OFX::IntParam *shadowX_;
     OFX::IntParam *shadowY_;
+    OFX::DoubleParam *shadowBlur_;
     bool has_pango;
     bool has_fontconfig;
     bool has_freetype;
@@ -258,8 +263,9 @@ TextPlugin::TextPlugin(OfxImageEffectHandle handle)
     shadowColor_ = fetchRGBParam(kParamShadowColor);
     shadowX_ = fetchIntParam(kParamShadowX);
     shadowY_ = fetchIntParam(kParamShadowY);
+    shadowBlur_ = fetchDoubleParam(kParamShadowBlur);
 
-    assert(position_ && text_ && fontSize_ && fontName_ && textColor_ && strokeColor_ && strokeWidth_ && fontOverride_ && shadowOpacity_ && shadowSigma_ && interlineSpacing_ && interwordSpacing_ && textSpacing_ && use_pango_ && shadowColor_ && shadowX_ && shadowY_);
+    assert(position_ && text_ && fontSize_ && fontName_ && textColor_ && strokeColor_ && strokeWidth_ && fontOverride_ && shadowOpacity_ && shadowSigma_ && interlineSpacing_ && interwordSpacing_ && textSpacing_ && use_pango_ && shadowColor_ && shadowX_ && shadowY_ && shadowBlur_);
 }
 
 TextPlugin::~TextPlugin()
@@ -329,7 +335,7 @@ void TextPlugin::render(const OFX::RenderArguments &args)
     }
 
     // Get params
-    double x, y, r, g, b, a, r_s, g_s, b_s, a_s, strokeWidth, shadowOpacity, shadowSigma, interlineSpacing, interwordSpacing, textSpacing, shadowR, shadowG, shadowB;
+    double x, y, r, g, b, a, r_s, g_s, b_s, a_s, strokeWidth, shadowOpacity, shadowSigma, interlineSpacing, interwordSpacing, textSpacing, shadowR, shadowG, shadowB, shadowBlur;
     int fontSize, fontID, shadowX, shadowY;
     bool use_pango = false;
     std::string text, fontOverride, fontName;
@@ -351,6 +357,7 @@ void TextPlugin::render(const OFX::RenderArguments &args)
     shadowColor_->getValueAtTime(args.time, shadowR, shadowG, shadowB);
     shadowX_->getValueAtTime(args.time, shadowX);
     shadowY_->getValueAtTime(args.time, shadowY);
+    shadowBlur_->getValueAtTime(args.time, shadowBlur);
     fontName_->getOption(fontID,fontName);
 
     // cascade menu
@@ -431,6 +438,8 @@ void TextPlugin::render(const OFX::RenderArguments &args)
         dropShadow.backgroundColor(shadowRGB.str());
         dropShadow.virtualPixelMethod(Magick::TransparentVirtualPixelMethod);
         dropShadow.shadow(shadowOpacity,std::floor(shadowSigma * args.renderScale.x + 0.5),0,0);
+        if (shadowBlur>0)
+            dropShadow.blur(0,shadowBlur);
         shadowContainer.composite(dropShadow,std::floor(shadowX * args.renderScale.x + 0.5),std::floor(shadowY * args.renderScale.x + 0.5),Magick::OverCompositeOp);
         shadowContainer.composite(image,0,0,Magick::OverCompositeOp);
         image=shadowContainer;
@@ -726,6 +735,15 @@ void TextPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, Cont
         param->setHint(kParamShadowColorHint);
         param->setDefault(0., 0., 0.);
         param->setAnimates(true);
+        param->setParent(*groupShadow);
+    }
+    {
+        DoubleParamDescriptor *param = desc.defineDoubleParam(kParamShadowBlur);
+        param->setLabel(kParamShadowBlurLabel);
+        param->setHint(kParamShadowBlurHint);
+        param->setRange(0, 100);
+        param->setDisplayRange(0, 10);
+        param->setDefault(kParamShadowBlurDefault);
         param->setParent(*groupShadow);
     }
     {
