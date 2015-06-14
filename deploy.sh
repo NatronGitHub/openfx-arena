@@ -20,9 +20,9 @@ MAGICK_WIN=6.8.9-10 # higher is broken on mingw
 if [ "$MAGICK_LEGACY" == "1" ]; then
   MAGICK_UNIX=$MAGICK_WIN
 else
-  MAGICK_UNIX=6.9.1-4
+  MAGICK_UNIX=6.9.1-5
 fi
-MAGICK_UNIX_BETA_MAJOR=6.9.1-5
+MAGICK_UNIX_BETA_MAJOR=6.9.1-6
 MAGICK_UNIX_BETA_MINOR=beta20150613
 MAGICK_REL_URL=ftp://ftp.sunet.se/pub/multimedia/graphics/ImageMagick
 MAGICK_BETA_URL=http://www.imagemagick.org/download/beta
