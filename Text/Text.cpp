@@ -85,7 +85,7 @@
 #define kPluginGrouping "Draw"
 #define kPluginIdentifier "net.fxarena.openfx.Text"
 #define kPluginVersionMajor 4
-#define kPluginVersionMinor 3
+#define kPluginVersionMinor 2
 
 #define kSupportsTiles 0
 #define kSupportsMultiResolution 0
@@ -437,8 +437,8 @@ void TextPlugin::render(const OFX::RenderArguments &args)
         image.draw(text_draw_list);
 
     // Shadow
-    Magick::Image shadowContainer(Magick::Geometry(width,height),Magick::Color("rgba(0,0,0,0)"));
     if (shadowOpacity>0 && shadowSigma>0) {
+        Magick::Image shadowContainer(Magick::Geometry(width,height),Magick::Color("rgba(0,0,0,0)"));
         Magick::Image dropShadow;
         dropShadow=image;
         dropShadow.backgroundColor(shadowRGB.str());
@@ -446,8 +446,7 @@ void TextPlugin::render(const OFX::RenderArguments &args)
         dropShadow.shadow(shadowOpacity,std::floor(shadowSigma * args.renderScale.x + 0.5),0,0);
         shadowContainer.composite(dropShadow,std::floor(shadowX * args.renderScale.x + 0.5),std::floor(shadowY * args.renderScale.x + 0.5),Magick::OverCompositeOp);
         shadowContainer.composite(image,0,0,Magick::OverCompositeOp);
-        if (bgA==0)
-            image=shadowContainer;
+        image=shadowContainer;
     }
 
     // Background
@@ -455,10 +454,7 @@ void TextPlugin::render(const OFX::RenderArguments &args)
         Magick::Image bgContainer(Magick::Geometry(width,height),Magick::Color("rgba(0,0,0,0)"));
         Magick::Image background(Magick::Geometry(width,height),Magick::Color(bgRGBA.str()));
         bgContainer.composite(background,0,0,Magick::OverCompositeOp);
-        if (shadowOpacity>0 && shadowSigma>0)
-            bgContainer.composite(shadowContainer,0,0,Magick::OverCompositeOp);
-        else
-            bgContainer.composite(image,0,0,Magick::BlendCompositeOp);
+        bgContainer.composite(image,0,0,Magick::OverCompositeOp);
         image=bgContainer;
     }
 
