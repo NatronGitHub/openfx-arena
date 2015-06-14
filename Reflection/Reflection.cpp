@@ -39,11 +39,10 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 #define kPluginName "Reflection"
 #define kPluginGrouping "Filter"
-#define kPluginDescription  "Creates a mirror/reflection effect."
 
 #define kPluginIdentifier "net.fxarena.openfx.Reflection"
 #define kPluginVersionMajor 2
-#define kPluginVersionMinor 1
+#define kPluginVersionMinor 2
 
 #define kParamSpace "spacing"
 #define kParamSpaceLabel "Spacing"
@@ -214,23 +213,8 @@ void ReflectionPlugin::render(const OFX::RenderArguments &args)
     container.composite(image,0,mirrorHeight-offset,Magick::OverCompositeOp);
 
     // return image
-    if (dstClip_ && dstClip_->isConnected() && srcClip_ && srcClip_->isConnected()) {
-        switch (dstBitDepth) {
-        case eBitDepthUByte: // 8bit
-            if (container.depth()>8)
-                container.depth(8);
-            container.write(0,0,srcWidth,srcHeight,"RGBA",Magick::CharPixel,(float*)dstImg->getPixelData());
-            break;
-        case eBitDepthUShort: // 16bit
-            if (container.depth()>16)
-                container.depth(16);
-            container.write(0,0,srcWidth,srcHeight,"RGBA",Magick::ShortPixel,(float*)dstImg->getPixelData());
-            break;
-        case eBitDepthFloat: // 32bit
-            container.write(0,0,srcWidth,srcHeight,"RGBA",Magick::FloatPixel,(float*)dstImg->getPixelData());
-            break;
-        }
-    }
+    if (dstClip_ && dstClip_->isConnected() && srcClip_ && srcClip_->isConnected())
+        container.write(0,0,srcWidth,srcHeight,"RGBA",Magick::FloatPixel,(float*)dstImg->getPixelData());
 }
 
 bool ReflectionPlugin::getRegionOfDefinition(const OFX::RegionOfDefinitionArguments &args, OfxRectD &rod)
@@ -256,15 +240,15 @@ void ReflectionPluginFactory::describe(OFX::ImageEffectDescriptor &desc)
     // basic labels
     desc.setLabel(kPluginName);
     desc.setPluginGrouping(kPluginGrouping);
-    desc.setPluginDescription(kPluginDescription);
+    std::string magickV = MagickCore::GetMagickVersion(NULL);
+    std::string delegates = MagickCore::GetMagickDelegates();
+    desc.setPluginDescription("Mirror/Reflection filter for Natron.\n\nWritten by Ole-André Rodlie <olear@fxarena.net>\n\n Powered by "+magickV+"\n\nFeatures: "+delegates);
 
     // add the supported contexts
     desc.addSupportedContext(eContextGeneral);
     desc.addSupportedContext(eContextFilter);
 
     // add supported pixel depths
-    //desc.addSupportedBitDepth(eBitDepthUByte);
-    //desc.addSupportedBitDepth(eBitDepthUShort);
     desc.addSupportedBitDepth(eBitDepthFloat);
 
     // other

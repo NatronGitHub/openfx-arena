@@ -40,11 +40,10 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 #define kPluginName "Tile"
 #define kPluginGrouping "Filter"
-#define kPluginDescription  "Tiles image."
 
 #define kPluginIdentifier "net.fxarena.openfx.Tile"
 #define kPluginVersionMajor 2
-#define kPluginVersionMinor 2
+#define kPluginVersionMinor 3
 
 #define kParamRows "rows"
 #define kParamRowsLabel "Rows"
@@ -266,23 +265,8 @@ void TilePlugin::render(const OFX::RenderArguments &args)
     Magick::appendImages(&container,montagelist.begin(),montagelist.end());
 
     // return image
-    if (dstClip_ && dstClip_->isConnected() && srcClip_ && srcClip_->isConnected()) {
-        switch (dstBitDepth) {
-        case eBitDepthUByte: // 8bit
-            if (container.depth()>8)
-                container.depth(8);
-            container.write(0,0,srcWidth,srcHeight,"RGBA",Magick::CharPixel,(float*)dstImg->getPixelData());
-            break;
-        case eBitDepthUShort: // 16bit
-            if (container.depth()>16)
-                container.depth(16);
-            container.write(0,0,srcWidth,srcHeight,"RGBA",Magick::ShortPixel,(float*)dstImg->getPixelData());
-            break;
-        case eBitDepthFloat: // 32bit
-            container.write(0,0,srcWidth,srcHeight,"RGBA",Magick::FloatPixel,(float*)dstImg->getPixelData());
-            break;
-        }
-    }
+    if (dstClip_ && dstClip_->isConnected() && srcClip_ && srcClip_->isConnected())
+        container.write(0,0,srcWidth,srcHeight,"RGBA",Magick::FloatPixel,(float*)dstImg->getPixelData());
 }
 
 bool TilePlugin::getRegionOfDefinition(const OFX::RegionOfDefinitionArguments &args, OfxRectD &rod)
@@ -308,15 +292,15 @@ void TilePluginFactory::describe(OFX::ImageEffectDescriptor &desc)
     // basic labels
     desc.setLabel(kPluginName);
     desc.setPluginGrouping(kPluginGrouping);
-    desc.setPluginDescription(kPluginDescription);
+    std::string magickV = MagickCore::GetMagickVersion(NULL);
+    std::string delegates = MagickCore::GetMagickDelegates();
+    desc.setPluginDescription("Tile filter for Natron.\n\nWritten by Ole-André Rodlie <olear@fxarena.net>\n\n Powered by "+magickV+"\n\nFeatures: "+delegates);
 
     // add the supported contexts
     desc.addSupportedContext(eContextGeneral);
     desc.addSupportedContext(eContextFilter);
 
     // add supported pixel depths
-    //desc.addSupportedBitDepth(eBitDepthUByte);
-    //desc.addSupportedBitDepth(eBitDepthUShort);
     desc.addSupportedBitDepth(eBitDepthFloat);
 
     // other
