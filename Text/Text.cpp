@@ -439,7 +439,7 @@ void TextPlugin::render(const OFX::RenderArguments &args)
         dropShadow.virtualPixelMethod(Magick::TransparentVirtualPixelMethod);
         dropShadow.shadow(shadowOpacity,std::floor(shadowSigma * args.renderScale.x + 0.5),0,0);
         if (shadowBlur>0)
-            dropShadow.blur(0,shadowBlur);
+            dropShadow.blur(0,std::floor(shadowBlur * args.renderScale.x + 0.5));
         shadowContainer.composite(dropShadow,std::floor(shadowX * args.renderScale.x + 0.5),std::floor(shadowY * args.renderScale.x + 0.5),Magick::OverCompositeOp);
         shadowContainer.composite(image,0,0,Magick::OverCompositeOp);
         image=shadowContainer;
@@ -633,7 +633,7 @@ void TextPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, Cont
         IntParamDescriptor* param = desc.defineIntParam(kParamFontSize);
         param->setLabel(kParamFontSizeLabel);
         param->setHint(kParamFontSizeHint);
-        param->setRange(0, 1000);
+        param->setRange(0, 10000);
         param->setDisplayRange(0, 500);
         param->setDefault(kParamFontSizeDefault);
         param->setAnimates(true);
@@ -643,8 +643,8 @@ void TextPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, Cont
         DoubleParamDescriptor *param = desc.defineDoubleParam(kParamTextSpacing);
         param->setLabel(kParamTextSpacingLabel);
         param->setHint(kParamTextSpacingHint);
-        param->setRange(-1000, 1000);
-        param->setDisplayRange(-100, 100);
+        param->setRange(-10000, 10000);
+        param->setDisplayRange(-500, 500);
         param->setDefault(kParamTextSpacingDefault);
         param->setParent(*groupSpace);
     }
@@ -652,8 +652,8 @@ void TextPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, Cont
         DoubleParamDescriptor *param = desc.defineDoubleParam(kParamInterwordSpacing);
         param->setLabel(kParamInterwordSpacingLabel);
         param->setHint(kParamInterwordSpacingHint);
-        param->setRange(-1000, 1000);
-        param->setDisplayRange(-100, 100);
+        param->setRange(-10000, 10000);
+        param->setDisplayRange(-500, 500);
         param->setDefault(kParamInterwordSpacingDefault);
         param->setParent(*groupSpace);
     }
@@ -661,8 +661,8 @@ void TextPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, Cont
         DoubleParamDescriptor *param = desc.defineDoubleParam(kParamInterlineSpacing);
         param->setLabel(kParamInterlineSpacingLabel);
         param->setHint(kParamInterlineSpacingHint);
-        param->setRange(-1000, 1000);
-        param->setDisplayRange(-100, 100);
+        param->setRange(-10000, 10000);
+        param->setDisplayRange(-500, 500);
         param->setDefault(kParamInterlineSpacingDefault);
         param->setParent(*groupSpace);
     }
@@ -670,7 +670,7 @@ void TextPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, Cont
         DoubleParamDescriptor *param = desc.defineDoubleParam(kParamStroke);
         param->setLabel(kParamStrokeLabel);
         param->setHint(kParamStrokeHint);
-        param->setRange(0, 100);
+        param->setRange(0, 1000);
         param->setDisplayRange(0, 10);
         param->setDefault(kParamStrokeDefault);
         param->setParent(*groupStroke);
@@ -691,6 +691,15 @@ void TextPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, Cont
         param->setRange(0, 100);
         param->setDisplayRange(0, 10);
         param->setDefault(kParamShadowSigmaDefault);
+        param->setParent(*groupShadow);
+    }
+    {
+        DoubleParamDescriptor *param = desc.defineDoubleParam(kParamShadowBlur);
+        param->setLabel(kParamShadowBlurLabel);
+        param->setHint(kParamShadowBlurHint);
+        param->setRange(0, 100);
+        param->setDisplayRange(0, 10);
+        param->setDefault(kParamShadowBlurDefault);
         param->setParent(*groupShadow);
     }
     {
@@ -735,15 +744,6 @@ void TextPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, Cont
         param->setHint(kParamShadowColorHint);
         param->setDefault(0., 0., 0.);
         param->setAnimates(true);
-        param->setParent(*groupShadow);
-    }
-    {
-        DoubleParamDescriptor *param = desc.defineDoubleParam(kParamShadowBlur);
-        param->setLabel(kParamShadowBlurLabel);
-        param->setHint(kParamShadowBlurHint);
-        param->setRange(0, 100);
-        param->setDisplayRange(0, 10);
-        param->setDefault(kParamShadowBlurDefault);
         param->setParent(*groupShadow);
     }
     {
