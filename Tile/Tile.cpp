@@ -40,11 +40,10 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 #define kPluginName "Tile"
 #define kPluginGrouping "Filter"
-#define kPluginDescription  "Tiles image."
 
 #define kPluginIdentifier "net.fxarena.openfx.Tile"
 #define kPluginVersionMajor 2
-#define kPluginVersionMinor 1
+#define kPluginVersionMinor 3
 
 #define kParamRows "rows"
 #define kParamRowsLabel "Rows"
@@ -61,9 +60,14 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #define kParamTileTimeOffsetHint "Set a time offset"
 #define kParamTileTimeOffsetDefault 0
 
+#define kParamTileTimeOffsetFirst "timeOffsetFirst"
+#define kParamTileTimeOffsetFirstLabel "Keep first frame"
+#define kParamTileTimeOffsetFirstHint "Stay on first frame is offset"
+#define kParamTileTimeOffsetFirstDefault true
+
 #define kSupportsTiles 0
 #define kSupportsMultiResolution 0
-#define kSupportsRenderScale 0 // TODO?
+#define kSupportsRenderScale 1
 #define kRenderThreadSafety eRenderInstanceSafe
 
 using namespace OFX;
@@ -81,6 +85,7 @@ private:
     OFX::IntParam *rows_;
     OFX::IntParam *cols_;
     OFX::IntParam *offset_;
+    OFX::BooleanParam *firstFrame_;
 };
 
 TilePlugin::TilePlugin(OfxImageEffectHandle handle)
@@ -96,7 +101,8 @@ TilePlugin::TilePlugin(OfxImageEffectHandle handle)
     rows_ = fetchIntParam(kParamRows);
     cols_ = fetchIntParam(kParamCols);
     offset_ = fetchIntParam(kParamTileTimeOffset);
-    assert(rows_ && cols_ && offset_);
+    firstFrame_ = fetchBooleanParam(kParamTileTimeOffsetFirst);
+    assert(rows_ && cols_ && offset_ && firstFrame_);
 }
 
 TilePlugin::~TilePlugin()
@@ -176,9 +182,11 @@ void TilePlugin::render(const OFX::RenderArguments &args)
     int rows = 0;
     int cols = 0;
     int offset = 0;
+    bool firstFrame = false;
     rows_->getValueAtTime(args.time, rows);
     cols_->getValueAtTime(args.time, cols);
     offset_->getValueAtTime(args.time, offset);
+    firstFrame_->getValueAtTime(args.time, firstFrame);
 
     // setup
     int srcWidth = srcRod.x2-srcRod.x1;
@@ -225,9 +233,15 @@ void TilePlugin::render(const OFX::RenderArguments &args)
             imageList.push_back(image);
     }
     else { // time offset
-        imageList.push_back(image);
+        int counter;
+        if (firstFrame) {
+            imageList.push_back(image);
+            counter=thumbs-1;
+        }
+        else
+            counter=thumbs;
         int frame = args.time+offset;
-        for(int y = 0; y < thumbs-1; y++) {
+        for(int y = 0; y < counter; y++) {
             std::auto_ptr<const OFX::Image> tileImg(srcClip_->fetchImage(frame));
             if (tileImg.get()) {
                 OfxRectI tileRod;
@@ -251,23 +265,8 @@ void TilePlugin::render(const OFX::RenderArguments &args)
     Magick::appendImages(&container,montagelist.begin(),montagelist.end());
 
     // return image
-    if (dstClip_ && dstClip_->isConnected() && srcClip_ && srcClip_->isConnected()) {
-        switch (dstBitDepth) {
-        case eBitDepthUByte: // 8bit
-            if (container.depth()>8)
-                container.depth(8);
-            container.write(0,0,srcWidth,srcHeight,"RGBA",Magick::CharPixel,(float*)dstImg->getPixelData());
-            break;
-        case eBitDepthUShort: // 16bit
-            if (container.depth()>16)
-                container.depth(16);
-            container.write(0,0,srcWidth,srcHeight,"RGBA",Magick::ShortPixel,(float*)dstImg->getPixelData());
-            break;
-        case eBitDepthFloat: // 32bit
-            container.write(0,0,srcWidth,srcHeight,"RGBA",Magick::FloatPixel,(float*)dstImg->getPixelData());
-            break;
-        }
-    }
+    if (dstClip_ && dstClip_->isConnected() && srcClip_ && srcClip_->isConnected())
+        container.write(0,0,srcWidth,srcHeight,"RGBA",Magick::FloatPixel,(float*)dstImg->getPixelData());
 }
 
 bool TilePlugin::getRegionOfDefinition(const OFX::RegionOfDefinitionArguments &args, OfxRectD &rod)
@@ -293,15 +292,15 @@ void TilePluginFactory::describe(OFX::ImageEffectDescriptor &desc)
     // basic labels
     desc.setLabel(kPluginName);
     desc.setPluginGrouping(kPluginGrouping);
-    desc.setPluginDescription(kPluginDescription);
+    std::string magickV = MagickCore::GetMagickVersion(NULL);
+    std::string delegates = MagickCore::GetMagickDelegates();
+    desc.setPluginDescription("Tile filter for Natron.\n\nWritten by Ole-André Rodlie <olear@fxarena.net>\n\n Powered by "+magickV+"\n\nFeatures: "+delegates);
 
     // add the supported contexts
     desc.addSupportedContext(eContextGeneral);
     desc.addSupportedContext(eContextFilter);
 
     // add supported pixel depths
-    //desc.addSupportedBitDepth(eBitDepthUByte);
-    //desc.addSupportedBitDepth(eBitDepthUShort);
     desc.addSupportedBitDepth(eBitDepthFloat);
 
     // other
@@ -352,6 +351,14 @@ void TilePluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, Cont
         param->setRange(0, 10000);
         param->setDisplayRange(0, 100);
         param->setDefault(kParamTileTimeOffsetDefault);
+        page->addChild(*param);
+    }
+    {
+        BooleanParamDescriptor *param = desc.defineBooleanParam(kParamTileTimeOffsetFirst);
+        param->setLabel(kParamTileTimeOffsetFirstLabel);
+        param->setHint(kParamTileTimeOffsetFirstHint);
+        param->setAnimates(true);
+        param->setDefault(kParamTileTimeOffsetFirstDefault);
         page->addChild(*param);
     }
 }

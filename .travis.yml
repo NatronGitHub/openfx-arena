@@ -10,4 +10,4 @@ install:
 
 script:
   - git submodule update -i
-  - bash deploy.sh
+  - MAGICK_LEGACY=1 MAGICK_MOD=1 bash deploy.sh

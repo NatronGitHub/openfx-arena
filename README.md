@@ -3,37 +3,6 @@ OpenFX-Arena [![Build Status](https://travis-ci.org/olear/openfx-arena.svg)](htt
 ![screenshot](https://cloud.githubusercontent.com/assets/7461595/7781564/a34444ce-00f0-11e5-957d-933ac91e0590.png)
 A set of visual effect plugins (OpenFX/OFX) for Natron VFX.
 
-Plugins
-======
-
- * Draw/Text
- * Draw/Texture
- * Filter/Distort
-    * Polar
-    * DePolar
-    * Arc
-    * Swirl
-    * Implode
-    * Edge
-    * Emboss
-    * Wave
-    * Roll
- * Filter/Mirror
- * Filter/Reflection
- * Filter/Tile
-
-Download
-========
-
-Download latest release from:
-
- * https://github.com/olear/openfx-arena/releases
- * http://openfx.fxarena.net/releases/
-
-Download latest snapshot from:
-
- * http://openfx.fxarena.net/snapshots/
-
 Build
 =====
 

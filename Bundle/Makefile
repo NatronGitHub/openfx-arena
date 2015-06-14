@@ -1,20 +1,18 @@
 PLUGINOBJECTS = \
-        Text.o \
         Distort.o \
         Mirror.o \
         Texture.o \
         Tile.o \
         Reflection.o \
-	ofxsOGLTextRenderer.o \
-	ofxsOGLFontData.o \
-	ofxsRectangleInteract.o \
-	PluginRegistrationCombined.o \
+        Text.o \
+        ofxsOGLTextRenderer.o \
+        ofxsOGLFontData.o \
+        ofxsRectangleInteract.o \
+        PluginRegistrationCombined.o \
 
 PLUGINNAME = Arena
 
 RESOURCES = \
-../Text/net.fxarena.openfx.Text.png \
-../Text/net.fxarena.openfx.Text.svg \
 ../Distort/net.fxarena.openfx.Distort.png \
 ../Distort/net.fxarena.openfx.Distort.svg \
 ../Mirror/net.fxarena.openfx.Mirror.png \
@@ -25,18 +23,20 @@ RESOURCES = \
 ../Tile/net.fxarena.openfx.Tile.svg \
 ../Reflection/net.fxarena.openfx.Reflection.png \
 ../Reflection/net.fxarena.openfx.Reflection.svg \
+../Text/net.fxarena.openfx.Text.png \
+../Text/net.fxarena.openfx.Text.svg \
 
 VPATH += \
 ../Mirror \
-../Text \
 ../Distort \
 ../Texture \
 ../Tile \
 ../Reflection \
+../Text \
 
 include ../Makefile.master
 
-CXXFLAGS += -I../Mirror -I../Text -I../Distort -I../Texture -I../Tile -I../Reflection
+CXXFLAGS += -I../Mirror -I../Distort -I../Texture -I../Tile -I../Reflection -I../Text
 
 CXXFLAGS  += $(MAGICK_CXXFLAGS)
 LINKFLAGS += $(MAGICK_LINKFLAGS)
