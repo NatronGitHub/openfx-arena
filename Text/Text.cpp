@@ -85,7 +85,7 @@
 #define kPluginGrouping "Draw"
 #define kPluginIdentifier "net.fxarena.openfx.Text"
 #define kPluginVersionMajor 4
-#define kPluginVersionMinor 2
+#define kPluginVersionMinor 3
 
 #define kSupportsTiles 0
 #define kSupportsMultiResolution 0
@@ -218,7 +218,7 @@ private:
     OFX::RGBParam *shadowColor_;
     OFX::IntParam *shadowX_;
     OFX::IntParam *shadowY_;
-    OFX::RGBAParam *bgColor_;
+    //OFX::RGBAParam *bgColor_;
     bool has_pango;
     bool has_fontconfig;
     bool has_freetype;
@@ -262,9 +262,9 @@ TextPlugin::TextPlugin(OfxImageEffectHandle handle)
     shadowColor_ = fetchRGBParam(kParamShadowColor);
     shadowX_ = fetchIntParam(kParamShadowX);
     shadowY_ = fetchIntParam(kParamShadowY);
-    bgColor_ = fetchRGBAParam(kParamBackgroundColor);
+    //bgColor_ = fetchRGBAParam(kParamBackgroundColor);
 
-    assert(position_ && text_ && fontSize_ && fontName_ && textColor_ && strokeColor_ && strokeWidth_ && fontOverride_ && shadowOpacity_ && shadowSigma_ && interlineSpacing_ && interwordSpacing_ && textSpacing_ && use_pango_ && shadowColor_ && shadowX_ && shadowY_ && bgColor_);
+    assert(position_ && text_ && fontSize_ && fontName_ && textColor_ && strokeColor_ && strokeWidth_ && fontOverride_ && shadowOpacity_ && shadowSigma_ && interlineSpacing_ && interwordSpacing_ && textSpacing_ && use_pango_ && shadowColor_ && shadowX_ && shadowY_ /*&& bgColor_*/);
 }
 
 TextPlugin::~TextPlugin()
@@ -334,7 +334,7 @@ void TextPlugin::render(const OFX::RenderArguments &args)
     }
 
     // Get params
-    double x, y, r, g, b, a, r_s, g_s, b_s, a_s, strokeWidth, shadowOpacity, shadowSigma, interlineSpacing, interwordSpacing, textSpacing, shadowR, shadowG, shadowB, bgR, bgG, bgB, bgA;
+    double x, y, r, g, b, a, r_s, g_s, b_s, a_s, strokeWidth, shadowOpacity, shadowSigma, interlineSpacing, interwordSpacing, textSpacing, shadowR, shadowG, shadowB; //, bgR, bgG, bgB, bgA;
     int fontSize, fontID, shadowX, shadowY;
     bool use_pango = false;
     std::string text, fontOverride, fontName;
@@ -356,7 +356,7 @@ void TextPlugin::render(const OFX::RenderArguments &args)
     shadowColor_->getValueAtTime(args.time, shadowR, shadowG, shadowB);
     shadowX_->getValueAtTime(args.time, shadowX);
     shadowY_->getValueAtTime(args.time, shadowY);
-    bgColor_->getValueAtTime(args.time, bgR, bgG, bgB, bgA);
+    //bgColor_->getValueAtTime(args.time, bgR, bgG, bgB, bgA);
     fontName_->getOption(fontID,fontName);
 
     // cascade menu
@@ -393,9 +393,9 @@ void TextPlugin::render(const OFX::RenderArguments &args)
     int shadowGI = ((uint8_t)(255.0f *CLAMP(shadowG, 0.0, 1.0)));
     int shadowBI = ((uint8_t)(255.0f *CLAMP(shadowB, 0.0, 1.0)));
 
-    int bgRI = ((uint8_t)(255.0f *CLAMP(bgR, 0.0, 1.0)));
+    /*int bgRI = ((uint8_t)(255.0f *CLAMP(bgR, 0.0, 1.0)));
     int bgGI = ((uint8_t)(255.0f *CLAMP(bgG, 0.0, 1.0)));
-    int bgBI = ((uint8_t)(255.0f *CLAMP(bgB, 0.0, 1.0)));
+    int bgBI = ((uint8_t)(255.0f *CLAMP(bgB, 0.0, 1.0)));*/
 
     std::ostringstream textRGBA;
     textRGBA << "rgba(" << rI <<"," << gI << "," << bI << "," << a << ")";
@@ -406,8 +406,8 @@ void TextPlugin::render(const OFX::RenderArguments &args)
     std::ostringstream shadowRGB;
     shadowRGB << "rgb(" << shadowRI <<"," << shadowGI << "," << shadowBI << ")";
 
-    std::ostringstream bgRGBA;
-    bgRGBA << "rgba(" << bgRI <<"," << bgGI << "," << bgBI << "," << bgA << ")";
+    //std::ostringstream bgRGBA;
+    //bgRGBA << "rgba(" << bgRI <<"," << bgGI << "," << bgBI << "," << bgA << ")";
 
     // Flip image
     image.flip();
@@ -450,13 +450,13 @@ void TextPlugin::render(const OFX::RenderArguments &args)
     }
 
     // Background
-    if (bgA>0) {
+    /*if (bgA>0) {
         Magick::Image bgContainer(Magick::Geometry(width,height),Magick::Color("rgba(0,0,0,0)"));
         Magick::Image background(Magick::Geometry(width,height),Magick::Color(bgRGBA.str()));
         bgContainer.composite(background,0,0,Magick::OverCompositeOp);
         bgContainer.composite(image,0,0,Magick::OverCompositeOp);
         image=bgContainer;
-    }
+    }*/
 
     // Flip image
     image.flip();
@@ -747,14 +747,14 @@ void TextPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, Cont
         param->setAnimates(true);
         page->addChild(*param);
     }
-    {
+    /*{
         RGBAParamDescriptor* param = desc.defineRGBAParam(kParamBackgroundColor);
         param->setLabel(kParamBackgroundColorLabel);
         param->setHint(kParamBackgroundColorHint);
         param->setDefault(0., 0., 0., 0.);
         param->setAnimates(true);
         page->addChild(*param);
-    }
+    }*/
 }
 
 /** @brief The create instance function, the plugin must return an object derived from the \ref OFX::ImageEffect class */
