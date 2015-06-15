@@ -44,7 +44,7 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #define kPluginGrouping "Transform"
 #define kPluginIdentifier "net.fxarena.openfx.Polar"
 #define kPluginVersionMajor 1
-#define kPluginVersionMinor 0
+#define kPluginVersionMinor 1
 
 #define kParamVPixel "virtualPixelMethod"
 #define kParamVPixelLabel "Virtual Pixel"
@@ -65,6 +65,11 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #define kParamPolarFlipLabel "Flip"
 #define kParamPolarFlipHint "Polar Flip"
 #define kParamPolarFlipDefault false
+
+#define kParamMatte "matte"
+#define kParamMatteLabel "Matte"
+#define kParamMatteHint "Merge Alpha before applying effect"
+#define kParamMatteDefault false
 
 #define kSupportsTiles 0
 #define kSupportsMultiResolution 0
@@ -87,6 +92,7 @@ private:
     OFX::DoubleParam *polarRotate_;
     OFX::BooleanParam *polarFlip_;
     OFX::BooleanParam *dePolar_;
+    OFX::BooleanParam *matte_;
 };
 
 PolarPlugin::PolarPlugin(OfxImageEffectHandle handle)
@@ -104,8 +110,9 @@ PolarPlugin::PolarPlugin(OfxImageEffectHandle handle)
     polarRotate_ = fetchDoubleParam(kParamPolarRotate);
     polarFlip_ = fetchBooleanParam(kParamPolarFlip);
     dePolar_ = fetchBooleanParam(kParamDePolar);
+    matte_ = fetchBooleanParam(kParamMatte);
 
-    assert(vpixel_ && polarRotate_ && polarFlip_ && dePolar_);
+    assert(vpixel_ && polarRotate_ && polarFlip_ && dePolar_ && matte_);
 }
 
 PolarPlugin::~PolarPlugin()
@@ -186,10 +193,12 @@ void PolarPlugin::render(const OFX::RenderArguments &args)
     double polarRotate;
     bool polarFlip = false;
     bool dePolar = false;
+    bool matte = false;
     vpixel_->getValueAtTime(args.time, vpixel);
     polarRotate_->getValueAtTime(args.time, polarRotate);
     polarFlip_->getValueAtTime(args.time, polarFlip);
     dePolar_->getValueAtTime(args.time, dePolar);
+    matte_->getValueAtTime(args.time, matte);
 
     // setup
     int width = srcRod.x2-srcRod.x1;
@@ -262,6 +271,10 @@ void PolarPlugin::render(const OFX::RenderArguments &args)
     std::ostringstream scaleH;
     scaleH << "x" << height;
     image.backgroundColor(Magick::Color("rgba(0,0,0,0)"));
+    if (matte) {
+        image.matte(false);
+        image.matte(true);
+    }
     if (polarFlip)
         image.flip();
     if (dePolar)
@@ -358,6 +371,14 @@ void PolarPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, Con
         param->setLabel(kParamPolarFlipLabel);
         param->setHint(kParamPolarFlipHint);
         param->setDefault(kParamPolarFlipDefault);
+        param->setAnimates(true);
+        page->addChild(*param);
+    }
+    {
+        BooleanParamDescriptor *param = desc.defineBooleanParam(kParamMatte);
+        param->setLabel(kParamMatteLabel);
+        param->setHint(kParamMatteHint);
+        param->setDefault(kParamMatteDefault);
         param->setAnimates(true);
         page->addChild(*param);
     }

@@ -44,7 +44,7 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #define kPluginGrouping "Transform"
 #define kPluginIdentifier "net.fxarena.openfx.Arc"
 #define kPluginVersionMajor 1
-#define kPluginVersionMinor 0
+#define kPluginVersionMinor 1
 
 #define kParamVPixel "virtualPixelMethod"
 #define kParamVPixelLabel "Virtual Pixel"
@@ -71,6 +71,11 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #define kParamArcBottomRadiusHint "Arc bottom radius"
 #define kParamArcBottomRadiusDefault 0
 
+#define kParamMatte "matte"
+#define kParamMatteLabel "Matte"
+#define kParamMatteHint "Merge Alpha before applying effect"
+#define kParamMatteDefault false
+
 #define kSupportsTiles 0
 #define kSupportsMultiResolution 0
 #define kSupportsRenderScale 1
@@ -93,6 +98,7 @@ private:
     OFX::DoubleParam *arcRotate_;
     OFX::DoubleParam *arcTopRadius_;
     OFX::DoubleParam *arcBottomRadius_;
+    OFX::BooleanParam *matte_;
 };
 
 ArcPlugin::ArcPlugin(OfxImageEffectHandle handle)
@@ -111,8 +117,9 @@ ArcPlugin::ArcPlugin(OfxImageEffectHandle handle)
     arcRotate_ = fetchDoubleParam(kParamArcRotate);
     arcTopRadius_ = fetchDoubleParam(kParamArcTopRadius);
     arcBottomRadius_ = fetchDoubleParam(kParamArcBottomRadius);
+    matte_ = fetchBooleanParam(kParamMatte);
 
-    assert(vpixel_ && arcAngle_ && arcRotate_ && arcTopRadius_&& arcBottomRadius_);
+    assert(vpixel_ && arcAngle_ && arcRotate_ && arcTopRadius_&& arcBottomRadius_ && matte_);
 }
 
 ArcPlugin::~ArcPlugin()
@@ -191,11 +198,13 @@ void ArcPlugin::render(const OFX::RenderArguments &args)
     // get params
     int vpixel;
     double arcAngle,arcRotate,arcTopRadius,arcBottomRadius;
+    bool matte = false;
     vpixel_->getValueAtTime(args.time, vpixel);
     arcAngle_->getValueAtTime(args.time, arcAngle);
     arcRotate_->getValueAtTime(args.time, arcRotate);
     arcTopRadius_->getValueAtTime(args.time, arcTopRadius);
     arcBottomRadius_->getValueAtTime(args.time, arcBottomRadius);
+    matte_->getValueAtTime(args.time, matte);
 
     // setup
     int width = srcRod.x2-srcRod.x1;
@@ -290,6 +299,10 @@ void ArcPlugin::render(const OFX::RenderArguments &args)
         distortOpts++;
     }
     image.backgroundColor(Magick::Color("rgba(0,0,0,0)"));
+    if (matte) {
+        image.matte(false);
+        image.matte(true);
+    }
     image.distort(Magick::ArcDistortion, distortOpts, distortArgs, Magick::MagickTrue);
     if (image.columns()>width)
         image.scale(scaleW.str());
@@ -393,6 +406,14 @@ void ArcPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, Conte
         param->setRange(0, 360);
         param->setDisplayRange(0, 360);
         param->setDefault(kParamArcBottomRadiusDefault);
+        page->addChild(*param);
+    }
+    {
+        BooleanParamDescriptor *param = desc.defineBooleanParam(kParamMatte);
+        param->setLabel(kParamMatteLabel);
+        param->setHint(kParamMatteHint);
+        param->setDefault(kParamMatteDefault);
+        param->setAnimates(true);
         page->addChild(*param);
     }
     {

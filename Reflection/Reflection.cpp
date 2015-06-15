@@ -44,7 +44,7 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 #define kPluginIdentifier "net.fxarena.openfx.Reflection"
 #define kPluginVersionMajor 2
-#define kPluginVersionMinor 3
+#define kPluginVersionMinor 4
 
 #define kParamSpace "spacing"
 #define kParamSpaceLabel "Spacing"
@@ -55,6 +55,11 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #define kParamOffsetLabel "Offset"
 #define kParamOffsetHint "Mirror offset"
 #define kParamOffsetDefault 0
+
+#define kParamMatte "matte"
+#define kParamMatteLabel "Matte"
+#define kParamMatteHint "Merge Alpha before applying effect"
+#define kParamMatteDefault false
 
 #define kSupportsTiles 0
 #define kSupportsMultiResolution 0
@@ -76,6 +81,7 @@ private:
     OFX::Clip *maskClip_;
     OFX::IntParam *spacing_;
     OFX::IntParam *offset_;
+    OFX::BooleanParam *matte_;
 };
 
 ReflectionPlugin::ReflectionPlugin(OfxImageEffectHandle handle)
@@ -93,7 +99,9 @@ ReflectionPlugin::ReflectionPlugin(OfxImageEffectHandle handle)
     assert(!maskClip_ || maskClip_->getPixelComponents() == OFX::ePixelComponentAlpha);
     spacing_ = fetchIntParam(kParamSpace);
     offset_ = fetchIntParam(kParamOffset);
-    assert(spacing_ && offset_);
+    matte_ = fetchBooleanParam(kParamMatte);
+
+    assert(spacing_ && offset_ && matte_);
 }
 
 ReflectionPlugin::~ReflectionPlugin()
@@ -178,8 +186,10 @@ void ReflectionPlugin::render(const OFX::RenderArguments &args)
     // get params
     int spacing = 0;
     int offset = 0;
+    bool matte = false;
     spacing_->getValueAtTime(args.time, spacing);
     offset_->getValueAtTime(args.time, offset);
+    matte_->getValueAtTime(args.time, matte);
 
     // setup
     int srcWidth = srcRod.x2-srcRod.x1;
@@ -192,6 +202,11 @@ void ReflectionPlugin::render(const OFX::RenderArguments &args)
     Magick::Image container(Magick::Geometry(srcWidth,srcHeight),Magick::Color("rgba(0,0,0,0)"));
     if (srcClip_ && srcClip_->isConnected())
         image.read(srcWidth,srcHeight,"RGBA",Magick::FloatPixel,(float*)srcImg->getPixelData());
+
+    if (matte) {
+        image.matte(false);
+        image.matte(true);
+    }
 
     // proc images
     image1 = image;
@@ -302,6 +317,14 @@ void ReflectionPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc
         param->setRange(0, 100);
         param->setDisplayRange(0, 10);
         param->setDefault(kParamSpaceDefault);
+        page->addChild(*param);
+    }
+    {
+        BooleanParamDescriptor *param = desc.defineBooleanParam(kParamMatte);
+        param->setLabel(kParamMatteLabel);
+        param->setHint(kParamMatteHint);
+        param->setDefault(kParamMatteDefault);
+        param->setAnimates(true);
         page->addChild(*param);
     }
 }

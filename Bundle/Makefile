@@ -11,6 +11,8 @@ PLUGINOBJECTS = \
         Swirl.o \
         Implode.o \
         Emboss.o \
+        Charcoal.o \
+        Oilpaint.o \
         ofxsOGLTextRenderer.o \
         ofxsOGLFontData.o \
         ofxsRectangleInteract.o \
@@ -43,6 +45,10 @@ RESOURCES = \
 ../Implode/net.fxarena.openfx.Implode.svg \
 ../Emboss/net.fxarena.openfx.Emboss.png \
 ../Emboss/net.fxarena.openfx.Emboss.svg \
+../Charcoal/net.fxarena.openfx.Charcoal.png \
+../Charcoal/net.fxarena.openfx.Charcoal.svg \
+../Oilpaint/net.fxarena.openfx.Oilpaint.png \
+../Oilpaint/net.fxarena.openfx.Oilpaint.svg \
 
 VPATH += \
 ../Mirror \
@@ -57,6 +63,8 @@ VPATH += \
 ../Swirl \
 ../Implode \
 ../Emboss \
+../Charcoal \
+../Oilpaint \
 
 include ../Makefile.master
 
@@ -73,6 +81,8 @@ CXXFLAGS += \
 -I../Swirl \
 -I../Implode \
 -I../Emboss \
+-I../Charcoal \
+-I../Oilpaint \
 
 CXXFLAGS  += $(MAGICK_CXXFLAGS)
 LINKFLAGS += $(MAGICK_LINKFLAGS)
