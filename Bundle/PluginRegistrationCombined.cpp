@@ -12,6 +12,7 @@
 #include "Implode.h"
 #include "Emboss.h"
 #include "Charcoal.h"
+#include "Oilpaint.h"
 
 namespace OFX
 {
@@ -32,6 +33,7 @@ namespace OFX
             getImplodePluginID(ids);
             getEmbossPluginID(ids);
             getCharcoalPluginID(ids);
+            getOilpaintPluginID(ids);
         }
     }
 }
