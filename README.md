@@ -1,7 +1,7 @@
 OpenFX-Arena [![Build Status](https://travis-ci.org/olear/openfx-arena.svg)](https://travis-ci.org/olear/openfx-arena)
 ============
 
-![screenshot](https://cloud.githubusercontent.com/assets/7461595/8152210/979d6a42-131a-11e5-975d-828292fa7942.png)
+![screenshot-3](https://cloud.githubusercontent.com/assets/7461595/8152563/e60b18c4-131e-11e5-8bd7-6fd6d3dd2db7.png)
 A set of [OpenFX](http://openfx.sf.net) visual effect plugins designed for [Natron](http://natron.inria.fr).
 
 License
