@@ -1,5 +1,4 @@
 PLUGINOBJECTS = \
-        Distort.o \
         Mirror.o \
         Texture.o \
         Tile.o \
@@ -20,8 +19,6 @@ PLUGINOBJECTS = \
 PLUGINNAME = Arena
 
 RESOURCES = \
-../Distort/net.fxarena.openfx.Distort.png \
-../Distort/net.fxarena.openfx.Distort.svg \
 ../Mirror/net.fxarena.openfx.Mirror.png \
 ../Mirror/net.fxarena.openfx.Mirror.svg \
 ../Texture/net.fxarena.openfx.Texture.png \
@@ -49,7 +46,6 @@ RESOURCES = \
 
 VPATH += \
 ../Mirror \
-../Distort \
 ../Texture \
 ../Tile \
 ../Reflection \
@@ -66,7 +62,6 @@ include ../Makefile.master
 
 CXXFLAGS += \
 -I../Mirror \
--I../Distort \
 -I../Texture \
 -I../Tile \
 -I../Reflection \
