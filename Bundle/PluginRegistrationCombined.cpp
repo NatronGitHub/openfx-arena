@@ -11,6 +11,7 @@
 #include "Swirl.h"
 #include "Implode.h"
 #include "Emboss.h"
+#include "Charcoal.h"
 
 namespace OFX
 {
@@ -30,6 +31,7 @@ namespace OFX
             getSwirlPluginID(ids);
             getImplodePluginID(ids);
             getEmbossPluginID(ids);
+            getCharcoalPluginID(ids);
         }
     }
 }

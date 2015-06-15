@@ -11,6 +11,7 @@ PLUGINOBJECTS = \
         Swirl.o \
         Implode.o \
         Emboss.o \
+        Charcoal.o \
         ofxsOGLTextRenderer.o \
         ofxsOGLFontData.o \
         ofxsRectangleInteract.o \
@@ -43,6 +44,8 @@ RESOURCES = \
 ../Implode/net.fxarena.openfx.Implode.svg \
 ../Emboss/net.fxarena.openfx.Emboss.png \
 ../Emboss/net.fxarena.openfx.Emboss.svg \
+../Charcoal/net.fxarena.openfx.Charcoal.png \
+../Charcoal/net.fxarena.openfx.Charcoal.svg \
 
 VPATH += \
 ../Mirror \
@@ -57,6 +60,7 @@ VPATH += \
 ../Swirl \
 ../Implode \
 ../Emboss \
+../Charcoal \
 
 include ../Makefile.master
 
@@ -73,6 +77,7 @@ CXXFLAGS += \
 -I../Swirl \
 -I../Implode \
 -I../Emboss \
+-I../Charcoal \
 
 CXXFLAGS  += $(MAGICK_CXXFLAGS)
 LINKFLAGS += $(MAGICK_LINKFLAGS)
