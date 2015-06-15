@@ -1,40 +1,8 @@
 OpenFX-Arena [![Build Status](https://travis-ci.org/olear/openfx-arena.svg)](https://travis-ci.org/olear/openfx-arena)
 ============
-![screenshot](https://cloud.githubusercontent.com/assets/7461595/7781564/a34444ce-00f0-11e5-957d-933ac91e0590.png)
-A set of visual effect plugins (OpenFX/OFX) for Natron VFX.
 
-Build
-=====
-
-Requires ImageMagick (MagickCore/Magick++ Q32-HDRI with fontconfig, freetype, libpng and zlib support, version 6.9.1-5) installed prior to build. Also see 'deploy.sh' for more information.
-
-**Make on Linux**
-```
-make CONFIG=release
-```
-
-**Make on FreeBSD**
-```
-gmake FREEBSD=1 CONFIG=release
-```
-
-**Make on Windows (MinGW)**
-
-Download and install MinGW64, MSYS, pkgconfig. Then build zlib, libpng, expat, freetype, fontconfig and ImageMagick. see 'deploy.sh' for recommended build options.
-
-```
-make STATIC=1 MINGW=1 BIT=64 CONFIG=release
-```
-
-**Install on Linux/FreeBSD**
-```
-cp -a Bundle/*-*-*/Arena.ofx.bundle /usr/OFX/Plugins/
-```
-
-**Install on Windows**
-```
-cp -a Bundle/*-*-*/Arena.ofx.bundle "/c/Program Files/Common Files/OFX/Plugins/"
-```
+![screenshot](https://cloud.githubusercontent.com/assets/7461595/8152210/979d6a42-131a-11e5-975d-828292fa7942.png)
+A set of [OpenFX](http://openfx.sf.net) visual effect plugins designed for [Natron](http://natron.inria.fr).
 
 License
 =======

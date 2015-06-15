@@ -33,36 +33,28 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 */
 
-#include "Tile.h"
+#include "Emboss.h"
 #include "ofxsMacros.h"
 #include <Magick++.h>
 #include <iostream>
+#include <stdint.h>
+#include <cmath>
 
-#define kPluginName "Tile"
-#define kPluginGrouping "Transform"
-#define kPluginIdentifier "net.fxarena.openfx.Tile"
-#define kPluginVersionMajor 2
-#define kPluginVersionMinor 3
+#define kPluginName "Emboss"
+#define kPluginGrouping "Filter"
+#define kPluginIdentifier "net.fxarena.openfx.Emboss"
+#define kPluginVersionMajor 1
+#define kPluginVersionMinor 0
 
-#define kParamRows "rows"
-#define kParamRowsLabel "Rows"
-#define kParamRowsHint "Rows in grid"
-#define kParamRowsDefault 2
+#define kParamEmbossRadius "embossRadius"
+#define kParamEmbossRadiusLabel "Radius"
+#define kParamEmbossRadiusHint "Radius of the Gaussian, in pixels, not counting the center pixel"
+#define kParamEmbossRadiusDefault 1
 
-#define kParamCols "cols"
-#define kParamColsLabel "Colums"
-#define kParamColsHint "Columns in grid"
-#define kParamColsDefault 2
-
-#define kParamTileTimeOffset "timeOffset"
-#define kParamTileTimeOffsetLabel "Time Offset"
-#define kParamTileTimeOffsetHint "Set a time offset"
-#define kParamTileTimeOffsetDefault 0
-
-#define kParamTileTimeOffsetFirst "timeOffsetFirst"
-#define kParamTileTimeOffsetFirstLabel "Keep first frame"
-#define kParamTileTimeOffsetFirstHint "Stay on first frame is offset"
-#define kParamTileTimeOffsetFirstDefault true
+#define kParamEmbossSigma "embossSigma"
+#define kParamEmbossSigmaLabel "Sigma"
+#define kParamEmbossSigmaHint "Specifies the standard deviation of the Laplacian, in pixels"
+#define kParamEmbossSigmaDefault 1
 
 #define kSupportsTiles 0
 #define kSupportsMultiResolution 0
@@ -71,23 +63,21 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 using namespace OFX;
 
-class TilePlugin : public OFX::ImageEffect
+class EmbossPlugin : public OFX::ImageEffect
 {
 public:
-    TilePlugin(OfxImageEffectHandle handle);
-    virtual ~TilePlugin();
+    EmbossPlugin(OfxImageEffectHandle handle);
+    virtual ~EmbossPlugin();
     virtual void render(const OFX::RenderArguments &args) OVERRIDE FINAL;
     virtual bool getRegionOfDefinition(const OFX::RegionOfDefinitionArguments &args, OfxRectD &rod) OVERRIDE FINAL;
 private:
     OFX::Clip *dstClip_;
     OFX::Clip *srcClip_;
-    OFX::IntParam *rows_;
-    OFX::IntParam *cols_;
-    OFX::IntParam *offset_;
-    OFX::BooleanParam *firstFrame_;
+    OFX::DoubleParam *embossRadius_;
+    OFX::DoubleParam *embossSigma_;
 };
 
-TilePlugin::TilePlugin(OfxImageEffectHandle handle)
+EmbossPlugin::EmbossPlugin(OfxImageEffectHandle handle)
 : OFX::ImageEffect(handle)
 , dstClip_(0)
 , srcClip_(0)
@@ -97,18 +87,18 @@ TilePlugin::TilePlugin(OfxImageEffectHandle handle)
     assert(dstClip_ && dstClip_->getPixelComponents() == OFX::ePixelComponentRGBA);
     srcClip_ = fetchClip(kOfxImageEffectSimpleSourceClipName);
     assert(srcClip_ && srcClip_->getPixelComponents() == OFX::ePixelComponentRGBA);
-    rows_ = fetchIntParam(kParamRows);
-    cols_ = fetchIntParam(kParamCols);
-    offset_ = fetchIntParam(kParamTileTimeOffset);
-    firstFrame_ = fetchBooleanParam(kParamTileTimeOffsetFirst);
-    assert(rows_ && cols_ && offset_ && firstFrame_);
+
+    embossRadius_ = fetchDoubleParam(kParamEmbossRadius);
+    embossSigma_ = fetchDoubleParam(kParamEmbossSigma);
+
+    assert(embossRadius_ && embossSigma_);
 }
 
-TilePlugin::~TilePlugin()
+EmbossPlugin::~EmbossPlugin()
 {
 }
 
-void TilePlugin::render(const OFX::RenderArguments &args)
+void EmbossPlugin::render(const OFX::RenderArguments &args)
 {
     // render scale
     if (!kSupportsRenderScale && (args.renderScale.x != 1. || args.renderScale.y != 1.)) {
@@ -178,97 +168,28 @@ void TilePlugin::render(const OFX::RenderArguments &args)
     }
 
     // get params
-    int rows = 0;
-    int cols = 0;
-    int offset = 0;
-    bool firstFrame = false;
-    rows_->getValueAtTime(args.time, rows);
-    cols_->getValueAtTime(args.time, cols);
-    offset_->getValueAtTime(args.time, offset);
-    firstFrame_->getValueAtTime(args.time, firstFrame);
+    double radius, sigma;
+    embossRadius_->getValueAtTime(args.time, radius);
+    embossSigma_->getValueAtTime(args.time, sigma);
 
     // setup
-    int srcWidth = srcRod.x2-srcRod.x1;
-    int srcHeight = srcRod.y2-srcRod.y1;
-    int tileWidth = srcWidth/rows;
-    int tileHeight = srcHeight/cols;
-    int thumbs = rows*cols;
-    std::string thumb;
-    std::ostringstream makeThumb;
-    makeThumb << tileWidth << "x" << tileHeight << "-0-0";
-    thumb = makeThumb.str();
-    std::string grid;
-    std::ostringstream makeGrid;
-    makeGrid << rows << "x" << cols;
-    grid = makeGrid.str();
-    std::list<Magick::Image> montagelist;
-    std::list<Magick::Image> imageList;
-    Magick::Image image;
-    Magick::Montage montage;
+    int width = srcRod.x2-srcRod.x1;
+    int height = srcRod.y2-srcRod.y1;
 
-    // read source image
-    Magick::Image container(Magick::Geometry(srcWidth,srcHeight),Magick::Color("rgba(0,0,0,0)"));
+    // read image
+    Magick::Image image(Magick::Geometry(width,height),Magick::Color("rgba(0,0,0,0)"));
     if (srcClip_ && srcClip_->isConnected())
-        image.read(srcWidth,srcHeight,"RGBA",Magick::FloatPixel,(float*)srcImg->getPixelData());
+        image.read(width,height,"RGBA",Magick::FloatPixel,(float*)srcImg->getPixelData());
 
-    // setup montage
-    std::string fontFile;
-    char **fonts;
-    std::size_t fontList;
-    fonts=MagickCore::MagickQueryFonts("*",&fontList);
-    fontFile = fonts[0];
-    for (size_t i = 0; i < fontList; i++)
-        free(fonts[i]);
-
-    montage.font(fontFile); // avoid warn, set default font
-    montage.shadow(false);
-    montage.backgroundColor(Magick::Color("rgba(0,0,0,0)"));
-    montage.geometry(thumb);
-    montage.tile(grid);
-
-    // add images
-    if (offset==0) {
-        for(int y = 0; y < thumbs; y++)
-            imageList.push_back(image);
-    }
-    else { // time offset
-        int counter;
-        if (firstFrame) {
-            imageList.push_back(image);
-            counter=thumbs-1;
-        }
-        else
-            counter=thumbs;
-        int frame = args.time+offset;
-        for(int y = 0; y < counter; y++) {
-            std::auto_ptr<const OFX::Image> tileImg(srcClip_->fetchImage(frame));
-            if (tileImg.get()) {
-                OfxRectI tileRod;
-                tileRod = tileImg->getRegionOfDefinition();
-                int tileWidth = tileRod.x2-tileRod.x1;
-                int tileHeight = tileRod.y2-tileRod.y1;
-                if (tileWidth>0&&tileHeight>0) {
-                    Magick::Image tmpTile(tileWidth,tileHeight,"RGBA",Magick::FloatPixel,(float*)tileImg->getPixelData());
-                    if (tmpTile.columns()==tileWidth&&tmpTile.rows()==tileHeight)
-                        imageList.push_back(tmpTile);
-                }
-            }
-            frame++;
-        }
-    }
-
-    // do a montage
-    Magick::montageImages(&montagelist,imageList.begin(),imageList.end(),montage);
-
-    // append images to container
-    Magick::appendImages(&container,montagelist.begin(),montagelist.end());
+    // emboss
+    image.emboss(radius,sigma);
 
     // return image
     if (dstClip_ && dstClip_->isConnected() && srcClip_ && srcClip_->isConnected())
-        container.write(0,0,srcWidth,srcHeight,"RGBA",Magick::FloatPixel,(float*)dstImg->getPixelData());
+        image.write(0,0,width,height,"RGBA",Magick::FloatPixel,(float*)dstImg->getPixelData());
 }
 
-bool TilePlugin::getRegionOfDefinition(const OFX::RegionOfDefinitionArguments &args, OfxRectD &rod)
+bool EmbossPlugin::getRegionOfDefinition(const OFX::RegionOfDefinitionArguments &args, OfxRectD &rod)
 {
     if (!kSupportsRenderScale && (args.renderScale.x != 1. || args.renderScale.y != 1.)) {
         OFX::throwSuiteStatusException(kOfxStatFailed);
@@ -283,17 +204,17 @@ bool TilePlugin::getRegionOfDefinition(const OFX::RegionOfDefinitionArguments &a
     return true;
 }
 
-mDeclarePluginFactory(TilePluginFactory, {}, {});
+mDeclarePluginFactory(EmbossPluginFactory, {}, {});
 
 /** @brief The basic describe function, passed a plugin descriptor */
-void TilePluginFactory::describe(OFX::ImageEffectDescriptor &desc)
+void EmbossPluginFactory::describe(OFX::ImageEffectDescriptor &desc)
 {
     // basic labels
     desc.setLabel(kPluginName);
     desc.setPluginGrouping(kPluginGrouping);
     std::string magickV = MagickCore::GetMagickVersion(NULL);
     std::string delegates = MagickCore::GetMagickDelegates();
-    desc.setPluginDescription("Tile filter for Natron.\n\nWritten by Ole-André Rodlie <olear@fxarena.net>\n\n Powered by "+magickV+"\n\nFeatures: "+delegates);
+    desc.setPluginDescription("Emboss filter for Natron.\n\nWritten by Ole-André Rodlie <olear@fxarena.net>\n\n Powered by "+magickV+"\n\nFeatures: "+delegates);
 
     // add the supported contexts
     desc.addSupportedContext(eContextGeneral);
@@ -302,14 +223,13 @@ void TilePluginFactory::describe(OFX::ImageEffectDescriptor &desc)
     // add supported pixel depths
     desc.addSupportedBitDepth(eBitDepthFloat);
 
-    // other
     desc.setSupportsTiles(kSupportsTiles);
     desc.setSupportsMultiResolution(kSupportsMultiResolution);
     desc.setRenderThreadSafety(kRenderThreadSafety);
 }
 
 /** @brief The describe in context function, passed a plugin descriptor and a context */
-void TilePluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, ContextEnum /*context*/)
+void EmbossPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, ContextEnum /*context*/)
 {
     // create the mandated source clip
     ClipDescriptor *srcClip = desc.defineClip(kOfxImageEffectSimpleSourceClipName);
@@ -323,53 +243,36 @@ void TilePluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, Cont
     dstClip->addSupportedComponent(ePixelComponentRGBA);
     dstClip->setSupportsTiles(kSupportsTiles);
 
-    // make pages and params
+    // make some pages
     PageParamDescriptor *page = desc.definePageParam(kPluginName);
     {
-        IntParamDescriptor *param = desc.defineIntParam(kParamRows);
-        param->setLabel(kParamRowsLabel);
-        param->setHint(kParamRowsHint);
-        param->setRange(1, 100);
-        param->setDisplayRange(1, 10);
-        param->setDefault(kParamRowsDefault);
+        DoubleParamDescriptor *param = desc.defineDoubleParam(kParamEmbossRadius);
+        param->setLabel(kParamEmbossRadiusLabel);
+        param->setHint(kParamEmbossRadiusHint);
+        param->setRange(0, 1.1);
+        param->setDisplayRange(0, 1.1);
+        param->setDefault(kParamEmbossRadiusDefault);
         page->addChild(*param);
     }
     {
-        IntParamDescriptor *param = desc.defineIntParam(kParamCols);
-        param->setLabel(kParamColsLabel);
-        param->setHint(kParamColsHint);
-        param->setRange(1, 100);
-        param->setDisplayRange(1, 10);
-        param->setDefault(kParamColsDefault);
-        page->addChild(*param);
-    }
-    {
-        IntParamDescriptor *param = desc.defineIntParam(kParamTileTimeOffset);
-        param->setLabel(kParamTileTimeOffsetLabel);
-        param->setHint(kParamTileTimeOffsetHint);
-        param->setRange(0, 10000);
-        param->setDisplayRange(0, 100);
-        param->setDefault(kParamTileTimeOffsetDefault);
-        page->addChild(*param);
-    }
-    {
-        BooleanParamDescriptor *param = desc.defineBooleanParam(kParamTileTimeOffsetFirst);
-        param->setLabel(kParamTileTimeOffsetFirstLabel);
-        param->setHint(kParamTileTimeOffsetFirstHint);
-        param->setAnimates(true);
-        param->setDefault(kParamTileTimeOffsetFirstDefault);
+        DoubleParamDescriptor *param = desc.defineDoubleParam(kParamEmbossSigma);
+        param->setLabel(kParamEmbossSigmaLabel);
+        param->setHint(kParamEmbossSigmaHint);
+        param->setRange(0, 1.1);
+        param->setDisplayRange(0, 1.1);
+        param->setDefault(kParamEmbossSigmaDefault);
         page->addChild(*param);
     }
 }
 
 /** @brief The create instance function, the plugin must return an object derived from the \ref OFX::ImageEffect class */
-ImageEffect* TilePluginFactory::createInstance(OfxImageEffectHandle handle, ContextEnum /*context*/)
+ImageEffect* EmbossPluginFactory::createInstance(OfxImageEffectHandle handle, ContextEnum /*context*/)
 {
-    return new TilePlugin(handle);
+    return new EmbossPlugin(handle);
 }
 
-void getTilePluginID(OFX::PluginFactoryArray &ids)
+void getEmbossPluginID(OFX::PluginFactoryArray &ids)
 {
-    static TilePluginFactory p(kPluginIdentifier, kPluginVersionMajor, kPluginVersionMinor);
+    static EmbossPluginFactory p(kPluginIdentifier, kPluginVersionMajor, kPluginVersionMinor);
     ids.push_back(&p);
 }
