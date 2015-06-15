@@ -11,6 +11,7 @@
 #include "Wave.h"
 #include "Swirl.h"
 #include "Implode.h"
+#include "Emboss.h"
 
 namespace OFX
 {
@@ -30,6 +31,7 @@ namespace OFX
             getWavePluginID(ids);
             getSwirlPluginID(ids);
             getImplodePluginID(ids);
+            getEmbossPluginID(ids);
         }
     }
 }
