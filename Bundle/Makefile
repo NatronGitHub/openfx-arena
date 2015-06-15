@@ -5,6 +5,7 @@ PLUGINOBJECTS = \
         Tile.o \
         Reflection.o \
         Text.o \
+        Arc.o \
         ofxsOGLTextRenderer.o \
         ofxsOGLFontData.o \
         ofxsRectangleInteract.o \
@@ -25,6 +26,8 @@ RESOURCES = \
 ../Reflection/net.fxarena.openfx.Reflection.svg \
 ../Text/net.fxarena.openfx.Text.png \
 ../Text/net.fxarena.openfx.Text.svg \
+../Arc/net.fxarena.openfx.Arc.png \
+../Arc/net.fxarena.openfx.Arc.svg \
 
 VPATH += \
 ../Mirror \
@@ -33,10 +36,18 @@ VPATH += \
 ../Tile \
 ../Reflection \
 ../Text \
+../Arc \
 
 include ../Makefile.master
 
-CXXFLAGS += -I../Mirror -I../Distort -I../Texture -I../Tile -I../Reflection -I../Text
+CXXFLAGS += \
+-I../Mirror \
+-I../Distort \
+-I../Texture \
+-I../Tile \
+-I../Reflection \
+-I../Text \
+-I../Arc \
 
 CXXFLAGS  += $(MAGICK_CXXFLAGS)
 LINKFLAGS += $(MAGICK_LINKFLAGS)

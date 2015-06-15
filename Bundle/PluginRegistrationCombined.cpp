@@ -5,6 +5,7 @@
 #include "Tile.h"
 #include "Reflection.h"
 #include "Text.h"
+#include "Arc.h"
 
 namespace OFX
 {
@@ -17,7 +18,8 @@ namespace OFX
             getTexturePluginID(ids);
             getTilePluginID(ids);
             getReflectionPluginID(ids);
-	    getTextPluginID(ids);
+            getTextPluginID(ids);
+            getArcPluginID(ids);
         }
     }
 }
