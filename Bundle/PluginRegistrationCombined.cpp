@@ -10,6 +10,7 @@
 #include "Roll.h"
 #include "Wave.h"
 #include "Swirl.h"
+#include "Implode.h"
 
 namespace OFX
 {
@@ -28,6 +29,7 @@ namespace OFX
             getRollPluginID(ids);
             getWavePluginID(ids);
             getSwirlPluginID(ids);
+            getImplodePluginID(ids);
         }
     }
 }
