@@ -7,6 +7,7 @@
 #include "Text.h"
 #include "Arc.h"
 #include "Polar.h"
+#include "Roll.h"
 
 namespace OFX
 {
@@ -22,6 +23,7 @@ namespace OFX
             getTextPluginID(ids);
             getArcPluginID(ids);
             getPolarPluginID(ids);
+            getRollPluginID(ids);
         }
     }
 }

@@ -7,6 +7,7 @@ PLUGINOBJECTS = \
         Text.o \
         Arc.o \
         Polar.o \
+        Roll.o \
         ofxsOGLTextRenderer.o \
         ofxsOGLFontData.o \
         ofxsRectangleInteract.o \
@@ -31,6 +32,8 @@ RESOURCES = \
 ../Arc/net.fxarena.openfx.Arc.svg \
 ../Polar/net.fxarena.openfx.Polar.png \
 ../Polar/net.fxarena.openfx.Polar.svg \
+../Roll/net.fxarena.openfx.Roll.png \
+../Roll/net.fxarena.openfx.Roll.svg \
 
 VPATH += \
 ../Mirror \
@@ -41,6 +44,7 @@ VPATH += \
 ../Text \
 ../Arc \
 ../Polar \
+../Roll \
 
 include ../Makefile.master
 
@@ -53,6 +57,7 @@ CXXFLAGS += \
 -I../Text \
 -I../Arc \
 -I../Polar \
+-I../Roll \
 
 CXXFLAGS  += $(MAGICK_CXXFLAGS)
 LINKFLAGS += $(MAGICK_LINKFLAGS)
