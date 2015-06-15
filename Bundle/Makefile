@@ -9,6 +9,7 @@ PLUGINOBJECTS = \
         Polar.o \
         Roll.o \
         Wave.o \
+        Swirl.o \
         ofxsOGLTextRenderer.o \
         ofxsOGLFontData.o \
         ofxsRectangleInteract.o \
@@ -37,6 +38,8 @@ RESOURCES = \
 ../Roll/net.fxarena.openfx.Roll.svg \
 ../Wave/net.fxarena.openfx.Wave.png \
 ../Wave/net.fxarena.openfx.Wave.svg \
+../Swirl/net.fxarena.openfx.Swirl.png \
+../Swirl/net.fxarena.openfx.Swirl.svg \
 
 VPATH += \
 ../Mirror \
@@ -49,6 +52,7 @@ VPATH += \
 ../Polar \
 ../Roll \
 ../Wave \
+../Swirl \
 
 include ../Makefile.master
 
@@ -63,6 +67,7 @@ CXXFLAGS += \
 -I../Polar \
 -I../Roll \
 -I../Wave \
+-I../Swirl \
 
 CXXFLAGS  += $(MAGICK_CXXFLAGS)
 LINKFLAGS += $(MAGICK_LINKFLAGS)

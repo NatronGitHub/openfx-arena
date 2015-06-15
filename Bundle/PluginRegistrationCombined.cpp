@@ -9,6 +9,7 @@
 #include "Polar.h"
 #include "Roll.h"
 #include "Wave.h"
+#include "Swirl.h"
 
 namespace OFX
 {
@@ -26,6 +27,7 @@ namespace OFX
             getPolarPluginID(ids);
             getRollPluginID(ids);
             getWavePluginID(ids);
+            getSwirlPluginID(ids);
         }
     }
 }
