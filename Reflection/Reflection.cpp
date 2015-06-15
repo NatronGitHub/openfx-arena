@@ -36,13 +36,15 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include "Reflection.h"
 #include "ofxsMacros.h"
 #include <Magick++.h>
+#include <stdint.h>
+#include <cmath>
 
 #define kPluginName "Reflection"
 #define kPluginGrouping "Filter"
 
 #define kPluginIdentifier "net.fxarena.openfx.Reflection"
 #define kPluginVersionMajor 2
-#define kPluginVersionMinor 2
+#define kPluginVersionMinor 3
 
 #define kParamSpace "spacing"
 #define kParamSpaceLabel "Spacing"
@@ -194,6 +196,8 @@ void ReflectionPlugin::render(const OFX::RenderArguments &args)
     // proc images
     image1 = image;
     image1.flip();
+    spacing = std::floor(spacing * args.renderScale.x + 0.5);
+    offset = std::floor(offset * args.renderScale.x + 0.5);
     image1.crop(Magick::Geometry(srcWidth,mirrorHeight-offset,0,offset+offset));
     image.crop(Magick::Geometry(srcWidth,mirrorHeight+offset,0,mirrorHeight-offset));
 
