@@ -33,16 +33,16 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 */
 
-#include "Arc.h"
+#include "Polar.h"
 #include "ofxsMacros.h"
 #include <Magick++.h>
 #include <iostream>
 #include <stdint.h>
 #include <cmath>
 
-#define kPluginName "Arc"
+#define kPluginName "Polar"
 #define kPluginGrouping "Transform"
-#define kPluginIdentifier "net.fxarena.openfx.Arc"
+#define kPluginIdentifier "net.fxarena.openfx.Polar"
 #define kPluginVersionMajor 1
 #define kPluginVersionMinor 0
 
@@ -51,25 +51,20 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #define kParamVPixelHint "Virtual Pixel Method"
 #define kParamVPixelDefault 12
 
-#define kParamArcAngle "arcAngle"
-#define kParamArcAngleLabel "Angle"
-#define kParamArcAngleHint "Arc angle"
-#define kParamArcAngleDefault 60
+#define kParamPolarRotate "polarRotate"
+#define kParamPolarRotateLabel "Rotate"
+#define kParamPolarRotateHint "Polar rotate"
+#define kParamPolarRotateDefault 0
 
-#define kParamArcRotate "arcRotate"
-#define kParamArcRotateLabel "Rotate"
-#define kParamArcRotateHint "Arc rotate"
-#define kParamArcRotateDefault 0
+#define kParamDePolar "dePolar"
+#define kParamDePolarLabel "DePolar"
+#define kParamDePolarHint "DePolar"
+#define kParamDePolarDefault false
 
-#define kParamArcTopRadius "arcTopRadius"
-#define kParamArcTopRadiusLabel "Top radius"
-#define kParamArcTopRadiusHint "Arc top radius"
-#define kParamArcTopRadiusDefault 0
-
-#define kParamArcBottomRadius "arcBottomRadius"
-#define kParamArcBottomRadiusLabel "Bottom radius"
-#define kParamArcBottomRadiusHint "Arc bottom radius"
-#define kParamArcBottomRadiusDefault 0
+#define kParamPolarFlip "polarFlip"
+#define kParamPolarFlipLabel "Flip"
+#define kParamPolarFlipHint "Polar Flip"
+#define kParamPolarFlipDefault false
 
 #define kSupportsTiles 0
 #define kSupportsMultiResolution 0
@@ -78,24 +73,23 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 using namespace OFX;
 
-class ArcPlugin : public OFX::ImageEffect
+class PolarPlugin : public OFX::ImageEffect
 {
 public:
-    ArcPlugin(OfxImageEffectHandle handle);
-    virtual ~ArcPlugin();
+    PolarPlugin(OfxImageEffectHandle handle);
+    virtual ~PolarPlugin();
     virtual void render(const OFX::RenderArguments &args) OVERRIDE FINAL;
     virtual bool getRegionOfDefinition(const OFX::RegionOfDefinitionArguments &args, OfxRectD &rod) OVERRIDE FINAL;
 private:
     OFX::Clip *dstClip_;
     OFX::Clip *srcClip_;
     OFX::ChoiceParam *vpixel_;
-    OFX::DoubleParam *arcAngle_;
-    OFX::DoubleParam *arcRotate_;
-    OFX::DoubleParam *arcTopRadius_;
-    OFX::DoubleParam *arcBottomRadius_;
+    OFX::DoubleParam *polarRotate_;
+    OFX::BooleanParam *polarFlip_;
+    OFX::BooleanParam *dePolar_;
 };
 
-ArcPlugin::ArcPlugin(OfxImageEffectHandle handle)
+PolarPlugin::PolarPlugin(OfxImageEffectHandle handle)
 : OFX::ImageEffect(handle)
 , dstClip_(0)
 , srcClip_(0)
@@ -107,19 +101,18 @@ ArcPlugin::ArcPlugin(OfxImageEffectHandle handle)
     assert(srcClip_ && srcClip_->getPixelComponents() == OFX::ePixelComponentRGBA);
 
     vpixel_ = fetchChoiceParam(kParamVPixel);
-    arcAngle_ = fetchDoubleParam(kParamArcAngle);
-    arcRotate_ = fetchDoubleParam(kParamArcRotate);
-    arcTopRadius_ = fetchDoubleParam(kParamArcTopRadius);
-    arcBottomRadius_ = fetchDoubleParam(kParamArcBottomRadius);
+    polarRotate_ = fetchDoubleParam(kParamPolarRotate);
+    polarFlip_ = fetchBooleanParam(kParamPolarFlip);
+    dePolar_ = fetchBooleanParam(kParamDePolar);
 
-    assert(vpixel_ && arcAngle_ && arcRotate_ && arcTopRadius_&& arcBottomRadius_);
+    assert(vpixel_ && polarRotate_ && polarFlip_ && dePolar_);
 }
 
-ArcPlugin::~ArcPlugin()
+PolarPlugin::~PolarPlugin()
 {
 }
 
-void ArcPlugin::render(const OFX::RenderArguments &args)
+void PolarPlugin::render(const OFX::RenderArguments &args)
 {
     // render scale
     if (!kSupportsRenderScale && (args.renderScale.x != 1. || args.renderScale.y != 1.)) {
@@ -190,12 +183,13 @@ void ArcPlugin::render(const OFX::RenderArguments &args)
 
     // get params
     int vpixel;
-    double arcAngle,arcRotate,arcTopRadius,arcBottomRadius;
+    double polarRotate;
+    bool polarFlip = false;
+    bool dePolar = false;
     vpixel_->getValueAtTime(args.time, vpixel);
-    arcAngle_->getValueAtTime(args.time, arcAngle);
-    arcRotate_->getValueAtTime(args.time, arcRotate);
-    arcTopRadius_->getValueAtTime(args.time, arcTopRadius);
-    arcBottomRadius_->getValueAtTime(args.time, arcBottomRadius);
+    polarRotate_->getValueAtTime(args.time, polarRotate);
+    polarFlip_->getValueAtTime(args.time, polarFlip);
+    dePolar_->getValueAtTime(args.time, dePolar);
 
     // setup
     int width = srcRod.x2-srcRod.x1;
@@ -262,39 +256,22 @@ void ArcPlugin::render(const OFX::RenderArguments &args)
     }
 
     // distort method
-    double distortArgs[4];
-    int distortOpts = 0;
+    double distortArgs[0];
     std::ostringstream scaleW;
     scaleW << width << "x";
     std::ostringstream scaleH;
     scaleH << "x" << height;
-
-    if (arcAngle!=0) {
-        distortArgs[distortOpts] = arcAngle;
-        distortOpts++;
-    }
-    if (arcRotate!=0) {
-        distortArgs[distortOpts] = arcRotate;
-        distortOpts++;
-    }
-    else {
-        distortArgs[distortOpts] = 0;
-        distortOpts++;
-    }
-    if (arcTopRadius!=0) {
-        distortArgs[distortOpts] = std::floor(arcTopRadius * args.renderScale.x + 0.5);
-        distortOpts++;
-    }
-    if (arcBottomRadius!=0 && arcTopRadius!=0) {
-        distortArgs[distortOpts] = std::floor(arcBottomRadius * args.renderScale.x + 0.5);
-        distortOpts++;
-    }
     image.backgroundColor(Magick::Color("rgba(0,0,0,0)"));
-    image.distort(Magick::ArcDistortion, distortOpts, distortArgs, Magick::MagickTrue);
-    if (image.columns()>width)
-        image.scale(scaleW.str());
+    if (polarFlip)
+        image.flip();
+    if (dePolar)
+        image.distort(Magick::DePolarDistortion, 0, distortArgs, Magick::MagickFalse);
+    else
+        image.distort(Magick::PolarDistortion, 0, distortArgs, Magick::MagickTrue);
     if (image.rows()>height)
         image.scale(scaleH.str());
+    if (polarRotate!=0)
+        image.rotate(polarRotate);
     image.flip();
     image.extent(Magick::Geometry(width,height),Magick::CenterGravity);
 
@@ -303,7 +280,7 @@ void ArcPlugin::render(const OFX::RenderArguments &args)
         image.write(0,0,width,height,"RGBA",Magick::FloatPixel,(float*)dstImg->getPixelData());
 }
 
-bool ArcPlugin::getRegionOfDefinition(const OFX::RegionOfDefinitionArguments &args, OfxRectD &rod)
+bool PolarPlugin::getRegionOfDefinition(const OFX::RegionOfDefinitionArguments &args, OfxRectD &rod)
 {
     if (!kSupportsRenderScale && (args.renderScale.x != 1. || args.renderScale.y != 1.)) {
         OFX::throwSuiteStatusException(kOfxStatFailed);
@@ -318,17 +295,17 @@ bool ArcPlugin::getRegionOfDefinition(const OFX::RegionOfDefinitionArguments &ar
     return true;
 }
 
-mDeclarePluginFactory(ArcPluginFactory, {}, {});
+mDeclarePluginFactory(PolarPluginFactory, {}, {});
 
 /** @brief The basic describe function, passed a plugin descriptor */
-void ArcPluginFactory::describe(OFX::ImageEffectDescriptor &desc)
+void PolarPluginFactory::describe(OFX::ImageEffectDescriptor &desc)
 {
     // basic labels
     desc.setLabel(kPluginName);
     desc.setPluginGrouping(kPluginGrouping);
     std::string magickV = MagickCore::GetMagickVersion(NULL);
     std::string delegates = MagickCore::GetMagickDelegates();
-    desc.setPluginDescription("Arc Distort filter for Natron.\n\nWritten by Ole-André Rodlie <olear@fxarena.net>\n\n Powered by "+magickV+"\n\nFeatures: "+delegates);
+    desc.setPluginDescription("Polar Distort filter for Natron.\n\nWritten by Ole-André Rodlie <olear@fxarena.net>\n\n Powered by "+magickV+"\n\nFeatures: "+delegates);
 
     // add the supported contexts
     desc.addSupportedContext(eContextGeneral);
@@ -343,7 +320,7 @@ void ArcPluginFactory::describe(OFX::ImageEffectDescriptor &desc)
 }
 
 /** @brief The describe in context function, passed a plugin descriptor and a context */
-void ArcPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, ContextEnum /*context*/)
+void PolarPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, ContextEnum /*context*/)
 {
     // create the mandated source clip
     ClipDescriptor *srcClip = desc.defineClip(kOfxImageEffectSimpleSourceClipName);
@@ -360,39 +337,28 @@ void ArcPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, Conte
     // make some pages
     PageParamDescriptor *page = desc.definePageParam(kPluginName);
     {
-        DoubleParamDescriptor *param = desc.defineDoubleParam(kParamArcAngle);
-        param->setLabel(kParamArcAngleLabel);
-        param->setHint(kParamArcAngleHint);
-        param->setRange(1, 360);
-        param->setDisplayRange(1, 360);
-        param->setDefault(kParamArcAngleDefault);
+        DoubleParamDescriptor *param = desc.defineDoubleParam(kParamPolarRotate);
+        param->setLabel(kParamPolarRotateLabel);
+        param->setHint(kParamPolarRotateHint);
+        param->setRange(-360, 360);
+        param->setDisplayRange(-360, 360);
+        param->setDefault(kParamPolarRotateDefault);
         page->addChild(*param);
     }
     {
-        DoubleParamDescriptor *param = desc.defineDoubleParam(kParamArcRotate);
-        param->setLabel(kParamArcRotateLabel);
-        param->setHint(kParamArcRotateHint);
-        param->setRange(0, 360);
-        param->setDisplayRange(0, 360);
-        param->setDefault(kParamArcRotateDefault);
+        BooleanParamDescriptor *param = desc.defineBooleanParam(kParamDePolar);
+        param->setLabel(kParamDePolarLabel);
+        param->setHint(kParamDePolarHint);
+        param->setDefault(kParamDePolarDefault);
+        param->setAnimates(true);
         page->addChild(*param);
     }
     {
-        DoubleParamDescriptor *param = desc.defineDoubleParam(kParamArcTopRadius);
-        param->setLabel(kParamArcTopRadiusLabel);
-        param->setHint(kParamArcTopRadiusHint);
-        param->setRange(0, 360);
-        param->setDisplayRange(0, 360);
-        param->setDefault(kParamArcTopRadiusDefault);
-        page->addChild(*param);
-    }
-    {
-        DoubleParamDescriptor *param = desc.defineDoubleParam(kParamArcBottomRadius);
-        param->setLabel(kParamArcBottomRadiusLabel);
-        param->setHint(kParamArcBottomRadiusHint);
-        param->setRange(0, 360);
-        param->setDisplayRange(0, 360);
-        param->setDefault(kParamArcBottomRadiusDefault);
+        BooleanParamDescriptor *param = desc.defineBooleanParam(kParamPolarFlip);
+        param->setLabel(kParamPolarFlipLabel);
+        param->setHint(kParamPolarFlipHint);
+        param->setDefault(kParamPolarFlipDefault);
+        param->setAnimates(true);
         page->addChild(*param);
     }
     {
@@ -422,13 +388,13 @@ void ArcPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, Conte
 }
 
 /** @brief The create instance function, the plugin must return an object derived from the \ref OFX::ImageEffect class */
-ImageEffect* ArcPluginFactory::createInstance(OfxImageEffectHandle handle, ContextEnum /*context*/)
+ImageEffect* PolarPluginFactory::createInstance(OfxImageEffectHandle handle, ContextEnum /*context*/)
 {
-    return new ArcPlugin(handle);
+    return new PolarPlugin(handle);
 }
 
-void getArcPluginID(OFX::PluginFactoryArray &ids)
+void getPolarPluginID(OFX::PluginFactoryArray &ids)
 {
-    static ArcPluginFactory p(kPluginIdentifier, kPluginVersionMajor, kPluginVersionMinor);
+    static PolarPluginFactory p(kPluginIdentifier, kPluginVersionMajor, kPluginVersionMinor);
     ids.push_back(&p);
 }

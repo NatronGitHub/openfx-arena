@@ -6,6 +6,7 @@
 #include "Reflection.h"
 #include "Text.h"
 #include "Arc.h"
+#include "Polar.h"
 
 namespace OFX
 {
@@ -20,6 +21,7 @@ namespace OFX
             getReflectionPluginID(ids);
             getTextPluginID(ids);
             getArcPluginID(ids);
+            getPolarPluginID(ids);
         }
     }
 }
