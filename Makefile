@@ -1,7 +1,7 @@
 # build a combined plugin that reads all formats
 SUBDIRS = Bundle
 
-SUBDIRS_NOMULTI = Distort Mirror Reflection Text Texture Tile Arc Polar Roll
+SUBDIRS_NOMULTI = Distort Mirror Reflection Text Texture Tile Arc Polar Roll Wave
 
 all: subdirs
 

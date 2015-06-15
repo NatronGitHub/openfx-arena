@@ -8,6 +8,7 @@
 #include "Arc.h"
 #include "Polar.h"
 #include "Roll.h"
+#include "Wave.h"
 
 namespace OFX
 {
@@ -24,6 +25,7 @@ namespace OFX
             getArcPluginID(ids);
             getPolarPluginID(ids);
             getRollPluginID(ids);
+            getWavePluginID(ids);
         }
     }
 }
