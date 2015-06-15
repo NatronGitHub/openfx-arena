@@ -42,12 +42,17 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 #define kPluginIdentifier "net.fxarena.openfx.Mirror"
 #define kPluginVersionMajor 3
-#define kPluginVersionMinor 2
+#define kPluginVersionMinor 3
 
 #define kParamMirror "mirrorType"
 #define kParamMirrorLabel "Type"
 #define kParamMirrorHint "Select mirror type"
 #define kParamMirrorDefault 1
+
+#define kParamMatte "matte"
+#define kParamMatteLabel "Matte"
+#define kParamMatteHint "Merge Alpha before applying effect"
+#define kParamMatteDefault false
 
 #define kSupportsTiles 0
 #define kSupportsMultiResolution 0
@@ -67,6 +72,7 @@ private:
     OFX::Clip *dstClip_;
     OFX::Clip *srcClip_;
     OFX::ChoiceParam *mirror_;
+    OFX::BooleanParam *matte_;
 };
 
 MirrorPlugin::MirrorPlugin(OfxImageEffectHandle handle)
@@ -80,7 +86,9 @@ MirrorPlugin::MirrorPlugin(OfxImageEffectHandle handle)
     srcClip_ = fetchClip(kOfxImageEffectSimpleSourceClipName);
     assert(srcClip_ && srcClip_->getPixelComponents() == OFX::ePixelComponentRGBA);
     mirror_ = fetchChoiceParam(kParamMirror);
-    assert(mirror_);
+    matte_ = fetchBooleanParam(kParamMatte);
+
+    assert(mirror_ && matte_);
 }
 
 MirrorPlugin::~MirrorPlugin()
@@ -158,7 +166,9 @@ void MirrorPlugin::render(const OFX::RenderArguments &args)
 
     // get params
     int mirror = 0;
+    bool matte = false;
     mirror_->getValueAtTime(args.time, mirror);
+    matte_->getValueAtTime(args.time, matte);
 
     // setup
     int srcWidth = srcRod.x2-srcRod.x1;
@@ -175,6 +185,11 @@ void MirrorPlugin::render(const OFX::RenderArguments &args)
     Magick::Image container(Magick::Geometry(srcWidth,srcHeight),Magick::Color("rgba(0,0,0,0)"));
     if (srcClip_ && srcClip_->isConnected())
         image.read(srcWidth,srcHeight,"RGBA",Magick::FloatPixel,(float*)srcImg->getPixelData());
+
+    if (matte) {
+        image.matte(false);
+        image.matte(true);
+    }
 
     // proc image(s)
     switch(mirror) {
@@ -357,6 +372,14 @@ void MirrorPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, Co
         param->appendOption("Flop");
         param->appendOption("Flip+Flop");
         param->setDefault(kParamMirrorDefault);
+        param->setAnimates(true);
+        page->addChild(*param);
+    }
+    {
+        BooleanParamDescriptor *param = desc.defineBooleanParam(kParamMatte);
+        param->setLabel(kParamMatteLabel);
+        param->setHint(kParamMatteHint);
+        param->setDefault(kParamMatteDefault);
         param->setAnimates(true);
         page->addChild(*param);
     }

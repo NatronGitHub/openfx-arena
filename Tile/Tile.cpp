@@ -42,7 +42,7 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #define kPluginGrouping "Transform"
 #define kPluginIdentifier "net.fxarena.openfx.Tile"
 #define kPluginVersionMajor 2
-#define kPluginVersionMinor 3
+#define kPluginVersionMinor 4
 
 #define kParamRows "rows"
 #define kParamRowsLabel "Rows"
@@ -63,6 +63,11 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #define kParamTileTimeOffsetFirstLabel "Keep first frame"
 #define kParamTileTimeOffsetFirstHint "Stay on first frame is offset"
 #define kParamTileTimeOffsetFirstDefault true
+
+#define kParamMatte "matte"
+#define kParamMatteLabel "Matte"
+#define kParamMatteHint "Merge Alpha before applying effect"
+#define kParamMatteDefault false
 
 #define kSupportsTiles 0
 #define kSupportsMultiResolution 0
@@ -85,6 +90,7 @@ private:
     OFX::IntParam *cols_;
     OFX::IntParam *offset_;
     OFX::BooleanParam *firstFrame_;
+    OFX::BooleanParam *matte_;
 };
 
 TilePlugin::TilePlugin(OfxImageEffectHandle handle)
@@ -101,7 +107,9 @@ TilePlugin::TilePlugin(OfxImageEffectHandle handle)
     cols_ = fetchIntParam(kParamCols);
     offset_ = fetchIntParam(kParamTileTimeOffset);
     firstFrame_ = fetchBooleanParam(kParamTileTimeOffsetFirst);
-    assert(rows_ && cols_ && offset_ && firstFrame_);
+    matte_ = fetchBooleanParam(kParamMatte);
+
+    assert(rows_ && cols_ && offset_ && firstFrame_ && matte_);
 }
 
 TilePlugin::~TilePlugin()
@@ -182,10 +190,12 @@ void TilePlugin::render(const OFX::RenderArguments &args)
     int cols = 0;
     int offset = 0;
     bool firstFrame = false;
+    bool matte = false;
     rows_->getValueAtTime(args.time, rows);
     cols_->getValueAtTime(args.time, cols);
     offset_->getValueAtTime(args.time, offset);
     firstFrame_->getValueAtTime(args.time, firstFrame);
+    matte_->getValueAtTime(args.time, matte);
 
     // setup
     int srcWidth = srcRod.x2-srcRod.x1;
@@ -225,6 +235,11 @@ void TilePlugin::render(const OFX::RenderArguments &args)
     montage.backgroundColor(Magick::Color("rgba(0,0,0,0)"));
     montage.geometry(thumb);
     montage.tile(grid);
+
+    if (matte) {
+        image.matte(false);
+        image.matte(true);
+    }
 
     // add images
     if (offset==0) {
@@ -358,6 +373,14 @@ void TilePluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, Cont
         param->setHint(kParamTileTimeOffsetFirstHint);
         param->setAnimates(true);
         param->setDefault(kParamTileTimeOffsetFirstDefault);
+        page->addChild(*param);
+    }
+    {
+        BooleanParamDescriptor *param = desc.defineBooleanParam(kParamMatte);
+        param->setLabel(kParamMatteLabel);
+        param->setHint(kParamMatteHint);
+        param->setDefault(kParamMatteDefault);
+        param->setAnimates(true);
         page->addChild(*param);
     }
 }
