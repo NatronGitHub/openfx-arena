@@ -42,7 +42,7 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 #define kPluginIdentifier "net.fxarena.openfx.Texture"
 #define kPluginVersionMajor 2
-#define kPluginVersionMinor 1
+#define kPluginVersionMinor 2
 
 #define kSupportsTiles 0
 #define kSupportsMultiResolution 0
@@ -190,8 +190,12 @@ void TexturePlugin::render(const OFX::RenderArguments &args)
     case 10: // checkerboard
         image.read("pattern:checkerboard");
         break;
-    case 11: // bricks
-        image.read("pattern:bricks");
+    case 11: // stripes
+        image.extent(Magick::Geometry(width,1));
+        image.addNoise(Magick::GaussianNoise);
+        image.channel(Magick::GreenChannel);
+        image.negate();
+        image.scale(Magick::Geometry(width,height));
         break;
     }
 
@@ -268,7 +272,7 @@ void TexturePluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, C
         param->appendOption("ImpulseNoise");
         param->appendOption("LaplacianNoise");
         param->appendOption("Checkerboard");
-        param->appendOption("Bricks");
+        param->appendOption("Stripes");
         param->setDefault(kParamEffectDefault);
         param->setAnimates(true);
         page->addChild(*param);

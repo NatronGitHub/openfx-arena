@@ -26,6 +26,8 @@ MAGICK_UNIX_BETA_MAJOR=6.9.1-6
 MAGICK_UNIX_BETA_MINOR=beta20150613
 MAGICK_REL_URL=ftp://ftp.sunet.se/pub/multimedia/graphics/ImageMagick
 MAGICK_BETA_URL=http://www.imagemagick.org/download/beta
+GMAGICK_URL=ftp://ftp.graphicsmagick.org/pub/GraphicsMagick/snapshots
+GMAGICK=1.4.020150607
 if [ -z "$QUANTUM" ]; then
   Q=32
 else
@@ -50,6 +52,7 @@ else
     MAGICK_URL=$MAGICK_REL_URL/ImageMagick-$MAGICK.tar.gz
   fi
 fi
+GMAGICK_URL=$GMAGICK_URL/GraphicsMagick-$GMAGICK.tar.gz
 
 ZLIB=1.2.8
 ZLIB_URL=http://prdownloads.sourceforge.net/libpng/zlib-${ZLIB}.tar.gz?download
@@ -261,6 +264,25 @@ if [ ! -f ${PREFIX}/lib/libMagick++-6.Q${Q}HDRI.a ]; then
   else
     rm -rf ImageMagick-$MAGICK || exit 1
   fi
+fi
+
+# gmagick
+if [ "$CLEAN" == "1" ]; then
+  rm -rf $CWD/3rdparty/GraphicsMagick-$GMAGICK
+fi
+if [ ! -f ${PREFIX}/lib/libGraphicsMagick++.a ] && [ "$GM" == "1" ]; then
+  if [ ! -f $CWD/3rdparty/GraphicsMagick-$GMAGICK.tar.gz ]; then
+    wget $GMAGICK_URL -O $CWD/3rdparty/GraphicsMagick-$GMAGICK.tar.gz || exit 1
+  fi
+  if [ ! -d $CWD/3rdparty/GraphicsMagick-$GMAGICK ]; then
+    tar xvf $CWD/3rdparty/GraphicsMagick-$GMAGICK.tar.gz -C $CWD/3rdparty/ || exit 1
+  fi
+  cd $CWD/3rdparty/GraphicsMagick-$GMAGICK || exit 1
+  $MAKE distclean
+  CFLAGS="-m${BIT} ${BF}" CXXFLAGS="-m${BIT} ${BF} ${BSD} -I${PREFIX}/include" CPPFLAGS="-I${PREFIX}/include -L${PREFIX}/lib" ./configure --libdir=${PREFIX}/lib --prefix=${PREFIX} --with-lcms=no --with-lcms2=no --with-magick-plus-plus=yes --with-tiff=no --with-trio=no --with-jpeg=no --with-jp2=no --with-ttf=no --with-png=no --with-xml=no --with-wmf=no --with-lzma=no --with-bzlib=no --with-zlib=no --with-quantum-depth=${Q} --with-x=no --enable-static --disable-shared || exit 1
+  $MAKE -j$JOBS install || exit 1
+  cd .. || exit 1
+  rm -rf GraphicsMagick-$GMAGICK || exit 1
 fi
 
 cd $CWD || exit 1
