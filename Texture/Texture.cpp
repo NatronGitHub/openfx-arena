@@ -41,8 +41,8 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #define kPluginGrouping "Draw"
 
 #define kPluginIdentifier "net.fxarena.openfx.Texture"
-#define kPluginVersionMajor 2
-#define kPluginVersionMinor 2
+#define kPluginVersionMajor 3
+#define kPluginVersionMinor 0
 
 #define kSupportsTiles 0
 #define kSupportsMultiResolution 0
@@ -197,6 +197,60 @@ void TexturePlugin::render(const OFX::RenderArguments &args)
         image.negate();
         image.scale(Magick::Geometry(width,height));
         break;
+    case 12:
+        image.read("gradient:");
+        break;
+    case 13:
+        image.read("gradient:blue");
+        break;
+    case 14:
+        image.read("gradient:yellow");
+        break;
+    case 15:
+        image.read("gradient:green-yellow");
+        break;
+    case 16:
+        image.read("gradient:red-blue");
+        break;
+    case 17:
+        image.read("gradient:tomato-steelblue");
+        break;
+    case 18:
+        image.read("gradient:snow-navy");
+        break;
+    case 19:
+        image.read("gradient:gold-firebrick");
+        break;
+    case 20:
+        image.read("gradient:yellow-limegreen");
+        break;
+    case 21:
+        image.read("gradient:khaki-tomato");
+        break;
+    case 22:
+        image.read("gradient:darkcyan-snow");
+        break;
+    case 23:
+        image.read("gradient:none-firebrick");
+        break;
+    case 24:
+        image.read("radial-gradient:");
+        break;
+    case 25:
+        image.read("radial-gradient:blue");
+        break;
+    case 26:
+        image.read("radial-gradient:yellow");
+        break;
+    case 27:
+        image.read("radial-gradient:green-yellow");
+        break;
+    case 28:
+        image.read("radial-gradient:red-blue");
+        break;
+    case 29:
+        image.read("radial-gradient:tomato-steelblue");
+        break;
     }
 
     // return image
@@ -273,6 +327,24 @@ void TexturePluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, C
         param->appendOption("LaplacianNoise");
         param->appendOption("Checkerboard");
         param->appendOption("Stripes");
+        param->appendOption("Gradient");
+        param->appendOption("Gradient blue");
+        param->appendOption("Gradient yellow");
+        param->appendOption("Gradient green-yellow");
+        param->appendOption("Gradient red-blue");
+        param->appendOption("Gradient tomato-steelblue");
+        param->appendOption("Gradient snow-navy");
+        param->appendOption("Gradient gold-firebrick");
+        param->appendOption("Gradient yellow-limegreen");
+        param->appendOption("Gradient khaki-tomato");
+        param->appendOption("Gradient darkcyan-snow");
+        param->appendOption("Gradient none-firebrick");
+        param->appendOption("Gradient Radial");
+        param->appendOption("Gradient Radial blue");
+        param->appendOption("Gradient Radial yellow");
+        param->appendOption("Gradient Radial green-yellow");
+        param->appendOption("Gradient Radial red-blue");
+        param->appendOption("Gradient Radial tomato-steelblue");
         param->setDefault(kParamEffectDefault);
         param->setAnimates(true);
         page->addChild(*param);
