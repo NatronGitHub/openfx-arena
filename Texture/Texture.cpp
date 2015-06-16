@@ -35,14 +35,15 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 #include "Texture.h"
 #include "ofxsMacros.h"
+#include "ofxNatron.h"
 #include <Magick++.h>
 
 #define kPluginName "Texture"
 #define kPluginGrouping "Draw"
 
 #define kPluginIdentifier "net.fxarena.openfx.Texture"
-#define kPluginVersionMajor 2
-#define kPluginVersionMinor 2
+#define kPluginVersionMajor 3
+#define kPluginVersionMinor 0
 
 #define kSupportsTiles 0
 #define kSupportsMultiResolution 0
@@ -60,6 +61,7 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #define kParamSeedDefault 4321
 
 using namespace OFX;
+static bool gHostIsNatron = false;
 
 class TexturePlugin : public OFX::ImageEffect
 {
@@ -197,6 +199,78 @@ void TexturePlugin::render(const OFX::RenderArguments &args)
         image.negate();
         image.scale(Magick::Geometry(width,height));
         break;
+    case 12:
+        image.read("gradient:");
+        break;
+    case 13:
+        image.read("gradient:blue");
+        break;
+    case 14:
+        image.read("gradient:yellow");
+        break;
+    case 15:
+        image.read("gradient:green-yellow");
+        break;
+    case 16:
+        image.read("gradient:red-blue");
+        break;
+    case 17:
+        image.read("gradient:tomato-steelblue");
+        break;
+    case 18:
+        image.read("gradient:snow-navy");
+        break;
+    case 19:
+        image.read("gradient:gold-firebrick");
+        break;
+    case 20:
+        image.read("gradient:yellow-limegreen");
+        break;
+    case 21:
+        image.read("gradient:khaki-tomato");
+        break;
+    case 22:
+        image.read("gradient:darkcyan-snow");
+        break;
+    case 23:
+        image.read("gradient:none-firebrick");
+        break;
+    case 24:
+        image.read("gradient:none-yellow");
+        break;
+    case 25:
+        image.read("gradient:none-steelblue");
+        break;
+    case 26:
+        image.read("gradient:none-navy");
+        break;
+    case 27:
+        image.read("gradient:none-gold");
+        break;
+    case 28:
+        image.read("gradient:none-orange");
+        break;
+    case 29:
+        image.read("gradient:none-tomato");
+        break;
+    case 30:
+        image.read("radial-gradient:");
+        break;
+    case 31:
+        image.read("radial-gradient:blue");
+        break;
+    case 32:
+        image.read("radial-gradient:yellow");
+        break;
+    case 33:
+        image.read("radial-gradient:green-yellow");
+        break;
+    case 34:
+        image.read("radial-gradient:red-blue");
+        break;
+    case 35:
+        image.read("radial-gradient:tomato-steelblue");
+        break;
     }
 
     // return image
@@ -244,6 +318,8 @@ void TexturePluginFactory::describe(OFX::ImageEffectDescriptor &desc)
 /** @brief The describe in context function, passed a plugin descriptor and a context */
 void TexturePluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, ContextEnum /*context*/)
 {   
+    gHostIsNatron = (OFX::getImageEffectHostDescription()->hostName == kNatronOfxHostName);
+
     // there has to be an input clip, even for generators
     ClipDescriptor* srcClip = desc.defineClip(kOfxImageEffectSimpleSourceClipName);
     srcClip->addSupportedComponent(ePixelComponentRGBA);
@@ -261,18 +337,83 @@ void TexturePluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, C
         ChoiceParamDescriptor *param = desc.defineChoiceParam(kParamEffect);
         param->setLabel(kParamEffectLabel);
         param->setHint(kParamEffectHint);
-        param->appendOption("Plasma");
-        param->appendOption("Plasma grey-grey");
-        param->appendOption("Plasma white-blue");
-        param->appendOption("Plasma green-yellow");
-        param->appendOption("Plasma red-blue");
-        param->appendOption("Plasma tomato-steelblue");
-        param->appendOption("Plasma Fractal");
-        param->appendOption("GaussianNoise");
-        param->appendOption("ImpulseNoise");
-        param->appendOption("LaplacianNoise");
-        param->appendOption("Checkerboard");
-        param->appendOption("Stripes");
+        if (gHostIsNatron) {
+            param->setCascading(OFX::getImageEffectHostDescription()->supportsCascadingChoices);
+            param->appendOption("Plasma/Regular");
+            param->appendOption("Plasma/grey-grey");
+            param->appendOption("Plasma/white-blue");
+            param->appendOption("Plasma/green-yellow");
+            param->appendOption("Plasma/red-blue");
+            param->appendOption("Plasma/tomato-steelblue");
+            param->appendOption("Plasma/Fractal");
+            param->appendOption("Noise/Gaussian");
+            param->appendOption("Noise/Impulse");
+            param->appendOption("Noise/Laplacian");
+            param->appendOption("Misc/Checkerboard");
+            param->appendOption("Misc/Stripes");
+            param->appendOption("Gradient/Regular");
+            param->appendOption("Gradient/Blue");
+            param->appendOption("Gradient/Yellow");
+            param->appendOption("Gradient/green-yellow");
+            param->appendOption("Gradient/red-blue");
+            param->appendOption("Gradient/tomato-steelblue");
+            param->appendOption("Gradient/snow-navy");
+            param->appendOption("Gradient/gold-firebrick");
+            param->appendOption("Gradient/yellow-limegreen");
+            param->appendOption("Gradient/khaki-tomato");
+            param->appendOption("Gradient/darkcyan-snow");
+            param->appendOption("Gradient/none-firebrick");
+            param->appendOption("Gradient/none-yellow");
+            param->appendOption("Gradient/none-steelblue");
+            param->appendOption("Gradient/none-navy");
+            param->appendOption("Gradient/none-gold");
+            param->appendOption("Gradient/none-orange");
+            param->appendOption("Gradient/none-tomato");
+            param->appendOption("Gradient/Radial/Regular");
+            param->appendOption("Gradient/Radial/Blue");
+            param->appendOption("Gradient/Radial/Yellow");
+            param->appendOption("Gradient/Radial/green-yellow");
+            param->appendOption("Gradient/Radial/red-blue");
+            param->appendOption("Gradient/Radial/tomato-steelblue");
+        }
+        else {
+            param->appendOption("Plasma");
+            param->appendOption("Plasma grey-grey");
+            param->appendOption("Plasma white-blue");
+            param->appendOption("Plasma green-yellow");
+            param->appendOption("Plasma red-blue");
+            param->appendOption("Plasma tomato-steelblue");
+            param->appendOption("Plasma Fractal");
+            param->appendOption("GaussianNoise");
+            param->appendOption("ImpulseNoise");
+            param->appendOption("LaplacianNoise");
+            param->appendOption("Checkerboard");
+            param->appendOption("Stripes");
+            param->appendOption("Gradient");
+            param->appendOption("Gradient blue");
+            param->appendOption("Gradient yellow");
+            param->appendOption("Gradient green-yellow");
+            param->appendOption("Gradient red-blue");
+            param->appendOption("Gradient tomato-steelblue");
+            param->appendOption("Gradient snow-navy");
+            param->appendOption("Gradient gold-firebrick");
+            param->appendOption("Gradient yellow-limegreen");
+            param->appendOption("Gradient khaki-tomato");
+            param->appendOption("Gradient darkcyan-snow");
+            param->appendOption("Gradient none-firebrick");
+            param->appendOption("Gradient none-yellow");
+            param->appendOption("Gradient none-steelblue");
+            param->appendOption("Gradient none-navy");
+            param->appendOption("Gradient none-gold");
+            param->appendOption("Gradient none-orange");
+            param->appendOption("Gradient none-tomato");
+            param->appendOption("Gradient Radial");
+            param->appendOption("Gradient Radial blue");
+            param->appendOption("Gradient Radial yellow");
+            param->appendOption("Gradient Radial green-yellow");
+            param->appendOption("Gradient Radial red-blue");
+            param->appendOption("Gradient Radial tomato-steelblue");
+        }
         param->setDefault(kParamEffectDefault);
         param->setAnimates(true);
         page->addChild(*param);
