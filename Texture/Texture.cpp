@@ -234,21 +234,39 @@ void TexturePlugin::render(const OFX::RenderArguments &args)
         image.read("gradient:none-firebrick");
         break;
     case 24:
-        image.read("radial-gradient:");
+        image.read("gradient:none-yellow");
         break;
     case 25:
-        image.read("radial-gradient:blue");
+        image.read("gradient:none-steelblue");
         break;
     case 26:
-        image.read("radial-gradient:yellow");
+        image.read("gradient:none-navy");
         break;
     case 27:
-        image.read("radial-gradient:green-yellow");
+        image.read("gradient:none-gold");
         break;
     case 28:
-        image.read("radial-gradient:red-blue");
+        image.read("gradient:none-orange");
         break;
     case 29:
+        image.read("gradient:none-tomato");
+        break;
+    case 30:
+        image.read("radial-gradient:");
+        break;
+    case 31:
+        image.read("radial-gradient:blue");
+        break;
+    case 32:
+        image.read("radial-gradient:yellow");
+        break;
+    case 33:
+        image.read("radial-gradient:green-yellow");
+        break;
+    case 34:
+        image.read("radial-gradient:red-blue");
+        break;
+    case 35:
         image.read("radial-gradient:tomato-steelblue");
         break;
     }
@@ -339,6 +357,12 @@ void TexturePluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, C
         param->appendOption("Gradient khaki-tomato");
         param->appendOption("Gradient darkcyan-snow");
         param->appendOption("Gradient none-firebrick");
+        param->appendOption("Gradient none-yellow");
+        param->appendOption("Gradient none-steelblue");
+        param->appendOption("Gradient none-navy");
+        param->appendOption("Gradient none-gold");
+        param->appendOption("Gradient none-orange");
+        param->appendOption("Gradient none-tomato");
         param->appendOption("Gradient Radial");
         param->appendOption("Gradient Radial blue");
         param->appendOption("Gradient Radial yellow");
