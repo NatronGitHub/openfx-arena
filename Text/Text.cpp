@@ -172,8 +172,8 @@
 #define kParamTextSpacingDefault 0
 
 #define kParamPango "pango"
-#define kParamPangoLabel "Pango markup"
-#define kParamPangoHint "Enable/Disable Pango Markup Language.\n\n http://www.imagemagick.org/Usage/text/#pango\nhttps://developer.gnome.org/pango/stable/PangoMarkupFormat.html"
+#define kParamPangoLabel "Pango"
+#define kParamPangoHint "Enable/Disable Pango Markup Language.\n\n Example:\n<span color=\"white\" size=\"x-large\">Text</span>\n<span font=\"Sans Italic 12\" color=\"white\">Text</span>\n\nOr use a text file with markup:\n@/path/to/text_file.txt\n\nhttp://www.imagemagick.org/Usage/text/#pango\nhttps://developer.gnome.org/pango/stable/PangoMarkupFormat.html\n\n NOTE! params have no effect when using Pango, and renderscale is not yet supported."
 #define kParamPangoDefault false
 
 #define kParamShadowBlur "shadowSoften"
@@ -680,7 +680,7 @@ void TextPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, Cont
         param->setLabel(kParamStrokeLabel);
         param->setHint(kParamStrokeHint);
         param->setRange(0, 1000);
-        param->setDisplayRange(0, 10);
+        param->setDisplayRange(0, 100);
         param->setDefault(kParamStrokeDefault);
         param->setParent(*groupStroke);
     }
