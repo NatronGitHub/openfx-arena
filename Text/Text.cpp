@@ -240,8 +240,8 @@ private:
 TextPlugin::TextPlugin(OfxImageEffectHandle handle)
 : OFX::ImageEffect(handle)
 , dstClip_(0)
-,width_(0)
-,height_(0)
+, width_(0)
+, height_(0)
 {
     Magick::InitializeMagick(NULL);
 
