@@ -44,7 +44,7 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #define kPluginGrouping "Filter"
 #define kPluginIdentifier "net.fxarena.openfx.Emboss"
 #define kPluginVersionMajor 1
-#define kPluginVersionMinor 0
+#define kPluginVersionMinor 1
 
 #define kParamEmbossRadius "embossRadius"
 #define kParamEmbossRadiusLabel "Radius"
@@ -55,6 +55,11 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #define kParamEmbossSigmaLabel "Sigma"
 #define kParamEmbossSigmaHint "Specifies the standard deviation of the Laplacian, in pixels"
 #define kParamEmbossSigmaDefault 1
+
+#define kParamMatte "matte"
+#define kParamMatteLabel "Matte"
+#define kParamMatteHint "Merge Alpha before applying effect"
+#define kParamMatteDefault false
 
 #define kSupportsTiles 0
 #define kSupportsMultiResolution 0
@@ -75,6 +80,7 @@ private:
     OFX::Clip *srcClip_;
     OFX::DoubleParam *embossRadius_;
     OFX::DoubleParam *embossSigma_;
+    OFX::BooleanParam *matte_;
 };
 
 EmbossPlugin::EmbossPlugin(OfxImageEffectHandle handle)
@@ -90,8 +96,9 @@ EmbossPlugin::EmbossPlugin(OfxImageEffectHandle handle)
 
     embossRadius_ = fetchDoubleParam(kParamEmbossRadius);
     embossSigma_ = fetchDoubleParam(kParamEmbossSigma);
+    matte_ = fetchBooleanParam(kParamMatte);
 
-    assert(embossRadius_ && embossSigma_);
+    assert(embossRadius_ && embossSigma_ && matte_);
 }
 
 EmbossPlugin::~EmbossPlugin()
@@ -169,8 +176,10 @@ void EmbossPlugin::render(const OFX::RenderArguments &args)
 
     // get params
     double radius, sigma;
+    bool matte = false;
     embossRadius_->getValueAtTime(args.time, radius);
     embossSigma_->getValueAtTime(args.time, sigma);
+    matte_->getValueAtTime(args.time, matte);
 
     // setup
     int width = srcRod.x2-srcRod.x1;
@@ -180,6 +189,11 @@ void EmbossPlugin::render(const OFX::RenderArguments &args)
     Magick::Image image(Magick::Geometry(width,height),Magick::Color("rgba(0,0,0,0)"));
     if (srcClip_ && srcClip_->isConnected())
         image.read(width,height,"RGBA",Magick::FloatPixel,(float*)srcImg->getPixelData());
+
+    if (matte) {
+        image.matte(false);
+        image.matte(true);
+    }
 
     // emboss
     image.emboss(radius,sigma);
@@ -261,6 +275,14 @@ void EmbossPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, Co
         param->setRange(0, 1.1);
         param->setDisplayRange(0, 1.1);
         param->setDefault(kParamEmbossSigmaDefault);
+        page->addChild(*param);
+    }
+    {
+        BooleanParamDescriptor *param = desc.defineBooleanParam(kParamMatte);
+        param->setLabel(kParamMatteLabel);
+        param->setHint(kParamMatteHint);
+        param->setDefault(kParamMatteDefault);
+        param->setAnimates(true);
         page->addChild(*param);
     }
 }

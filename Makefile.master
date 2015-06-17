@@ -28,6 +28,11 @@ ifeq ($(MINGW),1)
   GMAGICK_LINKFLAGS += -lgdi32
 endif
 
+# Pango
+ifeq ($(USE_PANGO),1)
+  MAGICK_LINKFLAGS += `pkg-config pangocairo --libs --static`
+endif
+
 # Static
 ifeq ($(STATIC),1)
   MAGICK_LINKFLAGS += -lgomp -lm -lpthread

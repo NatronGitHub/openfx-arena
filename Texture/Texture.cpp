@@ -43,7 +43,7 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 #define kPluginIdentifier "net.fxarena.openfx.Texture"
 #define kPluginVersionMajor 3
-#define kPluginVersionMinor 0
+#define kPluginVersionMinor 1
 
 #define kSupportsTiles 0
 #define kSupportsMultiResolution 0
@@ -60,6 +60,16 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #define kParamSeedHint "Seed the random generator"
 #define kParamSeedDefault 4321
 
+#define kParamWidth "width"
+#define kParamWidthLabel "Width"
+#define kParamWidthHint "Set canvas width, default (0) is project format"
+#define kParamWidthDefault 0
+
+#define kParamHeight "height"
+#define kParamHeightLabel "Height"
+#define kParamHeightHint "Set canvas height, default (0) is project format"
+#define kParamHeightDefault 0
+
 using namespace OFX;
 static bool gHostIsNatron = false;
 
@@ -74,11 +84,15 @@ private:
     OFX::Clip *dstClip_;
     OFX::ChoiceParam *effect_;
     OFX::IntParam *seed_;
+    OFX::IntParam *width_;
+    OFX::IntParam *height_;
 };
 
 TexturePlugin::TexturePlugin(OfxImageEffectHandle handle)
 : OFX::ImageEffect(handle)
 , dstClip_(0)
+, width_(0)
+, height_(0)
 {
     Magick::InitializeMagick(NULL);
 
@@ -87,7 +101,10 @@ TexturePlugin::TexturePlugin(OfxImageEffectHandle handle)
 
     effect_ = fetchChoiceParam(kParamEffect);
     seed_ = fetchIntParam(kParamSeed);
-    assert(effect_ && seed_);
+    width_ = fetchIntParam(kParamWidth);
+    height_ = fetchIntParam(kParamHeight);
+
+    assert(effect_ && seed_ && width_ && height_);
 }
 
 TexturePlugin::~TexturePlugin()
@@ -285,8 +302,19 @@ bool TexturePlugin::getRegionOfDefinition(const OFX::RegionOfDefinitionArguments
         return false;
     }
 
-    rod.x1 = rod.y1 = kOfxFlagInfiniteMin;
-    rod.x2 = rod.y2 = kOfxFlagInfiniteMax;
+    int width,height;
+    width_->getValue(width);
+    height_->getValue(height);
+
+    if (width>0 && height>0) {
+        rod.x1 = rod.y1 = 0;
+        rod.x2 = width;
+        rod.y2 = height;
+    }
+    else {
+        rod.x1 = rod.y1 = kOfxFlagInfiniteMin;
+        rod.x2 = rod.y2 = kOfxFlagInfiniteMax;
+    }
 
     return true;
 }
@@ -425,6 +453,24 @@ void TexturePluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, C
         param->setRange(0, 10000);
         param->setDisplayRange(0, 5000);
         param->setDefault(kParamSeedDefault);
+        page->addChild(*param);
+    }
+    {
+        IntParamDescriptor* param = desc.defineIntParam(kParamWidth);
+        param->setLabel(kParamWidthLabel);
+        param->setHint(kParamWidthHint);
+        param->setRange(0, 10000);
+        param->setDisplayRange(0, 4000);
+        param->setDefault(kParamWidthDefault);
+        page->addChild(*param);
+    }
+    {
+        IntParamDescriptor* param = desc.defineIntParam(kParamHeight);
+        param->setLabel(kParamHeightLabel);
+        param->setHint(kParamHeightHint);
+        param->setRange(0, 10000);
+        param->setDisplayRange(0, 4000);
+        param->setDefault(kParamHeightDefault);
         page->addChild(*param);
     }
 }
