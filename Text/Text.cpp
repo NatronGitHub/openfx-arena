@@ -85,7 +85,7 @@
 #define kPluginGrouping "Draw"
 #define kPluginIdentifier "net.fxarena.openfx.Text"
 #define kPluginVersionMajor 4
-#define kPluginVersionMinor 3
+#define kPluginVersionMinor 4
 
 #define kSupportsTiles 0
 #define kSupportsMultiResolution 0
@@ -176,6 +176,16 @@
 #define kParamPangoHint "Enable/Disable Pango Markup Language.\n\n Example:\n<span color=\"white\" size=\"x-large\">Text</span>\n<span font=\"Sans Italic 12\" color=\"white\">Text</span>\n\nOr use a text file with markup:\n@/path/to/text_file.txt\n\nhttp://www.imagemagick.org/Usage/text/#pango\nhttps://developer.gnome.org/pango/stable/PangoMarkupFormat.html\n\n NOTE! params have no effect when using Pango, and renderscale is not yet supported."
 #define kParamPangoDefault false
 
+#define kParamWidth "width"
+#define kParamWidthLabel "Width"
+#define kParamWidthHint "Set canvas width, default (0) is project format"
+#define kParamWidthDefault 0
+
+#define kParamHeight "height"
+#define kParamHeightLabel "Height"
+#define kParamHeightHint "Set canvas height, default (0) is project format"
+#define kParamHeightDefault 0
+
 #define kParamShadowBlur "shadowSoften"
 #define kParamShadowBlurLabel "Soften"
 #define kParamShadowBlurHint "Soften shadow"
@@ -220,6 +230,8 @@ private:
     OFX::IntParam *shadowX_;
     OFX::IntParam *shadowY_;
     OFX::DoubleParam *shadowBlur_;
+    OFX::IntParam *width_;
+    OFX::IntParam *height_;
     bool has_pango;
     bool has_fontconfig;
     bool has_freetype;
@@ -228,6 +240,8 @@ private:
 TextPlugin::TextPlugin(OfxImageEffectHandle handle)
 : OFX::ImageEffect(handle)
 , dstClip_(0)
+,width_(0)
+,height_(0)
 {
     Magick::InitializeMagick(NULL);
 
@@ -264,8 +278,10 @@ TextPlugin::TextPlugin(OfxImageEffectHandle handle)
     shadowX_ = fetchIntParam(kParamShadowX);
     shadowY_ = fetchIntParam(kParamShadowY);
     shadowBlur_ = fetchDoubleParam(kParamShadowBlur);
+    width_ = fetchIntParam(kParamWidth);
+    height_ = fetchIntParam(kParamHeight);
 
-    assert(position_ && text_ && fontSize_ && fontName_ && textColor_ && strokeColor_ && strokeWidth_ && fontOverride_ && shadowOpacity_ && shadowSigma_ && interlineSpacing_ && interwordSpacing_ && textSpacing_ && use_pango_ && shadowColor_ && shadowX_ && shadowY_ && shadowBlur_);
+    assert(position_ && text_ && fontSize_ && fontName_ && textColor_ && strokeColor_ && strokeWidth_ && fontOverride_ && shadowOpacity_ && shadowSigma_ && interlineSpacing_ && interwordSpacing_ && textSpacing_ && use_pango_ && shadowColor_ && shadowX_ && shadowY_ && shadowBlur_ && width_ && height_);
 }
 
 TextPlugin::~TextPlugin()
@@ -479,8 +495,19 @@ bool TextPlugin::getRegionOfDefinition(const OFX::RegionOfDefinitionArguments &a
         return false;
     }
 
-    rod.x1 = rod.y1 = kOfxFlagInfiniteMin;
-    rod.x2 = rod.y2 = kOfxFlagInfiniteMax;
+    int width,height;
+    width_->getValue(width);
+    height_->getValue(height);
+
+    if (width>0 && height>0) {
+        rod.x1 = rod.y1 = 0;
+        rod.x2 = width;
+        rod.y2 = height;
+    }
+    else {
+        rod.x1 = rod.y1 = kOfxFlagInfiniteMin;
+        rod.x2 = rod.y2 = kOfxFlagInfiniteMax;
+    }
 
     return true;
 }
@@ -540,6 +567,7 @@ void TextPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, Cont
     GroupParamDescriptor *groupStroke = desc.defineGroupParam("Stroke");
     GroupParamDescriptor *groupShadow = desc.defineGroupParam("Shadow");
     GroupParamDescriptor *groupSpace = desc.defineGroupParam("Spacing");
+    GroupParamDescriptor *groupCanvas = desc.defineGroupParam("Canvas");
 
     bool hostHasNativeOverlayForPosition;
     {
@@ -756,9 +784,28 @@ void TextPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, Cont
         param->setParent(*groupShadow);
     }
     {
+        IntParamDescriptor* param = desc.defineIntParam(kParamWidth);
+        param->setLabel(kParamWidthLabel);
+        param->setHint(kParamWidthHint);
+        param->setRange(0, 10000);
+        param->setDisplayRange(0, 4000);
+        param->setDefault(kParamWidthDefault);
+        param->setParent(*groupCanvas);
+    }
+    {
+        IntParamDescriptor* param = desc.defineIntParam(kParamHeight);
+        param->setLabel(kParamHeightLabel);
+        param->setHint(kParamHeightHint);
+        param->setRange(0, 10000);
+        param->setDisplayRange(0, 4000);
+        param->setDefault(kParamHeightDefault);
+        param->setParent(*groupCanvas);
+    }
+    {
          page->addChild(*groupStroke);
          page->addChild(*groupShadow);
          page->addChild(*groupSpace);
+         page->addChild(*groupCanvas);
      }
 }
 
