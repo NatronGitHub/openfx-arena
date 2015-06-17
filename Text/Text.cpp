@@ -428,7 +428,13 @@ void TextPlugin::render(const OFX::RenderArguments &args)
     if (has_pango && use_pango) {
 	image.backgroundColor("none");
 	// TODO fix renderscale
-	image.read("pango:"+text);
+	// TODO add justify
+	try {
+		image.read("pango:"+text);
+	}
+	catch (Magick::Exception &error_) {
+		setPersistentMessage(OFX::Message::eMessageError, "", error_.what());
+	}
     }
     else
         image.draw(text_draw_list);
