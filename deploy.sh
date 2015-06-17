@@ -218,7 +218,7 @@ if [ ! -f ${PREFIX}/lib/libexpat.a ] && [ "$OS" == "Msys" ]; then
 fi
 
 # freetype
-if [ ! -f ${PREFIX}/lib/libfreetype.a ]; then
+if [ ! -f ${PREFIX}/lib/libfreetype.a ] && [ "$OS" == "Msys" ]; then
   if [ ! -f $CWD/3rdparty/freetype-$FTYPE.tar.gz ]; then
     wget $FTYPE_URL -O $CWD/3rdparty/freetype-$FTYPE.tar.gz || exit 1
   fi
@@ -236,7 +236,7 @@ if [ ! -f ${PREFIX}/lib/libfreetype.a ]; then
 fi
 
 # fontconfig
-if [ ! -f ${PREFIX}/lib/libfontconfig.a ]; then
+if [ ! -f ${PREFIX}/lib/libfontconfig.a ] && [ "$OS" == "Msys" ]; then
   if [ ! -f $CWD/3rdparty/fontconfig-$FCONFIG.tar.gz ]; then
     wget $FCONFIG_URL -O $CWD/3rdparty/fontconfig-$FCONFIG.tar.gz || exit 1
   fi
@@ -254,127 +254,127 @@ if [ ! -f ${PREFIX}/lib/libfontconfig.a ]; then
 fi
 
 # libffi
-if [ ! -f ${PREFIX}/lib/pkgconfig/libffi.pc ]; then
-  if [ ! -f $CWD/3rdparty/libffi-$FFI.tar.gz ]; then
-    wget $FFI_URL -O $CWD/3rdparty/libffi-$FFI.tar.gz || exit 1
-  fi
-  if [ ! -d $CWD/3rdparty/libffi-$FFI ]; then
-    tar xvf $CWD/3rdparty/libffi-$FFI.tar.gz -C $CWD/3rdparty/ || exit 1
-  fi
-  cd $CWD/3rdparty/libffi-$FFI || exit 1
-  make distclean
-  CFLAGS="-m${BIT} ${BF}" CXXFLAGS="-m${BIT} ${BF} -I${PREFIX}/include" CPPFLAGS="-I${PREFIX}/include -L${PREFIX}/lib -lfreetype -lexpat -lz" ./configure --bindir=${PREFIX} --libdir=${PREFIX}/lib --prefix=${PREFIX} --disable-docs --enable-static --disable-shared || exit 1
-  make -j$JOBS install || exit 1
-  mkdir -p $PREFIX/share/doc/libffi/ || exit 1
-  cp COPYING* LIC* $PREFIX/share/doc/libffi/
-  cd .. || exit 1
-  rm -rf libffi-$FFI || exit 1
-fi
+#if [ ! -f ${PREFIX}/lib/pkgconfig/libffi.pc ]; then
+#  if [ ! -f $CWD/3rdparty/libffi-$FFI.tar.gz ]; then
+#    wget $FFI_URL -O $CWD/3rdparty/libffi-$FFI.tar.gz || exit 1
+#  fi
+#  if [ ! -d $CWD/3rdparty/libffi-$FFI ]; then
+#    tar xvf $CWD/3rdparty/libffi-$FFI.tar.gz -C $CWD/3rdparty/ || exit 1
+#  fi
+#  cd $CWD/3rdparty/libffi-$FFI || exit 1
+#  make distclean
+#  CFLAGS="-m${BIT} ${BF}" CXXFLAGS="-m${BIT} ${BF} -I${PREFIX}/include" CPPFLAGS="-I${PREFIX}/include -L${PREFIX}/lib -lfreetype -lexpat -lz" ./configure --bindir=${PREFIX} --libdir=${PREFIX}/lib --prefix=${PREFIX} --disable-docs --enable-static --disable-shared || exit 1
+#  make -j$JOBS install || exit 1
+#  mkdir -p $PREFIX/share/doc/libffi/ || exit 1
+#  cp COPYING* LIC* $PREFIX/share/doc/libffi/
+#  cd .. || exit 1
+#  rm -rf libffi-$FFI || exit 1
+#fi
 
 # glib
-if [ ! -f ${PREFIX}/lib/pkgconfig/glib-2.0.pc ]; then
-  if [ ! -f $CWD/3rdparty/glib-$GLIB.tar.xz ]; then
-    wget $GLIB_URL -O $CWD/3rdparty/glib-$GLIB.tar.xz || exit 1
-  fi
-  if [ ! -d $CWD/3rdparty/glib-$GLIB ]; then
-    tar xvf $CWD/3rdparty/glib-$GLIB.tar.xz -C $CWD/3rdparty/ || exit 1
-  fi
-  cd $CWD/3rdparty/glib-$GLIB || exit 1
-  make distclean
-  CFLAGS="-m${BIT} ${BF}" CXXFLAGS="-m${BIT} ${BF} -I${PREFIX}/include" CPPFLAGS="-I${PREFIX}/include -L${PREFIX}/lib -lfreetype -lexpat -lz" ./configure --bindir=${PREFIX} --libdir=${PREFIX}/lib --prefix=${PREFIX} --disable-docs --enable-static --disable-shared || exit 1
-  make -j$JOBS install || exit 1
-  mkdir -p $PREFIX/share/doc/glib/ || exit 1
-  cp COPYING* LIC* $PREFIX/share/doc/glib/
-  cd .. || exit 1
-  rm -rf glib-$GLIB || exit 1
-fi
+#if [ ! -f ${PREFIX}/lib/pkgconfig/glib-2.0.pc ]; then
+#  if [ ! -f $CWD/3rdparty/glib-$GLIB.tar.xz ]; then
+#    wget $GLIB_URL -O $CWD/3rdparty/glib-$GLIB.tar.xz || exit 1
+#  fi
+#  if [ ! -d $CWD/3rdparty/glib-$GLIB ]; then
+#    tar xvf $CWD/3rdparty/glib-$GLIB.tar.xz -C $CWD/3rdparty/ || exit 1
+#  fi
+#  cd $CWD/3rdparty/glib-$GLIB || exit 1
+#  make distclean
+#  CFLAGS="-m${BIT} ${BF}" CXXFLAGS="-m${BIT} ${BF} -I${PREFIX}/include" CPPFLAGS="-I${PREFIX}/include -L${PREFIX}/lib -lfreetype -lexpat -lz" ./configure --bindir=${PREFIX} --libdir=${PREFIX}/lib --prefix=${PREFIX} --disable-docs --disable-static --enable-shared || exit 1
+#  make -j$JOBS install || exit 1
+#  mkdir -p $PREFIX/share/doc/glib/ || exit 1
+#  cp COPYING* LIC* $PREFIX/share/doc/glib/
+#  cd .. || exit 1
+#  rm -rf glib-$GLIB || exit 1
+#fi
 
 # pixman
-if [ ! -f ${PREFIX}/lib/pkgconfig/pixman-1.pc ]; then
-  if [ ! -f $CWD/3rdparty/pixman-$PIX.tar.gz ]; then
-    wget $PIX_URL -O $CWD/3rdparty/pixman-$PIX.tar.gz || exit 1
-  fi
-  if [ ! -d $CWD/3rdparty/pixman-$PIX ]; then
-    tar xvf $CWD/3rdparty/pixman-$PIX.tar.gz -C $CWD/3rdparty/ || exit 1
-  fi
-  cd $CWD/3rdparty/pixman-$PIX || exit 1
-  make distclean
-  CFLAGS="-m${BIT} ${BF}" CXXFLAGS="-m${BIT} ${BF} -I${PREFIX}/include" CPPFLAGS="-I${PREFIX}/include -L${PREFIX}/lib" ./configure --bindir=${PREFIX} --libdir=${PREFIX}/lib --prefix=${PREFIX} --disable-docs --enable-static --disable-shared || exit 1
-  make -j$JOBS install || exit 1
-  mkdir -p $PREFIX/share/doc/pixman/ || exit 1
-  cp COPYING* LIC* $PREFIX/share/doc/pixman/
-  cd .. || exit 1
-  rm -rf pixman-$PIX || exit 1
-fi
+#if [ ! -f ${PREFIX}/lib/pkgconfig/pixman-1.pc ]; then
+#  if [ ! -f $CWD/3rdparty/pixman-$PIX.tar.gz ]; then
+#    wget $PIX_URL -O $CWD/3rdparty/pixman-$PIX.tar.gz || exit 1
+#  fi
+#  if [ ! -d $CWD/3rdparty/pixman-$PIX ]; then
+#    tar xvf $CWD/3rdparty/pixman-$PIX.tar.gz -C $CWD/3rdparty/ || exit 1
+#  fi
+#  cd $CWD/3rdparty/pixman-$PIX || exit 1
+#  make distclean
+#  CFLAGS="-m${BIT} ${BF}" CXXFLAGS="-m${BIT} ${BF} -I${PREFIX}/include" CPPFLAGS="-I${PREFIX}/include -L${PREFIX}/lib" ./configure --bindir=${PREFIX} --libdir=${PREFIX}/lib --prefix=${PREFIX} --disable-docs --enable-static --disable-shared || exit 1
+#  make -j$JOBS install || exit 1
+#  mkdir -p $PREFIX/share/doc/pixman/ || exit 1
+#  cp COPYING* LIC* $PREFIX/share/doc/pixman/
+#  cd .. || exit 1
+#  rm -rf pixman-$PIX || exit 1
+#fi
 
 # cairo
-if [ ! -f ${PREFIX}/lib/pkgconfig/cairo.pc ]; then
-  if [ ! -f $CWD/3rdparty/cairo-$CAIRO.tar.xz ]; then
-    wget $CAIRO_URL -O $CWD/3rdparty/cairo-$CAIRO.tar.xz || exit 1
-  fi
-  if [ ! -d $CWD/3rdparty/cairo-$CAIRO ]; then
-    tar xvf $CWD/3rdparty/cairo-$CAIRO.tar.xz -C $CWD/3rdparty/ || exit 1
-  fi
-  cd $CWD/3rdparty/cairo-$CAIRO || exit 1
-  make distclean
-  CFLAGS="-m${BIT} ${BF}" CXXFLAGS="-m${BIT} ${BF} -I${PREFIX}/include -I${PREFIX}/include/pixman-1" CPPFLAGS="-I${PREFIX}/include -L${PREFIX}/lib -lpixman-1" ./configure --bindir=${PREFIX} --libdir=${PREFIX}/lib --prefix=${PREFIX} --disable-docs --disable-shared --enable-static || exit 1
-  make -j$JOBS install || exit 1
-  mkdir -p $PREFIX/share/doc/cairo/ || exit 1
-  cp COPYING* LIC* $PREFIX/share/doc/cairo/
-  cd .. || exit 1
-  rm -rf cairo-$CAIRO || exit 1
-fi
+#if [ ! -f ${PREFIX}/lib/pkgconfig/cairo.pc ]; then
+#  if [ ! -f $CWD/3rdparty/cairo-$CAIRO.tar.xz ]; then
+#    wget $CAIRO_URL -O $CWD/3rdparty/cairo-$CAIRO.tar.xz || exit 1
+#  fi
+#  if [ ! -d $CWD/3rdparty/cairo-$CAIRO ]; then
+#    tar xvf $CWD/3rdparty/cairo-$CAIRO.tar.xz -C $CWD/3rdparty/ || exit 1
+#  fi
+#  cd $CWD/3rdparty/cairo-$CAIRO || exit 1
+#  make distclean
+#  CFLAGS="-m${BIT} ${BF}" CXXFLAGS="-m${BIT} ${BF} -I${PREFIX}/include -I${PREFIX}/include/pixman-1" CPPFLAGS="-I${PREFIX}/include -L${PREFIX}/lib -lpixman-1" ./configure --bindir=${PREFIX} --libdir=${PREFIX}/lib --prefix=${PREFIX} --disable-docs --disable-shared --enable-static || exit 1
+#  make -j$JOBS install || exit 1
+#  mkdir -p $PREFIX/share/doc/cairo/ || exit 1
+#  cp COPYING* LIC* $PREFIX/share/doc/cairo/
+#  cd .. || exit 1
+#  rm -rf cairo-$CAIRO || exit 1
+#fi
 
 # harfbuzz
-if [ ! -f ${PREFIX}/lib/pkgconfig/harfbuzz.pc ]; then
-  if [ ! -f $CWD/3rdparty/harfbuzz-$BUZZ.tar.bz2 ]; then
-    wget $BUZZ_URL -O $CWD/3rdparty/harfbuzz-$BUZZ.tar.bz2 || exit 1
-  fi
-  if [ ! -d $CWD/3rdparty/harfbuzz-$BUZZ ]; then
-    tar xvf $CWD/3rdparty/harfbuzz-$BUZZ.tar.bz2 -C $CWD/3rdparty/ || exit 1
-  fi
-  cd $CWD/3rdparty/harfbuzz-$BUZZ || exit 1
-  make distclean
-  CFLAGS="-m${BIT} ${BF}" CXXFLAGS="-m${BIT} ${BF} -I${PREFIX}/include" CPPFLAGS="-I${PREFIX}/include -L${PREFIX}/lib -lfreetype -lexpat -lz" ./configure --bindir=${PREFIX} --libdir=${PREFIX}/lib --prefix=${PREFIX} --disable-docs --enable-static --disable-shared --with-freetype --with-cairo --with-gobject --with-glib --without-icu || exit 1
-  make -j$JOBS install || exit 1
-  mkdir -p $PREFIX/share/doc/harfbuzz/ || exit 1
-  cp COPYING* LIC* $PREFIX/share/doc/harfbuzz/
-  cd .. || exit 1
-  rm -rf harfbuzz-$BUZZ || exit 1
+#if [ ! -f ${PREFIX}/lib/pkgconfig/harfbuzz.pc ]; then
+#  if [ ! -f $CWD/3rdparty/harfbuzz-$BUZZ.tar.bz2 ]; then
+#    wget $BUZZ_URL -O $CWD/3rdparty/harfbuzz-$BUZZ.tar.bz2 || exit 1
+#  fi
+#  if [ ! -d $CWD/3rdparty/harfbuzz-$BUZZ ]; then
+#    tar xvf $CWD/3rdparty/harfbuzz-$BUZZ.tar.bz2 -C $CWD/3rdparty/ || exit 1
+#  fi
+#  cd $CWD/3rdparty/harfbuzz-$BUZZ || exit 1
+#  make distclean
+#  CFLAGS="-m${BIT} ${BF}" CXXFLAGS="-m${BIT} ${BF} -I${PREFIX}/include" CPPFLAGS="-I${PREFIX}/include -L${PREFIX}/lib -lfreetype -lexpat -lz" ./configure --bindir=${PREFIX} --libdir=${PREFIX}/lib --prefix=${PREFIX} --disable-docs --enable-static --disable-shared --with-freetype --with-cairo --with-gobject --with-glib --without-icu || exit 1
+#  make -j$JOBS install || exit 1
+#  mkdir -p $PREFIX/share/doc/harfbuzz/ || exit 1
+#  cp COPYING* LIC* $PREFIX/share/doc/harfbuzz/
+#  cd .. || exit 1
+#  rm -rf harfbuzz-$BUZZ || exit 1
   # rebuild freetype
-  if [ ! -f $CWD/3rdparty/freetype-$FTYPE.tar.gz ]; then
-    wget $FTYPE_URL -O $CWD/3rdparty/freetype-$FTYPE.tar.gz || exit 1
-  fi
-  if [ ! -d $CWD/3rdparty/freetype-$FTYPE ]; then
-    tar xvf $CWD/3rdparty/freetype-$FTYPE.tar.gz -C $CWD/3rdparty/ || exit 1
-  fi
-  cd $CWD/3rdparty/freetype-$FTYPE || exit 1
-  make distclean
-  CFLAGS="-m${BIT} ${BF}" CXXFLAGS="-m${BIT} ${BF} -I${PREFIX}/include" CPPFLAGS="-I${PREFIX}/include -L${PREFIX}/lib -lexpat -lz" ./configure --libdir=${PREFIX}/lib --prefix=${PREFIX} --enable-static --disable-shared || exit 1
-  make -j$JOBS install || exit 1
-  mkdir -p $PREFIX/share/doc/freetype/ || exit 1
-  cp README $PREFIX/share/doc/freetype/ || exit 1
-  cd .. || exit 1
-  rm -rf freetype-$FTYPE || exit 1
-fi
+#  if [ ! -f $CWD/3rdparty/freetype-$FTYPE.tar.gz ]; then
+#    wget $FTYPE_URL -O $CWD/3rdparty/freetype-$FTYPE.tar.gz || exit 1
+#  fi
+#  if [ ! -d $CWD/3rdparty/freetype-$FTYPE ]; then
+#    tar xvf $CWD/3rdparty/freetype-$FTYPE.tar.gz -C $CWD/3rdparty/ || exit 1
+#  fi
+#  cd $CWD/3rdparty/freetype-$FTYPE || exit 1
+#  make distclean
+#  CFLAGS="-m${BIT} ${BF}" CXXFLAGS="-m${BIT} ${BF} -I${PREFIX}/include" CPPFLAGS="-I${PREFIX}/include -L${PREFIX}/lib -lexpat -lz" ./configure --libdir=${PREFIX}/lib --prefix=${PREFIX} --enable-static --disable-shared || exit 1
+#  make -j$JOBS install || exit 1
+#  mkdir -p $PREFIX/share/doc/freetype/ || exit 1
+#  cp README $PREFIX/share/doc/freetype/ || exit 1
+#  cd .. || exit 1
+#  rm -rf freetype-$FTYPE || exit 1
+#fi
 
 # pango
-if [ ! -f ${PREFIX}/lib/pkgconfig/pango.pc ]; then
-  if [ ! -f $CWD/3rdparty/pango-$PANGO.tar.xz ]; then
-    wget $PANGO_URL -O $CWD/3rdparty/pango-$PANGO.tar.xz || exit 1
-  fi
-  if [ ! -d $CWD/3rdparty/pango-$PANGO ]; then
-    tar xvf $CWD/3rdparty/pango-$PANGO.tar.xz -C $CWD/3rdparty/ || exit 1
-  fi
-  cd $CWD/3rdparty/pango-$PANGO || exit 1
-  make distclean
-  FONTCONFIG_CFLAGS="-I${PREFIX}/include" FONTCONFIG_LIBS="-L${PREFIX}/lib -lfontconfig" CFLAGS="-m${BIT} ${BF}" CXXFLAGS="-m${BIT} ${BF} -I${PREFIX}/include" CPPFLAGS="-I${PREFIX}/include -L${PREFIX}/lib -lfontconfig -lfreetype -lexpat -lz" ./configure --bindir=${PREFIX} --libdir=${PREFIX}/lib --prefix=${PREFIX} --disable-docs --enable-static --disable-shared --with-included-modules=basic-fc || exit 1
-  make -j$JOBS install || exit 1
-  mkdir -p $PREFIX/share/doc/pango/ || exit 1
-  cp COPYING* LIC* $PREFIX/share/doc/pango/
-  cd .. || exit 1
-  rm -rf pango-$PANGO || exit 1
-fi
+#if [ ! -f ${PREFIX}/lib/pkgconfig/pango.pc ]; then
+#  if [ ! -f $CWD/3rdparty/pango-$PANGO.tar.xz ]; then
+#    wget $PANGO_URL -O $CWD/3rdparty/pango-$PANGO.tar.xz || exit 1
+#  fi
+#  if [ ! -d $CWD/3rdparty/pango-$PANGO ]; then
+#    tar xvf $CWD/3rdparty/pango-$PANGO.tar.xz -C $CWD/3rdparty/ || exit 1
+#  fi
+#  cd $CWD/3rdparty/pango-$PANGO || exit 1
+#  make distclean
+#  FONTCONFIG_CFLAGS="-I${PREFIX}/include" FONTCONFIG_LIBS="-L${PREFIX}/lib -lfontconfig" CFLAGS="-m${BIT} ${BF}" CXXFLAGS="-m${BIT} ${BF} -I${PREFIX}/include" CPPFLAGS="-I${PREFIX}/include -L${PREFIX}/lib -lfontconfig -lfreetype -lexpat -lz" ./configure --bindir=${PREFIX} --libdir=${PREFIX}/lib --prefix=${PREFIX} --disable-docs --disable-static --enable-shared --with-included-modules=basic-fc || exit 1
+#  make -j$JOBS install || exit 1
+#  mkdir -p $PREFIX/share/doc/pango/ || exit 1
+#  cp COPYING* LIC* $PREFIX/share/doc/pango/
+#  cd .. || exit 1
+#  rm -rf pango-$PANGO || exit 1
+#fi
 
 # magick
 if [ "$CLEAN" == "1" ]; then
@@ -455,20 +455,20 @@ cp OpenFX/Support/LICENSE $CWD/$PKG/LICENSE.OpenFX || exit 1
 cp $PREFIX/share/doc/libpng/LICENSE $CWD/$PKG/LICENSE.libpng || exit 1
 
 #pango
-cp $PREFIX/share/doc/cairo/COPYING-MPL-1.1 $CWD/$PKG/LICENSE.cairo || exit 1
-cp $PREFIX/share/doc/glib/COPYING $CWD/$PKG/LICENSE.glib || exit 1
-cp $PREFIX/share/doc/harfbuzz/COPYING $CWD/$PKG/LICENSE.harfbuzz || exit 1
-cp $PREFIX/share/doc/libffi/LICENSE $CWD/$PKG/LICENSE.libffi || exit 1
-cp $PREFIX/share/doc/pango/COPYING $CWD/$PKG/LICENSE.pango || exit 1
-cp $PREFIX/share/doc/pixman/COPYING $CWD/$PKG/LICENSE.pixman || exit 1
-cp $PREFIX/share/doc/fontconfig/COPYING $CWD/$PKG/LICENSE.fontconfig || exit 1
-cp $PREFIX/share/doc/freetype/README $CWD/$PKG/LICENSE.freetype || exit 1
+#cp $PREFIX/share/doc/cairo/COPYING-MPL-1.1 $CWD/$PKG/LICENSE.cairo || exit 1
+#cp $PREFIX/share/doc/glib/COPYING $CWD/$PKG/LICENSE.glib || exit 1
+#cp $PREFIX/share/doc/harfbuzz/COPYING $CWD/$PKG/LICENSE.harfbuzz || exit 1
+#cp $PREFIX/share/doc/libffi/LICENSE $CWD/$PKG/LICENSE.libffi || exit 1
+#cp $PREFIX/share/doc/pango/COPYING $CWD/$PKG/LICENSE.pango || exit 1
+#cp $PREFIX/share/doc/pixman/COPYING $CWD/$PKG/LICENSE.pixman || exit 1
+#cp $PREFIX/share/doc/fontconfig/COPYING $CWD/$PKG/LICENSE.fontconfig || exit 1
+#cp $PREFIX/share/doc/freetype/README $CWD/$PKG/LICENSE.freetype || exit 1
 
 if [ "$OS" == "Msys" ]; then
   cp $PREFIX/share/doc/zlib/README $CWD/$PKG/LICENSE.zlib || exit 1
   cp $PREFIX/share/doc/expat/COPYING $CWD/$PKG/LICENSE.expat || exit 1
-  #cp $PREFIX/share/doc/fontconfig/COPYING $CWD/$PKG/LICENSE.fontconfig || exit 1
-  #cp $PREFIX/share/doc/freetype/README $CWD/$PKG/LICENSE.freetype || exit 1
+  cp $PREFIX/share/doc/fontconfig/COPYING $CWD/$PKG/LICENSE.fontconfig || exit 1
+  cp $PREFIX/share/doc/freetype/README $CWD/$PKG/LICENSE.freetype || exit 1
 fi
 
 # Strip and copy
