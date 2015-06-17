@@ -200,7 +200,7 @@ if [ ! -f ${PREFIX}/lib/libpng.a ]; then
 fi
 
 # expat
-if [ ! -f ${PREFIX}/lib/libexpat.a ]; then
+if [ ! -f ${PREFIX}/lib/libexpat.a ] && [ "$OS" == "Msys" ]; then
   if [ ! -f $CWD/3rdparty/expat-$EXPAT.tar.gz ]; then
     wget $EXPAT_URL -O $CWD/3rdparty/expat-$EXPAT.tar.gz || exit 1
   fi
@@ -452,16 +452,23 @@ mkdir $CWD/$PKG || exit 1
 cp LICENSE README.md $CWD/$PKG/ || exit 1
 cp $PREFIX/share/doc/ImageMagick/LICENSE $CWD/$PKG/LICENSE.ImageMagick || exit 1
 cp OpenFX/Support/LICENSE $CWD/$PKG/LICENSE.OpenFX || exit 1
+cp $PREFIX/share/doc/libpng/LICENSE $CWD/$PKG/LICENSE.libpng || exit 1
 
-if [ "$MAGICK_STRIP" != "1" ]; then
-  cp $PREFIX/share/doc/libpng/LICENSE $CWD/$PKG/LICENSE.libpng || exit 1
-fi
+#pango
+cp $PREFIX/share/doc/cairo/COPYING-MPL-1.1 $CWD/$PKG/LICENSE.cairo || exit 1
+cp $PREFIX/share/doc/glib/COPYING $CWD/$PKG/LICENSE.glib || exit 1
+cp $PREFIX/share/doc/harfbuzz/COPYING $CWD/$PKG/LICENSE.harfbuzz || exit 1
+cp $PREFIX/share/doc/libffi/LICENSE $CWD/$PKG/LICENSE.libffi || exit 1
+cp $PREFIX/share/doc/pango/COPYING $CWD/$PKG/LICENSE.pango || exit 1
+cp $PREFIX/share/doc/pixman/COPYING $CWD/$PKG/LICENSE.pixman || exit 1
+cp $PREFIX/share/doc/fontconfig/COPYING $CWD/$PKG/LICENSE.fontconfig || exit 1
+cp $PREFIX/share/doc/freetype/README $CWD/$PKG/LICENSE.freetype || exit 1
 
 if [ "$OS" == "Msys" ]; then
   cp $PREFIX/share/doc/zlib/README $CWD/$PKG/LICENSE.zlib || exit 1
   cp $PREFIX/share/doc/expat/COPYING $CWD/$PKG/LICENSE.expat || exit 1
-  cp $PREFIX/share/doc/fontconfig/COPYING $CWD/$PKG/LICENSE.fontconfig || exit 1
-  cp $PREFIX/share/doc/freetype/README $CWD/$PKG/LICENSE.freetype || exit 1
+  #cp $PREFIX/share/doc/fontconfig/COPYING $CWD/$PKG/LICENSE.fontconfig || exit 1
+  #cp $PREFIX/share/doc/freetype/README $CWD/$PKG/LICENSE.freetype || exit 1
 fi
 
 # Strip and copy
