@@ -173,7 +173,7 @@
 
 #define kParamPango "pango"
 #define kParamPangoLabel "Pango markup"
-#define kParamPangoHint "Enable/Disable Pango Markup Language.\n\n http://www.imagemagick.org/Usage/text/#pango"
+#define kParamPangoHint "Enable/Disable Pango Markup Language.\n\n http://www.imagemagick.org/Usage/text/#pango\nhttps://developer.gnome.org/pango/stable/PangoMarkupFormat.html"
 #define kParamPangoDefault false
 
 #define kParamShadowBlur "shadowSoften"

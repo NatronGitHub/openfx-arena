@@ -30,6 +30,9 @@ endif
 
 # Static
 ifeq ($(STATIC),1)
+  ifeq ($(USE_PANGO),1)
+    MAGICK_LINKFLAGS += `pkg-config pangocairo --libs --static`
+  endif
   MAGICK_LINKFLAGS += -lgomp -lm -lpthread
   GMAGICK_LINKFLAGS += -lgomp -lm -lpthread
   ifeq ($(MINGW),1)
