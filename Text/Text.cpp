@@ -425,8 +425,11 @@ void TextPlugin::render(const OFX::RenderArguments &args)
         text_draw_list.push_back(Magick::DrawableStrokeColor(strokeRGBA.str()));
 
     // Draw
-    if (has_pango && use_pango)
-        image.read("pango:"+text); // mostly untested
+    if (has_pango && use_pango) {
+	image.backgroundColor("none");
+	// TODO fix renderscale
+	image.read("pango:"+text);
+    }
     else
         image.draw(text_draw_list);
 
