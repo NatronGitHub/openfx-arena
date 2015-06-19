@@ -1,0 +1,14 @@
+PLUGINOBJECTS = \
+        TextPango.o \
+	PluginRegistration.o \
+
+PLUGINNAME = TextPango
+
+RESOURCES = \
+net.fxarena.openfx.TextPango.png \
+net.fxarena.openfx.TextPango.svg \
+
+include ../Makefile.master
+
+CXXFLAGS += $(MAGICK_CXXFLAGS)
+LINKFLAGS += $(MAGICK_LINKFLAGS)
