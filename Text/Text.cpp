@@ -85,7 +85,7 @@
 #define kPluginGrouping "Draw"
 #define kPluginIdentifier "net.fxarena.openfx.Text"
 #define kPluginVersionMajor 4
-#define kPluginVersionMinor 4
+#define kPluginVersionMinor 5
 
 #define kSupportsTiles 0
 #define kSupportsMultiResolution 0
@@ -171,11 +171,6 @@
 #define kParamTextSpacingHint "Spacing between letters"
 #define kParamTextSpacingDefault 0
 
-#define kParamPango "pango"
-#define kParamPangoLabel "Pango"
-#define kParamPangoHint "Enable/Disable Pango Markup Language.\n\n Example:\n<span color=\"white\" size=\"x-large\">Text</span>\n<span font=\"Sans Italic 12\" color=\"white\">Text</span>\n\nOr use a text file with markup:\n@/path/to/text_file.txt\n\nhttp://www.imagemagick.org/Usage/text/#pango\nhttps://developer.gnome.org/pango/stable/PangoMarkupFormat.html\n\n NOTE! params have no effect when using Pango, and renderscale is not yet supported."
-#define kParamPangoDefault false
-
 #define kParamWidth "width"
 #define kParamWidthLabel "Width"
 #define kParamWidthHint "Set canvas width, default (0) is project format"
@@ -232,7 +227,6 @@ private:
     OFX::DoubleParam *shadowBlur_;
     OFX::IntParam *width_;
     OFX::IntParam *height_;
-    bool has_pango;
     bool has_fontconfig;
     bool has_freetype;
 };
@@ -245,7 +239,6 @@ TextPlugin::TextPlugin(OfxImageEffectHandle handle)
 {
     Magick::InitializeMagick(NULL);
 
-    has_pango = false;
     has_fontconfig = false;
     has_freetype = false;
 
@@ -254,8 +247,6 @@ TextPlugin::TextPlugin(OfxImageEffectHandle handle)
         has_fontconfig = true;
     if (delegates.find("freetype") != std::string::npos)
         has_freetype = true;
-    if (delegates.find("pango") != std::string::npos)
-        has_pango = true;
 
     dstClip_ = fetchClip(kOfxImageEffectOutputClipName);
     assert(dstClip_ && dstClip_->getPixelComponents() == OFX::ePixelComponentRGBA);
@@ -273,7 +264,6 @@ TextPlugin::TextPlugin(OfxImageEffectHandle handle)
     interlineSpacing_ = fetchDoubleParam(kParamInterlineSpacing);
     interwordSpacing_ = fetchDoubleParam(kParamInterwordSpacing);
     textSpacing_ = fetchDoubleParam(kParamTextSpacing);
-    use_pango_ = fetchBooleanParam(kParamPango);
     shadowColor_ = fetchRGBParam(kParamShadowColor);
     shadowX_ = fetchIntParam(kParamShadowX);
     shadowY_ = fetchIntParam(kParamShadowY);
@@ -281,7 +271,7 @@ TextPlugin::TextPlugin(OfxImageEffectHandle handle)
     width_ = fetchIntParam(kParamWidth);
     height_ = fetchIntParam(kParamHeight);
 
-    assert(position_ && text_ && fontSize_ && fontName_ && textColor_ && strokeColor_ && strokeWidth_ && fontOverride_ && shadowOpacity_ && shadowSigma_ && interlineSpacing_ && interwordSpacing_ && textSpacing_ && use_pango_ && shadowColor_ && shadowX_ && shadowY_ && shadowBlur_ && width_ && height_);
+    assert(position_ && text_ && fontSize_ && fontName_ && textColor_ && strokeColor_ && strokeWidth_ && fontOverride_ && shadowOpacity_ && shadowSigma_ && interlineSpacing_ && interwordSpacing_ && textSpacing_ && shadowColor_ && shadowX_ && shadowY_ && shadowBlur_ && width_ && height_);
 }
 
 TextPlugin::~TextPlugin()
@@ -353,7 +343,6 @@ void TextPlugin::render(const OFX::RenderArguments &args)
     // Get params
     double x, y, r, g, b, a, r_s, g_s, b_s, a_s, strokeWidth, shadowOpacity, shadowSigma, interlineSpacing, interwordSpacing, textSpacing, shadowR, shadowG, shadowB, shadowBlur;
     int fontSize, fontID, shadowX, shadowY;
-    bool use_pango = false;
     std::string text, fontOverride, fontName;
 
     position_->getValueAtTime(args.time, x, y);
@@ -369,7 +358,6 @@ void TextPlugin::render(const OFX::RenderArguments &args)
     interlineSpacing_->getValueAtTime(args.time, interlineSpacing);
     interwordSpacing_->getValueAtTime(args.time, interwordSpacing);
     textSpacing_->getValueAtTime(args.time, textSpacing);
-    use_pango_->getValueAtTime(args.time, use_pango);
     shadowColor_->getValueAtTime(args.time, shadowR, shadowG, shadowB);
     shadowX_->getValueAtTime(args.time, shadowX);
     shadowY_->getValueAtTime(args.time, shadowY);
@@ -441,19 +429,7 @@ void TextPlugin::render(const OFX::RenderArguments &args)
         text_draw_list.push_back(Magick::DrawableStrokeColor(strokeRGBA.str()));
 
     // Draw
-    if (has_pango && use_pango) {
-        image.backgroundColor("none");
-        // TODO fix renderscale
-        // TODO add justify
-        try {
-            image.read("pango:"+text);
-        }
-        catch (Magick::Exception &error_) {
-            setPersistentMessage(OFX::Message::eMessageError, "", error_.what());
-        }
-    }
-    else
-        image.draw(text_draw_list);
+    image.draw(text_draw_list);
 
     // Shadow
     if (shadowOpacity>0 && shadowSigma>0) {
@@ -592,20 +568,6 @@ void TextPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, Cont
         
         //Do not show this parameter if the host handles the interact
         if (hostHasNativeOverlayForPosition)
-            param->setIsSecret(true);
-    }
-    {
-        BooleanParamDescriptor* param = desc.defineBooleanParam(kParamPango);
-        param->setLabel(kParamPangoLabel);
-        param->setHint(kParamPangoHint);
-        param->setDefault(kParamPangoDefault);
-        param->setAnimates(true);
-        page->addChild(*param);
-
-        std::string delegates = MagickCore::GetMagickDelegates();
-        if (delegates.find("pango") != std::string::npos)
-            param->setIsSecret(false);
-        else
             param->setIsSecret(true);
     }
     {
