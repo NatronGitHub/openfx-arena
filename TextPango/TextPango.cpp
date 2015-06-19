@@ -54,13 +54,38 @@
 #define kParamTextLabel "Markup"
 #define kParamTextHint "Pango Markup Language.\n\n Example:\n<span color=\"white\" size=\"x-large\">Text</span>\n<span font=\"Sans Italic 12\" color=\"white\">Text</span>\n\nOr use a text file with markup:\n@/path/to/text_file.txt\n\nhttp://www.imagemagick.org/Usage/text/#pango\nhttps://developer.gnome.org/pango/stable/PangoMarkupFormat.html"
 
+#define kParamGravity "gravity"
+#define kParamGravityLabel "Gravity hint"
+#define kParamGravityHint "Gravity hint"
+#define kParamGravityDefault 0
+
+#define kParamHinting "hinting"
+#define kParamHintingLabel "Hinting"
+#define kParamHintingHint "Hinting"
+#define kParamHintingDefault 0
+
+#define kParamIndent "indent"
+#define kParamIndentLabel "Indent"
+#define kParamIndentHint "Indent"
+#define kParamIndentDefault 0
+
+#define kParamJustify "justify"
+#define kParamJustifyLabel "Justify"
+#define kParamJustifyHint "Justify"
+#define kParamJustifyDefault false
+
+#define kParamWrap "wrap"
+#define kParamWrapLabel "Wrap"
+#define kParamWrapHint "Wrap"
+#define kParamWrapDefault 0
+
 #define kParamWidth "width"
-#define kParamWidthLabel "Canvas width"
+#define kParamWidthLabel "Width"
 #define kParamWidthHint "Set canvas width, default (0) is project format"
 #define kParamWidthDefault 0
 
 #define kParamHeight "height"
-#define kParamHeightLabel "Canvas height"
+#define kParamHeightLabel "Height"
 #define kParamHeightHint "Set canvas height, default (0) is project format"
 #define kParamHeightDefault 0
 
@@ -87,6 +112,11 @@ private:
     OFX::StringParam *text_;
     OFX::IntParam *width_;
     OFX::IntParam *height_;
+    OFX::ChoiceParam *gravity_;
+    OFX::ChoiceParam *hinting_;
+    OFX::IntParam *indent_;
+    OFX::BooleanParam *justify_;
+    OFX::ChoiceParam *wrap_;
     bool has_pango;
     bool has_fontconfig;
     bool has_freetype;
@@ -118,8 +148,13 @@ TextPangoPlugin::TextPangoPlugin(OfxImageEffectHandle handle)
     text_ = fetchStringParam(kParamText);
     width_ = fetchIntParam(kParamWidth);
     height_ = fetchIntParam(kParamHeight);
+    gravity_ = fetchChoiceParam(kParamGravity);
+    hinting_ = fetchChoiceParam(kParamHinting);
+    indent_ = fetchIntParam(kParamIndent);
+    justify_ = fetchBooleanParam(kParamJustify);
+    wrap_ = fetchChoiceParam(kParamWrap);
 
-    assert(text_ && width_ && height_);
+    assert(text_ && width_ && height_ && gravity_ && hinting_ && indent_ && justify_ && wrap_);
 }
 
 TextPangoPlugin::~TextPangoPlugin()
@@ -151,7 +186,7 @@ void TextPangoPlugin::render(const OFX::RenderArguments &args)
 
     // font support?
     if (!has_fontconfig||!has_freetype||!has_pango) {
-        setPersistentMessage(OFX::Message::eMessageError, "", "Fontconfig/Freetype/Pango missing");
+        setPersistentMessage(OFX::Message::eMessageError, "", "Fontconfig/Freetype/Pango is missing");
         OFX::throwSuiteStatusException(kOfxStatFailed);
         return;
     }
@@ -190,19 +225,66 @@ void TextPangoPlugin::render(const OFX::RenderArguments &args)
 
     // Get params
     std::string text;
+    int gravity, hinting, indent, wrap;
+    bool justify = false;
     text_->getValueAtTime(args.time, text);
+    gravity_->getValueAtTime(args.time, gravity);
+    hinting_->getValueAtTime(args.time, hinting);
+    indent_->getValueAtTime(args.time, indent);
+    justify_->getValueAtTime(args.time, justify);
+    wrap_->getValueAtTime(args.time, wrap);
 
     // Generate empty image
     int width = dstRod.x2-dstRod.x1;
     int height = dstRod.y2-dstRod.y1;
-    Magick::Image image(Magick::Geometry(width,height),Magick::Color("rgba(0,0,0,0)"));
+    Magick::Image image;
+    image.size(Magick::Geometry(width,height));
 
     // Flip image
     image.flip();
 
     // Pango
-    //std::cout << "size: " << width << "x" << height << " text: " << text << std::endl;
     image.backgroundColor("none");
+    switch(gravity) {
+    case 1: // natural
+        image.defineValue("pango","gravity-hint","natural");
+        break;
+    case 2: // strong
+        image.defineValue("pango","gravity-hint","strong");
+        break;
+    case 3: // line
+        image.defineValue("pango","gravity-hint","line");
+        break;
+    }
+    switch(hinting) {
+    case 1:
+        image.defineValue("pango","hinting","none");
+        break;
+    case 2:
+        image.defineValue("pango","hinting","auto");
+        break;
+    case 3:
+        image.defineValue("pango","hinting","full");
+        break;
+    }
+    switch(wrap) {
+    case 1:
+        image.defineValue("pango","wrap","word");
+        break;
+    case 2:
+        image.defineValue("pango","wrap","char");
+        break;
+    case 3:
+        image.defineValue("pango","wrap","word-char");
+        break;
+    }
+    if (indent!=0) {
+        std::ostringstream indentSize;
+        indentSize << indent;
+        image.defineValue("pango","indent",indentSize.str());
+    }
+    if (justify)
+        image.defineValue("pango","justify","true");
     try {
         image.read("pango:"+text);
     }
@@ -317,6 +399,56 @@ void TextPangoPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc,
         param->setRange(0, 10000);
         param->setDisplayRange(0, 4000);
         param->setDefault(kParamHeightDefault);
+        page->addChild(*param);
+    }
+    {
+        IntParamDescriptor* param = desc.defineIntParam(kParamIndent);
+        param->setLabel(kParamIndentLabel);
+        param->setHint(kParamIndentHint);
+        param->setRange(0, 10000);
+        param->setDisplayRange(0, 100);
+        param->setDefault(kParamIndentDefault);
+        page->addChild(*param);
+    }
+    {
+        ChoiceParamDescriptor *param = desc.defineChoiceParam(kParamGravity);
+        param->setLabel(kParamGravityLabel);
+        param->setHint(kParamGravityHint);
+        param->appendOption("Default");
+        param->appendOption("Natural");
+        param->appendOption("Strong");
+        param->appendOption("Line");
+        param->setAnimates(true);
+        page->addChild(*param);
+    }
+    {
+        ChoiceParamDescriptor *param = desc.defineChoiceParam(kParamHinting);
+        param->setLabel(kParamHintingLabel);
+        param->setHint(kParamHintingHint);
+        param->appendOption("Default");
+        param->appendOption("None");
+        param->appendOption("Auto");
+        param->appendOption("Full");
+        param->setAnimates(true);
+        page->addChild(*param);
+    }
+    {
+        ChoiceParamDescriptor *param = desc.defineChoiceParam(kParamWrap);
+        param->setLabel(kParamWrapLabel);
+        param->setHint(kParamWrapHint);
+        param->appendOption("Default");
+        param->appendOption("Word");
+        param->appendOption("Char");
+        param->appendOption("Word-Char");
+        param->setAnimates(true);
+        page->addChild(*param);
+    }
+    {
+        BooleanParamDescriptor *param = desc.defineBooleanParam(kParamJustify);
+        param->setLabel(kParamJustifyLabel);
+        param->setHint(kParamJustifyHint);
+        param->setDefault(kParamJustifyDefault);
+        param->setAnimates(true);
         page->addChild(*param);
     }
 }
