@@ -77,9 +77,10 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #define kParamMatteDefault false
 
 #define kSupportsTiles 0
-#define kSupportsMultiResolution 0
+#define kSupportsMultiResolution 1
 #define kSupportsRenderScale 1
-#define kRenderThreadSafety eRenderInstanceSafe
+#define kRenderThreadSafety eRenderFullySafe
+#define kHostFrameThreading false
 
 using namespace OFX;
 
@@ -304,9 +305,11 @@ void ArcPlugin::render(const OFX::RenderArguments &args)
         image.matte(true);
     }
     image.distort(Magick::ArcDistortion, distortOpts, distortArgs, Magick::MagickTrue);
-    if (image.columns()>width)
+    std::size_t columns = width;
+    std::size_t rows = height;
+    if (image.columns()>columns)
         image.scale(scaleW.str());
-    if (image.rows()>height)
+    if (image.rows()>rows)
         image.scale(scaleH.str());
     image.flip();
     image.extent(Magick::Geometry(width,height),Magick::CenterGravity);
@@ -353,6 +356,7 @@ void ArcPluginFactory::describe(OFX::ImageEffectDescriptor &desc)
     desc.setSupportsTiles(kSupportsTiles);
     desc.setSupportsMultiResolution(kSupportsMultiResolution);
     desc.setRenderThreadSafety(kRenderThreadSafety);
+    desc.setHostFrameThreading(kHostFrameThreading);
 }
 
 /** @brief The describe in context function, passed a plugin descriptor and a context */

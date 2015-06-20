@@ -72,9 +72,10 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #define kParamMatteDefault false
 
 #define kSupportsTiles 0
-#define kSupportsMultiResolution 0
+#define kSupportsMultiResolution 1
 #define kSupportsRenderScale 1
-#define kRenderThreadSafety eRenderInstanceSafe
+#define kRenderThreadSafety eRenderFullySafe
+#define kHostFrameThreading false
 
 using namespace OFX;
 
@@ -281,7 +282,8 @@ void PolarPlugin::render(const OFX::RenderArguments &args)
         image.distort(Magick::DePolarDistortion, 0, distortArgs, Magick::MagickFalse);
     else
         image.distort(Magick::PolarDistortion, 0, distortArgs, Magick::MagickTrue);
-    if (image.rows()>height)
+    std::size_t rows = height;
+    if (image.rows()>rows)
         image.scale(scaleH.str());
     if (polarRotate!=0)
         image.rotate(polarRotate);
@@ -330,6 +332,7 @@ void PolarPluginFactory::describe(OFX::ImageEffectDescriptor &desc)
     desc.setSupportsTiles(kSupportsTiles);
     desc.setSupportsMultiResolution(kSupportsMultiResolution);
     desc.setRenderThreadSafety(kRenderThreadSafety);
+    desc.setHostFrameThreading(kHostFrameThreading);
 }
 
 /** @brief The describe in context function, passed a plugin descriptor and a context */
