@@ -13,6 +13,7 @@
 #include "Emboss.h"
 #include "Charcoal.h"
 #include "Oilpaint.h"
+#include "TextPango.h"
 
 namespace OFX
 {
@@ -34,6 +35,7 @@ namespace OFX
             getEmbossPluginID(ids);
             getCharcoalPluginID(ids);
             getOilpaintPluginID(ids);
+            getTextPangoPluginID(ids);
         }
     }
 }

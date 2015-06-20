@@ -13,6 +13,7 @@ PLUGINOBJECTS = \
         Emboss.o \
         Charcoal.o \
         Oilpaint.o \
+        TextPango.o \
         ofxsOGLTextRenderer.o \
         ofxsOGLFontData.o \
         ofxsRectangleInteract.o \
@@ -49,6 +50,8 @@ RESOURCES = \
 ../Charcoal/net.fxarena.openfx.Charcoal.svg \
 ../Oilpaint/net.fxarena.openfx.Oilpaint.png \
 ../Oilpaint/net.fxarena.openfx.Oilpaint.svg \
+../TextPango/net.fxarena.openfx.TextPango.png \
+../TextPango/net.fxarena.openfx.TextPango.svg \
 
 VPATH += \
 ../Mirror \
@@ -65,6 +68,7 @@ VPATH += \
 ../Emboss \
 ../Charcoal \
 ../Oilpaint \
+../TextPango \
 
 include ../Makefile.master
 
@@ -83,6 +87,7 @@ CXXFLAGS += \
 -I../Emboss \
 -I../Charcoal \
 -I../Oilpaint \
+-I../TextPango \
 
 CXXFLAGS  += $(MAGICK_CXXFLAGS)
 LINKFLAGS += $(MAGICK_LINKFLAGS)
