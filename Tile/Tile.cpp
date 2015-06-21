@@ -54,12 +54,12 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #define kParamColsHint "Columns in grid"
 #define kParamColsDefault 2
 
-#define kParamTileTimeOffset "timeOffset"
+#define kParamTileTimeOffset "offset"
 #define kParamTileTimeOffsetLabel "Time Offset"
 #define kParamTileTimeOffsetHint "Set a time offset"
 #define kParamTileTimeOffsetDefault 0
 
-#define kParamTileTimeOffsetFirst "timeOffsetFirst"
+#define kParamTileTimeOffsetFirst "keepFirst"
 #define kParamTileTimeOffsetFirstLabel "Keep first frame"
 #define kParamTileTimeOffsetFirstHint "Stay on first frame is offset"
 #define kParamTileTimeOffsetFirstDefault true
@@ -70,9 +70,10 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #define kParamMatteDefault false
 
 #define kSupportsTiles 0
-#define kSupportsMultiResolution 0
+#define kSupportsMultiResolution 1
 #define kSupportsRenderScale 1
-#define kRenderThreadSafety eRenderInstanceSafe
+#define kRenderThreadSafety eRenderFullySafe
+#define kHostFrameThreading false
 
 using namespace OFX;
 
@@ -264,7 +265,9 @@ void TilePlugin::render(const OFX::RenderArguments &args)
                 int tileHeight = tileRod.y2-tileRod.y1;
                 if (tileWidth>0&&tileHeight>0) {
                     Magick::Image tmpTile(tileWidth,tileHeight,"RGBA",Magick::FloatPixel,(float*)tileImg->getPixelData());
-                    if (tmpTile.columns()==tileWidth&&tmpTile.rows()==tileHeight)
+                    std::size_t tileColumns = tileWidth;
+                    std::size_t tileRows = tileHeight;
+                    if (tmpTile.columns()==tileColumns && tmpTile.rows()==tileRows)
                         imageList.push_back(tmpTile);
                 }
             }
@@ -321,6 +324,7 @@ void TilePluginFactory::describe(OFX::ImageEffectDescriptor &desc)
     desc.setSupportsTiles(kSupportsTiles);
     desc.setSupportsMultiResolution(kSupportsMultiResolution);
     desc.setRenderThreadSafety(kRenderThreadSafety);
+    desc.setHostFrameThreading(kHostFrameThreading);
 }
 
 /** @brief The describe in context function, passed a plugin descriptor and a context */

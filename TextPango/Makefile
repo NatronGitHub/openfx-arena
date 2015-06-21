@@ -1,12 +1,12 @@
 PLUGINOBJECTS = \
-        Distort.o \
+        TextPango.o \
 	PluginRegistration.o \
 
-PLUGINNAME = Distort
+PLUGINNAME = TextPango
 
 RESOURCES = \
-net.fxarena.openfx.Distort.png \
-net.fxarena.openfx.Distort.svg \
+net.fxarena.openfx.TextPango.png \
+net.fxarena.openfx.TextPango.svg \
 
 include ../Makefile.master
 

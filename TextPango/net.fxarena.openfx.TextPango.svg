@@ -1,0 +1,79 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<svg
+   xmlns:dc="http://purl.org/dc/elements/1.1/"
+   xmlns:cc="http://creativecommons.org/ns#"
+   xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#"
+   xmlns:svg="http://www.w3.org/2000/svg"
+   xmlns="http://www.w3.org/2000/svg"
+   xmlns:sodipodi="http://sodipodi.sourceforge.net/DTD/sodipodi-0.dtd"
+   xmlns:inkscape="http://www.inkscape.org/namespaces/inkscape"
+   height="1024"
+   width="1024"
+   id="svg3786"
+   version="1.1"
+   inkscape:version="0.47 r22583"
+   sodipodi:docname="net.fxarena.openfx.TextPango.svg"
+   inkscape:export-filename="/home/olear/Projects/opensource/openfx-arena/TextPango/net.fxarena.openfx.TextPango.png"
+   inkscape:export-xdpi="11.25"
+   inkscape:export-ydpi="11.25">
+  <metadata
+     id="metadata3794">
+    <rdf:RDF>
+      <cc:Work
+         rdf:about="">
+        <dc:format>image/svg+xml</dc:format>
+        <dc:type
+           rdf:resource="http://purl.org/dc/dcmitype/StillImage" />
+        <dc:title></dc:title>
+      </cc:Work>
+    </rdf:RDF>
+  </metadata>
+  <defs
+     id="defs3792">
+    <inkscape:perspective
+       sodipodi:type="inkscape:persp3d"
+       inkscape:vp_x="0 : 512 : 1"
+       inkscape:vp_y="0 : 1000 : 0"
+       inkscape:vp_z="1024 : 512 : 1"
+       inkscape:persp3d-origin="512 : 341.33333 : 1"
+       id="perspective3796" />
+  </defs>
+  <sodipodi:namedview
+     pagecolor="#ffffff"
+     bordercolor="#666666"
+     borderopacity="1"
+     objecttolerance="10"
+     gridtolerance="10"
+     guidetolerance="10"
+     inkscape:pageopacity="0"
+     inkscape:pageshadow="2"
+     inkscape:window-width="1440"
+     inkscape:window-height="849"
+     id="namedview3790"
+     showgrid="false"
+     inkscape:zoom="0.23046875"
+     inkscape:cx="-370.98305"
+     inkscape:cy="316.74576"
+     inkscape:window-x="0"
+     inkscape:window-y="25"
+     inkscape:window-maximized="1"
+     inkscape:current-layer="svg3786" />
+  <flowRoot
+     xml:space="preserve"
+     id="flowRoot3687"
+     style="fill:black;stroke:none;stroke-opacity:1;stroke-width:1px;stroke-linejoin:miter;stroke-linecap:butt;fill-opacity:1;font-family:Sans;font-style:normal;font-weight:normal;font-size:40px;line-height:125%;letter-spacing:0px;word-spacing:0px"><flowRegion
+       id="flowRegion3689"><rect
+         id="rect3691"
+         width="373.15256"
+         height="86.779663"
+         x="-321.08475"
+         y="308.06781" /></flowRegion><flowPara
+       id="flowPara3693" /></flowRoot>  <g
+     style="font-size:1182.77136229999996431px;font-style:normal;font-weight:normal;fill:#ffffff;fill-opacity:1;stroke:none;font-family:Bitstream Vera Sans"
+     id="text3650">
+    <path
+       d="m 353.09045,172.50557 0,323.99157 146.69137,0 c 54.28692,4.4e-4 96.2537,-14.05266 125.90046,-42.15933 29.64576,-28.10571 44.46888,-68.14741 44.46943,-120.12522 -5.5e-4,-51.59158 -14.82367,-91.44078 -44.46943,-119.54769 -29.64676,-28.10547 -71.61354,-42.15857 -125.90046,-42.15933 l -146.69137,0 m -116.66007,-95.869166 263.35144,0 c 96.63872,8.63e-4 169.59931,21.946794 218.882,65.837856 49.66651,43.50765 74.50006,107.42036 74.50074,191.73833 -6.8e-4,85.08921 -24.83423,149.38694 -74.50074,192.89338 -49.28269,43.50725 -122.24328,65.26068 -218.882,65.26033 l -146.69137,0 0,346.51505 -116.66007,0 0,-862.244946"
+       style="fill:#ffffff;fill-opacity:1"
+       id="path3655" />
+  </g>
+</svg>

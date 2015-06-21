@@ -52,9 +52,10 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #define kParamRadiusDefault 1
 
 #define kSupportsTiles 0
-#define kSupportsMultiResolution 0
+#define kSupportsMultiResolution 1
 #define kSupportsRenderScale 1
-#define kRenderThreadSafety eRenderInstanceSafe
+#define kRenderThreadSafety eRenderFullySafe
+#define kHostFrameThreading false
 
 using namespace OFX;
 
@@ -173,8 +174,9 @@ void OilpaintPlugin::render(const OFX::RenderArguments &args)
     if (srcClip_ && srcClip_->isConnected())
         image.read(width,height,"RGBA",Magick::FloatPixel,(float*)srcImg->getPixelData());
 
-    // charcoal
-    image.oilPaint(std::floor(radius * args.renderScale.x + 0.5));
+    // oilpaint
+    if (radius>0)
+        image.oilPaint(std::floor(radius * args.renderScale.x + 0.5));
 
     // return image
     if (dstClip_ && dstClip_->isConnected() && srcClip_ && srcClip_->isConnected())
@@ -218,6 +220,7 @@ void OilpaintPluginFactory::describe(OFX::ImageEffectDescriptor &desc)
     desc.setSupportsTiles(kSupportsTiles);
     desc.setSupportsMultiResolution(kSupportsMultiResolution);
     desc.setRenderThreadSafety(kRenderThreadSafety);
+    desc.setHostFrameThreading(kHostFrameThreading);
 }
 
 /** @brief The describe in context function, passed a plugin descriptor and a context */

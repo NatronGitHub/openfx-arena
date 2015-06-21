@@ -1,5 +1,5 @@
 #include "ofxsImageEffect.h"
-#include "Distort.h"
+#include "TextPango.h"
 
 namespace OFX 
 {
@@ -7,7 +7,7 @@ namespace OFX
   {
     void getPluginIDs(OFX::PluginFactoryArray &ids)
     {
-        getDistortPluginID(ids);
+        getTextPangoPluginID(ids);
     }
   }
 }

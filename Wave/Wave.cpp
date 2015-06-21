@@ -46,20 +46,21 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #define kPluginVersionMajor 1
 #define kPluginVersionMinor 0
 
-#define kParamWaveAmp "waveAmp"
+#define kParamWaveAmp "amp"
 #define kParamWaveAmpLabel "Amplitude"
 #define kParamWaveAmpHint "Adjust wave amplitude"
 #define kParamWaveAmpDefault 25
 
-#define kParamWaveLength "waveLength"
+#define kParamWaveLength "length"
 #define kParamWaveLengthLabel "Length"
 #define kParamWaveLengthHint "Adjust wave length"
 #define kParamWaveLengthDefault 150
 
 #define kSupportsTiles 0
-#define kSupportsMultiResolution 0
+#define kSupportsMultiResolution 1
 #define kSupportsRenderScale 1
-#define kRenderThreadSafety eRenderInstanceSafe
+#define kRenderThreadSafety eRenderFullySafe
+#define kHostFrameThreading false
 
 using namespace OFX;
 
@@ -227,6 +228,7 @@ void WavePluginFactory::describe(OFX::ImageEffectDescriptor &desc)
     desc.setSupportsTiles(kSupportsTiles);
     desc.setSupportsMultiResolution(kSupportsMultiResolution);
     desc.setRenderThreadSafety(kRenderThreadSafety);
+    desc.setHostFrameThreading(kHostFrameThreading);
 }
 
 /** @brief The describe in context function, passed a plugin descriptor and a context */
