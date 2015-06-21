@@ -1,5 +1,5 @@
 #include "ofxsImageEffect.h"
-#include "ReadXCF.h"
+#include "ArenaIO.h"
 
 namespace OFX
 {
@@ -7,7 +7,7 @@ namespace OFX
     {
         void getPluginIDs(OFX::PluginFactoryArray &ids)
         {
-            getReadXCFPluginID(ids);
+            getArenaIOPluginID(ids);
         }
     }
 }

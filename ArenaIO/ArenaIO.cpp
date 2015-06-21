@@ -1,6 +1,6 @@
 // WORK IN PROGRESS
 
-#include "ReadXCF.h"
+#include "ArenaIO.h"
 #include <iostream>
 #include <stdint.h>
 #include <Magick++.h>
@@ -11,10 +11,10 @@
 #include <OpenColorIO/OpenColorIO.h>
 #endif
 
-#define kPluginName "ReadXCF"
+#define kPluginName "ArenaIO"
 #define kPluginGrouping "Image/Readers"
-#define kPluginDescription "Read GIMP (XCF) files"
-#define kPluginIdentifier "net.fxarena.openfx.ReadXCF"
+#define kPluginDescription "Read various image format using ImageMagick"
+#define kPluginIdentifier "net.fxarena.openfx.ArenaIO"
 #define kPluginVersionMajor 1
 #define kPluginVersionMinor 0
 
@@ -23,11 +23,11 @@
 #define kSupportsAlpha false
 #define kSupportsTiles false
 
-class ReadXCFPlugin : public GenericReaderPlugin
+class ArenaIOPlugin : public GenericReaderPlugin
 {
 public:
-    ReadXCFPlugin(OfxImageEffectHandle handle);
-    virtual ~ReadXCFPlugin();
+    ArenaIOPlugin(OfxImageEffectHandle handle);
+    virtual ~ArenaIOPlugin();
 private:
     virtual bool isVideoStream(const std::string& /*filename*/) OVERRIDE FINAL { return false; }
     virtual void decode(const std::string& filename, OfxTime time, const OfxRectI& renderWindow, float *pixelData, const OfxRectI& bounds, OFX::PixelComponentEnum pixelComponents, int pixelComponentCount, int rowBytes) OVERRIDE FINAL;
@@ -35,18 +35,18 @@ private:
     virtual void onInputFileChanged(const std::string& newFile, OFX::PreMultiplicationEnum *premult, OFX::PixelComponentEnum *components, int *componentCount) OVERRIDE FINAL;
 };
 
-ReadXCFPlugin::ReadXCFPlugin(OfxImageEffectHandle handle)
+ArenaIOPlugin::ArenaIOPlugin(OfxImageEffectHandle handle)
 : GenericReaderPlugin(handle, kSupportsRGBA, kSupportsRGB, kSupportsAlpha, kSupportsTiles, false)
 {
     Magick::InitializeMagick(NULL);
 }
 
-ReadXCFPlugin::~ReadXCFPlugin()
+ArenaIOPlugin::~ArenaIOPlugin()
 {
 }
 
 void
-ReadXCFPlugin::decode(const std::string& filename,
+ArenaIOPlugin::decode(const std::string& filename,
                       OfxTime /*time*/,
                       const OfxRectI& renderWindow,
                       float *pixelData,
@@ -62,11 +62,12 @@ ReadXCFPlugin::decode(const std::string& filename,
             image.matte(true);
         if (image.depth()<32)
             image.depth(32);
+        image.flip();
         image.write(0,0,bounds.x2,bounds.y2,"RGBA",Magick::FloatPixel,pixelData);
     }
 }
 
-bool ReadXCFPlugin::getFrameBounds(const std::string& filename,
+bool ArenaIOPlugin::getFrameBounds(const std::string& filename,
                               OfxTime /*time*/,
                               OfxRectI *bounds,
                               double *par,
@@ -86,7 +87,7 @@ bool ReadXCFPlugin::getFrameBounds(const std::string& filename,
     return false;
 }
 
-void ReadXCFPlugin::onInputFileChanged(const std::string& /*newFile*/,
+void ArenaIOPlugin::onInputFileChanged(const std::string& /*newFile*/,
                                   OFX::PreMultiplicationEnum *premult,
                                   OFX::PixelComponentEnum *components,int *componentCount)
 {
@@ -97,41 +98,41 @@ void ReadXCFPlugin::onInputFileChanged(const std::string& /*newFile*/,
 
 using namespace OFX;
 
-mDeclareReaderPluginFactory(ReadXCFPluginFactory, {}, {}, false);
+mDeclareReaderPluginFactory(ArenaIOPluginFactory, {}, {}, false);
 
 /** @brief The basic describe function, passed a plugin descriptor */
-void ReadXCFPluginFactory::describe(OFX::ImageEffectDescriptor &desc)
+void ArenaIOPluginFactory::describe(OFX::ImageEffectDescriptor &desc)
 {
     GenericReaderDescribe(desc, kSupportsTiles, false);
     desc.setLabel(kPluginName);
 
     #ifdef OFX_EXTENSIONS_TUTTLE
-    const char* extensions[] = {"xcf", NULL};
+    const char* extensions[] = {"xcf", "psd", NULL};
     desc.addSupportedExtensions(extensions);
-    desc.setPluginEvaluation(80);
+    desc.setPluginEvaluation(10);
     #endif
 
     desc.setPluginDescription(kPluginDescription);
 }
 
 /** @brief The describe in context function, passed a plugin descriptor and a context */
-void ReadXCFPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, ContextEnum context)
+void ArenaIOPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, ContextEnum context)
 {
     PageParamDescriptor *page = GenericReaderDescribeInContextBegin(desc, context, isVideoStreamPlugin(), kSupportsRGBA, kSupportsRGB, kSupportsAlpha, kSupportsTiles);
     GenericReaderDescribeInContextEnd(desc, context, page, "reference", "reference");
 }
 
 /** @brief The create instance function, the plugin must return an object derived from the \ref OFX::ImageEffect class */
-ImageEffect* ReadXCFPluginFactory::createInstance(OfxImageEffectHandle handle,
+ImageEffect* ArenaIOPluginFactory::createInstance(OfxImageEffectHandle handle,
                                      ContextEnum /*context*/)
 {
-    ReadXCFPlugin* ret =  new ReadXCFPlugin(handle);
+    ArenaIOPlugin* ret =  new ArenaIOPlugin(handle);
     ret->restoreStateFromParameters();
     return ret;
 }
 
-void getReadXCFPluginID(OFX::PluginFactoryArray &ids)
+void getArenaIOPluginID(OFX::PluginFactoryArray &ids)
 {
-    static ReadXCFPluginFactory p(kPluginIdentifier, kPluginVersionMajor, kPluginVersionMinor);
+    static ArenaIOPluginFactory p(kPluginIdentifier, kPluginVersionMajor, kPluginVersionMinor);
     ids.push_back(&p);
 }

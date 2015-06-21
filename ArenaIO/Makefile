@@ -1,11 +1,11 @@
 PLUGINOBJECTS = \
-    ReadXCF.o \
+    ArenaIO.o \
     PluginRegistration.o \
     GenericReader.o GenericOCIO.o SequenceParsing.o
 
-PLUGINNAME = ReadXCF
+PLUGINNAME = ArenaIO
 
-RESOURCES = net.fxarena.openfx.ReadXCF.png net.fxarena.openfx.ReadXCF.svg
+RESOURCES = net.fxarena.openfx.ArenaIO.png net.fxarena.openfx.ArenaIO.svg
 
 include ../Makefile.master
 
