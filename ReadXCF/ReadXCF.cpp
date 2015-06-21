@@ -30,7 +30,7 @@ public:
     virtual ~ReadXCFPlugin();
 private:
     virtual bool isVideoStream(const std::string& /*filename*/) OVERRIDE FINAL { return false; }
-    virtual void decode(const std::string& filename, OfxTime time, const OfxRectI& renderWindow, float *pixelData, const OfxRectI& bounds, OFX::PixelComponentEnum pixelComponents, int rowBytes) OVERRIDE FINAL;
+    virtual void decode(const std::string& filename, OfxTime time, const OfxRectI& renderWindow, float *pixelData, const OfxRectI& bounds, OFX::PixelComponentEnum pixelComponents, int pixelComponentCount, int rowBytes) OVERRIDE FINAL;
     virtual bool getFrameBounds(const std::string& filename, OfxTime time, OfxRectI *bounds, double *par, std::string *error) OVERRIDE FINAL;
     virtual void onInputFileChanged(const std::string& newFile, OFX::PreMultiplicationEnum *premult, OFX::PixelComponentEnum *components, int *componentCount) OVERRIDE FINAL;
 };
@@ -45,22 +45,25 @@ ReadXCFPlugin::~ReadXCFPlugin()
 {
 }
 
-void ReadXCFPlugin::decode(const std::string& filename,
+void
+ReadXCFPlugin::decode(const std::string& filename,
                       OfxTime /*time*/,
                       const OfxRectI& renderWindow,
                       float *pixelData,
                       const OfxRectI& bounds,
                       OFX::PixelComponentEnum pixelComponents,
+                      int pixelComponentCount,
                       int rowBytes)
-{ // TODO, this function does not run(?)
-    /*Magick::Image image;
+{
+    Magick::Image image;
     image.read(filename.c_str());
-    if (!image.matte())
-        image.matte(true);
-    if (image.depth()<32)
-        image.depth(32);
-    image.write(0,0,bounds.x2,bounds.y2,"RGBA",Magick::FloatPixel,pixelData);*/
-    std::cout << "foo" << std::endl;
+    if (image.columns() && image.rows()) {
+        if (!image.matte())
+            image.matte(true);
+        if (image.depth()<32)
+            image.depth(32);
+        image.write(0,0,bounds.x2,bounds.y2,"RGBA",Magick::FloatPixel,pixelData);
+    }
 }
 
 bool ReadXCFPlugin::getFrameBounds(const std::string& filename,
@@ -73,7 +76,6 @@ bool ReadXCFPlugin::getFrameBounds(const std::string& filename,
     Magick::Image image;
     image.read(filename.c_str());
     if (image.columns()>0 && image.rows()>0) {
-        std::cout << "size:" << image.columns() << "x" << image.rows() << std::endl;
         bounds->x1 = 0;
         bounds->x2 = image.columns();
         bounds->y1 = 0;
