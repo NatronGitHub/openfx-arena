@@ -16,8 +16,8 @@
 
 CWD=$(pwd)
 
-MAGICK_LEGACY=1
-MAGICK_MOD=1
+#MAGICK_LEGACY=1
+#MAGICK_MOD=1
 
 MAGICK_WIN=6.8.9-10 # higher is broken on mingw
 if [ "$MAGICK_LEGACY" == "1" ]; then
