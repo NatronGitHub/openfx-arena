@@ -9,5 +9,6 @@ install:
   - sudo apt-get install libfreetype6-dev libfontconfig1-dev libpango1.0-dev
 
 script:
-  - git submodule update -i
-  - bash deploy.sh
+  - git submodule update -i --recursive
+  - MAGICK_LEGACY=1 MAGICK_MOD=1 bash deploy.sh
+  - CLEAN=1 PACKAGE=ArenaIO bash deploy.sh
