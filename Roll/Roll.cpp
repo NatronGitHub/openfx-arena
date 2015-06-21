@@ -46,12 +46,12 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #define kPluginVersionMajor 1
 #define kPluginVersionMinor 0
 
-#define kParamRollX "rollX"
+#define kParamRollX "x"
 #define kParamRollXLabel "X"
 #define kParamRollXHint "Adjust roll X"
 #define kParamRollXDefault 0
 
-#define kParamRollY "rollY"
+#define kParamRollY "y"
 #define kParamRollYLabel "Y"
 #define kParamRollYHint "Adjust roll Y"
 #define kParamRollYDefault 0

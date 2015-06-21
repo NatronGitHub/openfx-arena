@@ -46,12 +46,12 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #define kPluginVersionMajor 1
 #define kPluginVersionMinor 1
 
-#define kParamVPixel "virtualPixelMethod"
+#define kParamVPixel "pixel"
 #define kParamVPixelLabel "Virtual Pixel"
 #define kParamVPixelHint "Virtual Pixel Method"
 #define kParamVPixelDefault 12
 
-#define kParamPolarRotate "polarRotate"
+#define kParamPolarRotate "rotate"
 #define kParamPolarRotateLabel "Rotate"
 #define kParamPolarRotateHint "Polar rotate"
 #define kParamPolarRotateDefault 0
@@ -61,7 +61,7 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #define kParamDePolarHint "DePolar"
 #define kParamDePolarDefault false
 
-#define kParamPolarFlip "polarFlip"
+#define kParamPolarFlip "flip"
 #define kParamPolarFlipLabel "Flip"
 #define kParamPolarFlipHint "Polar Flip"
 #define kParamPolarFlipDefault false

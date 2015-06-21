@@ -46,27 +46,27 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #define kPluginVersionMajor 1
 #define kPluginVersionMinor 1
 
-#define kParamVPixel "virtualPixelMethod"
+#define kParamVPixel "pixel"
 #define kParamVPixelLabel "Virtual Pixel"
 #define kParamVPixelHint "Virtual Pixel Method"
 #define kParamVPixelDefault 12
 
-#define kParamArcAngle "arcAngle"
+#define kParamArcAngle "angle"
 #define kParamArcAngleLabel "Angle"
 #define kParamArcAngleHint "Arc angle"
 #define kParamArcAngleDefault 60
 
-#define kParamArcRotate "arcRotate"
+#define kParamArcRotate "rotate"
 #define kParamArcRotateLabel "Rotate"
 #define kParamArcRotateHint "Arc rotate"
 #define kParamArcRotateDefault 0
 
-#define kParamArcTopRadius "arcTopRadius"
+#define kParamArcTopRadius "top"
 #define kParamArcTopRadiusLabel "Top radius"
 #define kParamArcTopRadiusHint "Arc top radius"
 #define kParamArcTopRadiusDefault 0
 
-#define kParamArcBottomRadius "arcBottomRadius"
+#define kParamArcBottomRadius "bottom"
 #define kParamArcBottomRadiusLabel "Bottom radius"
 #define kParamArcBottomRadiusHint "Arc bottom radius"
 #define kParamArcBottomRadiusDefault 0

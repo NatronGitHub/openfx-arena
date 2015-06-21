@@ -46,7 +46,7 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #define kPluginVersionMajor 1
 #define kPluginVersionMinor 0
 
-#define kParamImplode "implodeFactor"
+#define kParamImplode "factor"
 #define kParamImplodeLabel "Factor"
 #define kParamImplodeHint "Implode image by factor"
 #define kParamImplodeDefault 0.5

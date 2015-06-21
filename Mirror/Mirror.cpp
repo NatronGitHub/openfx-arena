@@ -44,7 +44,7 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #define kPluginVersionMajor 3
 #define kPluginVersionMinor 3
 
-#define kParamMirror "mirrorType"
+#define kParamMirror "type"
 #define kParamMirrorLabel "Type"
 #define kParamMirrorHint "Select mirror type"
 #define kParamMirrorDefault 1

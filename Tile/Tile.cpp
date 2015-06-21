@@ -54,12 +54,12 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #define kParamColsHint "Columns in grid"
 #define kParamColsDefault 2
 
-#define kParamTileTimeOffset "timeOffset"
+#define kParamTileTimeOffset "offset"
 #define kParamTileTimeOffsetLabel "Time Offset"
 #define kParamTileTimeOffsetHint "Set a time offset"
 #define kParamTileTimeOffsetDefault 0
 
-#define kParamTileTimeOffsetFirst "timeOffsetFirst"
+#define kParamTileTimeOffsetFirst "keepFirst"
 #define kParamTileTimeOffsetFirstLabel "Keep first frame"
 #define kParamTileTimeOffsetFirstHint "Stay on first frame is offset"
 #define kParamTileTimeOffsetFirstDefault true

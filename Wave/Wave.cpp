@@ -46,12 +46,12 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #define kPluginVersionMajor 1
 #define kPluginVersionMinor 0
 
-#define kParamWaveAmp "waveAmp"
+#define kParamWaveAmp "amp"
 #define kParamWaveAmpLabel "Amplitude"
 #define kParamWaveAmpHint "Adjust wave amplitude"
 #define kParamWaveAmpDefault 25
 
-#define kParamWaveLength "waveLength"
+#define kParamWaveLength "length"
 #define kParamWaveLengthLabel "Length"
 #define kParamWaveLengthHint "Adjust wave length"
 #define kParamWaveLengthDefault 150

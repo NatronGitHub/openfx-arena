@@ -46,7 +46,7 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #define kPluginVersionMajor 1
 #define kPluginVersionMinor 0
 
-#define kParamSwirl "swirlDegree"
+#define kParamSwirl "degree"
 #define kParamSwirlLabel "Degree"
 #define kParamSwirlHint "Swirl image by degree"
 #define kParamSwirlDefault 60

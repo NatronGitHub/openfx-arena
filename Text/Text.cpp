@@ -105,12 +105,12 @@
 #define kParamTextLabel "Text"
 #define kParamTextHint "The text that will be drawn"
 
-#define kParamFontSize "fontSize"
+#define kParamFontSize "size"
 #define kParamFontSizeLabel "Font size"
 #define kParamFontSizeHint "The height of the characters to render in pixels"
 #define kParamFontSizeDefault 64
 
-#define kParamFontName "fontName"
+#define kParamFontName "name"
 #define kParamFontNameLabel "Font family"
 #define kParamFontNameHint "The name of the font to be used"
 #define kParamFontNameDefault "Arial"
@@ -129,7 +129,7 @@
 #define kParamStrokeHint "Adjust stroke width"
 #define kParamStrokeDefault 0
 
-#define kParamFontOverride "customFont"
+#define kParamFontOverride "custom"
 #define kParamFontOverrideLabel "Custom font"
 #define kParamFontOverrideHint "Override the font list. You can use font name, filename or direct path"
 
