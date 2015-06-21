@@ -123,12 +123,12 @@ private:
     OFX::StringParam *text_;
     OFX::IntParam *width_;
     OFX::IntParam *height_;
-    OFX::ChoiceParam *gravity_;
+    //OFX::ChoiceParam *gravity_;
     OFX::ChoiceParam *hinting_;
     OFX::IntParam *indent_;
     OFX::BooleanParam *justify_;
     OFX::ChoiceParam *wrap_;
-    OFX::ChoiceParam *ellipsize_;
+    //OFX::ChoiceParam *ellipsize_;
     OFX::BooleanParam *single_;
     bool has_pango;
     bool has_fontconfig;
@@ -161,15 +161,15 @@ TextPangoPlugin::TextPangoPlugin(OfxImageEffectHandle handle)
     text_ = fetchStringParam(kParamText);
     width_ = fetchIntParam(kParamWidth);
     height_ = fetchIntParam(kParamHeight);
-    gravity_ = fetchChoiceParam(kParamGravity);
+    //gravity_ = fetchChoiceParam(kParamGravity);
     hinting_ = fetchChoiceParam(kParamHinting);
     indent_ = fetchIntParam(kParamIndent);
     justify_ = fetchBooleanParam(kParamJustify);
     wrap_ = fetchChoiceParam(kParamWrap);
-    ellipsize_ = fetchChoiceParam(kParamEllipsize);
+    //ellipsize_ = fetchChoiceParam(kParamEllipsize);
     single_ = fetchBooleanParam(kParamSingle);
 
-    assert(text_ && width_ && height_ && gravity_ && hinting_ && indent_ && justify_ && wrap_ && ellipsize_ && single_);
+    assert(text_ && width_ && height_ /*&& gravity_*/ && hinting_ && indent_ && justify_ && wrap_ /*&& ellipsize_*/ && single_);
 }
 
 TextPangoPlugin::~TextPangoPlugin()
@@ -240,16 +240,16 @@ void TextPangoPlugin::render(const OFX::RenderArguments &args)
 
     // Get params
     std::string text;
-    int gravity, hinting, indent, wrap, ellipsize;
+    int /*gravity,*/ hinting, indent, wrap/*, ellipsize*/;
     bool justify = false;
     bool single = false;
     text_->getValueAtTime(args.time, text);
-    gravity_->getValueAtTime(args.time, gravity);
+    //gravity_->getValueAtTime(args.time, gravity);
     hinting_->getValueAtTime(args.time, hinting);
     indent_->getValueAtTime(args.time, indent);
     justify_->getValueAtTime(args.time, justify);
     wrap_->getValueAtTime(args.time, wrap);
-    ellipsize_->getValueAtTime(args.time, ellipsize);
+    //ellipsize_->getValueAtTime(args.time, ellipsize);
 
     // Generate empty image
     int width = dstRod.x2-dstRod.x1;
@@ -262,7 +262,7 @@ void TextPangoPlugin::render(const OFX::RenderArguments &args)
 
     // Pango
     image.backgroundColor("none");
-    switch(gravity) {
+    /*switch(gravity) {
     case 1: // natural
         image.defineValue("pango","gravity-hint","natural");
         break;
@@ -272,7 +272,7 @@ void TextPangoPlugin::render(const OFX::RenderArguments &args)
     case 3: // line
         image.defineValue("pango","gravity-hint","line");
         break;
-    }
+    }*/
     switch(hinting) {
     case 0:
         image.defineValue("pango","hinting","none");
@@ -295,7 +295,7 @@ void TextPangoPlugin::render(const OFX::RenderArguments &args)
         image.defineValue("pango","wrap","word-char");
         break;
     }
-    switch(ellipsize) {
+    /*switch(ellipsize) {
     case 1:
         image.defineValue("pango","ellipsize","start");
         break;
@@ -305,7 +305,7 @@ void TextPangoPlugin::render(const OFX::RenderArguments &args)
     case 3:
         image.defineValue("pango","ellipsize","end");
         break;
-    }
+    }*/
     if (indent!=0) {
         std::ostringstream indentSize;
         indentSize << indent;
@@ -441,7 +441,7 @@ void TextPangoPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc,
         param->setDefault(kParamIndentDefault);
         page->addChild(*param);
     }
-    {
+    /*{
         ChoiceParamDescriptor *param = desc.defineChoiceParam(kParamGravity);
         param->setLabel(kParamGravityLabel);
         param->setHint(kParamGravityHint);
@@ -451,7 +451,7 @@ void TextPangoPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc,
         param->appendOption("Line");
         param->setAnimates(true);
         page->addChild(*param);
-    }
+    }*/
     {
         ChoiceParamDescriptor *param = desc.defineChoiceParam(kParamHinting);
         param->setLabel(kParamHintingLabel);
@@ -472,7 +472,7 @@ void TextPangoPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc,
         param->setAnimates(true);
         page->addChild(*param);
     }
-    {
+    /*{
         ChoiceParamDescriptor *param = desc.defineChoiceParam(kParamEllipsize);
         param->setLabel(kParamEllipsizeLabel);
         param->setHint(kParamEllipsizeHint);
@@ -482,7 +482,7 @@ void TextPangoPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc,
         param->appendOption("End");
         param->setAnimates(true);
         page->addChild(*param);
-    }
+    }*/
     {
         BooleanParamDescriptor *param = desc.defineBooleanParam(kParamJustify);
         param->setLabel(kParamJustifyLabel);
