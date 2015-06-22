@@ -36,7 +36,7 @@ if [ -z "$QUANTUM" ]; then
 else
   Q=$QUANTUM
 fi
-MAGICK_DEF_OPT="--disable-docs --disable-deprecated --with-magick-plus-plus=yes --with-quantum-depth=${Q} --without-dps --without-djvu --without-fftw --without-fpx --without-gslib --without-gvc --without-jbig --without-jpeg --without-lcms --without-lcms2 --without-openjp2 --without-lqr --without-lzma --without-openexr --with-pango --with-png --without-rsvg --without-tiff --without-webp --without-xml --with-zlib --without-bzlib --enable-static --disable-shared --enable-hdri --with-freetype --with-fontconfig --without-x --without-modules"
+MAGICK_DEF_OPT="--disable-docs --disable-deprecated --with-magick-plus-plus=yes --with-quantum-depth=${Q} --without-dps --without-djvu --without-fftw --without-fpx --without-gslib --without-gvc --without-jbig --without-jpeg --without-lcms --without-lcms2 --without-openjp2 --without-lqr --without-lzma --without-openexr --with-pango --with-png --with-rsvg --without-tiff --without-webp --with-xml --with-zlib --without-bzlib --enable-static --disable-shared --enable-hdri --with-freetype --with-fontconfig --without-x --without-modules"
 MAGICK_STRIP_OPT="--disable-docs --disable-deprecated --with-magick-plus-plus=yes --with-quantum-depth=${Q} --without-dps --without-djvu --without-fftw --without-fpx --without-gslib --without-gvc --without-jbig --without-jpeg --without-lcms --without-lcms2 --without-openjp2 --without-lqr --without-lzma --without-openexr --without-pango --without-png --without-rsvg --without-tiff --without-webp --without-xml --without-zlib --without-bzlib --enable-static --disable-shared --enable-hdri --without-freetype --without-fontconfig --without-x --without-modules"
 
 if [ "$MAGICK_STRIP" == "1" ]; then
@@ -397,6 +397,7 @@ if [ ! -f ${PREFIX}/lib/libMagick++-6.Q${Q}HDRI.a ]; then
   fi
   if [ "$MAGICK" == "6.8.9-10" ]; then
     patch -p0< $CWD/3rdparty/magick-seed.diff || exit 1
+    patch -p0< $CWD/3rdparty/magick-svg.diff || exit 1
   fi
   $MAKE distclean
   CFLAGS="-m${BIT} ${BF}" CXXFLAGS="-m${BIT} ${BF} ${BSD} -I${PREFIX}/include" CPPFLAGS="-I${PREFIX}/include -L${PREFIX}/lib" ./configure --libdir=${PREFIX}/lib --prefix=${PREFIX} $MAGICK_OPT || exit 1
@@ -437,8 +438,8 @@ if [ "$PKGNAME" != "Arena" ]; then
 fi
 
 if [ "$OS" != "Msys" ]; then
-  $MAKE USE_PANGO=1 STATIC=1 FREEBSD=$USE_FREEBSD BITS=$BIT CONFIG=release clean
-  $MAKE USE_PANGO=1 STATIC=1 FREEBSD=$USE_FREEBSD BITS=$BIT CONFIG=release || exit 1
+  $MAKE USE_SVG=1 USE_PANGO=1 STATIC=1 FREEBSD=$USE_FREEBSD BITS=$BIT CONFIG=release clean
+  $MAKE USE_SVG=1 USE_PANGO=1 STATIC=1 FREEBSD=$USE_FREEBSD BITS=$BIT CONFIG=release || exit 1
 else
   make STATIC=1 MINGW=1 BIT=$BIT CONFIG=release clean
   make STATIC=1 MINGW=1 BIT=$BIT CONFIG=release || exit 1

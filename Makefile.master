@@ -33,6 +33,12 @@ ifeq ($(USE_PANGO),1)
   MAGICK_LINKFLAGS += `pkg-config pangocairo --libs --static`
 endif
 
+# SVG
+ifeq ($(USE_SVG),1)
+  MAGICK_LINKFLAGS += `pkg-config librsvg-2.0 --libs --static`
+  MAGICK_LINKFLAGS += `pkg-config libxml-2.0 --libs --static`
+endif
+
 # Static
 ifeq ($(STATIC),1)
   MAGICK_LINKFLAGS += -lgomp -lm -lpthread

@@ -17,6 +17,7 @@
 #include "ReadPSD.h"
 #include "ReadXCF.h"
 #include "ReadMisc.h"
+#include "ReadSVG.h"
 
 namespace OFX
 {
@@ -42,6 +43,7 @@ namespace OFX
             getReadPSDPluginID(ids);
             getReadXCFPluginID(ids);
             getReadMiscPluginID(ids);
+            getReadSVGPluginID(ids);
         }
     }
 }
