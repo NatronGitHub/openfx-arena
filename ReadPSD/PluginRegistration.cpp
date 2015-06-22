@@ -1,5 +1,5 @@
 #include "ofxsImageEffect.h"
-#include "ArenaIO.h"
+#include "ReadPSD.h"
 
 namespace OFX
 {
@@ -7,7 +7,7 @@ namespace OFX
     {
         void getPluginIDs(OFX::PluginFactoryArray &ids)
         {
-            getArenaIOPluginID(ids);
+            getReadPSDPluginID(ids);
         }
     }
 }

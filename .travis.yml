@@ -11,4 +11,3 @@ install:
 script:
   - git submodule update -i --recursive
   - MAGICK_LEGACY=1 MAGICK_MOD=1 bash deploy.sh
-  - CLEAN=1 PACKAGE=ArenaIO bash deploy.sh

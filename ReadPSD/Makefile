@@ -1,11 +1,11 @@
 PLUGINOBJECTS = \
-    ArenaIO.o \
+    ReadPSD.o \
     PluginRegistration.o \
     GenericReader.o GenericOCIO.o SequenceParsing.o
 
-PLUGINNAME = ArenaIO
+PLUGINNAME = ReadPSD
 
-RESOURCES = net.fxarena.openfx.ArenaIO.png net.fxarena.openfx.ArenaIO.svg
+RESOURCES = net.fxarena.openfx.ReadPSD.png net.fxarena.openfx.ReadPSD.svg
 
 include ../Makefile.master
 
