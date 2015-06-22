@@ -70,7 +70,7 @@ private:
     virtual void decode(const std::string& filename, OfxTime time, const OfxRectI& renderWindow, float *pixelData, const OfxRectI& bounds, OFX::PixelComponentEnum pixelComponents, int pixelComponentCount, int rowBytes) OVERRIDE FINAL;
     virtual bool getFrameBounds(const std::string& filename, OfxTime time, OfxRectI *bounds, double *par, std::string *error) OVERRIDE FINAL;
     virtual void onInputFileChanged(const std::string& newFile, OFX::PreMultiplicationEnum *premult, OFX::PixelComponentEnum *components, int *componentCount) OVERRIDE FINAL;
-    OFX::ChoiceParam *_layer;
+    OFX::IntParam *_layer;
 };
 
 ReadPSDPlugin::ReadPSDPlugin(OfxImageEffectHandle handle)
@@ -78,7 +78,7 @@ ReadPSDPlugin::ReadPSDPlugin(OfxImageEffectHandle handle)
 ,_layer(0)
 {
     Magick::InitializeMagick(NULL);
-    _layer = fetchChoiceParam(kParamLayer);
+    _layer = fetchIntParam(kParamLayer);
     assert(_layer);
 }
 
@@ -180,23 +180,11 @@ void ReadPSDPluginFactory::describe(OFX::ImageEffectDescriptor &desc)
 void ReadPSDPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, ContextEnum context)
 {
     PageParamDescriptor *page = GenericReaderDescribeInContextBegin(desc, context, isVideoStreamPlugin(), kSupportsRGBA, kSupportsRGB, kSupportsAlpha, kSupportsTiles);
-    { // TODO get layer count from image
-        ChoiceParamDescriptor *param = desc.defineChoiceParam(kParamLayer);
+    {
+        IntParamDescriptor *param = desc.defineIntParam(kParamLayer);
         param->setLabel(kParamLayerLabel);
         param->setHint(kParamLayerHint);
-        param->appendOption("0");
-        param->appendOption("1");
-        param->appendOption("2");
-        param->appendOption("3");
-        param->appendOption("4");
-        param->appendOption("5");
-        param->appendOption("6");
-        param->appendOption("7");
-        param->appendOption("8");
-        param->appendOption("9");
-        param->appendOption("10");
         param->setDefault(kParamLayerDefault);
-        param->setAnimates(true);
         page->addChild(*param);
     }
     GenericReaderDescribeInContextEnd(desc, context, page, "reference", "reference");
