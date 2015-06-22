@@ -15,6 +15,7 @@
 #include "Oilpaint.h"
 #include "TextPango.h"
 #include "ReadPSD.h"
+#include "ReadXCF.h"
 
 namespace OFX
 {
@@ -38,6 +39,7 @@ namespace OFX
             getOilpaintPluginID(ids);
             getTextPangoPluginID(ids);
             getReadPSDPluginID(ids);
+            getReadXCFPluginID(ids);
         }
     }
 }

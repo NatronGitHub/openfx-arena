@@ -33,7 +33,7 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 */
 
-#include "ReadPSD.h"
+#include "ReadXCF.h"
 #include <iostream>
 #include <stdint.h>
 #include <Magick++.h>
@@ -44,9 +44,9 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include <OpenColorIO/OpenColorIO.h>
 #endif
 
-#define kPluginName "ReadPSD"
+#define kPluginName "ReadXCF"
 #define kPluginGrouping "Image/Readers"
-#define kPluginIdentifier "net.fxarena.openfx.ReadPSD"
+#define kPluginIdentifier "net.fxarena.openfx.ReadXCF"
 #define kPluginVersionMajor 1
 #define kPluginVersionMinor 0
 
@@ -60,11 +60,11 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #define kParamLayerHint "Layer"
 #define kParamLayerDefault 0
 
-class ReadPSDPlugin : public GenericReaderPlugin
+class ReadXCFPlugin : public GenericReaderPlugin
 {
 public:
-    ReadPSDPlugin(OfxImageEffectHandle handle);
-    virtual ~ReadPSDPlugin();
+    ReadXCFPlugin(OfxImageEffectHandle handle);
+    virtual ~ReadXCFPlugin();
 private:
     virtual bool isVideoStream(const std::string& /*filename*/) OVERRIDE FINAL { return false; }
     virtual void decode(const std::string& filename, OfxTime time, const OfxRectI& renderWindow, float *pixelData, const OfxRectI& bounds, OFX::PixelComponentEnum pixelComponents, int pixelComponentCount, int rowBytes) OVERRIDE FINAL;
@@ -73,7 +73,7 @@ private:
     OFX::IntParam *_layer;
 };
 
-ReadPSDPlugin::ReadPSDPlugin(OfxImageEffectHandle handle)
+ReadXCFPlugin::ReadXCFPlugin(OfxImageEffectHandle handle)
 : GenericReaderPlugin(handle, kSupportsRGBA, kSupportsRGB, kSupportsAlpha, kSupportsTiles, false)
 ,_layer(0)
 {
@@ -82,12 +82,12 @@ ReadPSDPlugin::ReadPSDPlugin(OfxImageEffectHandle handle)
     assert(_layer);
 }
 
-ReadPSDPlugin::~ReadPSDPlugin()
+ReadXCFPlugin::~ReadXCFPlugin()
 {
 }
 
 void
-ReadPSDPlugin::decode(const std::string& filename,
+ReadXCFPlugin::decode(const std::string& filename,
                       OfxTime time,
                       const OfxRectI& renderWindow,
                       float *pixelData,
@@ -118,7 +118,7 @@ ReadPSDPlugin::decode(const std::string& filename,
     }
 }
 
-bool ReadPSDPlugin::getFrameBounds(const std::string& filename,
+bool ReadXCFPlugin::getFrameBounds(const std::string& filename,
                               OfxTime time,
                               OfxRectI *bounds,
                               double *par,
@@ -148,7 +148,7 @@ bool ReadPSDPlugin::getFrameBounds(const std::string& filename,
     return false;
 }
 
-void ReadPSDPlugin::onInputFileChanged(const std::string& /*newFile*/,
+void ReadXCFPlugin::onInputFileChanged(const std::string& /*newFile*/,
                                   OFX::PreMultiplicationEnum *premult,
                                   OFX::PixelComponentEnum *components,int *componentCount)
 {
@@ -159,27 +159,27 @@ void ReadPSDPlugin::onInputFileChanged(const std::string& /*newFile*/,
 
 using namespace OFX;
 
-mDeclareReaderPluginFactory(ReadPSDPluginFactory, {}, {}, false);
+mDeclareReaderPluginFactory(ReadXCFPluginFactory, {}, {}, false);
 
 /** @brief The basic describe function, passed a plugin descriptor */
-void ReadPSDPluginFactory::describe(OFX::ImageEffectDescriptor &desc)
+void ReadXCFPluginFactory::describe(OFX::ImageEffectDescriptor &desc)
 {
     GenericReaderDescribe(desc, kSupportsTiles, false);
     desc.setLabel(kPluginName);
 
     #ifdef OFX_EXTENSIONS_TUTTLE
-    const char* extensions[] = {"psd", NULL};
+    const char* extensions[] = {"xcf", NULL};
     desc.addSupportedExtensions(extensions);
-    desc.setPluginEvaluation(92);
+    desc.setPluginEvaluation(50);
     #endif
 
     std::string magickV = MagickCore::GetMagickVersion(NULL);
     std::string delegates = MagickCore::GetMagickDelegates();
-    desc.setPluginDescription("Read PSD image format.\n\nWritten by Ole-André Rodlie <olear@fxarena.net>\n\n Powered by "+magickV+"\n\nFeatures: "+delegates);
+    desc.setPluginDescription("Read GIMP/XCF image format.\n\nWritten by Ole-André Rodlie <olear@fxarena.net>\n\n Powered by "+magickV+"\n\nFeatures: "+delegates);
 }
 
 /** @brief The describe in context function, passed a plugin descriptor and a context */
-void ReadPSDPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, ContextEnum context)
+void ReadXCFPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, ContextEnum context)
 {
     PageParamDescriptor *page = GenericReaderDescribeInContextBegin(desc, context, isVideoStreamPlugin(), kSupportsRGBA, kSupportsRGB, kSupportsAlpha, kSupportsTiles);
     {
@@ -193,16 +193,16 @@ void ReadPSDPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, C
 }
 
 /** @brief The create instance function, the plugin must return an object derived from the \ref OFX::ImageEffect class */
-ImageEffect* ReadPSDPluginFactory::createInstance(OfxImageEffectHandle handle,
+ImageEffect* ReadXCFPluginFactory::createInstance(OfxImageEffectHandle handle,
                                      ContextEnum /*context*/)
 {
-    ReadPSDPlugin* ret =  new ReadPSDPlugin(handle);
+    ReadXCFPlugin* ret =  new ReadXCFPlugin(handle);
     ret->restoreStateFromParameters();
     return ret;
 }
 
-void getReadPSDPluginID(OFX::PluginFactoryArray &ids)
+void getReadXCFPluginID(OFX::PluginFactoryArray &ids)
 {
-    static ReadPSDPluginFactory p(kPluginIdentifier, kPluginVersionMajor, kPluginVersionMinor);
+    static ReadXCFPluginFactory p(kPluginIdentifier, kPluginVersionMajor, kPluginVersionMinor);
     ids.push_back(&p);
 }
