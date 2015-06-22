@@ -16,6 +16,7 @@
 #include "TextPango.h"
 #include "ReadPSD.h"
 #include "ReadXCF.h"
+#include "ReadMisc.h"
 
 namespace OFX
 {
@@ -40,6 +41,7 @@ namespace OFX
             getTextPangoPluginID(ids);
             getReadPSDPluginID(ids);
             getReadXCFPluginID(ids);
+            getReadMiscPluginID(ids);
         }
     }
 }
