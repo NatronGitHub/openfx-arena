@@ -106,7 +106,7 @@ ReadPSDPlugin::decode(const std::string& filename,
     file << layer;
     file << "]";
     image.read(file.str());
-    if (image.columns() && image.rows()) {
+    if (image.columns()>0 && image.rows()>0) {
         Magick::Image container(Magick::Geometry(bounds.x2,bounds.y2),Magick::Color("rgba(0,0,0,0)"));
         container.composite(image,0,0,Magick::OverCompositeOp);
         container.flip();
