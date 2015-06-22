@@ -16,8 +16,8 @@
 
 CWD=$(pwd)
 
-#MAGICK_LEGACY=1
-#MAGICK_MOD=1
+MAGICK_LEGACY=1
+MAGICK_MOD=1
 
 MAGICK_WIN=6.8.9-10 # higher is broken on mingw
 if [ "$MAGICK_LEGACY" == "1" ]; then
@@ -91,7 +91,7 @@ PANGO=1.37.0
 PANGO_URL=http://ftp.gnome.org/pub/GNOME/sources/pango/1.37/pango-$PANGO.tar.xz
 
 if [ -z "$VERSION" ]; then
-  ARENA=0.7
+  ARENA=0.8
 else
   ARENA=$VERSION
 fi

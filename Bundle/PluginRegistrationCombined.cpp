@@ -14,6 +14,7 @@
 #include "Charcoal.h"
 #include "Oilpaint.h"
 #include "TextPango.h"
+#include "ReadPSD.h"
 
 namespace OFX
 {
@@ -36,6 +37,7 @@ namespace OFX
             getCharcoalPluginID(ids);
             getOilpaintPluginID(ids);
             getTextPangoPluginID(ids);
+            getReadPSDPluginID(ids);
         }
     }
 }
