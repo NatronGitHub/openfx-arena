@@ -30,6 +30,7 @@ Requirements:
  * zlib
  * libxml2
  * librsvg
+ * Pango
  * OpenColorIO
  * ImageMagick
 
@@ -40,7 +41,7 @@ See the [Travis](https://github.com/olear/openfx-arena/blob/trunk/.travis.yml) b
 **RHEL/CentOS/Fedora**
 
 ```
-yum install freetype-devel fontconfig-devel libxml2-devel librsvg-devel zlib-devel OpenColorIO-devel
+yum install freetype-devel fontconfig-devel libxml2-devel librsvg-devel pango-devel zlib-devel OpenColorIO-devel
 ```
 RHEL/CentOS needs the EPEL repo for OCIO support
 ```
