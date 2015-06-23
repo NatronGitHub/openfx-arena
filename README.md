@@ -4,6 +4,58 @@ OpenFX-Arena [![Build Status](https://travis-ci.org/olear/openfx-arena.svg)](htt
 ![screenshot-3](https://cloud.githubusercontent.com/assets/7461595/8152563/e60b18c4-131e-11e5-8bd7-6fd6d3dd2db7.png)
 A set of [OpenFX](http://openfx.sf.net) visual effect plugins designed for [Natron](http://natron.inria.fr).
 
+Downloads
+=========
+
+See latest releases for binary downloads.
+
+Source
+======
+
+Instructions for building from trunk.
+
+Get latest source:
+```
+git clone https://github.com/olear/openfx-arena
+cd openfx-arena
+git checkout trunk
+git submodule update -i --recursive
+```
+
+Requirements:
+
+ * Freetype
+ * Fontconfig
+ * libpng
+ * zlib
+ * libxml2
+ * librsvg
+ * OpenColorIO
+ * ImageMagick
+
+**Debian/Ubuntu**
+
+See the [Travis](https://github.com/olear/openfx-arena/blob/trunk/.travis.yml) build script.
+
+**RHEL/CentOS/Fedora**
+
+```
+yum install freetype-devel fontconfig-devel libxml2-devel librsvg-devel zlib-devel OpenColorIO-devel
+```
+RHEL/CentOS needs the EPEL repo for OCIO support
+```
+yum install epel-release
+```
+
+Now you can run the 'deploy.sh' script in the openfx-arena folder. The script will build libpng and a custom version of ImageMagick, then build the plugins against that. When done you will have a Arena.ofx.bundle-VERSION folder and a TGZ file.
+
+```
+sh deploy.sh
+```
+Replace 'sh' with 'bash' on Debian/Ubuntu.
+
+You can also build manually using 'make'. Please note that then you must have libpng-devel and ImageMagick-devel installed prior to build. Using other version of ImageMagick than the one built using 'deploy.sh' is not supported or recommended.
+
 License
 =======
 ```
