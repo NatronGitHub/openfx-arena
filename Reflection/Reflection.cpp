@@ -40,8 +40,7 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include <cmath>
 
 #define kPluginName "Reflection"
-#define kPluginGrouping "Filter"
-
+#define kPluginGrouping "Transform"
 #define kPluginIdentifier "net.fxarena.openfx.Reflection"
 #define kPluginVersionMajor 2
 #define kPluginVersionMinor 4

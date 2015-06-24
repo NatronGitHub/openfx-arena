@@ -1,5 +1,4 @@
 PLUGINOBJECTS = \
-        Mirror.o \
         Texture.o \
         Tile.o \
         Reflection.o \
@@ -27,8 +26,6 @@ PLUGINOBJECTS = \
 PLUGINNAME = Arena
 
 RESOURCES = \
-../Mirror/net.fxarena.openfx.Mirror.png \
-../Mirror/net.fxarena.openfx.Mirror.svg \
 ../Texture/net.fxarena.openfx.Texture.png \
 ../Texture/net.fxarena.openfx.Texture.svg \
 ../Tile/net.fxarena.openfx.Tile.png \
@@ -67,7 +64,6 @@ RESOURCES = \
 ../ReadSVG/net.fxarena.openfx.ReadSVG.svg \
 
 VPATH += \
-../Mirror \
 ../Texture \
 ../Tile \
 ../Reflection \
@@ -91,7 +87,6 @@ include ../Makefile.master
 include ../Makefile.io
 
 CXXFLAGS += \
--I../Mirror \
 -I../Texture \
 -I../Tile \
 -I../Reflection \

@@ -1,5 +1,4 @@
 #include "ofxsImageEffect.h"
-#include "Mirror.h"
 #include "Texture.h"
 #include "Tile.h"
 #include "Reflection.h"
@@ -25,7 +24,6 @@ namespace OFX
     {
         void getPluginIDs(OFX::PluginFactoryArray &ids)
         {
-            getMirrorPluginID(ids);
             getTexturePluginID(ids);
             getTilePluginID(ids);
             getReflectionPluginID(ids);

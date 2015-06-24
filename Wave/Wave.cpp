@@ -41,7 +41,7 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include <cmath>
 
 #define kPluginName "Wave"
-#define kPluginGrouping "Filter"
+#define kPluginGrouping "Transform"
 #define kPluginIdentifier "net.fxarena.openfx.Wave"
 #define kPluginVersionMajor 1
 #define kPluginVersionMinor 0
