@@ -21,4 +21,5 @@ install:
 
 script:
   - git submodule update -i --recursive
+  - DEBUG=1 bash deploy.sh
   - bash deploy.sh

@@ -116,13 +116,14 @@ if [ -z "$ARCH" ]; then
   esac
 fi
 if [ "$ARCH" = "i686" ]; then
-  BF="-m32 -pipe -O3 -march=i686 -mtune=i686 -fomit-frame-pointer"
+  BF="-m32 -pipe -O3 -march=i686 -mtune=core2"
   BIT=32
 elif [ "$ARCH" = "x86_64" ]; then
-  BF="-m64 -pipe -O3 -fPIC -march=core2 -fomit-frame-pointer"
+  BF="-m64 -pipe -O3 -fPIC -march=core2"
   BIT=64
 else
-  BF="-pipe -O2"
+  echo "CPU not supported"
+  exit 1
 fi
 
 if [ "$OS" == "GNU/Linux" ]; then
@@ -134,8 +135,14 @@ fi
 if [ "$OS" == "Msys" ]; then
   PKGOS=Windows
 fi
+if [ "$DEBUG" == "1" ]; then
+  TAG=debug
+else
+  TAG=release
+  BF="${BF} -fomit-frame-pointer"
+fi
 
-PKG=$PKGNAME.ofx.bundle-$ARENA-$PKGOS-x86-release-$BIT
+PKG=$PKGNAME.ofx.bundle-$ARENA-$PKGOS-x86-$TAG-$BIT
 
 export PKG_CONFIG_PATH=$PREFIX/lib/pkgconfig
 export LD_LIBRARY_PATH=$PREFIX/lib:$PREFIX/lib64:$LD_LIBRARY_PATH
@@ -438,8 +445,8 @@ if [ "$PKGNAME" != "Arena" ]; then
 fi
 
 if [ "$OS" != "Msys" ]; then
-  $MAKE USE_SVG=1 USE_PANGO=1 STATIC=1 FREEBSD=$USE_FREEBSD BITS=$BIT CONFIG=release clean
-  $MAKE USE_SVG=1 USE_PANGO=1 STATIC=1 FREEBSD=$USE_FREEBSD BITS=$BIT CONFIG=release || exit 1
+  $MAKE USE_SVG=1 USE_PANGO=1 STATIC=1 FREEBSD=$USE_FREEBSD BITS=$BIT CONFIG=$TAG clean
+  $MAKE USE_SVG=1 USE_PANGO=1 STATIC=1 FREEBSD=$USE_FREEBSD BITS=$BIT CONFIG=$TAG || exit 1
 else
   make STATIC=1 MINGW=1 BIT=$BIT CONFIG=release clean
   make STATIC=1 MINGW=1 BIT=$BIT CONFIG=release || exit 1
@@ -484,11 +491,15 @@ else
   PKGBIT=x86
 fi
 if [ "$OS" == "Msys" ]; then
-  strip -s $PKGSRC/$(uname -s)-$BIT-release/$PKGNAME.ofx.bundle/Contents/Win$BIT/*
-  mv $PKGSRC/$(uname -s)-$BIT-release/$PKGNAME.ofx.bundle $CWD/$PKG/ || exit 1
+  if [ "$TAG" == "release" ]; then
+    strip -s $PKGSRC/$(uname -s)-$BIT-$TAG/$PKGNAME.ofx.bundle/Contents/Win$BIT/*
+  fi
+  mv $PKGSRC/$(uname -s)-$BIT-$TAG/$PKGNAME.ofx.bundle $CWD/$PKG/ || exit 1
 else
-  strip -s $PKGSRC/$(uname -s)-$BIT-release/$PKGNAME.ofx.bundle/Contents/$PKGOS-$PKGBIT/$PKGNAME.ofx || exit 1
-  mv $PKGSRC/$(uname -s)-$BIT-release/$PKGNAME.ofx.bundle $CWD/$PKG/ || exit 1
+  if [ "$TAG" == "release" ]; then
+    strip -s $PKGSRC/$(uname -s)-$BIT-$TAG/$PKGNAME.ofx.bundle/Contents/$PKGOS-$PKGBIT/$PKGNAME.ofx || exit 1
+  fi
+  mv $PKGSRC/$(uname -s)-$BIT-$TAG/$PKGNAME.ofx.bundle $CWD/$PKG/ || exit 1
 fi
 
 # Package
