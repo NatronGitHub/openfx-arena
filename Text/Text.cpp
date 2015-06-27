@@ -84,8 +84,8 @@
 #define kPluginName "Text"
 #define kPluginGrouping "Draw"
 #define kPluginIdentifier "net.fxarena.openfx.Text"
-#define kPluginVersionMajor 4
-#define kPluginVersionMinor 5
+#define kPluginVersionMajor 5
+#define kPluginVersionMinor 0
 
 #define kSupportsTiles 0
 #define kSupportsMultiResolution 1
@@ -128,6 +128,16 @@
 #define kParamStrokeLabel "Width"
 #define kParamStrokeHint "Adjust stroke width"
 #define kParamStrokeDefault 0
+
+#define kParamStrokeCap "strokeLineCap"
+#define kParamStrokeCapLabel "Line cap"
+#define kParamStrokeCapHint "Adjust Line cap"
+#define kParamStrokeCapDefault 0
+
+#define kParamStrokeJoin "strokeLineJoin"
+#define kParamStrokeJoinLabel "Line join"
+#define kParamStrokeJoinHint "Adjust Line join"
+#define kParamStrokeJoinDefault 0
 
 #define kParamFontOverride "custom"
 #define kParamFontOverrideLabel "Custom font"
@@ -187,6 +197,11 @@
 #define kParamShadowBlurHint "Soften shadow"
 #define kParamShadowBlurDefault 0
 
+#define kParamDirection "align"
+#define kParamDirectionLabel "Text align"
+#define kParamDirectionHint "Align text"
+#define kParamDirectionDefault 0
+
 using namespace OFX;
 static bool gHostIsNatron = false;
 
@@ -215,6 +230,8 @@ private:
     OFX::RGBAParam *textColor_;
     OFX::RGBAParam *strokeColor_;
     OFX::DoubleParam *strokeWidth_;
+    OFX::ChoiceParam *strokeCap_;
+    OFX::ChoiceParam *strokeJoin_;
     OFX::StringParam *fontOverride_;
     OFX::DoubleParam *shadowOpacity_;
     OFX::DoubleParam *shadowSigma_;
@@ -228,6 +245,7 @@ private:
     OFX::DoubleParam *shadowBlur_;
     OFX::IntParam *width_;
     OFX::IntParam *height_;
+    OFX::ChoiceParam *direction_;
     bool has_fontconfig;
     bool has_freetype;
 };
@@ -259,6 +277,8 @@ TextPlugin::TextPlugin(OfxImageEffectHandle handle)
     textColor_ = fetchRGBAParam(kParamTextColor);
     strokeColor_ = fetchRGBAParam(kParamStrokeColor);
     strokeWidth_ = fetchDoubleParam(kParamStroke);
+    strokeCap_ = fetchChoiceParam(kParamStrokeCap);
+    strokeJoin_ = fetchChoiceParam(kParamStrokeJoin);
     fontOverride_ = fetchStringParam(kParamFontOverride);
     shadowOpacity_ = fetchDoubleParam(kParamShadowOpacity);
     shadowSigma_ = fetchDoubleParam(kParamShadowSigma);
@@ -271,8 +291,9 @@ TextPlugin::TextPlugin(OfxImageEffectHandle handle)
     shadowBlur_ = fetchDoubleParam(kParamShadowBlur);
     width_ = fetchIntParam(kParamWidth);
     height_ = fetchIntParam(kParamHeight);
+    direction_ = fetchChoiceParam(kParamDirection);
 
-    assert(position_ && text_ && fontSize_ && fontName_ && textColor_ && strokeColor_ && strokeWidth_ && fontOverride_ && shadowOpacity_ && shadowSigma_ && interlineSpacing_ && interwordSpacing_ && textSpacing_ && shadowColor_ && shadowX_ && shadowY_ && shadowBlur_ && width_ && height_);
+    assert(position_ && text_ && fontSize_ && fontName_ && textColor_ && strokeColor_ && strokeWidth_ && strokeCap_ && strokeJoin_ && fontOverride_ && shadowOpacity_ && shadowSigma_ && interlineSpacing_ && interwordSpacing_ && textSpacing_ && shadowColor_ && shadowX_ && shadowY_ && shadowBlur_ && width_ && height_ && direction_);
 }
 
 TextPlugin::~TextPlugin()
@@ -343,7 +364,7 @@ void TextPlugin::render(const OFX::RenderArguments &args)
 
     // Get params
     double x, y, r, g, b, a, r_s, g_s, b_s, a_s, strokeWidth, shadowOpacity, shadowSigma, interlineSpacing, interwordSpacing, textSpacing, shadowR, shadowG, shadowB, shadowBlur;
-    int fontSize, fontID, shadowX, shadowY;
+    int fontSize, fontID, shadowX, shadowY, strokeCap, strokeJoin, direction;
     std::string text, fontOverride, fontName;
 
     position_->getValueAtTime(args.time, x, y);
@@ -351,6 +372,8 @@ void TextPlugin::render(const OFX::RenderArguments &args)
     fontSize_->getValueAtTime(args.time, fontSize);
     fontName_->getValueAtTime(args.time, fontID);
     strokeWidth_->getValueAtTime(args.time, strokeWidth);
+    strokeCap_->getValueAtTime(args.time, strokeCap);
+    strokeJoin_->getValueAtTime(args.time, strokeJoin);
     fontOverride_->getValueAtTime(args.time, fontOverride);
     textColor_->getValueAtTime(args.time, r, g, b, a);
     strokeColor_->getValueAtTime(args.time, r_s, g_s, b_s, a_s);
@@ -363,6 +386,7 @@ void TextPlugin::render(const OFX::RenderArguments &args)
     shadowX_->getValueAtTime(args.time, shadowX);
     shadowY_->getValueAtTime(args.time, shadowY);
     shadowBlur_->getValueAtTime(args.time, shadowBlur);
+    direction_->getValueAtTime(args.time, direction);
     fontName_->getOption(fontID,fontName);
 
     // cascade menu
@@ -378,13 +402,10 @@ void TextPlugin::render(const OFX::RenderArguments &args)
     int height = dstRod.y2-dstRod.y1;
     Magick::Image image(Magick::Geometry(width,height),Magick::Color("rgba(0,0,0,0)"));
 
-    // Set font size
-    if (fontSize>0)
-        image.fontPointsize(std::floor(fontSize * args.renderScale.x + 0.5));
-
-    // Set stroke width
-    if (strokeWidth>0)
-        image.strokeWidth(std::floor(strokeWidth * args.renderScale.x + 0.5));
+    #ifdef DEBUG
+    image.debug(true);
+    image.verbose(true);
+    #endif
 
     // Convert colors to int
     int rI = ((uint8_t)(255.0f *CLAMP(r, 0.0, 1.0)));
@@ -418,19 +439,71 @@ void TextPlugin::render(const OFX::RenderArguments &args)
     int tmp_height = dstBounds.y2 - dstBounds.y1;
     ytext = tmp_y + ((tmp_y+tmp_height-1) - ytext);
 
-    // Setup draw
-    std::list<Magick::Drawable> text_draw_list;
-    text_draw_list.push_back(Magick::DrawableFont(fontName));
-    text_draw_list.push_back(Magick::DrawableText(xtext, ytext, text));
-    text_draw_list.push_back(Magick::DrawableFillColor(textRGBA.str()));
-    text_draw_list.push_back(Magick::DrawableTextInterlineSpacing(std::floor(interlineSpacing * args.renderScale.x + 0.5)));
-    text_draw_list.push_back(Magick::DrawableTextInterwordSpacing(std::floor(interwordSpacing * args.renderScale.x + 0.5)));
-    text_draw_list.push_back(Magick::DrawableTextKerning(std::floor(textSpacing * args.renderScale.x + 0.5)));
-    if (strokeWidth>0)
-        text_draw_list.push_back(Magick::DrawableStrokeColor(strokeRGBA.str()));
+
+    //double dashArray[2] {1,10};
+    //image.strokeDashArray(dashArray);
+
+
+    // Setup text draw
+    std::list<Magick::Drawable> draw;
+    switch(direction) {
+    case 1:
+        draw.push_back(Magick::DrawableGravity(Magick::CenterGravity));
+        break;
+    case 2:
+        draw.push_back(Magick::DrawableGravity(Magick::CenterGravity));
+        xtext = 0;
+        ytext = 0;
+        break;
+    case 3:
+        draw.push_back(Magick::DrawableTextDirection(Magick::RightToLeftDirection));
+        break;
+    default:
+        draw.push_back(Magick::DrawableTextDirection(Magick::UndefinedDirection));
+        break;
+    }
+    draw.push_back(Magick::DrawablePointSize(std::floor(fontSize * args.renderScale.x + 0.5)));
+    draw.push_back(Magick::DrawableFont(fontName));
+    draw.push_back(Magick::DrawableText(xtext, ytext, text));
+    draw.push_back(Magick::DrawableFillColor(textRGBA.str()));
+    draw.push_back(Magick::DrawableTextInterlineSpacing(std::floor(interlineSpacing * args.renderScale.x + 0.5)));
+    draw.push_back(Magick::DrawableTextInterwordSpacing(std::floor(interwordSpacing * args.renderScale.x + 0.5)));
+    draw.push_back(Magick::DrawableTextKerning(std::floor(textSpacing * args.renderScale.x + 0.5)));
+    if (strokeWidth>0) {
+        draw.push_back(Magick::DrawableStrokeColor(strokeRGBA.str()));
+        draw.push_back(Magick::DrawableStrokeWidth(std::floor(strokeWidth * args.renderScale.x + 0.5)));
+        switch(strokeCap) {
+        case 1:
+            draw.push_back(Magick::DrawableStrokeLineCap(Magick::ButtCap));
+            break;
+        case 2:
+            draw.push_back(Magick::DrawableStrokeLineCap(Magick::RoundCap));
+            break;
+        case 3:
+            draw.push_back(Magick::DrawableStrokeLineCap(Magick::SquareCap));
+            break;
+        default:
+            draw.push_back(Magick::DrawableStrokeLineCap(Magick::UndefinedCap));
+            break;
+        }
+        switch(strokeJoin) {
+        case 1:
+            draw.push_back(Magick::DrawableStrokeLineJoin(Magick::MiterJoin));
+            break;
+        case 2:
+            draw.push_back(Magick::DrawableStrokeLineJoin(Magick::RoundJoin));
+            break;
+        case 3:
+            draw.push_back(Magick::DrawableStrokeLineJoin(Magick::BevelJoin));
+            break;
+        default:
+            draw.push_back(Magick::DrawableStrokeLineJoin(Magick::UndefinedJoin));
+            break;
+        }
+    }
 
     // Draw
-    image.draw(text_draw_list);
+    image.draw(draw);
 
     // Shadow
     if (shadowOpacity>0 && shadowSigma>0) {
@@ -677,6 +750,28 @@ void TextPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, Cont
         param->setParent(*groupStroke);
     }
     {
+        ChoiceParamDescriptor *param = desc.defineChoiceParam(kParamStrokeCap);
+        param->setLabel(kParamStrokeCapLabel);
+        param->setHint(kParamStrokeCapHint);
+        param->appendOption("Undefined");
+        param->appendOption("ButtCap");
+        param->appendOption("RoundCap");
+        param->appendOption("SquareCap");
+        param->setDefault(kParamStrokeCapDefault);
+        param->setParent(*groupStroke);
+    }
+    {
+        ChoiceParamDescriptor *param = desc.defineChoiceParam(kParamStrokeJoin);
+        param->setLabel(kParamStrokeJoinLabel);
+        param->setHint(kParamStrokeJoinHint);
+        param->appendOption("Undefined");
+        param->appendOption("MiterJoin");
+        param->appendOption("RoundJoin");
+        param->appendOption("BevelJoin");
+        param->setDefault(kParamStrokeJoinDefault);
+        param->setParent(*groupStroke);
+    }
+    {
         DoubleParamDescriptor *param = desc.defineDoubleParam(kParamShadowOpacity);
         param->setLabel(kParamShadowOpacityLabel);
         param->setHint(kParamShadowOpacityHint);
@@ -728,6 +823,17 @@ void TextPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, Cont
         param->setLabel(kParamTextColorLabel);
         param->setHint(kParamTextColorHint);
         param->setDefault(1., 1., 1., 1.);
+        param->setAnimates(true);
+        page->addChild(*param);
+    }
+    {
+        ChoiceParamDescriptor *param = desc.defineChoiceParam(kParamDirection);
+        param->setLabel(kParamDirectionLabel);
+        param->setHint(kParamDirectionHint);
+        param->appendOption("Left");
+        param->appendOption("Center");
+        param->appendOption("Center (force)");
+        param->appendOption("Right");
         param->setAnimates(true);
         page->addChild(*param);
     }
