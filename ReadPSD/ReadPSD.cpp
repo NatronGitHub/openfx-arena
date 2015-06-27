@@ -35,13 +35,11 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 #include "ReadPSD.h"
 #include <iostream>
-#include <stdint.h>
 #include <string>
 #include <Magick++.h>
 #include "GenericReader.h"
 #include "GenericOCIO.h"
 #include "ofxsMacros.h"
-#include "ofxNatron.h"
 
 #ifdef OFX_IO_USING_OCIO
 #include <OpenColorIO/OpenColorIO.h>
@@ -58,8 +56,6 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #define kSupportsAlpha false
 #define kSupportsTiles false
 #define kIsMultiPlanar true
-
-static bool gHostIsNatron   = false;
 
 class ReadPSDPlugin : public GenericReaderPlugin
 {
@@ -244,6 +240,7 @@ void ReadPSDPlugin::onInputFileChanged(const std::string& newFile,
         break;
     case Magick::scRGBColorspace:
         _ocio->setInputColorspace("sRGB");
+        break;
     case Magick::Rec709LumaColorspace:
         _ocio->setInputColorspace("Rec709");
         break;
@@ -282,7 +279,6 @@ void ReadPSDPluginFactory::describe(OFX::ImageEffectDescriptor &desc)
 /** @brief The describe in context function, passed a plugin descriptor and a context */
 void ReadPSDPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, ContextEnum context)
 {
-    gHostIsNatron = (OFX::getImageEffectHostDescription()->hostName == kNatronOfxHostName);
     PageParamDescriptor *page = GenericReaderDescribeInContextBegin(desc, context, isVideoStreamPlugin(), kSupportsRGBA, kSupportsRGB, kSupportsAlpha, kSupportsTiles);
     GenericReaderDescribeInContextEnd(desc, context, page, "reference", "reference");
 }
