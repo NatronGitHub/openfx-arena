@@ -36,11 +36,13 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include "ReadPSD.h"
 #include <iostream>
 #include <stdint.h>
+#include <string>
 #include <Magick++.h>
 #include "GenericReader.h"
 #include "GenericOCIO.h"
 #include "ofxsMacros.h"
 #include "ofxNatron.h"
+
 #ifdef OFX_IO_USING_OCIO
 #include <OpenColorIO/OpenColorIO.h>
 #endif
@@ -49,57 +51,13 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #define kPluginGrouping "Image/Readers"
 #define kPluginIdentifier "net.fxarena.openfx.ReadPSD"
 #define kPluginVersionMajor 1
-#define kPluginVersionMinor 1
+#define kPluginVersionMinor 2
 
 #define kSupportsRGBA true
 #define kSupportsRGB false
 #define kSupportsAlpha false
 #define kSupportsTiles false
-
-#define kParamLayer "layer"
-#define kParamLayerLabel "Image layer"
-#define kParamLayerHint "Layer"
-#define kParamLayerDefault 0
-
-#define OFX_READ_OIIO_NEWMENU
-
-#ifndef OFX_READ_OIIO_NEWMENU
-#define kParamFirstChannel "firstChannel"
-#define kParamFirstChannelLabel "First Channel"
-#define kParamFirstChannelHint "Channel from the input file corresponding to the first component."
-#endif
-
-#ifdef OFX_READ_OIIO_NEWMENU
-
-#define kParamRChannel "rChannel"
-#define kParamRChannelLabel "R Channel"
-#define kParamRChannelHint "Channel from the input file corresponding to the red component."
-
-#define kParamGChannel "gChannel"
-#define kParamGChannelLabel "G Channel"
-#define kParamGChannelHint "Channel from the input file corresponding to the green component."
-
-#define kParamBChannel "bChannel"
-#define kParamBChannelLabel "B Channel"
-#define kParamBChannelHint "Channel from the input file corresponding to the blue component."
-
-#define kParamAChannel "aChannel"
-#define kParamAChannelLabel "A Channel"
-#define kParamAChannelHint "Channel from the input file corresponding to the alpha component."
-
-#define kParamRChannelName "rChannelIndex"
-#define kParamGChannelName "gChannelIndex"
-#define kParamBChannelName "bChannelIndex"
-#define kParamAChannelName "aChannelIndex"
-
-// number of channels for hosts that don't support modifying choice menus (e.g. Nuke)
-#define kDefaultChannelCount 16
-
-// Channels 0 and 1 are reserved for 0 and 1 constants
-#define kXChannelFirst 2
-
-#endif // OFX_READ_OIIO_NEWMENU
-
+#define kIsMultiPlanar true
 
 static bool gHostIsNatron   = false;
 
@@ -110,57 +68,44 @@ public:
     virtual ~ReadPSDPlugin();
 private:
     virtual bool isVideoStream(const std::string& /*filename*/) OVERRIDE FINAL { return false; }
-    virtual void decode(const std::string& filename, OfxTime time, const OfxRectI& renderWindow, float *pixelData, const OfxRectI& bounds, OFX::PixelComponentEnum pixelComponents, int pixelComponentCount, int rowBytes) OVERRIDE FINAL;
+    virtual void decode(const std::string& filename, OfxTime time, const OfxRectI& renderWindow, float *pixelData, const OfxRectI& bounds,
+                             OFX::PixelComponentEnum pixelComponents, int pixelComponentCount, int rowBytes) OVERRIDE FINAL
+    {
+        std::string rawComps;
+        switch (pixelComponents) {
+            case OFX::ePixelComponentAlpha:
+                rawComps = kOfxImageComponentAlpha;
+                break;
+            case OFX::ePixelComponentRGB:
+                rawComps = kOfxImageComponentRGB;
+                break;
+            case OFX::ePixelComponentRGBA:
+                rawComps = kOfxImageComponentRGBA;
+                break;
+            default:
+                OFX::throwSuiteStatusException(kOfxStatFailed);
+                return;
+        }
+        decodePlane(filename, time, renderWindow, pixelData, bounds, pixelComponents, pixelComponentCount, rawComps, rowBytes);
+    }
+    virtual void getClipComponents(const OFX::ClipComponentsArguments& args, OFX::ClipComponentsSetter& clipComponents) OVERRIDE FINAL;
+    virtual void decodePlane(const std::string& filename, OfxTime time, const OfxRectI& renderWindow, float *pixelData, const OfxRectI& bounds, OFX::PixelComponentEnum pixelComponents, int pixelComponentCount, const std::string& rawComponents, int rowBytes) OVERRIDE FINAL;
     virtual bool getFrameBounds(const std::string& filename, OfxTime time, OfxRectI *bounds, double *par, std::string *error) OVERRIDE FINAL;
     virtual void onInputFileChanged(const std::string& newFile, OFX::PreMultiplicationEnum *premult, OFX::PixelComponentEnum *components, int *componentCount) OVERRIDE FINAL;
-    virtual void restoreState(const std::string& filename) OVERRIDE FINAL;
     int getImageLayers(const std::string& filename);
-    void genLayerMenu(const std::string& filename);
-    OFX::ChoiceParam *_layer;
-#ifdef OFX_READ_OIIO_NEWMENU
-    OFX::ChoiceParam *_rChannel;
-    OFX::ChoiceParam *_gChannel;
-    OFX::ChoiceParam *_bChannel;
-    OFX::ChoiceParam *_aChannel;
-    OFX::StringParam *_rChannelName;
-    OFX::StringParam *_gChannelName;
-    OFX::StringParam *_bChannelName;
-    OFX::StringParam *_aChannelName;
-#else
-    OFX::IntParam *_firstChannel;
-#endif
 };
 
 ReadPSDPlugin::ReadPSDPlugin(OfxImageEffectHandle handle)
-: GenericReaderPlugin(handle, kSupportsRGBA, kSupportsRGB, kSupportsAlpha, kSupportsTiles, false)
-,_layer(0)
-#ifdef OFX_READ_OIIO_NEWMENU
-, _rChannel(0)
-, _gChannel(0)
-, _bChannel(0)
-, _aChannel(0)
+: GenericReaderPlugin(handle, kSupportsRGBA, kSupportsRGB, kSupportsAlpha, kSupportsTiles,
+#ifdef OFX_EXTENSIONS_NUKE
+(OFX::getImageEffectHostDescription() && OFX::getImageEffectHostDescription()->isMultiPlanar) ? kIsMultiPlanar : false
 #else
-, _firstChannel(0)
+false
 #endif
+)
 {
     Magick::InitializeMagick(NULL);
-    _layer = fetchChoiceParam(kParamLayer);
-    assert(_layer);
-#ifdef OFX_READ_OIIO_NEWMENU
-    _rChannel = fetchChoiceParam(kParamRChannel);
-    _gChannel = fetchChoiceParam(kParamGChannel);
-    _bChannel = fetchChoiceParam(kParamBChannel);
-    _aChannel = fetchChoiceParam(kParamAChannel);
-    _rChannelName = fetchStringParam(kParamRChannelName);
-    _gChannelName = fetchStringParam(kParamGChannelName);
-    _bChannelName = fetchStringParam(kParamBChannelName);
-    _aChannelName = fetchStringParam(kParamAChannelName);
-    assert(_outputComponents && _rChannel && _gChannel && _bChannel && _aChannel &&
-           _rChannelName && _bChannelName && _gChannelName && _aChannelName);
-#else
-    _firstChannel = fetchIntParam(kParamFirstChannel);
-    assert(_outputComponents && _firstChannel);
-#endif
+    assert(_outputComponents);
 }
 
 ReadPSDPlugin::~ReadPSDPlugin()
@@ -189,17 +134,53 @@ int ReadPSDPlugin::getImageLayers(const std::string &filename)
     return layers;
 }
 
-void ReadPSDPlugin::decode(const std::string& filename,
-                      OfxTime time,
-                      const OfxRectI& /*renderWindow*/,
-                      float *pixelData,
-                      const OfxRectI& bounds,
-                      OFX::PixelComponentEnum pixelComponents,
-                      int pixelComponentCount,
-                      int /*rowBytes*/)
+void ReadPSDPlugin::getClipComponents(const OFX::ClipComponentsArguments& args, OFX::ClipComponentsSetter& clipComponents)
+{
+    //Should only be called if multi-planar
+    assert(isMultiPlanar());
+
+    clipComponents.addClipComponents(*_outputClip, getOutputComponents());
+    clipComponents.setPassThroughClip(NULL, args.time, args.view);
+
+    std::string filename;
+    int layers = 0;
+    _fileParam->getValueAtTime(args.time, filename);
+    if (!filename.empty())
+        layers = getImageLayers(filename);
+    if (layers>1) {
+        for(int i = 1; i<layers+1;i++) {
+            std::string component(kNatronOfxImageComponentsPlane);
+            std::ostringstream layerName;
+            layerName << "Layer#" << i;
+            component.append(layerName.str());
+            component.append(kNatronOfxImageComponentsPlaneChannel);
+            component.append("R");
+            component.append(kNatronOfxImageComponentsPlaneChannel);
+            component.append("G");
+            component.append(kNatronOfxImageComponentsPlaneChannel);
+            component.append("B");
+            component.append(kNatronOfxImageComponentsPlaneChannel);
+            component.append("A");
+            clipComponents.addClipComponents(*_outputClip, component);
+        }
+    }
+}
+
+void ReadPSDPlugin::decodePlane(const std::string& filename, OfxTime /*time*/, const OfxRectI& /*renderWindow*/, float *pixelData, const OfxRectI& bounds,
+                                 OFX::PixelComponentEnum /*pixelComponents*/, int /*pixelComponentCount*/, const std::string& rawComponents, int /*rowBytes*/)
 {
     int layer = 0;
-    _layer->getValueAtTime(time, layer);
+    std::string layerInfo = rawComponents;
+    std::replace(layerInfo.begin(), layerInfo.end(), '_', ' ');
+    std::stringstream stream(layerInfo);
+    std::string streamInfo;
+    while (stream>>streamInfo) {
+        std::string findLayer = "Layer#";
+        if (streamInfo.find(findLayer) != std::string::npos) {
+            streamInfo.erase(streamInfo.find(findLayer),findLayer.length());
+            layer = std::atoi(streamInfo.c_str());
+        }
+    }
     Magick::Image image;
     image.backgroundColor("none");
     std::ostringstream file;
@@ -210,7 +191,7 @@ void ReadPSDPlugin::decode(const std::string& filename,
     image.read(file.str());
     if (image.columns()>0 && image.rows()>0) {
         Magick::Image container(Magick::Geometry(bounds.x2,bounds.y2),Magick::Color("rgba(0,0,0,0)"));
-        container.composite(image,0,0,Magick::OverCompositeOp);
+        container.composite(image,image.page().xOff(),image.page().yOff(),Magick::OverCompositeOp);
         container.flip();
         container.write(0,0,bounds.x2,bounds.y2,"RGBA",Magick::FloatPixel,pixelData);
     }
@@ -221,19 +202,15 @@ void ReadPSDPlugin::decode(const std::string& filename,
 }
 
 bool ReadPSDPlugin::getFrameBounds(const std::string& filename,
-                              OfxTime time,
+                              OfxTime /*time*/,
                               OfxRectI *bounds,
                               double *par,
                               std::string */*error*/)
 {
-    int layer = 0;
-    _layer->getValueAtTime(time, layer);
     Magick::Image image;
     std::ostringstream file;
     file << filename.c_str();
-    file << "[";
-    file << layer;
-    file << "]";
+    file << "[0]";
     image.read(file.str());
     if (image.columns()>0 && image.rows()>0) {
         bounds->x1 = 0;
@@ -250,27 +227,9 @@ bool ReadPSDPlugin::getFrameBounds(const std::string& filename,
     return false;
 }
 
-void ReadPSDPlugin::genLayerMenu(const std::string& filename)
-{
-    if (gHostIsNatron) {
-        _layer->resetOptions();
-        int layers = getImageLayers(filename)+1;
-        for (int i = 0; i < layers; ++i) {
-            std::ostringstream layer;
-            layer << i;
-            _layer->appendOption(layer.str());
-        }
-    }
-}
-
-void ReadPSDPlugin::restoreState(const std::string& filename)
-{
-    genLayerMenu(filename);
-}
-
 void ReadPSDPlugin::onInputFileChanged(const std::string& newFile,
                                   OFX::PreMultiplicationEnum *premult,
-                                  OFX::PixelComponentEnum *components,int *componentCount)
+                                  OFX::PixelComponentEnum *components,int */*componentCount*/)
 {
     assert(premult && components);
 # ifdef OFX_IO_USING_OCIO
@@ -285,6 +244,14 @@ void ReadPSDPlugin::onInputFileChanged(const std::string& newFile,
         break;
     case Magick::scRGBColorspace:
         _ocio->setInputColorspace("sRGB");
+    case Magick::Rec709LumaColorspace:
+        _ocio->setInputColorspace("Rec709");
+        break;
+    case Magick::Rec709YCbCrColorspace:
+        _ocio->setInputColorspace("Rec709");
+        break;
+    default:
+        _ocio->setInputColorspace("Linear");
         break;
     }
 # endif // OFX_IO_USING_OCIO
@@ -299,7 +266,7 @@ mDeclareReaderPluginFactory(ReadPSDPluginFactory, {}, {}, false);
 /** @brief The basic describe function, passed a plugin descriptor */
 void ReadPSDPluginFactory::describe(OFX::ImageEffectDescriptor &desc)
 {
-    GenericReaderDescribe(desc, kSupportsTiles, false);
+    GenericReaderDescribe(desc, kSupportsTiles, kIsMultiPlanar);
     desc.setLabel(kPluginName);
 
     #ifdef OFX_EXTENSIONS_TUTTLE
@@ -309,8 +276,7 @@ void ReadPSDPluginFactory::describe(OFX::ImageEffectDescriptor &desc)
     #endif
 
     std::string magickV = MagickCore::GetMagickVersion(NULL);
-    std::string delegates = MagickCore::GetMagickDelegates();
-    desc.setPluginDescription("Read PSD image format.\n\nWritten by Ole-André Rodlie <olear@fxarena.net>\n\n Powered by "+magickV+"\n\nFeatures: "+delegates);
+    desc.setPluginDescription("Read PSD image format.\n\nWritten by Ole-André Rodlie <olear@fxarena.net>\n\nPowered by "+magickV);
 }
 
 /** @brief The describe in context function, passed a plugin descriptor and a context */
@@ -318,99 +284,6 @@ void ReadPSDPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, C
 {
     gHostIsNatron = (OFX::getImageEffectHostDescription()->hostName == kNatronOfxHostName);
     PageParamDescriptor *page = GenericReaderDescribeInContextBegin(desc, context, isVideoStreamPlugin(), kSupportsRGBA, kSupportsRGB, kSupportsAlpha, kSupportsTiles);
-    {
-        ChoiceParamDescriptor *param = desc.defineChoiceParam(kParamLayer);
-        param->setLabel(kParamLayerLabel);
-        param->setHint(kParamLayerHint);
-        param->appendOption("0");
-        param->appendOption("1");
-        page->addChild(*param);
-    }
-#ifndef OFX_READ_OIIO_NEWMENU
-    {
-        IntParamDescriptor *param = desc.defineIntParam(kParamFirstChannel);
-        param->setLabel(kParamFirstChannelLabel, kParamFirstChannelLabel, kParamFirstChannelLabel);
-        param->setHint(kParamFirstChannelHint);
-        page->addChild(*param);
-    }
-#endif
-
-
-#ifdef OFX_READ_OIIO_NEWMENU
-    {
-        ChoiceParamDescriptor *param = desc.defineChoiceParam(kParamRChannel);
-        param->setLabel(kParamRChannelLabel);
-        param->setHint(kParamRChannelHint);
-        param->appendOption("0");
-        param->appendOption("1");
-        param->setAnimates(true);
-        param->setIsPersistant(false); //don't save, we will restore it using the StringParams holding the index
-        page->addChild(*param);
-    }
-    {
-        ChoiceParamDescriptor *param = desc.defineChoiceParam(kParamGChannel);
-        param->setLabel(kParamGChannelLabel);
-        param->setHint(kParamGChannelHint);
-        param->appendOption("0");
-        param->appendOption("1");
-        param->setAnimates(true);
-        param->setIsPersistant(false); //don't save, we will restore it using the StringParams holding the index
-        page->addChild(*param);
-    }
-    {
-        ChoiceParamDescriptor *param = desc.defineChoiceParam(kParamBChannel);
-        param->setLabel(kParamBChannelLabel);
-        param->setHint(kParamBChannelHint);
-        param->appendOption("0");
-        param->appendOption("1");
-        param->setAnimates(true);
-        param->setIsPersistant(false); //don't save, we will restore it using the StringParams holding the index
-        page->addChild(*param);
-    }
-    {
-        ChoiceParamDescriptor *param = desc.defineChoiceParam(kParamAChannel);
-        param->setLabel(kParamAChannelLabel);
-        param->setHint(kParamAChannelHint);
-        param->appendOption("0");
-        param->appendOption("1");
-        param->setAnimates(true);
-        param->setDefault(1); // opaque by default
-        param->setIsPersistant(false); //don't save, we will restore it using the StringParams holding the index
-        page->addChild(*param);
-    }
-    {
-        StringParamDescriptor* param = desc.defineStringParam(kParamRChannelName);
-        param->setLabel(kParamRChannelLabel);
-        param->setHint(kParamRChannelHint);
-        param->setAnimates(false);
-        param->setIsSecret(true); // never meant to be visible
-        page->addChild(*param);
-    }
-    {
-        StringParamDescriptor* param = desc.defineStringParam(kParamGChannelName);
-        param->setLabel(kParamGChannelLabel);
-        param->setHint(kParamGChannelHint);
-        param->setAnimates(false);
-        param->setIsSecret(true); // never meant to be visible
-        page->addChild(*param);
-    }
-    {
-        StringParamDescriptor* param = desc.defineStringParam(kParamBChannelName);
-        param->setLabel(kParamBChannelLabel);
-        param->setHint(kParamBChannelHint);
-        param->setAnimates(false);
-        param->setIsSecret(true); // never meant to be visible
-        page->addChild(*param);
-    }
-    {
-        StringParamDescriptor* param = desc.defineStringParam(kParamAChannelName);
-        param->setLabel(kParamAChannelLabel);
-        param->setHint(kParamAChannelHint);
-        param->setAnimates(false);
-        param->setIsSecret(true); // never meant to be visible
-        page->addChild(*param);
-    }
-#endif
     GenericReaderDescribeInContextEnd(desc, context, page, "reference", "reference");
 }
 
