@@ -178,6 +178,12 @@ void ReadPSDPlugin::decodePlane(const std::string& filename, OfxTime /*time*/, c
         }
     }
     Magick::Image image;
+
+    #ifdef DEBUG
+    image.debug(true);
+    image.verbose(true);
+    #endif
+
     image.backgroundColor("none");
     std::ostringstream file;
     file << filename.c_str();
