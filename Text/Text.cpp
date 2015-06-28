@@ -464,6 +464,8 @@ void TextPlugin::render(const OFX::RenderArguments &args)
     }
     switch(gravity) {
     case 1:
+        xtext = xtext-(width/2);
+        ytext = ytext-(height/2);
         draw.push_back(Magick::DrawableGravity(Magick::CenterGravity));
         break;
     case 2:
@@ -663,7 +665,7 @@ void TextPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, Cont
         ChoiceParamDescriptor *param = desc.defineChoiceParam(kParamGravity);
         param->setLabel(kParamGravityLabel);
         param->setHint(kParamGravityHint);
-        param->appendOption("Undefined");
+        param->appendOption("None");
         param->appendOption("Center");
         param->appendOption("Center forced");
         param->setAnimates(true);
