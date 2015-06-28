@@ -119,6 +119,9 @@ int ReadPSDPlugin::getImageLayers(const std::string &filename)
     int layers = 0;
     int max = 999;
     Magick::Image image;
+    #ifdef DEBUG
+    image.debug(true);
+    #endif
     while (layers<max) {
         std::ostringstream layer;
         layer << filename;
@@ -176,11 +179,9 @@ void ReadPSDPlugin::decodePlane(const std::string& filename, OfxTime /*time*/, c
         }
     }
     Magick::Image image;
-
     #ifdef DEBUG
     image.debug(true);
     #endif
-
     image.backgroundColor("none");
     std::ostringstream file;
     file << filename.c_str();
@@ -190,6 +191,9 @@ void ReadPSDPlugin::decodePlane(const std::string& filename, OfxTime /*time*/, c
     image.read(file.str());
     if (image.columns()>0 && image.rows()>0) {
         Magick::Image container(Magick::Geometry(bounds.x2,bounds.y2),Magick::Color("rgba(0,0,0,0)"));
+        #ifdef DEBUG
+        container.debug(true);
+        #endif
         container.composite(image,image.page().xOff(),image.page().yOff(),Magick::OverCompositeOp);
         container.flip();
         container.write(0,0,bounds.x2,bounds.y2,"RGBA",Magick::FloatPixel,pixelData);
@@ -222,6 +226,9 @@ void ReadPSDPlugin::onInputFileChanged(const std::string& newFile,
 {
     assert(premult && components);
     Magick::Image image;
+    #ifdef DEBUG
+    image.debug(true);
+    #endif
     image.read(newFile);
     if (image.columns()>0 && image.rows()>0) {
         _imageWidth = image.columns();
@@ -245,7 +252,7 @@ void ReadPSDPlugin::onInputFileChanged(const std::string& newFile,
             _ocio->setInputColorspace("Rec709");
             break;
         default:
-            //_ocio->setInputColorspace("Linear");
+            _ocio->setInputColorspace("Linear");
             break;
         }
         # endif // OFX_IO_USING_OCIO
