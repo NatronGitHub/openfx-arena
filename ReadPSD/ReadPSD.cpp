@@ -89,6 +89,7 @@ private:
     virtual void getClipComponents(const OFX::ClipComponentsArguments& args, OFX::ClipComponentsSetter& clipComponents) OVERRIDE FINAL;
     virtual void decodePlane(const std::string& filename, OfxTime time, const OfxRectI& renderWindow, float *pixelData, const OfxRectI& bounds, OFX::PixelComponentEnum pixelComponents, int pixelComponentCount, const std::string& rawComponents, int rowBytes) OVERRIDE FINAL;
     virtual bool getFrameBounds(const std::string& filename, OfxTime time, OfxRectI *bounds, double *par, std::string *error) OVERRIDE FINAL;
+    virtual void restoreState(const std::string& filename) OVERRIDE FINAL;
     virtual void onInputFileChanged(const std::string& newFile, OFX::PreMultiplicationEnum *premult, OFX::PixelComponentEnum *components, int *componentCount) OVERRIDE FINAL;
     int getImageLayers(const std::string& filename);
     int _imageLayers;
@@ -215,7 +216,7 @@ void ReadPSDPlugin::decodePlane(const std::string& filename, OfxTime /*time*/, c
     }
 }
 
-bool ReadPSDPlugin::getFrameBounds(const std::string& filename,
+bool ReadPSDPlugin::getFrameBounds(const std::string& /*filename*/,
                               OfxTime /*time*/,
                               OfxRectI *bounds,
                               double *par,
@@ -231,24 +232,28 @@ bool ReadPSDPlugin::getFrameBounds(const std::string& filename,
         bounds->y2 = _imageHeight;
         *par = 1.0;
     }
-    else { // needed on project load ...
-        #ifdef DEBUG
-        std::cout << "no image width/height, get dimensions" << std::endl;
-        #endif
-        Magick::Image image;
-        #ifdef DEBUG
-        image.debug(DEBUG_MAGICK);
-        #endif
-        image.read(filename);
-        if (image.columns()>0 && image.rows()>0) {
-            _imageWidth = image.columns();
-            _imageHeight = image.rows();
-            if (_imageLayers==0) { // not intact on project load, get layer count, this will trigger getlayercount twice on new node
-                _imageLayers = getImageLayers(filename);
-            }
-        }
-    }
     return true;
+}
+
+void ReadPSDPlugin::restoreState(const std::string& filename)
+{
+    #ifdef DEBUG
+    std::cout << "restoreState ..." << std::endl;
+    #endif
+    Magick::Image image;
+    #ifdef DEBUG
+    image.debug(DEBUG_MAGICK);
+    #endif
+    image.read(filename);
+    if (image.columns()>0 && image.rows()>0) {
+        _imageWidth = image.columns();
+        _imageHeight = image.rows();
+        _imageLayers = getImageLayers(filename);
+    }
+    else {
+        setPersistentMessage(OFX::Message::eMessageError, "", "Unable to read image");
+        OFX::throwSuiteStatusException(kOfxStatErrFormat);
+    }
 }
 
 void ReadPSDPlugin::onInputFileChanged(const std::string& newFile,
@@ -267,7 +272,7 @@ void ReadPSDPlugin::onInputFileChanged(const std::string& newFile,
     if (image.columns()>0 && image.rows()>0) {
         _imageWidth = image.columns();
         _imageHeight = image.rows();
-        _imageLayers = getImageLayers(newFile); // runs twice on new node, try to avoid
+        _imageLayers = getImageLayers(newFile);
         # ifdef OFX_IO_USING_OCIO
         switch(image.colorSpace()) {
         case Magick::RGBColorspace:
@@ -290,6 +295,10 @@ void ReadPSDPlugin::onInputFileChanged(const std::string& newFile,
             break;
         }
         # endif // OFX_IO_USING_OCIO
+    }
+    else {
+        setPersistentMessage(OFX::Message::eMessageError, "", "Unable to read image");
+        OFX::throwSuiteStatusException(kOfxStatErrFormat);
     }
     *components = OFX::ePixelComponentRGBA;
     *premult = OFX::eImageOpaque;
