@@ -57,6 +57,8 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #define kSupportsTiles false
 #define kIsMultiPlanar true
 
+#define DEBUG_MAGICK false
+
 class ReadPSDPlugin : public GenericReaderPlugin
 {
 public:
@@ -116,11 +118,14 @@ ReadPSDPlugin::~ReadPSDPlugin()
 
 int ReadPSDPlugin::getImageLayers(const std::string &filename)
 {
+    #ifdef DEBUG
+    std::cout << "getImageLayers ..." << std::endl;
+    #endif
     int layers = 0;
     int max = 999;
     Magick::Image image;
     #ifdef DEBUG
-    image.debug(true);
+    image.debug(DEBUG_MAGICK);
     #endif
     while (layers<max) {
         std::ostringstream layer;
@@ -136,11 +141,17 @@ int ReadPSDPlugin::getImageLayers(const std::string &filename)
     }
     if (layers>0)
         layers--;
+    #ifdef DEBUG
+    std::cout << "found " << layers << " layers" << std::endl;
+    #endif
     return layers;
 }
 
 void ReadPSDPlugin::getClipComponents(const OFX::ClipComponentsArguments& args, OFX::ClipComponentsSetter& clipComponents)
 {
+    #ifdef DEBUG
+    std::cout << "getClipComponents ..." << std::endl;
+    #endif
     assert(isMultiPlanar());
     clipComponents.addClipComponents(*_outputClip, getOutputComponents());
     clipComponents.setPassThroughClip(NULL, args.time, args.view);
@@ -166,6 +177,9 @@ void ReadPSDPlugin::getClipComponents(const OFX::ClipComponentsArguments& args, 
 void ReadPSDPlugin::decodePlane(const std::string& filename, OfxTime /*time*/, const OfxRectI& /*renderWindow*/, float *pixelData, const OfxRectI& bounds,
                                  OFX::PixelComponentEnum /*pixelComponents*/, int /*pixelComponentCount*/, const std::string& rawComponents, int /*rowBytes*/)
 {
+    #ifdef DEBUG
+    std::cout << "decodePlane ..." << std::endl;
+    #endif
     int layer = 0;
     std::string layerInfo = rawComponents;
     std::replace(layerInfo.begin(), layerInfo.end(), '_', ' ');
@@ -180,19 +194,16 @@ void ReadPSDPlugin::decodePlane(const std::string& filename, OfxTime /*time*/, c
     }
     Magick::Image image;
     #ifdef DEBUG
-    image.debug(true);
+    image.debug(DEBUG_MAGICK);
     #endif
     image.backgroundColor("none");
     std::ostringstream file;
-    file << filename.c_str();
-    file << "[";
-    file << layer;
-    file << "]";
+    file << filename.c_str() << "[" << layer << "]";
     image.read(file.str());
     if (image.columns()>0 && image.rows()>0) {
         Magick::Image container(Magick::Geometry(bounds.x2,bounds.y2),Magick::Color("rgba(0,0,0,0)"));
         #ifdef DEBUG
-        container.debug(true);
+        container.debug(DEBUG_MAGICK);
         #endif
         container.composite(image,image.page().xOff(),image.page().yOff(),Magick::OverCompositeOp);
         container.flip();
@@ -204,18 +215,38 @@ void ReadPSDPlugin::decodePlane(const std::string& filename, OfxTime /*time*/, c
     }
 }
 
-bool ReadPSDPlugin::getFrameBounds(const std::string& /*filename*/,
+bool ReadPSDPlugin::getFrameBounds(const std::string& filename,
                               OfxTime /*time*/,
                               OfxRectI *bounds,
                               double *par,
                               std::string */*error*/)
 {
+    #ifdef DEBUG
+    std::cout << "getFrameBounds ..." << std::endl;
+    #endif
     if (_imageWidth>0 && _imageHeight>0) {
         bounds->x1 = 0;
         bounds->x2 = _imageWidth;
         bounds->y1 = 0;
         bounds->y2 = _imageHeight;
         *par = 1.0;
+    }
+    else { // needed on project load ...
+        #ifdef DEBUG
+        std::cout << "no image width/height, get dimensions" << std::endl;
+        #endif
+        Magick::Image image;
+        #ifdef DEBUG
+        image.debug(DEBUG_MAGICK);
+        #endif
+        image.read(filename);
+        if (image.columns()>0 && image.rows()>0) {
+            _imageWidth = image.columns();
+            _imageHeight = image.rows();
+            if (_imageLayers==0) { // not intact on project load, get layer count, this will trigger getlayercount twice on new node
+                _imageLayers = getImageLayers(filename);
+            }
+        }
     }
     return true;
 }
@@ -224,16 +255,19 @@ void ReadPSDPlugin::onInputFileChanged(const std::string& newFile,
                                   OFX::PreMultiplicationEnum *premult,
                                   OFX::PixelComponentEnum *components,int */*componentCount*/)
 {
+    #ifdef DEBUG
+    std::cout << "onInputFileChanged ..." << std::endl;
+    #endif
     assert(premult && components);
     Magick::Image image;
     #ifdef DEBUG
-    image.debug(true);
+    image.debug(DEBUG_MAGICK);
     #endif
     image.read(newFile);
     if (image.columns()>0 && image.rows()>0) {
         _imageWidth = image.columns();
         _imageHeight = image.rows();
-        _imageLayers = getImageLayers(newFile);
+        _imageLayers = getImageLayers(newFile); // runs twice on new node, try to avoid
         # ifdef OFX_IO_USING_OCIO
         switch(image.colorSpace()) {
         case Magick::RGBColorspace:
