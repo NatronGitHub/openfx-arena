@@ -199,8 +199,13 @@
 
 #define kParamDirection "direction"
 #define kParamDirectionLabel "Text direction"
-#define kParamDirectionHint "Align text direction"
+#define kParamDirectionHint "Text direction"
 #define kParamDirectionDefault 0
+
+#define kParamGravity "gravity"
+#define kParamGravityLabel "Gravity"
+#define kParamGravityHint "Select text gravity"
+#define kParamGravityDefault 0
 
 using namespace OFX;
 static bool gHostIsNatron = false;
@@ -246,6 +251,7 @@ private:
     OFX::IntParam *width_;
     OFX::IntParam *height_;
     OFX::ChoiceParam *direction_;
+    OFX::ChoiceParam *gravity_;
     bool has_fontconfig;
     bool has_freetype;
 };
@@ -292,8 +298,9 @@ TextPlugin::TextPlugin(OfxImageEffectHandle handle)
     width_ = fetchIntParam(kParamWidth);
     height_ = fetchIntParam(kParamHeight);
     direction_ = fetchChoiceParam(kParamDirection);
+    gravity_ = fetchChoiceParam(kParamGravity);
 
-    assert(position_ && text_ && fontSize_ && fontName_ && textColor_ && strokeColor_ && strokeWidth_ && strokeCap_ && strokeJoin_ && fontOverride_ && shadowOpacity_ && shadowSigma_ && interlineSpacing_ && interwordSpacing_ && textSpacing_ && shadowColor_ && shadowX_ && shadowY_ && shadowBlur_ && width_ && height_ && direction_);
+    assert(position_ && text_ && fontSize_ && fontName_ && textColor_ && strokeColor_ && strokeWidth_ && strokeCap_ && strokeJoin_ && fontOverride_ && shadowOpacity_ && shadowSigma_ && interlineSpacing_ && interwordSpacing_ && textSpacing_ && shadowColor_ && shadowX_ && shadowY_ && shadowBlur_ && width_ && height_ && direction_ && gravity_);
 }
 
 TextPlugin::~TextPlugin()
@@ -364,7 +371,7 @@ void TextPlugin::render(const OFX::RenderArguments &args)
 
     // Get params
     double x, y, r, g, b, a, r_s, g_s, b_s, a_s, strokeWidth, shadowOpacity, shadowSigma, interlineSpacing, interwordSpacing, textSpacing, shadowR, shadowG, shadowB, shadowBlur;
-    int fontSize, fontID, shadowX, shadowY, strokeCap, strokeJoin, direction;
+    int fontSize, fontID, shadowX, shadowY, strokeCap, strokeJoin, direction, gravity;
     std::string text, fontOverride, fontName;
 
     position_->getValueAtTime(args.time, x, y);
@@ -387,6 +394,7 @@ void TextPlugin::render(const OFX::RenderArguments &args)
     shadowY_->getValueAtTime(args.time, shadowY);
     shadowBlur_->getValueAtTime(args.time, shadowBlur);
     direction_->getValueAtTime(args.time, direction);
+    gravity_->getValueAtTime(args.time, gravity);
     fontName_->getOption(fontID,fontName);
 
     // cascade menu
@@ -447,14 +455,6 @@ void TextPlugin::render(const OFX::RenderArguments &args)
     // Setup text draw
     std::list<Magick::Drawable> draw;
     switch(direction) {
-    /*case 1:
-        draw.push_back(Magick::DrawableGravity(Magick::CenterGravity));
-        break;
-    case 2:
-        draw.push_back(Magick::DrawableGravity(Magick::CenterGravity));
-        xtext = 0;
-        ytext = 0;
-        break;*/
     case 1:
         draw.push_back(Magick::DrawableTextDirection(Magick::RightToLeftDirection));
         break;
@@ -462,8 +462,21 @@ void TextPlugin::render(const OFX::RenderArguments &args)
         draw.push_back(Magick::DrawableTextDirection(Magick::UndefinedDirection));
         break;
     }
-    draw.push_back(Magick::DrawablePointSize(std::floor(fontSize * args.renderScale.x + 0.5)));
+    switch(gravity) {
+    case 1:
+        draw.push_back(Magick::DrawableGravity(Magick::CenterGravity));
+        break;
+    case 2:
+        xtext = 0;
+        ytext = 0;
+        draw.push_back(Magick::DrawableGravity(Magick::CenterGravity));
+        break;
+    default:
+        //
+        break;
+    }
     draw.push_back(Magick::DrawableFont(fontName));
+    draw.push_back(Magick::DrawablePointSize(std::floor(fontSize * args.renderScale.x + 0.5)));
     draw.push_back(Magick::DrawableText(xtext, ytext, text));
     draw.push_back(Magick::DrawableFillColor(textRGBA.str()));
     draw.push_back(Magick::DrawableTextInterlineSpacing(std::floor(interlineSpacing * args.renderScale.x + 0.5)));
@@ -634,6 +647,7 @@ void TextPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, Cont
             param->setUseHostOverlayHandle(true);
         page->addChild(*param);
     }
+
     {
         BooleanParamDescriptor* param = desc.defineBooleanParam(kParamInteractive);
         param->setLabel(kParamInteractiveLabel);
@@ -644,6 +658,16 @@ void TextPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, Cont
         //Do not show this parameter if the host handles the interact
         if (hostHasNativeOverlayForPosition)
             param->setIsSecret(true);
+    }
+    {
+        ChoiceParamDescriptor *param = desc.defineChoiceParam(kParamGravity);
+        param->setLabel(kParamGravityLabel);
+        param->setHint(kParamGravityHint);
+        param->appendOption("Undefined");
+        param->appendOption("Center");
+        param->appendOption("Center forced");
+        param->setAnimates(true);
+        page->addChild(*param);
     }
     {
         StringParamDescriptor* param = desc.defineStringParam(kParamText);
