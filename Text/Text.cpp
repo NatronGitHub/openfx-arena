@@ -197,9 +197,9 @@
 #define kParamShadowBlurHint "Soften shadow"
 #define kParamShadowBlurDefault 0
 
-#define kParamDirection "align"
-#define kParamDirectionLabel "Text align"
-#define kParamDirectionHint "Align text"
+#define kParamDirection "direction"
+#define kParamDirectionLabel "Text direction"
+#define kParamDirectionHint "Align text direction"
 #define kParamDirectionDefault 0
 
 using namespace OFX;
@@ -447,15 +447,15 @@ void TextPlugin::render(const OFX::RenderArguments &args)
     // Setup text draw
     std::list<Magick::Drawable> draw;
     switch(direction) {
-    case 1:
+    /*case 1:
         draw.push_back(Magick::DrawableGravity(Magick::CenterGravity));
         break;
     case 2:
         draw.push_back(Magick::DrawableGravity(Magick::CenterGravity));
         xtext = 0;
         ytext = 0;
-        break;
-    case 3:
+        break;*/
+    case 1:
         draw.push_back(Magick::DrawableTextDirection(Magick::RightToLeftDirection));
         break;
     default:
@@ -831,8 +831,6 @@ void TextPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, Cont
         param->setLabel(kParamDirectionLabel);
         param->setHint(kParamDirectionHint);
         param->appendOption("Left");
-        param->appendOption("Center");
-        param->appendOption("Center (force)");
         param->appendOption("Right");
         param->setAnimates(true);
         page->addChild(*param);
