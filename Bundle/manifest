@@ -1,12 +1,64 @@
 <?xml version="1.0" encoding="UTF-8" standalone="yes"?>
 <assembly xmlns="urn:schemas-microsoft-com:asm.v1" manifestVersion="1.0">
 <assemblyIdentity name="Magick" version="1.0.0.0" type="win32" processorArchitecture="amd64"/>
+<file name="libOpenColorIO.dll">
+</file>
+<file name="libbz2-1.dll">
+</file>
+<file name="libcairo-2.dll">
+</file>
+<file name="libcroco-0.6-3.dll">
+</file>
+<file name="libexpat-1.dll">
+</file>
+<file name="libffi-6.dll">
+</file>
+<file name="libfontconfig-1.dll">
+</file>
+<file name="libfreetype-6.dll">
+</file>
 <file name="libgcc_s_seh-1.dll">
+</file>
+<file name="libgdk_pixbuf-2.0-0.dll">
+</file>
+<file name="libgio-2.0-0.dll">
+</file>
+<file name="libglib-2.0-0.dll">
+</file>
+<file name="libgmodule-2.0-0.dll">
+</file>
+<file name="libgobject-2.0-0.dll">
 </file>
 <file name="libgomp-1.dll">
 </file>
+<file name="libharfbuzz-0.dll">
+</file>
+<file name="libiconv-2.dll">
+</file>
+<file name="libintl-8.dll">
+</file>
+<file name="libpango-1.0-0.dll">
+</file>
+<file name="libpangocairo-1.0-0.dll">
+</file>
+<file name="libpangoft2-1.0-0.dll">
+</file>
+<file name="libpangowin32-1.0-0.dll">
+</file>
+<file name="libpixman-1-0.dll">
+</file>
+<file name="libpng16-16.dll">
+</file>
+<file name="librsvg-2-2.dll">
+</file>
 <file name="libstdc++-6.dll">
 </file>
+<file name="libtinyxml-0.dll">
+</file>
 <file name="libwinpthread-1.dll">
+</file>
+<file name="libxml2-2.dll">
+</file>
+<file name="zlib1.dll">
 </file>
 </assembly>
