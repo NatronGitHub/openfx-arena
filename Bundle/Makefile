@@ -15,7 +15,6 @@ PLUGINOBJECTS = \
         TextPango.o \
         ReadPSD.o \
         ReadXCF.o \
-        ReadMisc.o \
         ReadSVG.o \
         ofxsOGLTextRenderer.o \
         ofxsOGLFontData.o \
@@ -58,8 +57,6 @@ RESOURCES = \
 ../ReadPSD/net.fxarena.openfx.ReadPSD.svg \
 ../ReadXCF/net.fxarena.openfx.ReadXCF.png \
 ../ReadXCF/net.fxarena.openfx.ReadXCF.svg \
-../ReadMisc/net.fxarena.openfx.ReadMisc.png \
-../ReadMisc/net.fxarena.openfx.ReadMisc.svg \
 ../ReadSVG/net.fxarena.openfx.ReadSVG.png \
 ../ReadSVG/net.fxarena.openfx.ReadSVG.svg \
 
@@ -80,7 +77,6 @@ VPATH += \
 ../TextPango \
 ../ReadPSD \
 ../ReadXCF \
-../ReadMisc \
 ../ReadSVG \
 
 include ../Makefile.master
@@ -103,7 +99,6 @@ CXXFLAGS += \
 -I../TextPango \
 -I../ReadPSD \
 -I../ReadXCF \
--I../ReadMisc \
 -I../ReadSVG \
 
 CXXFLAGS  += $(MAGICK_CXXFLAGS)
