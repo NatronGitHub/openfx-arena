@@ -122,7 +122,7 @@ int ReadPSDPlugin::getImageLayers(const std::string &filename)
     #ifdef DEBUG
     std::cout << "getImageLayers ..." << std::endl;
     #endif
-    int layers;
+    int layers = 0;
     std::list <Magick::Image> image;
     Magick::readImages(&image, filename);
     layers = image.size();
