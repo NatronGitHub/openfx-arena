@@ -49,7 +49,7 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #define kPluginGrouping "Image/Readers"
 #define kPluginIdentifier "net.fxarena.openfx.ReadPSD"
 #define kPluginVersionMajor 1
-#define kPluginVersionMinor 4
+#define kPluginVersionMinor 5
 
 #define kSupportsRGBA true
 #define kSupportsRGB false
@@ -123,7 +123,7 @@ void ReadPSDPlugin::getClipComponents(const OFX::ClipComponentsArguments& args, 
             if (i!=0) {
                 std::ostringstream layerName;
                 layerName << _psd[i].label();
-                if (layerName.str().empty()) // TODO this should not happen(?)
+                if (layerName.str().empty())
                     layerName << "PSD Layer #" << i;
                 std::string component(kNatronOfxImageComponentsPlane);
                 component.append(layerName.str());
@@ -158,7 +158,16 @@ void ReadPSDPlugin::decodePlane(const std::string& /*filename*/, OfxTime /*time*
     }
     if (!layerName.empty()) {
         for (size_t i = 0; i < _psd.size(); i++) {
-            if (_psd[i].label()==layerName) { // TODO what about unlabeled?
+            if (_psd[i].label()==layerName) {
+                #ifdef DEBUG
+                std::cout << "found layer! " << layerName << std::endl;
+                #endif
+                container.composite(_psd[i],_psd[i].page().xOff(),_psd[i].page().yOff(),Magick::OverCompositeOp);
+                break;
+            }
+            std::ostringstream psdLayer;
+            psdLayer << "PSD Layer #" << i;
+            if (psdLayer.str()==layerName) {
                 #ifdef DEBUG
                 std::cout << "found layer! " << layerName << std::endl;
                 #endif
