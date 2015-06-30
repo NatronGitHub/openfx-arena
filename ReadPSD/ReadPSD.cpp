@@ -49,15 +49,13 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #define kPluginGrouping "Image/Readers"
 #define kPluginIdentifier "net.fxarena.openfx.ReadPSD"
 #define kPluginVersionMajor 1
-#define kPluginVersionMinor 3
+#define kPluginVersionMinor 4
 
 #define kSupportsRGBA true
 #define kSupportsRGB false
 #define kSupportsAlpha false
 #define kSupportsTiles false
 #define kIsMultiPlanar true
-
-#define DEBUG_MAGICK false
 
 class ReadPSDPlugin : public GenericReaderPlugin
 {
@@ -91,10 +89,8 @@ private:
     virtual bool getFrameBounds(const std::string& filename, OfxTime time, OfxRectI *bounds, double *par, std::string *error) OVERRIDE FINAL;
     virtual void restoreState(const std::string& filename) OVERRIDE FINAL;
     virtual void onInputFileChanged(const std::string& newFile, OFX::PreMultiplicationEnum *premult, OFX::PixelComponentEnum *components, int *componentCount) OVERRIDE FINAL;
-    int getImageLayers(const std::string& filename);
-    int _imageLayers;
-    int _imageWidth;
-    int _imageHeight;
+    std::string _filename;
+    std::vector<Magick::Image> _psd;
 };
 
 ReadPSDPlugin::ReadPSDPlugin(OfxImageEffectHandle handle)
@@ -105,9 +101,6 @@ ReadPSDPlugin::ReadPSDPlugin(OfxImageEffectHandle handle)
 false
 #endif
 )
-,_imageLayers(0)
-,_imageWidth(0)
-,_imageHeight(0)
 {
     Magick::InitializeMagick(NULL);
     assert(_outputComponents);
@@ -115,23 +108,6 @@ false
 
 ReadPSDPlugin::~ReadPSDPlugin()
 {
-}
-
-int ReadPSDPlugin::getImageLayers(const std::string &filename)
-{
-    #ifdef DEBUG
-    std::cout << "getImageLayers ..." << std::endl;
-    #endif
-    int layers = 0;
-    std::list <Magick::Image> image;
-    Magick::readImages(&image, filename);
-    layers = image.size();
-    if (layers>0)
-        layers--;
-    #ifdef DEBUG
-    std::cout << "found " << layers << " layers" << std::endl;
-    #endif
-    return layers;
 }
 
 void ReadPSDPlugin::getClipComponents(const OFX::ClipComponentsArguments& args, OFX::ClipComponentsSetter& clipComponents)
@@ -142,64 +118,59 @@ void ReadPSDPlugin::getClipComponents(const OFX::ClipComponentsArguments& args, 
     assert(isMultiPlanar());
     clipComponents.addClipComponents(*_outputClip, getOutputComponents());
     clipComponents.setPassThroughClip(NULL, args.time, args.view);
-    if (_imageLayers>0) {
-        for(int i = 1; i<_imageLayers+1;i++) {
-            std::string component(kNatronOfxImageComponentsPlane);
-            std::ostringstream layerName;
-            layerName << "Layer#" << i;
-            component.append(layerName.str());
-            component.append(kNatronOfxImageComponentsPlaneChannel);
-            component.append("R");
-            component.append(kNatronOfxImageComponentsPlaneChannel);
-            component.append("G");
-            component.append(kNatronOfxImageComponentsPlaneChannel);
-            component.append("B");
-            component.append(kNatronOfxImageComponentsPlaneChannel);
-            component.append("A");
-            clipComponents.addClipComponents(*_outputClip, component);
+    if (_psd.size()>0) {
+        for (size_t i = 0; i < _psd.size(); i++) {
+            if (i!=0) {
+                std::ostringstream layerName;
+                layerName << _psd[i].label();
+                if (layerName.str().empty()) // TODO this should not happen(?)
+                    layerName << "PSD Layer #" << i;
+                std::string component(kNatronOfxImageComponentsPlane);
+                component.append(layerName.str());
+                component.append(kNatronOfxImageComponentsPlaneChannel);
+                component.append("R");
+                component.append(kNatronOfxImageComponentsPlaneChannel);
+                component.append("G");
+                component.append(kNatronOfxImageComponentsPlaneChannel);
+                component.append("B");
+                component.append(kNatronOfxImageComponentsPlaneChannel);
+                component.append("A");
+                clipComponents.addClipComponents(*_outputClip, component);
+            }
         }
     }
 }
 
-void ReadPSDPlugin::decodePlane(const std::string& filename, OfxTime /*time*/, const OfxRectI& /*renderWindow*/, float *pixelData, const OfxRectI& bounds,
+void ReadPSDPlugin::decodePlane(const std::string& /*filename*/, OfxTime /*time*/, const OfxRectI& /*renderWindow*/, float *pixelData, const OfxRectI& bounds,
                                  OFX::PixelComponentEnum /*pixelComponents*/, int /*pixelComponentCount*/, const std::string& rawComponents, int /*rowBytes*/)
 {
     #ifdef DEBUG
     std::cout << "decodePlane ..." << std::endl;
     #endif
-    int layer = 0;
-    std::string layerInfo = rawComponents;
-    std::replace(layerInfo.begin(), layerInfo.end(), '_', ' ');
-    std::stringstream stream(layerInfo);
-    std::string streamInfo;
-    while (stream>>streamInfo) {
-        std::string findLayer = "Layer#";
-        if (streamInfo.find(findLayer) != std::string::npos) {
-            streamInfo.erase(streamInfo.find(findLayer),findLayer.length());
-            layer = std::atoi(streamInfo.c_str());
+    Magick::Image container(Magick::Geometry(bounds.x2,bounds.y2),Magick::Color("rgba(0,0,0,0)"));
+    std::string layerName;
+    std::string::size_type prev_pos = 0, pos = 0;
+    while( (pos = rawComponents.find('_', pos)) != std::string::npos ) { // TODO meh, find a better solution...
+        std::string substring( rawComponents.substr(prev_pos, pos-prev_pos) );
+        if (substring!="NatronOfxImageComponentsPlane" && substring!="Channel" && substring!="R" && substring!="G" && substring!="B" && substring!="A")
+            layerName = substring;
+        prev_pos = ++pos;
+    }
+    if (!layerName.empty()) {
+        for (size_t i = 0; i < _psd.size(); i++) {
+            if (_psd[i].label()==layerName) { // TODO what about unlabeled?
+                #ifdef DEBUG
+                std::cout << "found layer! " << layerName << std::endl;
+                #endif
+                container.composite(_psd[i],_psd[i].page().xOff(),_psd[i].page().yOff(),Magick::OverCompositeOp);
+                break;
+            }
         }
     }
-    Magick::Image image;
-    #ifdef DEBUG
-    image.debug(DEBUG_MAGICK);
-    #endif
-    image.backgroundColor("none");
-    std::ostringstream file;
-    file << filename.c_str() << "[" << layer << "]";
-    image.read(file.str());
-    if (image.columns()>0 && image.rows()>0) {
-        Magick::Image container(Magick::Geometry(bounds.x2,bounds.y2),Magick::Color("rgba(0,0,0,0)"));
-        #ifdef DEBUG
-        container.debug(DEBUG_MAGICK);
-        #endif
-        container.composite(image,image.page().xOff(),image.page().yOff(),Magick::OverCompositeOp);
-        container.flip();
-        container.write(0,0,bounds.x2,bounds.y2,"RGBA",Magick::FloatPixel,pixelData);
-    }
-    else {
-        setPersistentMessage(OFX::Message::eMessageError, "", "Unable to read image");
-        OFX::throwSuiteStatusException(kOfxStatErrFormat);
-    }
+    else
+        container.composite(_psd[0],0,0,Magick::OverCompositeOp);
+    container.flip();
+    container.write(0,0,bounds.x2,bounds.y2,"RGBA",Magick::FloatPixel,pixelData);
 }
 
 bool ReadPSDPlugin::getFrameBounds(const std::string& /*filename*/,
@@ -211,11 +182,11 @@ bool ReadPSDPlugin::getFrameBounds(const std::string& /*filename*/,
     #ifdef DEBUG
     std::cout << "getFrameBounds ..." << std::endl;
     #endif
-    if (_imageWidth>0 && _imageHeight>0) {
+    if (_psd[0].columns()>0 && _psd[0].rows()>0) {
         bounds->x1 = 0;
-        bounds->x2 = _imageWidth;
+        bounds->x2 = _psd[0].columns();
         bounds->y1 = 0;
-        bounds->y2 = _imageHeight;
+        bounds->y2 = _psd[0].rows();
         *par = 1.0;
     }
     return true;
@@ -226,17 +197,18 @@ void ReadPSDPlugin::restoreState(const std::string& filename)
     #ifdef DEBUG
     std::cout << "restoreState ..." << std::endl;
     #endif
-    Magick::Image image;
-    #ifdef DEBUG
-    image.debug(DEBUG_MAGICK);
-    #endif
-    image.read(filename);
-    if (image.columns()>0 && image.rows()>0) {
-        _imageWidth = image.columns();
-        _imageHeight = image.rows();
-        _imageLayers = getImageLayers(filename);
+    _psd.clear();
+    try {
+        Magick::readImages(&_psd, filename);
     }
+    catch(Magick::Exception) {
+        setPersistentMessage(OFX::Message::eMessageError, "", "Unable to read image");
+        OFX::throwSuiteStatusException(kOfxStatErrFormat);
+    }
+    if (_psd[0].columns()>0 && _psd[0].rows()>0)
+        _filename = filename;
     else {
+        _psd.clear();
         setPersistentMessage(OFX::Message::eMessageError, "", "Unable to read image");
         OFX::throwSuiteStatusException(kOfxStatErrFormat);
     }
@@ -250,42 +222,30 @@ void ReadPSDPlugin::onInputFileChanged(const std::string& newFile,
     std::cout << "onInputFileChanged ..." << std::endl;
     #endif
     assert(premult && components);
-    Magick::Image image;
-    #ifdef DEBUG
-    image.debug(DEBUG_MAGICK);
-    #endif
-    image.read(newFile);
-    if (image.columns()>0 && image.rows()>0) {
-        _imageWidth = image.columns();
-        _imageHeight = image.rows();
-        _imageLayers = getImageLayers(newFile);
-        # ifdef OFX_IO_USING_OCIO
-        switch(image.colorSpace()) {
-        case Magick::RGBColorspace:
-            _ocio->setInputColorspace("sRGB");
-            break;
-        case Magick::sRGBColorspace:
-            _ocio->setInputColorspace("sRGB");
-            break;
-        case Magick::scRGBColorspace:
-            _ocio->setInputColorspace("sRGB");
-            break;
-        case Magick::Rec709LumaColorspace:
-            _ocio->setInputColorspace("Rec709");
-            break;
-        case Magick::Rec709YCbCrColorspace:
-            _ocio->setInputColorspace("Rec709");
-            break;
-        default:
-            _ocio->setInputColorspace("Linear");
-            break;
-        }
-        # endif // OFX_IO_USING_OCIO
+    if (newFile!=_filename)
+        restoreState(newFile);
+    # ifdef OFX_IO_USING_OCIO
+    switch(_psd[0].colorSpace()) {
+    case Magick::RGBColorspace:
+        _ocio->setInputColorspace("sRGB");
+        break;
+    case Magick::sRGBColorspace:
+        _ocio->setInputColorspace("sRGB");
+        break;
+    case Magick::scRGBColorspace:
+        _ocio->setInputColorspace("sRGB");
+        break;
+    case Magick::Rec709LumaColorspace:
+        _ocio->setInputColorspace("Rec709");
+        break;
+    case Magick::Rec709YCbCrColorspace:
+        _ocio->setInputColorspace("Rec709");
+        break;
+    default:
+        _ocio->setInputColorspace("Linear");
+        break;
     }
-    else {
-        setPersistentMessage(OFX::Message::eMessageError, "", "Unable to read image");
-        OFX::throwSuiteStatusException(kOfxStatErrFormat);
-    }
+    # endif // OFX_IO_USING_OCIO
     *components = OFX::ePixelComponentRGBA;
     *premult = OFX::eImageOpaque;
 }
