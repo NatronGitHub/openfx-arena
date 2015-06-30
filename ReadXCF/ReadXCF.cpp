@@ -48,17 +48,13 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #define kPluginGrouping "Image/Readers"
 #define kPluginIdentifier "net.fxarena.openfx.ReadXCF"
 #define kPluginVersionMajor 1
-#define kPluginVersionMinor 0
+#define kPluginVersionMinor 2
 
 #define kSupportsRGBA true
 #define kSupportsRGB false
 #define kSupportsAlpha false
 #define kSupportsTiles false
-
-#define kParamLayer "layer"
-#define kParamLayerLabel "Layer"
-#define kParamLayerHint "Layer"
-#define kParamLayerDefault 0
+#define kIsMultiPlanar true
 
 class ReadXCFPlugin : public GenericReaderPlugin
 {
@@ -67,92 +63,197 @@ public:
     virtual ~ReadXCFPlugin();
 private:
     virtual bool isVideoStream(const std::string& /*filename*/) OVERRIDE FINAL { return false; }
-    virtual void decode(const std::string& filename, OfxTime time, const OfxRectI& renderWindow, float *pixelData, const OfxRectI& bounds, OFX::PixelComponentEnum pixelComponents, int pixelComponentCount, int rowBytes) OVERRIDE FINAL;
+    virtual void decode(const std::string& filename, OfxTime time, const OfxRectI& renderWindow, float *pixelData, const OfxRectI& bounds,
+                             OFX::PixelComponentEnum pixelComponents, int pixelComponentCount, int rowBytes) OVERRIDE FINAL
+    {
+        std::string rawComps;
+        switch (pixelComponents) {
+            case OFX::ePixelComponentAlpha:
+                rawComps = kOfxImageComponentAlpha;
+                break;
+            case OFX::ePixelComponentRGB:
+                rawComps = kOfxImageComponentRGB;
+                break;
+            case OFX::ePixelComponentRGBA:
+                rawComps = kOfxImageComponentRGBA;
+                break;
+            default:
+                OFX::throwSuiteStatusException(kOfxStatFailed);
+                return;
+        }
+        decodePlane(filename, time, renderWindow, pixelData, bounds, pixelComponents, pixelComponentCount, rawComps, rowBytes);
+    }
+    virtual void getClipComponents(const OFX::ClipComponentsArguments& args, OFX::ClipComponentsSetter& clipComponents) OVERRIDE FINAL;
+    virtual void decodePlane(const std::string& filename, OfxTime time, const OfxRectI& renderWindow, float *pixelData, const OfxRectI& bounds, OFX::PixelComponentEnum pixelComponents, int pixelComponentCount, const std::string& rawComponents, int rowBytes) OVERRIDE FINAL;
     virtual bool getFrameBounds(const std::string& filename, OfxTime time, OfxRectI *bounds, double *par, std::string *error) OVERRIDE FINAL;
+    virtual void restoreState(const std::string& filename) OVERRIDE FINAL;
     virtual void onInputFileChanged(const std::string& newFile, OFX::PreMultiplicationEnum *premult, OFX::PixelComponentEnum *components, int *componentCount) OVERRIDE FINAL;
-    OFX::IntParam *_layer;
+    std::string _filename;
+    std::vector<Magick::Image> _xcf;
 };
 
 ReadXCFPlugin::ReadXCFPlugin(OfxImageEffectHandle handle)
-: GenericReaderPlugin(handle, kSupportsRGBA, kSupportsRGB, kSupportsAlpha, kSupportsTiles, false)
-,_layer(0)
+: GenericReaderPlugin(handle, kSupportsRGBA, kSupportsRGB, kSupportsAlpha, kSupportsTiles,
+#ifdef OFX_EXTENSIONS_NUKE
+(OFX::getImageEffectHostDescription() && OFX::getImageEffectHostDescription()->isMultiPlanar) ? kIsMultiPlanar : false
+#else
+false
+#endif
+)
 {
     Magick::InitializeMagick(NULL);
-    _layer = fetchIntParam(kParamLayer);
-    assert(_layer);
+    assert(_outputComponents);
 }
 
 ReadXCFPlugin::~ReadXCFPlugin()
 {
 }
 
-void
-ReadXCFPlugin::decode(const std::string& filename,
-                      OfxTime time,
-                      const OfxRectI& renderWindow,
-                      float *pixelData,
-                      const OfxRectI& bounds,
-                      OFX::PixelComponentEnum pixelComponents,
-                      int pixelComponentCount,
-                      int rowBytes)
+void ReadXCFPlugin::getClipComponents(const OFX::ClipComponentsArguments& args, OFX::ClipComponentsSetter& clipComponents)
 {
-    int layer = 0;
-    _layer->getValueAtTime(time, layer);
-    Magick::Image image;
-    image.backgroundColor("none");
-    std::ostringstream file;
-    file << filename.c_str();
-    file << "[";
-    file << layer;
-    file << "]";
-    image.read(file.str());
-    if (image.columns() && image.rows()) {
-        Magick::Image container(Magick::Geometry(bounds.x2,bounds.y2),Magick::Color("rgba(0,0,0,0)"));
-        container.composite(image,0,0,Magick::OverCompositeOp);
-        container.flip();
-        container.write(0,0,bounds.x2,bounds.y2,"RGBA",Magick::FloatPixel,pixelData);
-    }
-    else {
-        setPersistentMessage(OFX::Message::eMessageError, "", "Unable to read image");
-        OFX::throwSuiteStatusException(kOfxStatErrFormat);
-    }
+    #ifdef DEBUG
+    std::cout << "getClipComponents ..." << std::endl;
+    #endif
+    assert(isMultiPlanar());
+    clipComponents.addClipComponents(*_outputClip, getOutputComponents());
+    clipComponents.setPassThroughClip(NULL, args.time, args.view);
+    //if (_xcf.size()>0) { // in xcf all images are layers, in psd first is complete image
+        for (size_t i = 0; i < _xcf.size(); i++) {
+            //if (i!=0) {
+                std::ostringstream layerName;
+                layerName << _xcf[i].label();
+                if (layerName.str().empty())
+                    layerName << "XCF Layer #" << i;
+                std::string component(kNatronOfxImageComponentsPlane);
+                component.append(layerName.str());
+                component.append(kNatronOfxImageComponentsPlaneChannel);
+                component.append("R");
+                component.append(kNatronOfxImageComponentsPlaneChannel);
+                component.append("G");
+                component.append(kNatronOfxImageComponentsPlaneChannel);
+                component.append("B");
+                component.append(kNatronOfxImageComponentsPlaneChannel);
+                component.append("A");
+                clipComponents.addClipComponents(*_outputClip, component);
+            //}
+        }
+    //}
 }
 
-bool ReadXCFPlugin::getFrameBounds(const std::string& filename,
-                              OfxTime time,
+void ReadXCFPlugin::decodePlane(const std::string& /*filename*/, OfxTime /*time*/, const OfxRectI& /*renderWindow*/, float *pixelData, const OfxRectI& bounds,
+                                 OFX::PixelComponentEnum /*pixelComponents*/, int /*pixelComponentCount*/, const std::string& rawComponents, int /*rowBytes*/)
+{
+    #ifdef DEBUG
+    std::cout << "decodePlane ..." << std::endl;
+    #endif
+    Magick::Image container(Magick::Geometry(bounds.x2,bounds.y2),Magick::Color("rgba(0,0,0,0)"));
+    std::string layerName;
+    std::string::size_type prev_pos = 0, pos = 0;
+    while( (pos = rawComponents.find('_', pos)) != std::string::npos ) { // TODO meh, find a better solution...
+        std::string substring( rawComponents.substr(prev_pos, pos-prev_pos) );
+        if (substring!="NatronOfxImageComponentsPlane" && substring!="Channel" && substring!="R" && substring!="G" && substring!="B" && substring!="A")
+            layerName = substring;
+        prev_pos = ++pos;
+    }
+    if (!layerName.empty()) {
+        for (size_t i = 0; i < _xcf.size(); i++) {
+            if (_xcf[i].label()==layerName) {
+                #ifdef DEBUG
+                std::cout << "found layer! " << layerName << std::endl;
+                #endif
+                container.composite(_xcf[i],_xcf[i].page().xOff(),_xcf[i].page().yOff(),Magick::OverCompositeOp);
+                break;
+            }
+            std::ostringstream xcfLayer;
+            xcfLayer << "XCF Layer #" << i;
+            if (xcfLayer.str()==layerName) {
+                #ifdef DEBUG
+                std::cout << "found layer! " << layerName << std::endl;
+                #endif
+                container.composite(_xcf[i],_xcf[i].page().xOff(),_xcf[i].page().yOff(),Magick::OverCompositeOp);
+                break;
+            }
+        }
+    }
+    else // fail, show layer 0
+        container.composite(_xcf[0],0,0,Magick::OverCompositeOp);
+    container.flip();
+    container.write(0,0,bounds.x2,bounds.y2,"RGBA",Magick::FloatPixel,pixelData);
+}
+
+bool ReadXCFPlugin::getFrameBounds(const std::string& /*filename*/,
+                              OfxTime /*time*/,
                               OfxRectI *bounds,
                               double *par,
-                              std::string *error)
+                              std::string */*error*/)
 {
-    int layer = 0;
-    _layer->getValueAtTime(time, layer);
-    Magick::Image image;
-    std::ostringstream file;
-    file << filename.c_str();
-    file << "[";
-    file << layer;
-    file << "]";
-    image.read(file.str());
-    if (image.columns()>0 && image.rows()>0) {
+    #ifdef DEBUG
+    std::cout << "getFrameBounds ..." << std::endl;
+    #endif
+    if (_xcf[0].columns()>0 && _xcf[0].rows()>0) {
         bounds->x1 = 0;
-        bounds->x2 = image.columns();
+        bounds->x2 = _xcf[0].columns();
         bounds->y1 = 0;
-        bounds->y2 = image.rows();
+        bounds->y2 = _xcf[0].rows();
         *par = 1.0;
-        return true;
     }
-    else {
+    return true;
+}
+
+void ReadXCFPlugin::restoreState(const std::string& filename)
+{
+    #ifdef DEBUG
+    std::cout << "restoreState ..." << std::endl;
+    #endif
+    _xcf.clear();
+    try {
+        Magick::readImages(&_xcf, filename);
+    }
+    catch(Magick::Exception) {
         setPersistentMessage(OFX::Message::eMessageError, "", "Unable to read image");
         OFX::throwSuiteStatusException(kOfxStatErrFormat);
     }
-    return false;
+    if (_xcf[0].columns()>0 && _xcf[0].rows()>0)
+        _filename = filename;
+    else {
+        _xcf.clear();
+        setPersistentMessage(OFX::Message::eMessageError, "", "Unable to read image");
+        OFX::throwSuiteStatusException(kOfxStatErrFormat);
+    }
 }
 
-void ReadXCFPlugin::onInputFileChanged(const std::string& /*newFile*/,
+void ReadXCFPlugin::onInputFileChanged(const std::string& newFile,
                                   OFX::PreMultiplicationEnum *premult,
-                                  OFX::PixelComponentEnum *components,int *componentCount)
+                                  OFX::PixelComponentEnum *components,int */*componentCount*/)
 {
+    #ifdef DEBUG
+    std::cout << "onInputFileChanged ..." << std::endl;
+    #endif
     assert(premult && components);
+    if (newFile!=_filename)
+        restoreState(newFile);
+    # ifdef OFX_IO_USING_OCIO
+    switch(_xcf[0].colorSpace()) {
+    case Magick::RGBColorspace:
+        _ocio->setInputColorspace("sRGB");
+        break;
+    case Magick::sRGBColorspace:
+        _ocio->setInputColorspace("sRGB");
+        break;
+    case Magick::scRGBColorspace:
+        _ocio->setInputColorspace("sRGB");
+        break;
+    case Magick::Rec709LumaColorspace:
+        _ocio->setInputColorspace("Rec709");
+        break;
+    case Magick::Rec709YCbCrColorspace:
+        _ocio->setInputColorspace("Rec709");
+        break;
+    default:
+        _ocio->setInputColorspace("Linear");
+        break;
+    }
+    # endif // OFX_IO_USING_OCIO
     *components = OFX::ePixelComponentRGBA;
     *premult = OFX::eImageOpaque;
 }
@@ -164,7 +265,7 @@ mDeclareReaderPluginFactory(ReadXCFPluginFactory, {}, {}, false);
 /** @brief The basic describe function, passed a plugin descriptor */
 void ReadXCFPluginFactory::describe(OFX::ImageEffectDescriptor &desc)
 {
-    GenericReaderDescribe(desc, kSupportsTiles, false);
+    GenericReaderDescribe(desc, kSupportsTiles, kIsMultiPlanar);
     desc.setLabel(kPluginName);
 
     #ifdef OFX_EXTENSIONS_TUTTLE
@@ -174,21 +275,13 @@ void ReadXCFPluginFactory::describe(OFX::ImageEffectDescriptor &desc)
     #endif
 
     std::string magickV = MagickCore::GetMagickVersion(NULL);
-    std::string delegates = MagickCore::GetMagickDelegates();
-    desc.setPluginDescription("Read GIMP/XCF image format.\n\nWritten by Ole-André Rodlie <olear@fxarena.net>\n\n Powered by "+magickV+"\n\nFeatures: "+delegates);
+    desc.setPluginDescription("Read GIMP/XCF image format.\n\nWritten by Ole-André Rodlie <olear@fxarena.net>\n\nPowered by "+magickV);
 }
 
 /** @brief The describe in context function, passed a plugin descriptor and a context */
 void ReadXCFPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, ContextEnum context)
 {
     PageParamDescriptor *page = GenericReaderDescribeInContextBegin(desc, context, isVideoStreamPlugin(), kSupportsRGBA, kSupportsRGB, kSupportsAlpha, kSupportsTiles);
-    {
-        IntParamDescriptor *param = desc.defineIntParam(kParamLayer);
-        param->setLabel(kParamLayerLabel);
-        param->setHint(kParamLayerHint);
-        param->setDefault(kParamLayerDefault);
-        page->addChild(*param);
-    }
     GenericReaderDescribeInContextEnd(desc, context, page, "reference", "reference");
 }
 
