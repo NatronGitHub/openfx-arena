@@ -122,24 +122,10 @@ int ReadPSDPlugin::getImageLayers(const std::string &filename)
     #ifdef DEBUG
     std::cout << "getImageLayers ..." << std::endl;
     #endif
-    int layers = 0;
-    int max = 999;
-    Magick::Image image;
-    #ifdef DEBUG
-    image.debug(DEBUG_MAGICK);
-    #endif
-    while (layers<max) {
-        std::ostringstream layer;
-        layer << filename;
-        layer << "[" << layers << "]";
-        try {
-            image.read(layer.str());
-        }
-        catch(Magick::Exception) {
-            break;
-        }
-        layers++;
-    }
+    int layers;
+    std::list <Magick::Image> image;
+    Magick::readImages(&image, filename);
+    layers = image.size();
     if (layers>0)
         layers--;
     #ifdef DEBUG
