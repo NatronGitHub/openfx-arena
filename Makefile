@@ -1,7 +1,7 @@
 # build a combined plugin that reads all formats
 SUBDIRS = Bundle
 
-SUBDIRS_NOMULTI = Reflection Text Texture Tile Arc Polar Roll Wave Swirl Implode Emboss Charcoal Oilpaint TextPango ReadPSD ReadXCF ReadMisc ReadSVG
+SUBDIRS_NOMULTI = Reflection Text Texture Tile Arc Polar Roll Wave Swirl Implode Emboss Charcoal Oilpaint TextPango ReadPSD ReadXCF ReadSVG
 
 all: subdirs
 
