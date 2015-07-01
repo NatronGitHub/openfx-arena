@@ -155,20 +155,14 @@ void ReadPSDPlugin::decodePlane(const std::string& /*filename*/, OfxTime /*time*
         layerName=layerChannels[0];
     if (!layerName.empty()) {
         for (size_t i = 0; i < _psd.size(); i++) {
-            if (_psd[i].label()==layerName) {
-                #ifdef DEBUG
-                std::cout << "found layer! " << layerName << std::endl;
-                #endif
-                container.composite(_psd[i],_psd[i].page().xOff(),_psd[i].page().yOff(),Magick::OverCompositeOp);
-                break;
-            }
-            // unnamed layer:
+            bool foundLayer = false;
             std::ostringstream psdLayer;
             psdLayer << "PSD Layer #" << i;
-            if (psdLayer.str()==layerName) {
-                #ifdef DEBUG
-                std::cout << "found layer! " << layerName << std::endl;
-                #endif
+            if (_psd[i].label()==layerName)
+                foundLayer = true;
+            if (psdLayer.str()==layerName && !foundLayer)
+                foundLayer = true;
+            if (foundLayer) {
                 container.composite(_psd[i],_psd[i].page().xOff(),_psd[i].page().yOff(),Magick::OverCompositeOp);
                 break;
             }
