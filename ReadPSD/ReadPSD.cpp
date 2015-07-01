@@ -149,13 +149,10 @@ void ReadPSDPlugin::decodePlane(const std::string& /*filename*/, OfxTime /*time*
     #endif
     Magick::Image container(Magick::Geometry(bounds.x2,bounds.y2),Magick::Color("rgba(0,0,0,0)"));
     std::string layerName;
-    std::string::size_type prev_pos = 0, pos = 0;
-    while( (pos = rawComponents.find('_', pos)) != std::string::npos ) { // TODO meh, find a better solution...
-        std::string substring( rawComponents.substr(prev_pos, pos-prev_pos) );
-        if (substring!="NatronOfxImageComponentsPlane" && substring!="Channel" && substring!="R" && substring!="G" && substring!="B" && substring!="A")
-            layerName = substring;
-        prev_pos = ++pos;
-    }
+    std::vector<std::string> layerChannels = OFX::mapPixelComponentCustomToLayerChannels(rawComponents);
+    int numChannels = layerChannels.size();
+    if (numChannels==5) // layer+R+G+B+A
+        layerName=layerChannels[0];
     if (!layerName.empty()) {
         for (size_t i = 0; i < _psd.size(); i++) {
             if (_psd[i].label()==layerName) {
@@ -165,6 +162,7 @@ void ReadPSDPlugin::decodePlane(const std::string& /*filename*/, OfxTime /*time*
                 container.composite(_psd[i],_psd[i].page().xOff(),_psd[i].page().yOff(),Magick::OverCompositeOp);
                 break;
             }
+            // unnamed layer:
             std::ostringstream psdLayer;
             psdLayer << "PSD Layer #" << i;
             if (psdLayer.str()==layerName) {
