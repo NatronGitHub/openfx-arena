@@ -49,7 +49,7 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #define kPluginGrouping "Image/Readers"
 #define kPluginIdentifier "net.fxarena.openfx.ReadPSD"
 #define kPluginVersionMajor 1
-#define kPluginVersionMinor 5
+#define kPluginVersionMinor 6
 
 #define kSupportsRGBA true
 #define kSupportsRGB false
@@ -119,24 +119,25 @@ void ReadPSDPlugin::getClipComponents(const OFX::ClipComponentsArguments& args, 
     clipComponents.addClipComponents(*_outputClip, getOutputComponents());
     clipComponents.setPassThroughClip(NULL, args.time, args.view);
     if (_psd.size()>0) {
-        for (size_t i = 0; i < _psd.size(); i++) {
-            if (i!=0) { // 0 is all layers merged, ignore
-                std::ostringstream layerName;
-                layerName << _psd[i].label();
-                if (layerName.str().empty())
-                    layerName << "PSD Layer #" << i; // add a label if empty
-                std::string component(kNatronOfxImageComponentsPlane);
-                component.append(layerName.str());
-                component.append(kNatronOfxImageComponentsPlaneChannel);
-                component.append("R");
-                component.append(kNatronOfxImageComponentsPlaneChannel);
-                component.append("G");
-                component.append(kNatronOfxImageComponentsPlaneChannel);
-                component.append("B");
-                component.append(kNatronOfxImageComponentsPlaneChannel);
-                component.append("A");
-                clipComponents.addClipComponents(*_outputClip, component);
-            }
+        int startLayer = 0;
+        if (_psd[0].format()=="Adobe Photoshop bitmap")
+            startLayer++;
+        for (int i = startLayer; i < (int)_psd.size(); i++) {
+            std::ostringstream layerName;
+            layerName << _psd[i].label();
+            if (layerName.str().empty())
+                layerName << "Image Layer #" << i; // add a label if empty
+            std::string component(kNatronOfxImageComponentsPlane);
+            component.append(layerName.str());
+            component.append(kNatronOfxImageComponentsPlaneChannel);
+            component.append("R");
+            component.append(kNatronOfxImageComponentsPlaneChannel);
+            component.append("G");
+            component.append(kNatronOfxImageComponentsPlaneChannel);
+            component.append("B");
+            component.append(kNatronOfxImageComponentsPlaneChannel);
+            component.append("A");
+            clipComponents.addClipComponents(*_outputClip, component);
         }
     }
 }
@@ -157,7 +158,7 @@ void ReadPSDPlugin::decodePlane(const std::string& /*filename*/, OfxTime /*time*
         for (size_t i = 0; i < _psd.size(); i++) {
             bool foundLayer = false;
             std::ostringstream psdLayer;
-            psdLayer << "PSD Layer #" << i;
+            psdLayer << "Image Layer #" << i;
             if (_psd[i].label()==layerName)
                 foundLayer = true;
             if (psdLayer.str()==layerName && !foundLayer)
@@ -274,13 +275,13 @@ void ReadPSDPluginFactory::describe(OFX::ImageEffectDescriptor &desc)
     desc.setLabel(kPluginName);
 
     #ifdef OFX_EXTENSIONS_TUTTLE
-    const char* extensions[] = {"psd", NULL};
+    const char* extensions[] = {"psd", "xcf", NULL};
     desc.addSupportedExtensions(extensions);
     desc.setPluginEvaluation(92);
     #endif
 
     std::string magickV = MagickCore::GetMagickVersion(NULL);
-    desc.setPluginDescription("Read PSD image format.\n\nWritten by Ole-André Rodlie <olear@fxarena.net>\n\nPowered by "+magickV);
+    desc.setPluginDescription("Read Photoshop/GIMP/Cinepaint image formats.\n\nWritten by Ole-André Rodlie <olear@fxarena.net>\n\nPowered by "+magickV);
 }
 
 /** @brief The describe in context function, passed a plugin descriptor and a context */
