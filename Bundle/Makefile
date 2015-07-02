@@ -14,7 +14,6 @@ PLUGINOBJECTS = \
         Oilpaint.o \
         TextPango.o \
         ReadPSD.o \
-        ReadXCF.o \
         ReadSVG.o \
         ofxsOGLTextRenderer.o \
         ofxsOGLFontData.o \
@@ -55,8 +54,6 @@ RESOURCES = \
 ../TextPango/net.fxarena.openfx.TextPango.svg \
 ../ReadPSD/net.fxarena.openfx.ReadPSD.png \
 ../ReadPSD/net.fxarena.openfx.ReadPSD.svg \
-../ReadXCF/net.fxarena.openfx.ReadXCF.png \
-../ReadXCF/net.fxarena.openfx.ReadXCF.svg \
 ../ReadSVG/net.fxarena.openfx.ReadSVG.png \
 ../ReadSVG/net.fxarena.openfx.ReadSVG.svg \
 
@@ -76,7 +73,6 @@ VPATH += \
 ../Oilpaint \
 ../TextPango \
 ../ReadPSD \
-../ReadXCF \
 ../ReadSVG \
 
 include ../Makefile.master
@@ -98,7 +94,6 @@ CXXFLAGS += \
 -I../Oilpaint \
 -I../TextPango \
 -I../ReadPSD \
--I../ReadXCF \
 -I../ReadSVG \
 
 CXXFLAGS  += $(MAGICK_CXXFLAGS)
