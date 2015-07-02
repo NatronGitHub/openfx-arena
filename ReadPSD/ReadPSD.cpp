@@ -148,7 +148,11 @@ void ReadPSDPlugin::decodePlane(const std::string& /*filename*/, OfxTime /*time*
     #ifdef DEBUG
     std::cout << "decodePlane ..." << std::endl;
     #endif
-    Magick::Image container(Magick::Geometry(bounds.x2,bounds.y2),Magick::Color("rgba(0,0,0,0)"));
+    int offsetX = 0;
+    int offsetY = 0;
+    int layer = 0;
+    int width = bounds.x2;
+    int height = bounds.y2;
     std::string layerName;
     std::vector<std::string> layerChannels = OFX::mapPixelComponentCustomToLayerChannels(rawComponents);
     int numChannels = layerChannels.size();
@@ -164,24 +168,19 @@ void ReadPSDPlugin::decodePlane(const std::string& /*filename*/, OfxTime /*time*
             if (psdLayer.str()==layerName && !foundLayer)
                 foundLayer = true;
             if (foundLayer) {
-                int offsetX = 0;
-                int offsetY = 0;
                 if ((int)_psd[i].columns()!=bounds.x2)
                     offsetX = _psd[i].page().xOff();
                 if ((int)_psd[i].rows()!=bounds.y2)
                     offsetY = _psd[i].page().yOff();
-                #ifdef DEBUG
-                std::cout << "offset layer " << offsetX << "x" << offsetY << std::endl;
-                #endif
-                container.composite(_psd[i],offsetX,offsetY,Magick::OverCompositeOp);
+                layer = i;
                 break;
             }
         }
     }
-    else
-        container.composite(_psd[0],0,0,Magick::OverCompositeOp);
+    Magick::Image container(Magick::Geometry(width,height),Magick::Color("rgba(0,0,0,0)"));
+    container.composite(_psd[layer],offsetX,offsetY,Magick::OverCompositeOp);
     container.flip();
-    container.write(0,0,bounds.x2,bounds.y2,"RGBA",Magick::FloatPixel,pixelData);
+    container.write(0,0,width,height,"RGBA",Magick::FloatPixel,pixelData);
 }
 
 bool ReadPSDPlugin::getFrameBounds(const std::string& /*filename*/,

@@ -60,8 +60,6 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #define kSupportsAlpha false
 #define kSupportsTiles false
 
-#define DEBUG_MAGICK false
-
 class ReadSVGPlugin : public GenericReaderPlugin
 {
 public:
@@ -114,21 +112,21 @@ ReadSVGPlugin::decode(const std::string& filename,
     std::cout << "decode ..." << std::endl;
     #endif
     if (!hasRSVG_)
-        setPersistentMessage(OFX::Message::eMessageError, "", "librsvg missing");
+        setPersistentMessage(OFX::Message::eMessageError, "", "librsvg missing, some features may not work as expected");
     int dpi = 0;
     dpi_->getValueAtTime(time, dpi);
     Magick::Image image;
-    #ifdef DEBUG
-    image.debug(DEBUG_MAGICK);
-    #endif
     image.resolutionUnits(Magick::PixelsPerInchResolution);
     image.density(Magick::Geometry(dpi,dpi));
-    image.read(filename);
+    try {
+        image.read(filename);
+    }
+    catch(Magick::Exception) {
+        setPersistentMessage(OFX::Message::eMessageError, "", "Unable to read image");
+        OFX::throwSuiteStatusException(kOfxStatErrFormat);
+    }
     if (image.columns()>0 && image.rows()>0) {
         Magick::Image container(Magick::Geometry(bounds.x2,bounds.y2),Magick::Color("rgba(0,0,0,0)"));
-        #ifdef DEBUG
-        container.debug(DEBUG_MAGICK);
-        #endif
         container.composite(image,0,0,Magick::OverCompositeOp);
         container.flip();
         container.write(0,0,bounds.x2,bounds.y2,"RGBA",Magick::FloatPixel,pixelData);
@@ -164,14 +162,17 @@ void ReadSVGPlugin::restoreState(const std::string& filename)
     std::cout << "restoreState ..." << std::endl;
     #endif
     Magick::Image image;
-    #ifdef DEBUG
-    image.debug(DEBUG_MAGICK);
-    #endif
     int dpi;
     dpi_->getValue(dpi);
     image.resolutionUnits(Magick::PixelsPerInchResolution);
     image.density(Magick::Geometry(dpi,dpi));
-    image.read(filename);
+    try {
+        image.read(filename);
+    }
+    catch(Magick::Exception) {
+        setPersistentMessage(OFX::Message::eMessageError, "", "Unable to read image");
+        OFX::throwSuiteStatusException(kOfxStatErrFormat);
+    }
     if (image.columns()>0 && image.rows()>0) {
         width_ = image.columns();
         height_ = image.rows();
@@ -192,16 +193,16 @@ void ReadSVGPlugin::changedParam(const OFX::InstanceChangedArgs &args, const std
         std::string imageFile;
         _fileParam->getValue(imageFile);
         dpi_->getValue(dpi);
-        #ifdef DEBUG
-        std::cout << "changed dpi to " << dpi << std::endl;
-        #endif
         Magick::Image image;
-        #ifdef DEBUG
-        image.debug(DEBUG_MAGICK);
-        #endif
         image.resolutionUnits(Magick::PixelsPerInchResolution);
         image.density(Magick::Geometry(dpi,dpi));
-        image.read(imageFile);
+        try {
+            image.read(imageFile);
+        }
+        catch(Magick::Exception) {
+            setPersistentMessage(OFX::Message::eMessageError, "", "Unable to read image");
+            OFX::throwSuiteStatusException(kOfxStatErrFormat);
+        }
         if (image.columns()>0 && image.rows()>0) {
             width_ = image.columns();
             height_ = image.rows();
@@ -220,15 +221,18 @@ void ReadSVGPlugin::onInputFileChanged(const std::string& newFile,
     std::cout << "onInputFileChanged ..." << std::endl;
     #endif
     assert(premult && components);
-    Magick::Image image;
-    #ifdef DEBUG
-    image.debug(DEBUG_MAGICK);
-    #endif
     int dpi;
     dpi_->getValue(dpi);
+    Magick::Image image;
     image.resolutionUnits(Magick::PixelsPerInchResolution);
     image.density(Magick::Geometry(dpi,dpi));
-    image.read(newFile);
+    try {
+        image.read(newFile);
+    }
+    catch(Magick::Exception) {
+        setPersistentMessage(OFX::Message::eMessageError, "", "Unable to read image");
+        OFX::throwSuiteStatusException(kOfxStatErrFormat);
+    }
     if (image.columns()>0 && image.rows()>0) {
         width_ = image.columns();
         height_ = image.rows();
