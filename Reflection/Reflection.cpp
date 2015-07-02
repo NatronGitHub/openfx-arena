@@ -337,6 +337,8 @@ void ReflectionPlugin::render(const OFX::RenderArguments &args)
         image0.flip();
         spacing = std::floor(spacing * args.renderScale.x + 0.5);
         offset = std::floor(offset * args.renderScale.x + 0.5);
+        if (offset>=mirrorHeight)
+            offset=mirrorHeight-1;
         image0.crop(Magick::Geometry(srcWidth,mirrorHeight-offset,0,offset+offset));
         image.crop(Magick::Geometry(srcWidth,mirrorHeight+offset,0,mirrorHeight-offset));
         if (maskClip_ && maskClip_->isConnected()) {
