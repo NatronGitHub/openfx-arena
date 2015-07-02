@@ -120,11 +120,11 @@ void ReadPSDPlugin::getClipComponents(const OFX::ClipComponentsArguments& args, 
     clipComponents.setPassThroughClip(NULL, args.time, args.view);
     if (_psd.size()>0) {
         for (size_t i = 0; i < _psd.size(); i++) {
-            if (i!=0) {
+            if (i!=0) { // 0 is all layers merged, ignore
                 std::ostringstream layerName;
                 layerName << _psd[i].label();
                 if (layerName.str().empty())
-                    layerName << "PSD Layer #" << i;
+                    layerName << "PSD Layer #" << i; // add a label if empty
                 std::string component(kNatronOfxImageComponentsPlane);
                 component.append(layerName.str());
                 component.append(kNatronOfxImageComponentsPlaneChannel);
@@ -163,7 +163,16 @@ void ReadPSDPlugin::decodePlane(const std::string& /*filename*/, OfxTime /*time*
             if (psdLayer.str()==layerName && !foundLayer)
                 foundLayer = true;
             if (foundLayer) {
-                container.composite(_psd[i],_psd[i].page().xOff(),_psd[i].page().yOff(),Magick::OverCompositeOp);
+                int offsetX = 0;
+                int offsetY = 0;
+                if ((int)_psd[i].columns()!=bounds.x2)
+                    offsetX = _psd[i].page().xOff();
+                if ((int)_psd[i].rows()!=bounds.y2)
+                    offsetY = _psd[i].page().yOff();
+                #ifdef DEBUG
+                std::cout << "offset layer " << offsetX << "x" << offsetY << std::endl;
+                #endif
+                container.composite(_psd[i],offsetX,offsetY,Magick::OverCompositeOp);
                 break;
             }
         }
@@ -190,6 +199,9 @@ bool ReadPSDPlugin::getFrameBounds(const std::string& /*filename*/,
         bounds->y2 = _psd[0].rows();
         *par = 1.0;
     }
+    #ifdef DEBUG
+    std::cout << "bounds " << bounds->x2 << "x" << bounds->y2 << std::endl;
+    #endif
     return true;
 }
 
