@@ -63,7 +63,7 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #define kParamICCLabel "ICC profile"
 #define kParamICCHint "Convert to the selected ICC profile"
 
-void _getProFiles(std::vector<std::string> &files, bool desc) {
+void _getProFiles(std::vector<std::string> &files, bool desc, std::string filter) {
     std::vector<std::string> paths;
     paths.push_back("/usr/share/color/icc/");
     paths.push_back("\\Windows\\system32\\spool\\drivers\\color\\");
@@ -71,7 +71,7 @@ void _getProFiles(std::vector<std::string> &files, bool desc) {
     for (unsigned int i = 0; i < paths.size(); i++) {
         DIR *dp;
         struct dirent *dirp;
-        if((dp=opendir(paths[i].c_str())) != NULL) {
+        if ((dp=opendir(paths[i].c_str())) != NULL) {
             while ((dirp=readdir(dp)) != NULL) {
                 std::string proFile = dirp->d_name;
                 std::ostringstream profileDesc;
@@ -84,15 +84,23 @@ void _getProFiles(std::vector<std::string> &files, bool desc) {
                     if (lcmsProfile) {
                         cmsGetProfileInfoASCII(lcmsProfile, cmsInfoDescription, "en", "US", buffer, 500);
                         profileDesc << buffer;
-                        if(cmsGetColorSpace(lcmsProfile) == cmsSigRgbData)
+                        if (cmsGetColorSpace(lcmsProfile) == cmsSigRgbData)
                             rgb = true;
                     }
                     cmsCloseProfile(lcmsProfile);
                     if (!profileDesc.str().empty() && rgb) {
-                        if (desc)
-                            files.push_back(profileDesc.str());
-                        else
-                            files.push_back(std::string(dirp->d_name));
+                        if (!filter.empty()) {
+                            if (profileDesc.str()==filter) {
+                                files.push_back(path.str());
+                                break;
+                            }
+                        }
+                        else {
+                            if (desc)
+                                files.push_back(profileDesc.str());
+                            else
+                                files.push_back(proFile);
+                        }
                     }
             }
         }
@@ -201,9 +209,11 @@ void ReadPSDPlugin::decodePlane(const std::string& /*filename*/, OfxTime time, c
     int height = bounds.y2;
     std::string layerName;
     int iccProfileID = 0;
+    std::string iccProfile;
     std::vector<std::string> layerChannels = OFX::mapPixelComponentCustomToLayerChannels(rawComponents);
     int numChannels = layerChannels.size();
     _icc->getValueAtTime(time, iccProfileID);
+    _icc->getOption(iccProfileID, iccProfile);
     if (numChannels==5) // layer+R+G+B+A
         layerName=layerChannels[0];
     if (!layerName.empty()) {
@@ -225,8 +235,21 @@ void ReadPSDPlugin::decodePlane(const std::string& /*filename*/, OfxTime time, c
             }
         }
     }
+    Magick::Image image;
+    image = _psd[layer];
+    if (!iccProfile.empty() && iccProfile.find("Undefined") == std::string::npos) {
+        std::vector<std::string> profile;
+        _getProFiles(profile, false, iccProfile);
+        if (!profile[0].empty()) {
+            Magick::Blob iccBlob;
+            Magick::Image iccExtract(profile[0]);
+            iccExtract.write(&iccBlob);
+            if (iccBlob.length()>0)
+                image.profile("ICC",iccBlob); // TODO only works if image has an icc profile already
+        }
+    }
     Magick::Image container(Magick::Geometry(width,height),Magick::Color("rgba(0,0,0,0)"));
-    container.composite(_psd[layer],offsetX,offsetY,Magick::OverCompositeOp);
+    container.composite(image,offsetX,offsetY,Magick::OverCompositeOp);
     container.flip();
     container.write(0,0,width,height,"RGBA",Magick::FloatPixel,pixelData);
 }
@@ -268,8 +291,6 @@ void ReadPSDPlugin::restoreState(const std::string& filename)
     }
     if (_psd[0].columns()>0 && _psd[0].rows()>0) {
         _filename = filename;
-        if (_psd[0].iccColorProfile().length()>0) { // image has an icc profile
-        }
     }
     else {
         _psd.clear();
@@ -344,7 +365,7 @@ void ReadPSDPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, C
         param->setHint(kParamICCHint);
         param->appendOption("Undefined");
         std::vector<std::string> profiles;
-        _getProFiles(profiles, true);
+        _getProFiles(profiles, true, "");
         for (unsigned int i = 0;i < profiles.size();i++)
             param->appendOption(profiles[i]);
         page->addChild(*param);
