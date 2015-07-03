@@ -51,7 +51,7 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #define kPluginGrouping "Image/Readers"
 #define kPluginIdentifier "net.fxarena.openfx.ReadPSD"
 #define kPluginVersionMajor 1
-#define kPluginVersionMinor 7
+#define kPluginVersionMinor 8
 
 #define kSupportsRGBA true
 #define kSupportsRGB false
@@ -59,11 +59,15 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #define kSupportsTiles false
 #define kIsMultiPlanar true
 
-#define kParamICC "icc"
-#define kParamICCLabel "ICC profile"
-#define kParamICCHint "Convert to the selected ICC profile"
+#define kParamICCIn "iccIn"
+#define kParamICCInLabel "ICC input profile"
+#define kParamICCInHint "ICC input profile"
 
-void _getProFiles(std::vector<std::string> &files, bool desc, std::string filter) {
+#define kParamICCOut "iccOut"
+#define kParamICCOutLabel "ICC output profile"
+#define kParamICCOutHint "ICC output profile"
+
+void _getProFiles(std::vector<std::string> &files, bool desc, std::string filter, int colorspace) {
     std::vector<std::string> paths;
     paths.push_back("/usr/share/color/icc/");
     paths.push_back("\\Windows\\system32\\spool\\drivers\\color\\");
@@ -78,17 +82,21 @@ void _getProFiles(std::vector<std::string> &files, bool desc, std::string filter
                     cmsHPROFILE lcmsProfile;
                     char buffer[500];
                     std::ostringstream path;
-                    bool rgb = false;
+                    int iccColorspace = 0;
                     path << paths[i] << proFile;
                     lcmsProfile = cmsOpenProfileFromFile(path.str().c_str(), "r");
                     if (lcmsProfile) {
                         cmsGetProfileInfoASCII(lcmsProfile, cmsInfoDescription, "en", "US", buffer, 500);
                         profileDesc << buffer;
-                        if (cmsGetColorSpace(lcmsProfile) == cmsSigRgbData)
-                            rgb = true;
+                        if(cmsGetColorSpace(lcmsProfile) == cmsSigRgbData)
+                            iccColorspace = 1;
+                        if(cmsGetColorSpace(lcmsProfile) == cmsSigCmykData)
+                            iccColorspace = 2;
+                        if(cmsGetColorSpace(lcmsProfile) == cmsSigGrayData)
+                            iccColorspace = 3;
                     }
                     cmsCloseProfile(lcmsProfile);
-                    if (!profileDesc.str().empty() && rgb) {
+                    if (!profileDesc.str().empty() && (colorspace==iccColorspace||colorspace>3)) {
                         if (!filter.empty()) {
                             if (profileDesc.str()==filter) {
                                 files.push_back(path.str());
@@ -142,7 +150,8 @@ private:
     virtual void onInputFileChanged(const std::string& newFile, OFX::PreMultiplicationEnum *premult, OFX::PixelComponentEnum *components, int *componentCount) OVERRIDE FINAL;
     std::string _filename;
     std::vector<Magick::Image> _psd;
-    OFX::ChoiceParam *_icc;
+    OFX::ChoiceParam *_iccIn;
+    OFX::ChoiceParam *_iccOut;
     bool _hasLCMS;
 };
 
@@ -162,8 +171,9 @@ false
     if (delegates.find("lcms") != std::string::npos)
         _hasLCMS = true;
 
-    _icc = fetchChoiceParam(kParamICC);
-    assert(_outputComponents && _icc);
+    _iccIn = fetchChoiceParam(kParamICCIn);
+    _iccOut = fetchChoiceParam(kParamICCOut);
+    assert(_outputComponents && _iccIn && _iccOut);
 }
 
 ReadPSDPlugin::~ReadPSDPlugin()
@@ -214,12 +224,18 @@ void ReadPSDPlugin::decodePlane(const std::string& /*filename*/, OfxTime time, c
     int width = bounds.x2;
     int height = bounds.y2;
     std::string layerName;
-    int iccProfileID = 0;
-    std::string iccProfile;
+    int iccProfileInID = 0;
+    std::string iccProfileIn;
+    int iccProfileOutID = 0;
+    std::string iccProfileOut;
     std::vector<std::string> layerChannels = OFX::mapPixelComponentCustomToLayerChannels(rawComponents);
     int numChannels = layerChannels.size();
-    _icc->getValueAtTime(time, iccProfileID);
-    _icc->getOption(iccProfileID, iccProfile);
+    _iccIn->getValueAtTime(time, iccProfileInID);
+    _iccIn->getOption(iccProfileInID, iccProfileIn);
+    _iccOut->getValueAtTime(time, iccProfileOutID);
+    _iccOut->getOption(iccProfileOutID, iccProfileOut);
+
+    // Get layer
     if (numChannels==5) // layer+R+G+B+A
         layerName=layerChannels[0];
     if (!layerName.empty()) {
@@ -241,11 +257,15 @@ void ReadPSDPlugin::decodePlane(const std::string& /*filename*/, OfxTime time, c
             }
         }
     }
+
+    // Get image
     Magick::Image image;
     image = _psd[layer];
-    if (!iccProfile.empty() && iccProfile.find("Undefined") == std::string::npos) {
+
+    // ICC input
+    if (!iccProfileIn.empty() && iccProfileIn.find("None") == std::string::npos) {
         std::vector<std::string> profile;
-        _getProFiles(profile, false, iccProfile);
+        _getProFiles(profile, false, iccProfileIn,4);
         if (!profile[0].empty()) {
             if (!_hasLCMS)
                 setPersistentMessage(OFX::Message::eMessageError, "", "LCMS support missing, unable to convert");
@@ -254,10 +274,29 @@ void ReadPSDPlugin::decodePlane(const std::string& /*filename*/, OfxTime time, c
                 Magick::Image iccExtract(profile[0]);
                 iccExtract.write(&iccBlob);
                 if (iccBlob.length()>0)
-                    image.profile("ICC",iccBlob); // TODO only works if image has an icc profile already
+                    image.profile("ICC",iccBlob);
             }
         }
     }
+
+    // ICC output
+    if (!iccProfileOut.empty() && iccProfileOut.find("None") == std::string::npos) {
+        std::vector<std::string> profile;
+        _getProFiles(profile, false, iccProfileOut,1);
+        if (!profile[0].empty()) {
+            if (!_hasLCMS)
+                setPersistentMessage(OFX::Message::eMessageError, "", "LCMS support missing, unable to convert");
+            else {
+                Magick::Blob iccBlob;
+                Magick::Image iccExtract(profile[0]);
+                iccExtract.write(&iccBlob);
+                if (iccBlob.length()>0)
+                    image.profile("ICC",iccBlob);
+            }
+        }
+    }
+
+    // Return image
     Magick::Image container(Magick::Geometry(width,height),Magick::Color("rgba(0,0,0,0)"));
     container.composite(image,offsetX,offsetY,Magick::OverCompositeOp);
     container.flip();
@@ -370,14 +409,25 @@ void ReadPSDPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, C
 {
     PageParamDescriptor *page = GenericReaderDescribeInContextBegin(desc, context, isVideoStreamPlugin(), kSupportsRGBA, kSupportsRGB, kSupportsAlpha, kSupportsTiles);
     {
-        ChoiceParamDescriptor* param = desc.defineChoiceParam(kParamICC);
-        param->setLabel(kParamICCLabel);
-        param->setHint(kParamICCHint);
-        param->appendOption("Undefined");
-        std::vector<std::string> profiles;
-        _getProFiles(profiles, true, "");
-        for (unsigned int i = 0;i < profiles.size();i++)
-            param->appendOption(profiles[i]);
+        ChoiceParamDescriptor* param = desc.defineChoiceParam(kParamICCIn);
+        param->setLabel(kParamICCInLabel);
+        param->setHint(kParamICCInHint);
+        param->appendOption("None");
+        std::vector<std::string> profilesIn;
+        _getProFiles(profilesIn, true, "",4);
+        for (unsigned int i = 0;i < profilesIn.size();i++)
+            param->appendOption(profilesIn[i]);
+        page->addChild(*param);
+    }
+    {
+        ChoiceParamDescriptor* param = desc.defineChoiceParam(kParamICCOut);
+        param->setLabel(kParamICCOutLabel);
+        param->setHint(kParamICCOutHint);
+        param->appendOption("None");
+        std::vector<std::string> profilesOut;
+        _getProFiles(profilesOut, true, "",1);
+        for (unsigned int i = 0;i < profilesOut.size();i++)
+            param->appendOption(profilesOut[i]);
         page->addChild(*param);
     }
     GenericReaderDescribeInContextEnd(desc, context, page, "reference", "reference");
