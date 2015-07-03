@@ -43,7 +43,7 @@ if [ "$CL" == "1" ]; then
 else
   USE_CL=0
 fi
-MAGICK_OPT="--disable-docs --disable-deprecated --with-magick-plus-plus=yes --with-quantum-depth=${Q} --without-dps --without-djvu --without-fftw --without-fpx --without-gslib --without-gvc --without-jbig --without-jpeg --without-lcms --without-lcms2 --without-openjp2 --without-lqr --without-lzma --without-openexr --with-pango --with-png --with-rsvg --without-tiff --without-webp --with-xml --with-zlib --without-bzlib --enable-static --disable-shared --enable-hdri --with-freetype --with-fontconfig --without-x --without-modules $CL_CONF"
+MAGICK_OPT="--disable-docs --disable-deprecated --with-magick-plus-plus=yes --with-quantum-depth=${Q} --without-dps --without-djvu --without-fftw --without-fpx --without-gslib --without-gvc --without-jbig --without-jpeg --without-lcms --with-lcms2 --without-openjp2 --without-lqr --without-lzma --without-openexr --with-pango --with-png --with-rsvg --without-tiff --without-webp --with-xml --with-zlib --without-bzlib --enable-static --disable-shared --enable-hdri --with-freetype --with-fontconfig --without-x --without-modules $CL_CONF"
 
 if [ "$OS" == "Msys" ]; then
   MAGICK=$MAGICK_WIN
@@ -220,11 +220,11 @@ if [ "$PKGNAME" != "Arena" ]; then
 fi
 
 if [ "$OS" != "Msys" ]; then
-  $MAKE USE_SVG=1 OPENCL=$USE_CL USE_PANGO=1 STATIC=1 FREEBSD=$USE_FREEBSD BITS=$BIT CONFIG=$TAG clean
-  $MAKE USE_SVG=1 OPENCL=$USE_CL USE_PANGO=1 STATIC=1 FREEBSD=$USE_FREEBSD BITS=$BIT CONFIG=$TAG || exit 1
+  $MAKE USE_LCMS=1 USE_SVG=1 OPENCL=$USE_CL USE_PANGO=1 STATIC=1 FREEBSD=$USE_FREEBSD BITS=$BIT CONFIG=$TAG clean
+  $MAKE USE_LCMS=1 USE_SVG=1 OPENCL=$USE_CL USE_PANGO=1 STATIC=1 FREEBSD=$USE_FREEBSD BITS=$BIT CONFIG=$TAG || exit 1
 else
-  make STATIC=1 USE_SVG=1 OPENCL=$USE_CL USE_PANGO=1 MINGW=1 BIT=$BIT CONFIG=release clean
-  make STATIC=1 USE_SVG=1 OPENCL=$USE_CL USE_PANGO=1 MINGW=1 BIT=$BIT CONFIG=release || exit 1
+  make STATIC=1 USE_LCMS=1 USE_SVG=1 OPENCL=$USE_CL USE_PANGO=1 MINGW=1 BIT=$BIT CONFIG=release clean
+  make STATIC=1 USE_LCMS=1 USE_SVG=1 OPENCL=$USE_CL USE_PANGO=1 MINGW=1 BIT=$BIT CONFIG=release || exit 1
 fi
 
 cd $CWD || exit 1
@@ -239,27 +239,9 @@ cp OpenFX-IO/LICENSE $CWD/$PKG/LICENSE.OpenFX-IO || exit 1
 if [ "$OS" != "Msys" ]; then 
   cp $PREFIX/share/doc/libpng/LICENSE $CWD/$PKG/LICENSE.libpng || exit 1
 fi
-
 if [ "$CL" == "1" ]; then
   cp $CWD/OpenCL/LICENSE $CWD/$PKG/LICENSE.OpenCL || exit 1
 fi
-
-#pango
-#cp $PREFIX/share/doc/cairo/COPYING-MPL-1.1 $CWD/$PKG/LICENSE.cairo || exit 1
-#cp $PREFIX/share/doc/glib/COPYING $CWD/$PKG/LICENSE.glib || exit 1
-#cp $PREFIX/share/doc/harfbuzz/COPYING $CWD/$PKG/LICENSE.harfbuzz || exit 1
-#cp $PREFIX/share/doc/libffi/LICENSE $CWD/$PKG/LICENSE.libffi || exit 1
-#cp $PREFIX/share/doc/pango/COPYING $CWD/$PKG/LICENSE.pango || exit 1
-#cp $PREFIX/share/doc/pixman/COPYING $CWD/$PKG/LICENSE.pixman || exit 1
-#cp $PREFIX/share/doc/fontconfig/COPYING $CWD/$PKG/LICENSE.fontconfig || exit 1
-#cp $PREFIX/share/doc/freetype/README $CWD/$PKG/LICENSE.freetype || exit 1
-
-#if [ "$OS" == "Msys" ]; then
-#  cp $PREFIX/share/doc/zlib/README $CWD/$PKG/LICENSE.zlib || exit 1
-#  cp $PREFIX/share/doc/expat/COPYING $CWD/$PKG/LICENSE.expat || exit 1
-#  cp $PREFIX/share/doc/fontconfig/COPYING $CWD/$PKG/LICENSE.fontconfig || exit 1
-#  cp $PREFIX/share/doc/freetype/README $CWD/$PKG/LICENSE.freetype || exit 1
-#fi
 
 # Strip and copy
 if [ "$PKGNAME" != "Arena" ]; then
