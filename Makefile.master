@@ -40,9 +40,7 @@ ifeq ($(USE_SVG),1)
 endif
 
 #lcms
-ifeq ($(USE_LCMS),1)
-  MAGICK_LINKFLAGS += `pkg-config lcms2 --libs --static`
-endif
+MAGICK_LINKFLAGS += `pkg-config lcms2 --libs --static`
 
 # Static
 ifeq ($(STATIC),1)

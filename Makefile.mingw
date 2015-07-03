@@ -96,9 +96,8 @@ $(OBJECTPATH)/$(PLUGINNAME).ofx.bundle: $(OBJECTPATH)/$(PLUGINNAME).ofx
 	cp /mingw/bin/libwinpthread-1.dll $@/Contents/$(ARCH)
 	cp /mingw/bin/libxml2-2.dll $@/Contents/$(ARCH)
 	cp /mingw/bin/zlib1.dll $@/Contents/$(ARCH)
-
+	cp /mingw/bin/liblcms2-2.dll $@/Contents/$(ARCH)
 	(cd $@/Contents/$(ARCH) ; mt -manifest manifest -outputresource:"$(PLUGINNAME).ofx;2")
-	
 	if [ -n "$(RESOURCES)" ]; then mkdir -p $@/Contents/Resources; cp $(RESOURCES)  $@/Contents/Resources; fi
 
 clean :
