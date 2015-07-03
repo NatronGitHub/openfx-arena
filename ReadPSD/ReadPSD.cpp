@@ -143,6 +143,7 @@ private:
     std::string _filename;
     std::vector<Magick::Image> _psd;
     OFX::ChoiceParam *_icc;
+    bool _hasLCMS;
 };
 
 ReadPSDPlugin::ReadPSDPlugin(OfxImageEffectHandle handle)
@@ -153,8 +154,13 @@ ReadPSDPlugin::ReadPSDPlugin(OfxImageEffectHandle handle)
 false
 #endif
 )
+,_hasLCMS(false)
 {
     Magick::InitializeMagick(NULL);
+
+    std::string delegates = MagickCore::GetMagickDelegates();
+    if (delegates.find("lcms") != std::string::npos)
+        _hasLCMS = true;
 
     _icc = fetchChoiceParam(kParamICC);
     assert(_outputComponents && _icc);
@@ -241,11 +247,15 @@ void ReadPSDPlugin::decodePlane(const std::string& /*filename*/, OfxTime time, c
         std::vector<std::string> profile;
         _getProFiles(profile, false, iccProfile);
         if (!profile[0].empty()) {
-            Magick::Blob iccBlob;
-            Magick::Image iccExtract(profile[0]);
-            iccExtract.write(&iccBlob);
-            if (iccBlob.length()>0)
-                image.profile("ICC",iccBlob); // TODO only works if image has an icc profile already
+            if (!_hasLCMS)
+                setPersistentMessage(OFX::Message::eMessageError, "", "LCMS support missing, unable to convert");
+            else {
+                Magick::Blob iccBlob;
+                Magick::Image iccExtract(profile[0]);
+                iccExtract.write(&iccBlob);
+                if (iccBlob.length()>0)
+                    image.profile("ICC",iccBlob); // TODO only works if image has an icc profile already
+            }
         }
     }
     Magick::Image container(Magick::Geometry(width,height),Magick::Color("rgba(0,0,0,0)"));
