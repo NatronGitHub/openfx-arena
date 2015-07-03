@@ -39,6 +39,9 @@ ifeq ($(USE_SVG),1)
   MAGICK_LINKFLAGS += `pkg-config libxml-2.0 --libs --static`
 endif
 
+#lcms
+MAGICK_LINKFLAGS += `pkg-config lcms2 --libs --static`
+
 # Static
 ifeq ($(STATIC),1)
   MAGICK_LINKFLAGS += -lgomp -lm -lpthread

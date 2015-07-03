@@ -40,6 +40,8 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include "GenericReader.h"
 #include "GenericOCIO.h"
 #include "ofxsMacros.h"
+#include <lcms2.h>
+#include <dirent.h>
 
 #ifdef OFX_IO_USING_OCIO
 #include <OpenColorIO/OpenColorIO.h>
@@ -49,13 +51,62 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #define kPluginGrouping "Image/Readers"
 #define kPluginIdentifier "net.fxarena.openfx.ReadPSD"
 #define kPluginVersionMajor 1
-#define kPluginVersionMinor 6
+#define kPluginVersionMinor 7
 
 #define kSupportsRGBA true
 #define kSupportsRGB false
 #define kSupportsAlpha false
 #define kSupportsTiles false
 #define kIsMultiPlanar true
+
+#define kParamICC "icc"
+#define kParamICCLabel "ICC profile"
+#define kParamICCHint "Convert to the selected ICC profile"
+
+void _getProFiles(std::vector<std::string> &files, bool desc, std::string filter) {
+    std::vector<std::string> paths;
+    paths.push_back("/usr/share/color/icc/");
+    paths.push_back("\\Windows\\system32\\spool\\drivers\\color\\");
+    paths.push_back("/Library/ColorSync/Profiles/");
+    for (unsigned int i = 0; i < paths.size(); i++) {
+        DIR *dp;
+        struct dirent *dirp;
+        if ((dp=opendir(paths[i].c_str())) != NULL) {
+            while ((dirp=readdir(dp)) != NULL) {
+                std::string proFile = dirp->d_name;
+                std::ostringstream profileDesc;
+                    cmsHPROFILE lcmsProfile;
+                    char buffer[500];
+                    std::ostringstream path;
+                    bool rgb = false;
+                    path << paths[i] << proFile;
+                    lcmsProfile = cmsOpenProfileFromFile(path.str().c_str(), "r");
+                    if (lcmsProfile) {
+                        cmsGetProfileInfoASCII(lcmsProfile, cmsInfoDescription, "en", "US", buffer, 500);
+                        profileDesc << buffer;
+                        if (cmsGetColorSpace(lcmsProfile) == cmsSigRgbData)
+                            rgb = true;
+                    }
+                    cmsCloseProfile(lcmsProfile);
+                    if (!profileDesc.str().empty() && rgb) {
+                        if (!filter.empty()) {
+                            if (profileDesc.str()==filter) {
+                                files.push_back(path.str());
+                                break;
+                            }
+                        }
+                        else {
+                            if (desc)
+                                files.push_back(profileDesc.str());
+                            else
+                                files.push_back(proFile);
+                        }
+                    }
+            }
+        }
+        closedir(dp);
+    }
+}
 
 class ReadPSDPlugin : public GenericReaderPlugin
 {
@@ -91,6 +142,8 @@ private:
     virtual void onInputFileChanged(const std::string& newFile, OFX::PreMultiplicationEnum *premult, OFX::PixelComponentEnum *components, int *componentCount) OVERRIDE FINAL;
     std::string _filename;
     std::vector<Magick::Image> _psd;
+    OFX::ChoiceParam *_icc;
+    bool _hasLCMS;
 };
 
 ReadPSDPlugin::ReadPSDPlugin(OfxImageEffectHandle handle)
@@ -101,9 +154,16 @@ ReadPSDPlugin::ReadPSDPlugin(OfxImageEffectHandle handle)
 false
 #endif
 )
+,_hasLCMS(false)
 {
     Magick::InitializeMagick(NULL);
-    assert(_outputComponents);
+
+    std::string delegates = MagickCore::GetMagickDelegates();
+    if (delegates.find("lcms") != std::string::npos)
+        _hasLCMS = true;
+
+    _icc = fetchChoiceParam(kParamICC);
+    assert(_outputComponents && _icc);
 }
 
 ReadPSDPlugin::~ReadPSDPlugin()
@@ -142,7 +202,7 @@ void ReadPSDPlugin::getClipComponents(const OFX::ClipComponentsArguments& args, 
     }
 }
 
-void ReadPSDPlugin::decodePlane(const std::string& /*filename*/, OfxTime /*time*/, const OfxRectI& /*renderWindow*/, float *pixelData, const OfxRectI& bounds,
+void ReadPSDPlugin::decodePlane(const std::string& /*filename*/, OfxTime time, const OfxRectI& /*renderWindow*/, float *pixelData, const OfxRectI& bounds,
                                  OFX::PixelComponentEnum /*pixelComponents*/, int /*pixelComponentCount*/, const std::string& rawComponents, int /*rowBytes*/)
 {
     #ifdef DEBUG
@@ -154,8 +214,12 @@ void ReadPSDPlugin::decodePlane(const std::string& /*filename*/, OfxTime /*time*
     int width = bounds.x2;
     int height = bounds.y2;
     std::string layerName;
+    int iccProfileID = 0;
+    std::string iccProfile;
     std::vector<std::string> layerChannels = OFX::mapPixelComponentCustomToLayerChannels(rawComponents);
     int numChannels = layerChannels.size();
+    _icc->getValueAtTime(time, iccProfileID);
+    _icc->getOption(iccProfileID, iccProfile);
     if (numChannels==5) // layer+R+G+B+A
         layerName=layerChannels[0];
     if (!layerName.empty()) {
@@ -177,8 +241,25 @@ void ReadPSDPlugin::decodePlane(const std::string& /*filename*/, OfxTime /*time*
             }
         }
     }
+    Magick::Image image;
+    image = _psd[layer];
+    if (!iccProfile.empty() && iccProfile.find("Undefined") == std::string::npos) {
+        std::vector<std::string> profile;
+        _getProFiles(profile, false, iccProfile);
+        if (!profile[0].empty()) {
+            if (!_hasLCMS)
+                setPersistentMessage(OFX::Message::eMessageError, "", "LCMS support missing, unable to convert");
+            else {
+                Magick::Blob iccBlob;
+                Magick::Image iccExtract(profile[0]);
+                iccExtract.write(&iccBlob);
+                if (iccBlob.length()>0)
+                    image.profile("ICC",iccBlob); // TODO only works if image has an icc profile already
+            }
+        }
+    }
     Magick::Image container(Magick::Geometry(width,height),Magick::Color("rgba(0,0,0,0)"));
-    container.composite(_psd[layer],offsetX,offsetY,Magick::OverCompositeOp);
+    container.composite(image,offsetX,offsetY,Magick::OverCompositeOp);
     container.flip();
     container.write(0,0,width,height,"RGBA",Magick::FloatPixel,pixelData);
 }
@@ -218,8 +299,9 @@ void ReadPSDPlugin::restoreState(const std::string& filename)
         setPersistentMessage(OFX::Message::eMessageError, "", "Unable to read image");
         OFX::throwSuiteStatusException(kOfxStatErrFormat);
     }
-    if (_psd[0].columns()>0 && _psd[0].rows()>0)
+    if (_psd[0].columns()>0 && _psd[0].rows()>0) {
         _filename = filename;
+    }
     else {
         _psd.clear();
         setPersistentMessage(OFX::Message::eMessageError, "", "Unable to read image");
@@ -287,6 +369,17 @@ void ReadPSDPluginFactory::describe(OFX::ImageEffectDescriptor &desc)
 void ReadPSDPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, ContextEnum context)
 {
     PageParamDescriptor *page = GenericReaderDescribeInContextBegin(desc, context, isVideoStreamPlugin(), kSupportsRGBA, kSupportsRGB, kSupportsAlpha, kSupportsTiles);
+    {
+        ChoiceParamDescriptor* param = desc.defineChoiceParam(kParamICC);
+        param->setLabel(kParamICCLabel);
+        param->setHint(kParamICCHint);
+        param->appendOption("Undefined");
+        std::vector<std::string> profiles;
+        _getProFiles(profiles, true, "");
+        for (unsigned int i = 0;i < profiles.size();i++)
+            param->appendOption(profiles[i]);
+        page->addChild(*param);
+    }
     GenericReaderDescribeInContextEnd(desc, context, page, "reference", "reference");
 }
 
