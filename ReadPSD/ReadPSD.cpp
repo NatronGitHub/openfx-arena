@@ -290,8 +290,15 @@ void ReadPSDPlugin::decodePlane(const std::string& /*filename*/, OfxTime time, c
                 Magick::Blob iccBlob;
                 Magick::Image iccExtract(profile[0]);
                 iccExtract.write(&iccBlob);
-                if (iccBlob.length()>0)
-                    image.profile("ICC",iccBlob);
+                if (iccBlob.length()>0) {
+                    try {
+                        image.profile("ICC",iccBlob);
+                    }
+                    catch(Magick::Exception &error) {
+                        setPersistentMessage(OFX::Message::eMessageError, "", error.what());
+                        OFX::throwSuiteStatusException(kOfxStatFailed);
+                    }
+                }
             }
         }
     }
