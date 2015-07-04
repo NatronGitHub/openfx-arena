@@ -51,7 +51,7 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #define kPluginGrouping "Image/Readers"
 #define kPluginIdentifier "net.fxarena.openfx.ReadPSD"
 #define kPluginVersionMajor 1
-#define kPluginVersionMinor 8
+#define kPluginVersionMinor 9
 
 #define kSupportsRGBA true
 #define kSupportsRGB false
@@ -59,13 +59,43 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #define kSupportsTiles false
 #define kIsMultiPlanar true
 
+#define kParamICC "icc"
+#define kParamICCLabel "Color management"
+#define kParamICCHint "Enable/Disable ICC color management"
+#define kParamICCDefault false
+
 #define kParamICCIn "iccIn"
-#define kParamICCInLabel "ICC input profile"
-#define kParamICCInHint "ICC input profile"
+#define kParamICCInLabel "Input color profile"
+#define kParamICCInHint "ICC input profile\n\nIf profile colorspace differs from image colorspace then a colorspace convert will happen."
 
 #define kParamICCOut "iccOut"
-#define kParamICCOutLabel "ICC output profile"
-#define kParamICCOutHint "ICC output profile"
+#define kParamICCOutLabel "Output color profile"
+#define kParamICCOutHint "ICC RGB output profile\n\nIf image is CMYK/GRAY a colorspace convert will happen."
+
+#define kParamICCRGB "iccRGB"
+#define kParamICCRGBLabel "Default RGB profile"
+#define kParamICCRGBHint "Default RGB profile\n\nUsed when a RGB image is missing an embedded color profile."
+#define kParamICCRGBDefault "sRGB IEC61966"
+
+#define kParamICCCMYK "iccCMYK"
+#define kParamICCCMYKLabel "Default CMYK profile"
+#define kParamICCCMYKHint "Default CMYK profile\n\nUsed when a CMYK image is missing an embedded color profile."
+#define kParamICCCMYKDefault "U.S. Web Coated"
+
+#define kParamICCGRAY "iccGRAY"
+#define kParamICCGRAYLabel "Default GRAY profile"
+#define kParamICCGRAYHint "Default GRAY profile\n\nUsed when a GRAY image is missing an embedded color profile."
+#define kParamICCGRAYDefault "" // does a sane default exists?
+
+#define kParamICCRender "renderingIntent"
+#define kParamICCRenderLabel "Rendering intent"
+#define kParamICCRenderHint "Rendering intent specifies the style of reproduction to be used."
+#define kParamICCRenderDefault 2 //Perceptual
+
+#define kParamICCBlack "blackPoint"
+#define kParamICCBlackLabel "Black point"
+#define kParamICCBlackHint "Enable/Disable black point compensation"
+#define kParamICCBlackDefault false
 
 void _getProFiles(std::vector<std::string> &files, bool desc, std::string filter, int colorspace) {
     std::vector<std::string> paths;
@@ -153,6 +183,12 @@ private:
     OFX::ChoiceParam *_iccIn;
     OFX::ChoiceParam *_iccOut;
     bool _hasLCMS;
+    OFX::BooleanParam *_doICC;
+    OFX::ChoiceParam *_iccRGB;
+    OFX::ChoiceParam *_iccCMYK;
+    OFX::ChoiceParam *_iccGRAY;
+    OFX::ChoiceParam *_iccRender;
+    OFX::BooleanParam *_iccBlack;
 };
 
 ReadPSDPlugin::ReadPSDPlugin(OfxImageEffectHandle handle)
@@ -173,7 +209,14 @@ false
 
     _iccIn = fetchChoiceParam(kParamICCIn);
     _iccOut = fetchChoiceParam(kParamICCOut);
-    assert(_outputComponents && _iccIn && _iccOut);
+    _iccRGB = fetchChoiceParam(kParamICCRGB);
+    _iccCMYK = fetchChoiceParam(kParamICCCMYK);
+    _iccGRAY = fetchChoiceParam(kParamICCGRAY);
+    _doICC = fetchBooleanParam(kParamICC);
+    _iccRender = fetchChoiceParam(kParamICCRender);
+    _iccBlack = fetchBooleanParam(kParamICCBlack);
+
+    assert(_outputComponents && _iccIn && _iccOut && _doICC && _iccRGB && _iccCMYK && _iccGRAY && _iccRender && _iccBlack);
 }
 
 ReadPSDPlugin::~ReadPSDPlugin()
@@ -191,7 +234,7 @@ void ReadPSDPlugin::getClipComponents(const OFX::ClipComponentsArguments& args, 
     if (_psd.size()>0) {
         int startLayer = 0;
         if (_psd[0].format()=="Adobe Photoshop bitmap")
-            startLayer++;
+            startLayer++; // first layer in a PSD is a comp
         for (int i = startLayer; i < (int)_psd.size(); i++) {
             std::ostringstream layerName;
             layerName << _psd[i].label();
@@ -228,12 +271,30 @@ void ReadPSDPlugin::decodePlane(const std::string& /*filename*/, OfxTime time, c
     std::string iccProfileIn;
     int iccProfileOutID = 0;
     std::string iccProfileOut;
+    int iccProfileRGBID = 0;
+    std::string iccProfileRGB;
+    int iccProfileCMYKID = 0;
+    std::string iccProfileCMYK;
+    int iccProfileGRAYID = 0;
+    std::string iccProfileGRAY;
+    bool color = false;
+    int iccRender = 0;
+    bool iccBlack = false;
     std::vector<std::string> layerChannels = OFX::mapPixelComponentCustomToLayerChannels(rawComponents);
     int numChannels = layerChannels.size();
     _iccIn->getValueAtTime(time, iccProfileInID);
     _iccIn->getOption(iccProfileInID, iccProfileIn);
     _iccOut->getValueAtTime(time, iccProfileOutID);
     _iccOut->getOption(iccProfileOutID, iccProfileOut);
+    _iccRGB->getValueAtTime(time, iccProfileRGBID);
+    _iccRGB->getOption(iccProfileRGBID, iccProfileRGB);
+    _iccCMYK->getValueAtTime(time, iccProfileCMYKID);
+    _iccCMYK->getOption(iccProfileCMYKID, iccProfileCMYK);
+    _iccGRAY->getValueAtTime(time, iccProfileGRAYID);
+    _iccGRAY->getOption(iccProfileGRAYID, iccProfileGRAY);
+    _doICC->getValueAtTime(time, color);
+    _iccRender->getValueAtTime(time, iccRender);
+    _iccBlack->getValueAtTime(time, iccBlack);
 
     // Get layer
     if (numChannels==5) // layer+R+G+B+A
@@ -242,13 +303,13 @@ void ReadPSDPlugin::decodePlane(const std::string& /*filename*/, OfxTime time, c
         for (size_t i = 0; i < _psd.size(); i++) {
             bool foundLayer = false;
             std::ostringstream psdLayer;
-            psdLayer << "Image Layer #" << i;
+            psdLayer << "Image Layer #" << i; // if layer name is empty
             if (_psd[i].label()==layerName)
                 foundLayer = true;
             if (psdLayer.str()==layerName && !foundLayer)
                 foundLayer = true;
             if (foundLayer) {
-                if ((int)_psd[i].columns()!=bounds.x2)
+                if ((int)_psd[i].columns()!=bounds.x2) // offset should be optional, but until we support real layer size (#126), leave as-is
                     offsetX = _psd[i].page().xOff();
                 if ((int)_psd[i].rows()!=bounds.y2)
                     offsetY = _psd[i].page().yOff();
@@ -262,48 +323,145 @@ void ReadPSDPlugin::decodePlane(const std::string& /*filename*/, OfxTime time, c
     Magick::Image image;
     image = _psd[layer];
 
-    // ICC input
-    if (!iccProfileIn.empty() && iccProfileIn.find("None") == std::string::npos) {
-        std::vector<std::string> profile;
-        _getProFiles(profile, false, iccProfileIn,4);
-        if (!profile[0].empty()) {
-            if (!_hasLCMS)
-                setPersistentMessage(OFX::Message::eMessageError, "", "LCMS support missing, unable to convert");
-            else {
-                Magick::Blob iccBlob;
-                Magick::Image iccExtract(profile[0]);
-                iccExtract.write(&iccBlob);
-                if (iccBlob.length()>0)
-                    image.profile("ICC",iccBlob);
+    if (color) {
+        #ifdef DEBUG
+        std::cout << "color management enabled" << std::endl;
+        #endif
+        // blackpoint
+        if (iccBlack)
+            image.blackPointCompensation(true);
+        // render intent
+        switch (iccRender) {
+        case 1: // SaturationIntent
+            image.renderingIntent(Magick::SaturationIntent);
+            break;
+        case 2: // PerceptualIntent
+            image.renderingIntent(Magick::PerceptualIntent);
+            break;
+        case 3: // AbsoluteIntent
+            image.renderingIntent(Magick::AbsoluteIntent);
+            break;
+        case 4: // RelativeIntent
+            image.renderingIntent(Magick::RelativeIntent);
+            break;
+        default:
+            //
+            break;
+        }
+        // default profile
+        std::string defaultProfile;
+        if (image.iccColorProfile().length()==0) {
+            #ifdef DEBUG
+            std::cout << "image is missing profile" << std::endl;
+            #endif
+            std::vector<std::string> profileDef;
+            switch(image.colorSpace()) {
+            case Magick::RGBColorspace:
+                if (!iccProfileRGB.empty())
+                    _getProFiles(profileDef, false, iccProfileRGB,1);
+                break;
+            case Magick::sRGBColorspace:
+                if (!iccProfileRGB.empty())
+                    _getProFiles(profileDef, false, iccProfileRGB,1);
+                break;
+            case Magick::scRGBColorspace:
+                if (!iccProfileRGB.empty())
+                    _getProFiles(profileDef, false, iccProfileRGB,1);
+                break;
+            case Magick::CMYKColorspace:
+                if (!iccProfileCMYK.empty())
+                    _getProFiles(profileDef, false, iccProfileCMYK,2);
+                break;
+            case Magick::GRAYColorspace:
+                if (!iccProfileGRAY.empty())
+                    _getProFiles(profileDef, false, iccProfileGRAY,3);
+                break;
+            default:
+                //
+                break;
+            }
+            if (profileDef.size()==1)
+                defaultProfile=profileDef[0];
+        }
+        // ICC input
+        if (!iccProfileIn.empty() && iccProfileIn.find("None") == std::string::npos) {
+            std::vector<std::string> profile;
+            _getProFiles(profile, false, iccProfileIn,4);
+            if (profile.size()==1) {
+                if (!profile[0].empty()) {
+                    #ifdef DEBUG
+                    std::cout << "icc in:" << profile[0] << std::endl;
+                    #endif
+                    if (!_hasLCMS)
+                        setPersistentMessage(OFX::Message::eMessageError, "", "LCMS support missing, unable to convert");
+                    else {
+                        if (!defaultProfile.empty()) { // apply default profile if not exist
+                            Magick::Blob iccBlobDef;
+                            Magick::Image iccExtractDef(defaultProfile);
+                            iccExtractDef.write(&iccBlobDef); // can't load the file directly, use a blob
+                            if (iccBlobDef.length()>0) {
+                                #ifdef DEBUG
+                                std::cout << "applying default icc profile before input" << std::endl;
+                                #endif
+                                image.profile("ICC",iccBlobDef); // no need to catch since colorspace match
+                            }
+                        }
+                        Magick::Blob iccBlob;
+                        Magick::Image iccExtract(profile[0]);
+                        iccExtract.write(&iccBlob); // can't load the file directly, use a blob
+                        try { // catch final convert errors, like wrong profile compared to colorspace etc
+                            image.profile("ICC",iccBlob);
+                        }
+                        catch(Magick::Exception &error) {
+                            setPersistentMessage(OFX::Message::eMessageError, "", error.what());
+                            OFX::throwSuiteStatusException(kOfxStatFailed);
+                        }
+                    }
+                }
             }
         }
-    }
-
-    // ICC output
-    if (!iccProfileOut.empty() && iccProfileOut.find("None") == std::string::npos) {
-        std::vector<std::string> profile;
-        _getProFiles(profile, false, iccProfileOut,1);
-        if (!profile[0].empty()) {
-            if (!_hasLCMS)
-                setPersistentMessage(OFX::Message::eMessageError, "", "LCMS support missing, unable to convert");
-            else {
-                Magick::Blob iccBlob;
-                Magick::Image iccExtract(profile[0]);
-                iccExtract.write(&iccBlob);
-                if (iccBlob.length()>0) {
-                    try {
-                        image.profile("ICC",iccBlob);
-                    }
-                    catch(Magick::Exception &error) {
-                        setPersistentMessage(OFX::Message::eMessageError, "", error.what());
-                        OFX::throwSuiteStatusException(kOfxStatFailed);
+        // ICC output
+        if (!iccProfileOut.empty() && iccProfileOut.find("None") == std::string::npos) {
+            std::vector<std::string> profile;
+            _getProFiles(profile, false, iccProfileOut,1);
+            if (profile.size()==1) {
+                if (!profile[0].empty()) {
+                    #ifdef DEBUG
+                    std::cout << "icc out:" << profile[0] << std::endl;
+                    #endif
+                    if (!_hasLCMS)
+                        setPersistentMessage(OFX::Message::eMessageError, "", "LCMS support missing, unable to convert");
+                    else {
+                        if (!defaultProfile.empty() && (iccProfileIn.find("None") != std::string::npos)) { // apply default profile if not exist
+                            Magick::Blob iccBlobDef;
+                            Magick::Image iccExtractDef(defaultProfile);
+                            iccExtractDef.write(&iccBlobDef);
+                            if (iccBlobDef.length()>0) {
+                                #ifdef DEBUG
+                                std::cout << "applying default profile before icc output" << std::endl;
+                                #endif
+                                image.profile("ICC",iccBlobDef);
+                            }
+                        }
+                        Magick::Blob iccBlob;
+                        Magick::Image iccExtract(profile[0]);
+                        iccExtract.write(&iccBlob); // can't load the file directly, use a blob
+                        if (iccBlob.length()>0) {
+                            try { // catch final convert errors, like wrong profile compared to colorspace etc
+                                image.profile("ICC",iccBlob);
+                            }
+                            catch(Magick::Exception &error) {
+                                setPersistentMessage(OFX::Message::eMessageError, "", error.what());
+                                OFX::throwSuiteStatusException(kOfxStatFailed);
+                            }
+                        }
                     }
                 }
             }
         }
     }
 
-    // Return image
+    // Return image (comping on a empty canvas makes things easier, modify when #126 is done)
     Magick::Image container(Magick::Geometry(width,height),Magick::Color("rgba(0,0,0,0)"));
     container.composite(image,offsetX,offsetY,Magick::OverCompositeOp);
     container.flip();
@@ -319,7 +477,7 @@ bool ReadPSDPlugin::getFrameBounds(const std::string& /*filename*/,
     #ifdef DEBUG
     std::cout << "getFrameBounds ..." << std::endl;
     #endif
-    if (_psd[0].columns()>0 && _psd[0].rows()>0) {
+    if (_psd[0].columns()>0 && _psd[0].rows()>0) { // TODO get real layers size (#126)
         bounds->x1 = 0;
         bounds->x2 = _psd[0].columns();
         bounds->y1 = 0;
@@ -366,7 +524,7 @@ void ReadPSDPlugin::onInputFileChanged(const std::string& newFile,
     if (newFile!=_filename)
         restoreState(newFile);
     # ifdef OFX_IO_USING_OCIO
-    switch(_psd[0].colorSpace()) {
+    switch(_psd[0].colorSpace()) { // TODO more checks?
     case Magick::RGBColorspace:
         _ocio->setInputColorspace("sRGB");
         break;
@@ -416,12 +574,87 @@ void ReadPSDPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, C
 {
     PageParamDescriptor *page = GenericReaderDescribeInContextBegin(desc, context, isVideoStreamPlugin(), kSupportsRGBA, kSupportsRGB, kSupportsAlpha, kSupportsTiles);
     {
+        BooleanParamDescriptor* param = desc.defineBooleanParam(kParamICC);
+        param->setLabel(kParamICCLabel);
+        param->setHint(kParamICCHint);
+        param->setDefault(kParamICCDefault);
+        page->addChild(*param);
+    }
+    {
+        ChoiceParamDescriptor* param = desc.defineChoiceParam(kParamICCRGB);
+        param->setLabel(kParamICCRGBLabel);
+        param->setHint(kParamICCRGBHint);
+        param->appendOption("None");
+        std::vector<std::string> profilesRGB;
+        _getProFiles(profilesRGB, true, "",1); // get RGB profiles
+        int defaultOpt = 0;
+        for (unsigned int i = 0;i < profilesRGB.size();i++) {
+            param->appendOption(profilesRGB[i]);
+            if (profilesRGB[i].find(kParamICCRGBDefault) != std::string::npos) // set default
+                defaultOpt=i;
+        }
+        if (defaultOpt>0) {
+            defaultOpt++;
+            param->setDefault(defaultOpt);
+        }
+        page->addChild(*param);
+    }
+    {
+        ChoiceParamDescriptor* param = desc.defineChoiceParam(kParamICCCMYK);
+        param->setLabel(kParamICCCMYKLabel);
+        param->setHint(kParamICCCMYKHint);
+        param->appendOption("None");
+        std::vector<std::string> profilesCMYK;
+        _getProFiles(profilesCMYK, true, "",2); // get CMYK profiles
+        int defaultOpt = 0;
+        for (unsigned int i = 0;i < profilesCMYK.size();i++) {
+            param->appendOption(profilesCMYK[i]);
+            if (profilesCMYK[i].find(kParamICCCMYKDefault) != std::string::npos) // set default
+                defaultOpt=i;
+        }
+        if (defaultOpt>0) {
+            defaultOpt++;
+            param->setDefault(defaultOpt);
+        }
+        page->addChild(*param);
+    }
+    {
+        ChoiceParamDescriptor* param = desc.defineChoiceParam(kParamICCGRAY);
+        param->setLabel(kParamICCGRAYLabel);
+        param->setHint(kParamICCGRAYHint);
+        param->appendOption("None");
+        std::vector<std::string> profilesGRAY;
+        _getProFiles(profilesGRAY, true, "",4); // get GRAY profiles
+        for (unsigned int i = 0;i < profilesGRAY.size();i++)
+            param->appendOption(profilesGRAY[i]);
+        page->addChild(*param);
+    }
+    {
+        ChoiceParamDescriptor* param = desc.defineChoiceParam(kParamICCRender);
+        param->setLabel(kParamICCRenderLabel);
+        param->setHint(kParamICCRenderHint);
+        param->appendOption("Undefined");
+        param->appendOption("Saturation");
+        param->appendOption("Perceptual");
+        param->appendOption("Absolute");
+        param->appendOption("Relative");
+        param->setDefault(kParamICCRenderDefault);
+        page->addChild(*param);
+    }
+    {
+        BooleanParamDescriptor* param = desc.defineBooleanParam(kParamICCBlack);
+        param->setLabel(kParamICCBlackLabel);
+        param->setHint(kParamICCBlackHint);
+        param->setDefault(kParamICCBlackDefault);
+        page->addChild(*param);
+    }
+    {
         ChoiceParamDescriptor* param = desc.defineChoiceParam(kParamICCIn);
         param->setLabel(kParamICCInLabel);
         param->setHint(kParamICCInHint);
         param->appendOption("None");
         std::vector<std::string> profilesIn;
-        _getProFiles(profilesIn, true, "",4);
+        _getProFiles(profilesIn, true, "",4); // get RGB/CMYK/GRAY profiles
         for (unsigned int i = 0;i < profilesIn.size();i++)
             param->appendOption(profilesIn[i]);
         page->addChild(*param);
@@ -432,7 +665,7 @@ void ReadPSDPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, C
         param->setHint(kParamICCOutHint);
         param->appendOption("None");
         std::vector<std::string> profilesOut;
-        _getProFiles(profilesOut, true, "",1);
+        _getProFiles(profilesOut, true, "",1); // get RGB profiles
         for (unsigned int i = 0;i < profilesOut.size();i++)
             param->appendOption(profilesOut[i]);
         page->addChild(*param);
