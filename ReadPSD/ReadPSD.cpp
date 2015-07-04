@@ -42,6 +42,7 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include "ofxsMacros.h"
 #include <lcms2.h>
 #include <dirent.h>
+#include <ofxNatron.h>
 
 #ifdef OFX_IO_USING_OCIO
 #include <OpenColorIO/OpenColorIO.h>
@@ -85,7 +86,7 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #define kParamICCGRAY "iccGRAY"
 #define kParamICCGRAYLabel "Default GRAY profile"
 #define kParamICCGRAYHint "Default GRAY profile\n\nUsed when a GRAY image is missing an embedded color profile."
-#define kParamICCGRAYDefault "" // does a sane default exists?
+#define kParamICCGRAYDefault "Gray linear"
 
 #define kParamICCRender "renderingIntent"
 #define kParamICCRenderLabel "Rendering intent"
@@ -96,6 +97,8 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #define kParamICCBlackLabel "Black point"
 #define kParamICCBlackHint "Enable/Disable black point compensation"
 #define kParamICCBlackDefault false
+
+static bool gHostIsNatron   = false;
 
 void _getProFiles(std::vector<std::string> &files, bool desc, std::string filter, int colorspace) {
     std::vector<std::string> paths;
@@ -179,10 +182,10 @@ private:
     virtual void restoreState(const std::string& filename) OVERRIDE FINAL;
     virtual void onInputFileChanged(const std::string& newFile, OFX::PreMultiplicationEnum *premult, OFX::PixelComponentEnum *components, int *componentCount) OVERRIDE FINAL;
     std::string _filename;
+    bool _hasLCMS;
     std::vector<Magick::Image> _psd;
     OFX::ChoiceParam *_iccIn;
     OFX::ChoiceParam *_iccOut;
-    bool _hasLCMS;
     OFX::BooleanParam *_doICC;
     OFX::ChoiceParam *_iccRGB;
     OFX::ChoiceParam *_iccCMYK;
@@ -231,7 +234,7 @@ void ReadPSDPlugin::getClipComponents(const OFX::ClipComponentsArguments& args, 
     assert(isMultiPlanar());
     clipComponents.addClipComponents(*_outputClip, getOutputComponents());
     clipComponents.setPassThroughClip(NULL, args.time, args.view);
-    if (_psd.size()>0) {
+    if (_psd.size()>0 && gHostIsNatron) {
         int startLayer = 0;
         if (_psd[0].format()=="Adobe Photoshop bitmap")
             startLayer++; // first layer in a PSD is a comp
@@ -324,9 +327,6 @@ void ReadPSDPlugin::decodePlane(const std::string& /*filename*/, OfxTime time, c
     image = _psd[layer];
 
     if (color) {
-        #ifdef DEBUG
-        std::cout << "color management enabled" << std::endl;
-        #endif
         // blackpoint
         if (iccBlack)
             image.blackPointCompensation(true);
@@ -351,9 +351,6 @@ void ReadPSDPlugin::decodePlane(const std::string& /*filename*/, OfxTime time, c
         // default profile
         std::string defaultProfile;
         if (image.iccColorProfile().length()==0) {
-            #ifdef DEBUG
-            std::cout << "image is missing profile" << std::endl;
-            #endif
             std::vector<std::string> profileDef;
             switch(image.colorSpace()) {
             case Magick::RGBColorspace:
@@ -389,26 +386,19 @@ void ReadPSDPlugin::decodePlane(const std::string& /*filename*/, OfxTime time, c
             _getProFiles(profile, false, iccProfileIn,4);
             if (profile.size()==1) {
                 if (!profile[0].empty()) {
-                    #ifdef DEBUG
-                    std::cout << "icc in:" << profile[0] << std::endl;
-                    #endif
                     if (!_hasLCMS)
                         setPersistentMessage(OFX::Message::eMessageError, "", "LCMS support missing, unable to convert");
                     else {
                         if (!defaultProfile.empty()) { // apply default profile if not exist
                             Magick::Blob iccBlobDef;
                             Magick::Image iccExtractDef(defaultProfile);
-                            iccExtractDef.write(&iccBlobDef); // can't load the file directly, use a blob
-                            if (iccBlobDef.length()>0) {
-                                #ifdef DEBUG
-                                std::cout << "applying default icc profile before input" << std::endl;
-                                #endif
-                                image.profile("ICC",iccBlobDef); // no need to catch since colorspace match
-                            }
+                            iccExtractDef.write(&iccBlobDef);
+                            if (iccBlobDef.length()>0)
+                                image.profile("ICC",iccBlobDef);
                         }
                         Magick::Blob iccBlob;
                         Magick::Image iccExtract(profile[0]);
-                        iccExtract.write(&iccBlob); // can't load the file directly, use a blob
+                        iccExtract.write(&iccBlob);
                         try { // catch final convert errors, like wrong profile compared to colorspace etc
                             image.profile("ICC",iccBlob);
                         }
@@ -426,9 +416,6 @@ void ReadPSDPlugin::decodePlane(const std::string& /*filename*/, OfxTime time, c
             _getProFiles(profile, false, iccProfileOut,1);
             if (profile.size()==1) {
                 if (!profile[0].empty()) {
-                    #ifdef DEBUG
-                    std::cout << "icc out:" << profile[0] << std::endl;
-                    #endif
                     if (!_hasLCMS)
                         setPersistentMessage(OFX::Message::eMessageError, "", "LCMS support missing, unable to convert");
                     else {
@@ -436,16 +423,12 @@ void ReadPSDPlugin::decodePlane(const std::string& /*filename*/, OfxTime time, c
                             Magick::Blob iccBlobDef;
                             Magick::Image iccExtractDef(defaultProfile);
                             iccExtractDef.write(&iccBlobDef);
-                            if (iccBlobDef.length()>0) {
-                                #ifdef DEBUG
-                                std::cout << "applying default profile before icc output" << std::endl;
-                                #endif
+                            if (iccBlobDef.length()>0)
                                 image.profile("ICC",iccBlobDef);
-                            }
                         }
                         Magick::Blob iccBlob;
                         Magick::Image iccExtract(profile[0]);
-                        iccExtract.write(&iccBlob); // can't load the file directly, use a blob
+                        iccExtract.write(&iccBlob);
                         if (iccBlob.length()>0) {
                             try { // catch final convert errors, like wrong profile compared to colorspace etc
                                 image.profile("ICC",iccBlob);
@@ -524,7 +507,7 @@ void ReadPSDPlugin::onInputFileChanged(const std::string& newFile,
     if (newFile!=_filename)
         restoreState(newFile);
     # ifdef OFX_IO_USING_OCIO
-    switch(_psd[0].colorSpace()) { // TODO more checks?
+    switch(_psd[0].colorSpace()) {
     case Magick::RGBColorspace:
         _ocio->setInputColorspace("sRGB");
         break;
@@ -572,6 +555,8 @@ void ReadPSDPluginFactory::describe(OFX::ImageEffectDescriptor &desc)
 /** @brief The describe in context function, passed a plugin descriptor and a context */
 void ReadPSDPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, ContextEnum context)
 {
+    gHostIsNatron = (OFX::getImageEffectHostDescription()->hostName == kNatronOfxHostName);
+
     PageParamDescriptor *page = GenericReaderDescribeInContextBegin(desc, context, isVideoStreamPlugin(), kSupportsRGBA, kSupportsRGB, kSupportsAlpha, kSupportsTiles);
     {
         BooleanParamDescriptor* param = desc.defineBooleanParam(kParamICC);
@@ -624,9 +609,17 @@ void ReadPSDPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, C
         param->setHint(kParamICCGRAYHint);
         param->appendOption("None");
         std::vector<std::string> profilesGRAY;
-        _getProFiles(profilesGRAY, true, "",4); // get GRAY profiles
-        for (unsigned int i = 0;i < profilesGRAY.size();i++)
+        _getProFiles(profilesGRAY, true, "",3); // get GRAY profiles
+        int defaultOpt = 0;
+        for (unsigned int i = 0;i < profilesGRAY.size();i++) {
             param->appendOption(profilesGRAY[i]);
+            if (profilesGRAY[i].find(kParamICCGRAYDefault) != std::string::npos) // set default
+                defaultOpt=i;
+        }
+        if (defaultOpt>0) {
+            defaultOpt++;
+            param->setDefault(defaultOpt);
+        }
         page->addChild(*param);
     }
     {
