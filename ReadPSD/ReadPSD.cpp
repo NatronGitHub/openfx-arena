@@ -72,11 +72,12 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #define kParamICCOut "iccOut"
 #define kParamICCOutLabel "Output color profile"
 #define kParamICCOutHint "ICC RGB output profile\n\nIf image is CMYK/GRAY a colorspace convert will happen."
+#define kParamICCOutDefault "sRGB"
 
 #define kParamICCRGB "iccRGB"
 #define kParamICCRGBLabel "Default RGB profile"
 #define kParamICCRGBHint "Default RGB profile\n\nUsed when a RGB image is missing an embedded color profile."
-#define kParamICCRGBDefault "sRGB IEC61966"
+#define kParamICCRGBDefault "sRGB"
 
 #define kParamICCCMYK "iccCMYK"
 #define kParamICCCMYKLabel "Default CMYK profile"
@@ -508,23 +509,8 @@ void ReadPSDPlugin::onInputFileChanged(const std::string& newFile,
         restoreState(newFile);
     # ifdef OFX_IO_USING_OCIO
     switch(_psd[0].colorSpace()) {
-    case Magick::RGBColorspace:
-        _ocio->setInputColorspace("sRGB");
-        break;
-    case Magick::sRGBColorspace:
-        _ocio->setInputColorspace("sRGB");
-        break;
-    case Magick::scRGBColorspace:
-        _ocio->setInputColorspace("sRGB");
-        break;
-    case Magick::Rec709LumaColorspace:
-        _ocio->setInputColorspace("Rec709");
-        break;
-    case Magick::Rec709YCbCrColorspace:
-        _ocio->setInputColorspace("Rec709");
-        break;
     default:
-        _ocio->setInputColorspace("Linear");
+        _ocio->setInputColorspace("sRGB");
         break;
     }
     # endif // OFX_IO_USING_OCIO
@@ -659,8 +645,16 @@ void ReadPSDPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, C
         param->appendOption("None");
         std::vector<std::string> profilesOut;
         _getProFiles(profilesOut, true, "",1); // get RGB profiles
-        for (unsigned int i = 0;i < profilesOut.size();i++)
+        int defaultOpt = 0;
+        for (unsigned int i = 0;i < profilesOut.size();i++) {
             param->appendOption(profilesOut[i]);
+            if (profilesOut[i].find(kParamICCOutDefault) != std::string::npos) // set default
+                defaultOpt=i;
+        }
+        if (defaultOpt>0) {
+            defaultOpt++;
+            param->setDefault(defaultOpt);
+        }
         page->addChild(*param);
     }
     GenericReaderDescribeInContextEnd(desc, context, page, "reference", "reference");
