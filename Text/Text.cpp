@@ -594,7 +594,7 @@ void TextPluginFactory::describe(OFX::ImageEffectDescriptor &desc)
     desc.setPluginGrouping(kPluginGrouping);
     std::string magickV = MagickCore::GetMagickVersion(NULL);
     std::string delegates = MagickCore::GetMagickDelegates();
-    desc.setPluginDescription("Text generator for Natron.\n\nWritten by Ole-André Rodlie <olear@fxarena.net>\n\n Powered by "+magickV+"\n\nFeatures: "+delegates);
+    desc.setPluginDescription("Text generator for Natron.\n\nWritten by Ole-André Rodlie <olear@fxarena.net>\n\nPowered by "+magickV+"\n\nFeatures: "+delegates);
 
     // add the supported contexts
     desc.addSupportedContext(eContextGeneral);
@@ -784,6 +784,7 @@ void TextPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, Cont
         param->appendOption("RoundCap");
         param->appendOption("SquareCap");
         param->setDefault(kParamStrokeCapDefault);
+        param->setIsSecret(true); // disable until issue #89 is fixed
         param->setParent(*groupStroke);
     }
     {
@@ -795,6 +796,7 @@ void TextPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, Cont
         param->appendOption("RoundJoin");
         param->appendOption("BevelJoin");
         param->setDefault(kParamStrokeJoinDefault);
+        param->setIsSecret(true); // disable until issue #89 is fixed
         param->setParent(*groupStroke);
     }
     {
