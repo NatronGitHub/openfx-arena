@@ -51,8 +51,8 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #define kPluginName "ReadPSD"
 #define kPluginGrouping "Image/Readers"
 #define kPluginIdentifier "net.fxarena.openfx.ReadPSD"
-#define kPluginVersionMajor 1
-#define kPluginVersionMinor 9
+#define kPluginVersionMajor 2
+#define kPluginVersionMinor 0
 
 #define kSupportsRGBA true
 #define kSupportsRGB false
@@ -62,7 +62,7 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 #define kParamICC "icc"
 #define kParamICCLabel "Color management"
-#define kParamICCHint "Enable/Disable ICC color management"
+#define kParamICCHint "Enable/Disable ICC color management\n\nRequires installed ICC v2/v4 color profiles."
 #define kParamICCDefault false
 
 #define kParamICCIn "iccIn"
@@ -98,6 +98,11 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #define kParamICCBlackLabel "Black point"
 #define kParamICCBlackHint "Enable/Disable black point compensation"
 #define kParamICCBlackDefault false
+
+#define kParamImageLayer "Image layer"
+#define kParamImageLayerLabel "Image layer"
+#define kParamImageLayerHint "Select image layer\n\nNote! Selecting layer other than default will disable multi-plane."
+#define kParamImageLayerDefault 0
 
 static bool gHostIsNatron   = false;
 
@@ -182,6 +187,7 @@ private:
     virtual bool getFrameBounds(const std::string& filename, OfxTime time, OfxRectI *bounds, double *par, std::string *error) OVERRIDE FINAL;
     virtual void restoreState(const std::string& filename) OVERRIDE FINAL;
     virtual void onInputFileChanged(const std::string& newFile, OFX::PreMultiplicationEnum *premult, OFX::PixelComponentEnum *components, int *componentCount) OVERRIDE FINAL;
+    void genLayerMenu();
     std::string _filename;
     bool _hasLCMS;
     std::vector<Magick::Image> _psd;
@@ -193,6 +199,7 @@ private:
     OFX::ChoiceParam *_iccGRAY;
     OFX::ChoiceParam *_iccRender;
     OFX::BooleanParam *_iccBlack;
+    OFX::ChoiceParam *_imageLayer;
 };
 
 ReadPSDPlugin::ReadPSDPlugin(OfxImageEffectHandle handle)
@@ -219,12 +226,32 @@ false
     _doICC = fetchBooleanParam(kParamICC);
     _iccRender = fetchChoiceParam(kParamICCRender);
     _iccBlack = fetchBooleanParam(kParamICCBlack);
+    _imageLayer = fetchChoiceParam(kParamImageLayer);
 
-    assert(_outputComponents && _iccIn && _iccOut && _doICC && _iccRGB && _iccCMYK && _iccGRAY && _iccRender && _iccBlack);
+    assert(_outputComponents && _iccIn && _iccOut && _doICC && _iccRGB && _iccCMYK && _iccGRAY && _iccRender && _iccBlack && _imageLayer);
 }
 
 ReadPSDPlugin::~ReadPSDPlugin()
 {
+}
+
+void ReadPSDPlugin::genLayerMenu()
+{
+    if (gHostIsNatron) {
+        _imageLayer->resetOptions();
+        int startLayer = 0;
+        if (_psd[0].format()=="Adobe Photoshop bitmap") {
+            _imageLayer->appendOption("Default");
+            startLayer++; // first layer in a PSD is a comp
+        }
+        for (int i = startLayer; i < (int)_psd.size(); i++) {
+            std::ostringstream layerName;
+            layerName << _psd[i].label();
+            if (layerName.str().empty())
+                layerName << "Layer " << i; // add a label if empty
+            _imageLayer->appendOption(layerName.str());
+        }
+    }
 }
 
 void ReadPSDPlugin::getClipComponents(const OFX::ClipComponentsArguments& args, OFX::ClipComponentsSetter& clipComponents)
@@ -235,7 +262,7 @@ void ReadPSDPlugin::getClipComponents(const OFX::ClipComponentsArguments& args, 
     assert(isMultiPlanar());
     clipComponents.addClipComponents(*_outputClip, getOutputComponents());
     clipComponents.setPassThroughClip(NULL, args.time, args.view);
-    if (_psd.size()>0 && gHostIsNatron) {
+    if (_psd.size()>0 && gHostIsNatron) { // what about nuke?
         int startLayer = 0;
         if (_psd[0].format()=="Adobe Photoshop bitmap")
             startLayer++; // first layer in a PSD is a comp
@@ -262,9 +289,6 @@ void ReadPSDPlugin::getClipComponents(const OFX::ClipComponentsArguments& args, 
 void ReadPSDPlugin::decodePlane(const std::string& /*filename*/, OfxTime time, const OfxRectI& /*renderWindow*/, float *pixelData, const OfxRectI& bounds,
                                  OFX::PixelComponentEnum /*pixelComponents*/, int /*pixelComponentCount*/, const std::string& rawComponents, int /*rowBytes*/)
 {
-    #ifdef DEBUG
-    std::cout << "decodePlane ..." << std::endl;
-    #endif
     int offsetX = 0;
     int offsetY = 0;
     int layer = 0;
@@ -284,6 +308,7 @@ void ReadPSDPlugin::decodePlane(const std::string& /*filename*/, OfxTime time, c
     bool color = false;
     int iccRender = 0;
     bool iccBlack = false;
+    int imageLayer = 0;
     std::vector<std::string> layerChannels = OFX::mapPixelComponentCustomToLayerChannels(rawComponents);
     int numChannels = layerChannels.size();
     _iccIn->getValueAtTime(time, iccProfileInID);
@@ -299,8 +324,9 @@ void ReadPSDPlugin::decodePlane(const std::string& /*filename*/, OfxTime time, c
     _doICC->getValueAtTime(time, color);
     _iccRender->getValueAtTime(time, iccRender);
     _iccBlack->getValueAtTime(time, iccBlack);
+    _imageLayer->getValueAtTime(time, imageLayer);
 
-    // Get layer
+    // Get multiplane layer
     if (numChannels==5) // layer+R+G+B+A
         layerName=layerChannels[0];
     if (!layerName.empty()) {
@@ -323,10 +349,18 @@ void ReadPSDPlugin::decodePlane(const std::string& /*filename*/, OfxTime time, c
         }
     }
 
+    // if layer selected from choiceparam
+    if (imageLayer>0) {
+        offsetX = 0;
+        offsetY = 0;
+        layer = imageLayer;
+    }
+
     // Get image
     Magick::Image image;
     image = _psd[layer];
 
+    // color management
     if (color) {
         // blackpoint
         if (iccBlack)
@@ -458,28 +492,23 @@ bool ReadPSDPlugin::getFrameBounds(const std::string& /*filename*/,
                               double *par,
                               std::string */*error*/)
 {
-    #ifdef DEBUG
-    std::cout << "getFrameBounds ..." << std::endl;
-    #endif
-    if (_psd[0].columns()>0 && _psd[0].rows()>0) { // TODO get real layers size (#126)
+    int layer = 0;
+    _imageLayer->getValue(layer);
+    if (_psd[layer].columns()>0 && _psd[layer].rows()>0) {
         bounds->x1 = 0;
-        bounds->x2 = _psd[0].columns();
+        bounds->x2 = _psd[layer].columns();
         bounds->y1 = 0;
-        bounds->y2 = _psd[0].rows();
+        bounds->y2 = _psd[layer].rows();
         *par = 1.0;
     }
-    #ifdef DEBUG
-    std::cout << "bounds " << bounds->x2 << "x" << bounds->y2 << std::endl;
-    #endif
     return true;
 }
 
 void ReadPSDPlugin::restoreState(const std::string& filename)
 {
-    #ifdef DEBUG
-    std::cout << "restoreState ..." << std::endl;
-    #endif
     _psd.clear();
+    int layer = 0;
+    _imageLayer->getValue(layer);
     try {
         Magick::readImages(&_psd, filename);
     }
@@ -487,9 +516,9 @@ void ReadPSDPlugin::restoreState(const std::string& filename)
         setPersistentMessage(OFX::Message::eMessageError, "", "Unable to read image");
         OFX::throwSuiteStatusException(kOfxStatErrFormat);
     }
-    if (_psd[0].columns()>0 && _psd[0].rows()>0) {
+    genLayerMenu();
+    if (_psd[layer].columns()>0 && _psd[layer].rows()>0)
         _filename = filename;
-    }
     else {
         _psd.clear();
         setPersistentMessage(OFX::Message::eMessageError, "", "Unable to read image");
@@ -544,6 +573,22 @@ void ReadPSDPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, C
     gHostIsNatron = (OFX::getImageEffectHostDescription()->hostName == kNatronOfxHostName);
 
     PageParamDescriptor *page = GenericReaderDescribeInContextBegin(desc, context, isVideoStreamPlugin(), kSupportsRGBA, kSupportsRGB, kSupportsAlpha, kSupportsTiles);
+    {
+        ChoiceParamDescriptor* param = desc.defineChoiceParam(kParamImageLayer);
+        param->setLabel(kParamImageLayerLabel);
+        param->setHint(kParamImageLayerHint);
+        param->appendOption("Default");
+        param->appendOption("Layer 1"); // for non-natron:
+        param->appendOption("Layer 2");
+        param->appendOption("Layer 3");
+        param->appendOption("Layer 4");
+        param->appendOption("Layer 5");
+        param->appendOption("Layer 6");
+        param->appendOption("Layer 7");
+        param->appendOption("Layer 8");
+        param->appendOption("Layer 9");
+        page->addChild(*param);
+    }
     {
         BooleanParamDescriptor* param = desc.defineBooleanParam(kParamICC);
         param->setLabel(kParamICCLabel);
