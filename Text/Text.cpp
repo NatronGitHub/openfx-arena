@@ -243,7 +243,6 @@ private:
     OFX::DoubleParam *interlineSpacing_;
     OFX::DoubleParam *interwordSpacing_;
     OFX::DoubleParam *textSpacing_;
-    OFX::BooleanParam *use_pango_;
     OFX::RGBParam *shadowColor_;
     OFX::IntParam *shadowX_;
     OFX::IntParam *shadowY_;
@@ -409,11 +408,6 @@ void TextPlugin::render(const OFX::RenderArguments &args)
     int width = dstRod.x2-dstRod.x1;
     int height = dstRod.y2-dstRod.y1;
     Magick::Image image(Magick::Geometry(width,height),Magick::Color("rgba(0,0,0,0)"));
-
-    #ifdef DEBUG
-    image.debug(true);
-    image.verbose(true);
-    #endif
 
     // Convert colors to int
     int rI = ((uint8_t)(255.0f *CLAMP(r, 0.0, 1.0)));
