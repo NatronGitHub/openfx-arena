@@ -361,7 +361,7 @@ void ReadPSDPlugin::decodePlane(const std::string& /*filename*/, OfxTime time, c
     image = _psd[layer];
 
     // color management
-    if (color) {
+    if (color && _hasLCMS) {
         // blackpoint
         if (iccBlack)
             image.blackPointCompensation(true);
@@ -421,19 +421,43 @@ void ReadPSDPlugin::decodePlane(const std::string& /*filename*/, OfxTime time, c
             _getProFiles(profile, false, iccProfileIn,4);
             if (profile.size()==1) {
                 if (!profile[0].empty()) {
-                    if (!_hasLCMS)
-                        setPersistentMessage(OFX::Message::eMessageError, "", "LCMS support missing, unable to convert");
-                    else {
-                        if (!defaultProfile.empty()) { // apply default profile if not exist
-                            Magick::Blob iccBlobDef;
-                            Magick::Image iccExtractDef(defaultProfile);
-                            iccExtractDef.write(&iccBlobDef);
-                            if (iccBlobDef.length()>0)
-                                image.profile("ICC",iccBlobDef);
-                        }
-                        Magick::Blob iccBlob;
-                        Magick::Image iccExtract(profile[0]);
-                        iccExtract.write(&iccBlob);
+                    if (!defaultProfile.empty()) { // apply default profile if not exist
+                        Magick::Blob iccBlobDef;
+                        Magick::Image iccExtractDef(defaultProfile);
+                        iccExtractDef.write(&iccBlobDef);
+                        if (iccBlobDef.length()>0)
+                            image.profile("ICC",iccBlobDef);
+                    }
+                    Magick::Blob iccBlob;
+                    Magick::Image iccExtract(profile[0]);
+                    iccExtract.write(&iccBlob);
+                    try { // catch final convert errors, like wrong profile compared to colorspace etc
+                        image.profile("ICC",iccBlob);
+                    }
+                    catch(Magick::Exception &error) {
+                        setPersistentMessage(OFX::Message::eMessageError, "", error.what());
+                        OFX::throwSuiteStatusException(kOfxStatFailed);
+                    }
+                }
+            }
+        }
+        // ICC output
+        if (!iccProfileOut.empty() && iccProfileOut.find("None") == std::string::npos) {
+            std::vector<std::string> profile;
+            _getProFiles(profile, false, iccProfileOut,1);
+            if (profile.size()==1) {
+                if (!profile[0].empty()) {
+                    if (!defaultProfile.empty() && (iccProfileIn.find("None") != std::string::npos)) { // apply default profile if not exist
+                        Magick::Blob iccBlobDef;
+                        Magick::Image iccExtractDef(defaultProfile);
+                        iccExtractDef.write(&iccBlobDef);
+                        if (iccBlobDef.length()>0)
+                            image.profile("ICC",iccBlobDef);
+                    }
+                    Magick::Blob iccBlob;
+                    Magick::Image iccExtract(profile[0]);
+                    iccExtract.write(&iccBlob);
+                    if (iccBlob.length()>0) {
                         try { // catch final convert errors, like wrong profile compared to colorspace etc
                             image.profile("ICC",iccBlob);
                         }
@@ -445,38 +469,9 @@ void ReadPSDPlugin::decodePlane(const std::string& /*filename*/, OfxTime time, c
                 }
             }
         }
-        // ICC output
-        if (!iccProfileOut.empty() && iccProfileOut.find("None") == std::string::npos) {
-            std::vector<std::string> profile;
-            _getProFiles(profile, false, iccProfileOut,1);
-            if (profile.size()==1) {
-                if (!profile[0].empty()) {
-                    if (!_hasLCMS)
-                        setPersistentMessage(OFX::Message::eMessageError, "", "LCMS support missing, unable to convert");
-                    else {
-                        if (!defaultProfile.empty() && (iccProfileIn.find("None") != std::string::npos)) { // apply default profile if not exist
-                            Magick::Blob iccBlobDef;
-                            Magick::Image iccExtractDef(defaultProfile);
-                            iccExtractDef.write(&iccBlobDef);
-                            if (iccBlobDef.length()>0)
-                                image.profile("ICC",iccBlobDef);
-                        }
-                        Magick::Blob iccBlob;
-                        Magick::Image iccExtract(profile[0]);
-                        iccExtract.write(&iccBlob);
-                        if (iccBlob.length()>0) {
-                            try { // catch final convert errors, like wrong profile compared to colorspace etc
-                                image.profile("ICC",iccBlob);
-                            }
-                            catch(Magick::Exception &error) {
-                                setPersistentMessage(OFX::Message::eMessageError, "", error.what());
-                                OFX::throwSuiteStatusException(kOfxStatFailed);
-                            }
-                        }
-                    }
-                }
-            }
-        }
+    }
+    else if (color && !_hasLCMS) {
+        setPersistentMessage(OFX::Message::eMessageError, "", "LCMS support missing, unable to use color management");
     }
 
     // Return image (comping on a empty canvas makes things easier, modify when #126 is done)
