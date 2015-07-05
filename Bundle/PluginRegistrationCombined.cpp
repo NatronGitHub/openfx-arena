@@ -9,7 +9,6 @@
 #include "Wave.h"
 #include "Swirl.h"
 #include "Implode.h"
-#include "Emboss.h"
 #include "Charcoal.h"
 #include "Oilpaint.h"
 #include "TextPango.h"
@@ -32,7 +31,6 @@ namespace OFX
             getWavePluginID(ids);
             getSwirlPluginID(ids);
             getImplodePluginID(ids);
-            getEmbossPluginID(ids);
             getCharcoalPluginID(ids);
             getOilpaintPluginID(ids);
             getTextPangoPluginID(ids);

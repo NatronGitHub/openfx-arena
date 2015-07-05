@@ -9,7 +9,6 @@ PLUGINOBJECTS = \
         Wave.o \
         Swirl.o \
         Implode.o \
-        Emboss.o \
         Charcoal.o \
         Oilpaint.o \
         TextPango.o \
@@ -44,8 +43,6 @@ RESOURCES = \
 ../Swirl/net.fxarena.openfx.Swirl.svg \
 ../Implode/net.fxarena.openfx.Implode.png \
 ../Implode/net.fxarena.openfx.Implode.svg \
-../Emboss/net.fxarena.openfx.Emboss.png \
-../Emboss/net.fxarena.openfx.Emboss.svg \
 ../Charcoal/net.fxarena.openfx.Charcoal.png \
 ../Charcoal/net.fxarena.openfx.Charcoal.svg \
 ../Oilpaint/net.fxarena.openfx.Oilpaint.png \
