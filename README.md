@@ -12,9 +12,14 @@ See latest releases for binary downloads.
 Source
 ======
 
-Instructions for building from trunk.
+Get latest stable source:
+```
+git clone https://github.com/olear/openfx-arena
+cd openfx-arena
+git submodule update -i --recursive
+```
 
-Get latest source:
+Get latest development source:
 ```
 git clone https://github.com/olear/openfx-arena
 cd openfx-arena
