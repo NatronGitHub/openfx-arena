@@ -73,11 +73,11 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 #define kParamFromColor "fromColor"
 #define kParamFromColorLabel "Color from"
-#define kParamFromColorHint "Set start color, you must set a end color for this to work. Valid values are: none, color name (red, blue etc) or hex colors"
+#define kParamFromColorHint "Set start color, you must set a end color for this to work. Valid values are: none (transparent), color name (red, blue etc) or hex colors"
 
 #define kParamToColor "toColor"
 #define kParamToColorLabel "Color to"
-#define kParamToColorHint "Set end color, you must set a start color for this to work. Valid values are : none, color name (red, blue etc) or hex colors"
+#define kParamToColorHint "Set end color, you must set a start color for this to work. Valid values are : none (transparent), color name (red, blue etc) or hex colors"
 
 using namespace OFX;
 static bool gHostIsNatron = false;
@@ -272,8 +272,7 @@ void TexturePluginFactory::describe(OFX::ImageEffectDescriptor &desc)
     desc.setLabel(kPluginName);
     desc.setPluginGrouping(kPluginGrouping);
     std::string magickV = MagickCore::GetMagickVersion(NULL);
-    std::string delegates = MagickCore::GetMagickDelegates();
-    desc.setPluginDescription("Texture/Background generator for Natron.\n\nWritten by Ole-André Rodlie <olear@fxarena.net>\n\n Powered by "+magickV+"\n\nFeatures: "+delegates);
+    desc.setPluginDescription("Texture/Background generator for Natron.\n\nWritten by Ole-André Rodlie <olear@fxarena.net>\n\nPowered by "+magickV);
 
     // add the supported contexts
     desc.addSupportedContext(eContextGeneral);

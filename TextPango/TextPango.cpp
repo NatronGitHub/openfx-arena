@@ -53,7 +53,7 @@
 
 #define kParamText "markup"
 #define kParamTextLabel "Markup"
-#define kParamTextHint "Pango Markup Language.\n\n Example:\n<span color=\"white\" size=\"x-large\">Text</span>\n<span font=\"Sans Italic 12\" color=\"white\">Text</span>\n\nOr use a text file with markup:\n@/path/to/text_file.txt\n\nhttps://github.com/olear/openfx-arena/wiki/Pango"
+#define kParamTextHint "Pango Markup Language.\n\n Example:\n<span color=\"white\" size=\"x-large\">Text</span>\n<span font=\"Sans Italic 12\" color=\"white\">Text</span>\n\nOr use a text file with markup:\n@/path/to/text_file.txt"
 
 #define kParamGravity "gravity"
 #define kParamGravityLabel "Gravity hint"
@@ -373,7 +373,7 @@ void TextPangoPluginFactory::describe(OFX::ImageEffectDescriptor &desc)
     desc.setPluginGrouping(kPluginGrouping);
     std::string magickV = MagickCore::GetMagickVersion(NULL);
     std::string delegates = MagickCore::GetMagickDelegates();
-    desc.setPluginDescription("Pango text generator for Natron.\n\nWritten by Ole-André Rodlie <olear@fxarena.net>\n\n Powered by "+magickV+"\n\nFeatures: "+delegates);
+    desc.setPluginDescription("Pango text generator for Natron.\n\nWritten by Ole-André Rodlie <olear@fxarena.net>\n\nPowered by "+magickV+"\n\nFeatures: "+delegates+"\n\nVisit https://github.com/olear/openfx-arena/wiki/Pango for more info regarding usage of the TextPango node.");
 
     // add the supported contexts
     desc.addSupportedContext(eContextGeneral);

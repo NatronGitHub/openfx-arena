@@ -65,7 +65,6 @@ VPATH += \
 ../Wave \
 ../Swirl \
 ../Implode \
-../Emboss \
 ../Charcoal \
 ../Oilpaint \
 ../TextPango \
@@ -86,7 +85,6 @@ CXXFLAGS += \
 -I../Wave \
 -I../Swirl \
 -I../Implode \
--I../Emboss \
 -I../Charcoal \
 -I../Oilpaint \
 -I../TextPango \
