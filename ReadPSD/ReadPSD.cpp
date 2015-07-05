@@ -99,7 +99,7 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #define kParamICCBlackHint "Enable/Disable black point compensation"
 #define kParamICCBlackDefault false
 
-#define kParamImageLayer "Image layer"
+#define kParamImageLayer "layer"
 #define kParamImageLayerLabel "Image layer"
 #define kParamImageLayerHint "Select image layer\n\nNote! Selecting layer other than default will disable multi-plane."
 #define kParamImageLayerDefault 0
