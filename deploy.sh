@@ -62,7 +62,7 @@ PNG=1.2.52
 PNG_URL=http://prdownloads.sourceforge.net/libpng/libpng-${PNG}.tar.gz?download
 
 if [ -z "$VERSION" ]; then
-  ARENA=0.8
+  ARENA=0.9
 else
   ARENA=$VERSION
 fi
