@@ -190,8 +190,8 @@ void SketchPlugin::render(const OFX::RenderArguments &args)
     if (srcClip_ && srcClip_->isConnected())
         image.read(width,height,"RGBA",Magick::FloatPixel,(float*)srcImg->getPixelData());
 
-    // charcoal
-    image.sketch(radius,sigma,angle);
+    // sketch
+    image.sketch(std::floor(radius * args.renderScale.x + 0.5),std::floor(sigma * args.renderScale.x + 0.5),angle);
 
     // return image
     if (dstClip_ && dstClip_->isConnected() && srcClip_ && srcClip_->isConnected())
