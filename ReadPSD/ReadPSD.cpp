@@ -101,12 +101,12 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 #define kParamImageLayer "layer"
 #define kParamImageLayerLabel "Image layer"
-#define kParamImageLayerHint "Select image layer\n\nNote! Selecting layer here will conflict with multi-plane, the recommended way to access layers is through a merge/shuffle node (multi-plane)."
+#define kParamImageLayerHint "Select image layer\n\nThe recommended way to access layers is through a merge/shuffle node (multi-plane)."
 #define kParamImageLayerDefault 0
 
 #define kParamOffsetLayer "offset"
 #define kParamOffsetLayerLabel "Offset layers"
-#define kParamOffsetLayerHint "Enable/Disable layer offset in multi-plane"
+#define kParamOffsetLayerHint "Enable/Disable layer offset"
 #define kParamOffsetLayerDefault true
 
 static bool gHostIsNatron   = false;
@@ -364,11 +364,21 @@ void ReadPSDPlugin::decodePlane(const std::string& /*filename*/, OfxTime time, c
             }
         }
     }
-
-    // if layer selected from choiceparam and no multiplane
-    if (imageLayer>0 && layer==0) {
-        offsetX = 0;
-        offsetY = 0;
+    else { // no multiplane
+        if (imageLayer==0 && _psd[imageLayer].format()=="Adobe Photoshop bitmap") {
+            if ((int)_psd[imageLayer].columns()<width)
+                offsetX = width-(int)_psd[imageLayer].columns();
+            if ((int)_psd[imageLayer].rows()<height)
+                offsetY = height-(int)_psd[imageLayer].rows();
+        }
+        if (imageLayer>0 || _psd[imageLayer].format()!="Adobe Photoshop bitmap") {
+            if (offsetLayer) {
+                if ((int)_psd[imageLayer].columns()!=bounds.x2)
+                    offsetX = _psd[imageLayer].page().xOff();
+                if ((int)_psd[imageLayer].rows()!=bounds.y2)
+                    offsetY = _psd[imageLayer].page().yOff();
+            }
+        }
         layer = imageLayer;
     }
 
@@ -502,24 +512,12 @@ bool ReadPSDPlugin::getFrameBounds(const std::string& /*filename*/,
                               OfxRectI *bounds,
                               double *par,
                               std::string */*error*/)
-{ // TODO don't know if this is the best solution ...
-    int layer = 0;
-    _imageLayer->getValue(layer);
-    int frameX = 0;
-    int frameY = 0;
-    if (layer>0) {
-        frameX = (int)_psd[layer].columns();
-        frameY = (int)_psd[layer].rows();
-    }
-    else {
-        frameX = _maxWidth;
-        frameY = _maxHeight;
-    }
-    if (frameX>0 && frameY>0) {
+{
+    if (_maxWidth>0 && _maxHeight>0) {
         bounds->x1 = 0;
-        bounds->x2 = frameX;
+        bounds->x2 = _maxWidth;
         bounds->y1 = 0;
-        bounds->y2 = frameY;
+        bounds->y2 = _maxHeight;
         *par = 1.0;
     }
     return true;
@@ -542,7 +540,6 @@ void ReadPSDPlugin::restoreState(const std::string& filename)
     genLayerMenu();
     if (_psd[layer].columns()>0 && _psd[layer].rows()>0) {
         _filename = filename;
-        // get max width/height for multiplane
         for (int i = 0; i < (int)_psd.size(); i++) {
             if ((int)_psd[i].columns()>_maxWidth)
                 _maxWidth = (int)_psd[i].columns();
@@ -606,7 +603,7 @@ void ReadPSDPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, C
     gHostIsNatron = (OFX::getImageEffectHostDescription()->hostName == kNatronOfxHostName);
 
     PageParamDescriptor *page = GenericReaderDescribeInContextBegin(desc, context, isVideoStreamPlugin(), kSupportsRGBA, kSupportsRGB, kSupportsAlpha, kSupportsTiles);
-    { //TODO is this still needed? pros are exact layer size, cons are confusion for users?
+    {
         ChoiceParamDescriptor* param = desc.defineChoiceParam(kParamImageLayer);
         param->setLabel(kParamImageLayerLabel);
         param->setHint(kParamImageLayerHint);
