@@ -14,6 +14,7 @@ PLUGINOBJECTS = \
         TextPango.o \
         ReadPSD.o \
         ReadSVG.o \
+        Sketch.o \
         ofxsOGLTextRenderer.o \
         ofxsOGLFontData.o \
         ofxsRectangleInteract.o \
@@ -53,6 +54,8 @@ RESOURCES = \
 ../ReadPSD/net.fxarena.openfx.ReadPSD.svg \
 ../ReadSVG/net.fxarena.openfx.ReadSVG.png \
 ../ReadSVG/net.fxarena.openfx.ReadSVG.svg \
+../Sketch/net.fxarena.openfx.Sketch.png \
+../Sketch/net.fxarena.openfx.Sketch.svg \
 
 VPATH += \
 ../Texture \
@@ -70,6 +73,7 @@ VPATH += \
 ../TextPango \
 ../ReadPSD \
 ../ReadSVG \
+../Sketch \
 
 include ../Makefile.master
 include ../Makefile.io
@@ -90,6 +94,7 @@ CXXFLAGS += \
 -I../TextPango \
 -I../ReadPSD \
 -I../ReadSVG \
+-I../Sketch \
 
 CXXFLAGS  += $(MAGICK_CXXFLAGS)
 LINKFLAGS += $(MAGICK_LINKFLAGS)
