@@ -15,6 +15,7 @@ PLUGINOBJECTS = \
         ReadPSD.o \
         ReadSVG.o \
         Sketch.o \
+        Polaroid.o \
         ofxsOGLTextRenderer.o \
         ofxsOGLFontData.o \
         ofxsRectangleInteract.o \
@@ -56,6 +57,8 @@ RESOURCES = \
 ../ReadSVG/net.fxarena.openfx.ReadSVG.svg \
 ../Sketch/net.fxarena.openfx.Sketch.png \
 ../Sketch/net.fxarena.openfx.Sketch.svg \
+../Polaroid/net.fxarena.openfx.Polaroid.png \
+../Polaroid/net.fxarena.openfx.Polaroid.svg \
 
 VPATH += \
 ../Texture \
@@ -74,6 +77,7 @@ VPATH += \
 ../ReadPSD \
 ../ReadSVG \
 ../Sketch \
+../Polaroid \
 
 include ../Makefile.master
 include ../Makefile.io
@@ -95,6 +99,7 @@ CXXFLAGS += \
 -I../ReadPSD \
 -I../ReadSVG \
 -I../Sketch \
+-I../Polaroid \
 
 CXXFLAGS  += $(MAGICK_CXXFLAGS)
 LINKFLAGS += $(MAGICK_LINKFLAGS)
