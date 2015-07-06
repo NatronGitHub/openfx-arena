@@ -354,9 +354,9 @@ void ReadPSDPlugin::decodePlane(const std::string& /*filename*/, OfxTime time, c
                 foundLayer = true;
             if (foundLayer) {
                 if (offsetLayer) {
-                    if ((int)_psd[i].columns()!=bounds.x2)
+                    //if ((int)_psd[i].columns()!=bounds.x2)
                         offsetX = _psd[i].page().xOff();
-                    if ((int)_psd[i].rows()!=bounds.y2)
+                    //if ((int)_psd[i].rows()!=bounds.y2)
                         offsetY = _psd[i].page().yOff();
                 }
                 layer = i;
@@ -365,17 +365,17 @@ void ReadPSDPlugin::decodePlane(const std::string& /*filename*/, OfxTime time, c
         }
     }
     else { // no multiplane
-        if (imageLayer==0 && _psd[imageLayer].format()=="Adobe Photoshop bitmap") {
+        /*if (imageLayer==0 && _psd[imageLayer].format()=="Adobe Photoshop bitmap") {
             if ((int)_psd[imageLayer].columns()<width)
                 offsetX = width-(int)_psd[imageLayer].columns();
             if ((int)_psd[imageLayer].rows()<height)
                 offsetY = height-(int)_psd[imageLayer].rows();
-        }
+        }*/
         if (imageLayer>0 || _psd[imageLayer].format()!="Adobe Photoshop bitmap") {
             if (offsetLayer) {
-                if ((int)_psd[imageLayer].columns()!=bounds.x2)
+                //if ((int)_psd[imageLayer].columns()!=bounds.x2)
                     offsetX = _psd[imageLayer].page().xOff();
-                if ((int)_psd[imageLayer].rows()!=bounds.y2)
+                //if ((int)_psd[imageLayer].rows()!=bounds.y2)
                     offsetY = _psd[imageLayer].page().yOff();
             }
         }
