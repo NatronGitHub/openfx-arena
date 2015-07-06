@@ -101,8 +101,13 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 #define kParamImageLayer "layer"
 #define kParamImageLayerLabel "Image layer"
-#define kParamImageLayerHint "Select image layer\n\nNote! Selecting layer other than default will disable multi-plane."
+#define kParamImageLayerHint "Select image layer\n\nNote! Selecting layer here will conflict with multi-plane, the recommended way to access layers is through a merge/shuffle node (multi-plane)."
 #define kParamImageLayerDefault 0
+
+#define kParamOffsetLayer "offset"
+#define kParamOffsetLayerLabel "Offset layers"
+#define kParamOffsetLayerHint "Enable/Disable layer offset in multi-plane"
+#define kParamOffsetLayerDefault true
 
 static bool gHostIsNatron   = false;
 
@@ -201,6 +206,9 @@ private:
     OFX::ChoiceParam *_iccRender;
     OFX::BooleanParam *_iccBlack;
     OFX::ChoiceParam *_imageLayer;
+    OFX::BooleanParam *_offsetLayer;
+    int _maxWidth;
+    int _maxHeight;
 };
 
 ReadPSDPlugin::ReadPSDPlugin(OfxImageEffectHandle handle)
@@ -212,6 +220,8 @@ false
 #endif
 )
 ,_hasLCMS(false)
+,_maxWidth(0)
+,_maxHeight(0)
 {
     Magick::InitializeMagick(NULL);
 
@@ -228,8 +238,9 @@ false
     _iccRender = fetchChoiceParam(kParamICCRender);
     _iccBlack = fetchBooleanParam(kParamICCBlack);
     _imageLayer = fetchChoiceParam(kParamImageLayer);
+    _offsetLayer = fetchBooleanParam(kParamOffsetLayer);
 
-    assert(_outputComponents && _iccIn && _iccOut && _doICC && _iccRGB && _iccCMYK && _iccGRAY && _iccRender && _iccBlack && _imageLayer);
+    assert(_outputComponents && _iccIn && _iccOut && _doICC && _iccRGB && _iccCMYK && _iccGRAY && _iccRender && _iccBlack && _imageLayer && _offsetLayer);
 }
 
 ReadPSDPlugin::~ReadPSDPlugin()
@@ -310,6 +321,7 @@ void ReadPSDPlugin::decodePlane(const std::string& /*filename*/, OfxTime time, c
     int iccRender = 0;
     bool iccBlack = false;
     int imageLayer = 0;
+    bool offsetLayer = false;
     std::vector<std::string> layerChannels = OFX::mapPixelComponentCustomToLayerChannels(rawComponents);
     int numChannels = layerChannels.size();
     _iccIn->getValueAtTime(time, iccProfileInID);
@@ -326,6 +338,7 @@ void ReadPSDPlugin::decodePlane(const std::string& /*filename*/, OfxTime time, c
     _iccRender->getValueAtTime(time, iccRender);
     _iccBlack->getValueAtTime(time, iccBlack);
     _imageLayer->getValueAtTime(time, imageLayer);
+    _offsetLayer->getValueAtTime(time, offsetLayer);
 
     // Get multiplane layer
     if (numChannels==5) // layer+R+G+B+A
@@ -340,18 +353,20 @@ void ReadPSDPlugin::decodePlane(const std::string& /*filename*/, OfxTime time, c
             if (psdLayer.str()==layerName && !foundLayer)
                 foundLayer = true;
             if (foundLayer) {
-                if ((int)_psd[i].columns()!=bounds.x2) // offset should be optional, but until we support real layer size (#126), leave as-is
-                    offsetX = _psd[i].page().xOff();
-                if ((int)_psd[i].rows()!=bounds.y2)
-                    offsetY = _psd[i].page().yOff();
+                if (offsetLayer) {
+                    if ((int)_psd[i].columns()!=bounds.x2)
+                        offsetX = _psd[i].page().xOff();
+                    if ((int)_psd[i].rows()!=bounds.y2)
+                        offsetY = _psd[i].page().yOff();
+                }
                 layer = i;
                 break;
             }
         }
     }
 
-    // if layer selected from choiceparam
-    if (imageLayer>0) {
+    // if layer selected from choiceparam and no multiplane
+    if (imageLayer>0 && layer==0) {
         offsetX = 0;
         offsetY = 0;
         layer = imageLayer;
@@ -487,14 +502,24 @@ bool ReadPSDPlugin::getFrameBounds(const std::string& /*filename*/,
                               OfxRectI *bounds,
                               double *par,
                               std::string */*error*/)
-{
+{ // TODO don't know if this is the best solution ...
     int layer = 0;
     _imageLayer->getValue(layer);
-    if (_psd[layer].columns()>0 && _psd[layer].rows()>0) {
+    int frameX = 0;
+    int frameY = 0;
+    if (layer>0) {
+        frameX = (int)_psd[layer].columns();
+        frameY = (int)_psd[layer].rows();
+    }
+    else {
+        frameX = _maxWidth;
+        frameY = _maxHeight;
+    }
+    if (frameX>0 && frameY>0) {
         bounds->x1 = 0;
-        bounds->x2 = _psd[layer].columns();
+        bounds->x2 = frameX;
         bounds->y1 = 0;
-        bounds->y2 = _psd[layer].rows();
+        bounds->y2 = frameY;
         *par = 1.0;
     }
     return true;
@@ -503,6 +528,8 @@ bool ReadPSDPlugin::getFrameBounds(const std::string& /*filename*/,
 void ReadPSDPlugin::restoreState(const std::string& filename)
 {
     _psd.clear();
+    _maxWidth = 0;
+    _maxHeight = 0;
     int layer = 0;
     _imageLayer->getValue(layer);
     try {
@@ -513,10 +540,20 @@ void ReadPSDPlugin::restoreState(const std::string& filename)
         OFX::throwSuiteStatusException(kOfxStatErrFormat);
     }
     genLayerMenu();
-    if (_psd[layer].columns()>0 && _psd[layer].rows()>0)
+    if (_psd[layer].columns()>0 && _psd[layer].rows()>0) {
         _filename = filename;
+        // get max width/height for multiplane
+        for (int i = 0; i < (int)_psd.size(); i++) {
+            if ((int)_psd[i].columns()>_maxWidth)
+                _maxWidth = (int)_psd[i].columns();
+            if ((int)_psd[i].rows()>_maxHeight)
+                _maxHeight = (int)_psd[i].rows();
+        }
+    }
     else {
         _psd.clear();
+        _maxWidth = 0;
+        _maxHeight = 0;
         setPersistentMessage(OFX::Message::eMessageError, "", "Unable to read image");
         OFX::throwSuiteStatusException(kOfxStatErrFormat);
     }
@@ -569,7 +606,7 @@ void ReadPSDPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, C
     gHostIsNatron = (OFX::getImageEffectHostDescription()->hostName == kNatronOfxHostName);
 
     PageParamDescriptor *page = GenericReaderDescribeInContextBegin(desc, context, isVideoStreamPlugin(), kSupportsRGBA, kSupportsRGB, kSupportsAlpha, kSupportsTiles);
-    {
+    { //TODO is this still needed? pros are exact layer size, cons are confusion for users?
         ChoiceParamDescriptor* param = desc.defineChoiceParam(kParamImageLayer);
         param->setLabel(kParamImageLayerLabel);
         param->setHint(kParamImageLayerHint);
@@ -583,6 +620,13 @@ void ReadPSDPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, C
         param->appendOption("Layer 7");
         param->appendOption("Layer 8");
         param->appendOption("Layer 9");
+        page->addChild(*param);
+    }
+    {
+        BooleanParamDescriptor* param = desc.defineBooleanParam(kParamOffsetLayer);
+        param->setLabel(kParamOffsetLayerLabel);
+        param->setHint(kParamOffsetLayerHint);
+        param->setDefault(kParamOffsetLayerDefault);
         page->addChild(*param);
     }
     {
