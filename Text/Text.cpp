@@ -260,11 +260,10 @@ TextPlugin::TextPlugin(OfxImageEffectHandle handle)
 , dstClip_(0)
 , width_(0)
 , height_(0)
+,has_fontconfig(false)
+,has_freetype(false)
 {
     Magick::InitializeMagick(NULL);
-
-    has_fontconfig = false;
-    has_freetype = false;
 
     std::string delegates = MagickCore::GetMagickDelegates();
     if (delegates.find("fontconfig") != std::string::npos)
