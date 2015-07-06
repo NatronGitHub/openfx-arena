@@ -1,5 +1,5 @@
 #include "ofxsImageEffect.h"
-#include "Charcoal.h"
+#include "Sketch.h"
 
 namespace OFX 
 {
@@ -7,7 +7,7 @@ namespace OFX
   {
     void getPluginIDs(OFX::PluginFactoryArray &ids)
     {
-        getCharcoalPluginID(ids);
+        getSketchPluginID(ids);
     }
   }
 }
