@@ -151,7 +151,8 @@ void _getProFiles(std::vector<std::string> &files, bool desc, std::string filter
                     }
             }
         }
-        closedir(dp);
+        if (dp)
+            closedir(dp);
     }
 }
 
