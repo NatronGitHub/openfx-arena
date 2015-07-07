@@ -43,7 +43,7 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 #define kPluginIdentifier "net.fxarena.openfx.Texture"
 #define kPluginVersionMajor 3
-#define kPluginVersionMinor 4
+#define kPluginVersionMinor 5
 
 #define kSupportsTiles 0
 #define kSupportsMultiResolution 1
@@ -58,8 +58,8 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 #define kParamSeed "seed"
 #define kParamSeedLabel "Seed"
-#define kParamSeedHint "Seed the random generator (-1 is random)"
-#define kParamSeedDefault -1
+#define kParamSeedHint "Seed the random generator"
+#define kParamSeedDefault 0
 
 #define kParamWidth "width"
 #define kParamWidthLabel "Width"
@@ -81,6 +81,16 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 using namespace OFX;
 static bool gHostIsNatron = false;
+
+static unsigned int hash(unsigned int a)
+{
+    a = (a ^ 61) ^ (a >> 16);
+    a = a + (a << 3);
+    a = a ^ (a >> 4);
+    a = a * 0x27d4eb2d;
+    a = a ^ (a >> 15);
+    return a;
+}
 
 class TexturePlugin : public OFX::ImageEffect
 {
@@ -187,7 +197,7 @@ void TexturePlugin::render(const OFX::RenderArguments &args)
     Magick::Image image(Magick::Geometry(width,height),Magick::Color("rgba(0,0,0,0)"));
 
     // Set seed
-    Magick::SetRandomSeed(seed);
+    Magick::SetRandomSeed(hash((unsigned)(args.time)^seed));
 
     // generate background
     switch (effect) {
@@ -364,8 +374,8 @@ void TexturePluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, C
         IntParamDescriptor *param = desc.defineIntParam(kParamSeed);
         param->setLabel(kParamSeedLabel);
         param->setHint(kParamSeedHint);
-        param->setRange(-1, 10000);
-        param->setDisplayRange(-1, 5000);
+        param->setRange(0, 10000);
+        param->setDisplayRange(0, 5000);
         param->setDefault(kParamSeedDefault);
         page->addChild(*param);
     }
