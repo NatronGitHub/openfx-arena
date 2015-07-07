@@ -43,7 +43,7 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 #define kPluginIdentifier "net.fxarena.openfx.Texture"
 #define kPluginVersionMajor 3
-#define kPluginVersionMinor 3
+#define kPluginVersionMinor 4
 
 #define kSupportsTiles 0
 #define kSupportsMultiResolution 1
@@ -59,7 +59,7 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #define kParamSeed "seed"
 #define kParamSeedLabel "Seed"
 #define kParamSeedHint "Seed the random generator (-1 is random)"
-#define kParamSeedDefault 4321
+#define kParamSeedDefault -1
 
 #define kParamWidth "width"
 #define kParamWidthLabel "Width"
@@ -231,6 +231,25 @@ void TexturePlugin::render(const OFX::RenderArguments &args)
         else
             image.read("radial-gradient:"+fromColor+"-"+toColor);
         break;
+    case 9: // loops1
+        image.addNoise(Magick::GaussianNoise);
+        break;
+    case 10: // loops2
+        image.addNoise(Magick::ImpulseNoise);
+        break;
+    case 11: // loops3
+        image.addNoise(Magick::LaplacianNoise);
+        break;
+    }
+
+    if (effect>8 && effect<12) { // loops 1 2 3
+        image.matte(false);
+        image.blur(0,10);
+        image.normalize();
+        image.fx("sin(u*4*pi)*100");
+        image.edge(1);
+        image.blur(0,10);
+        image.matte(true);
     }
 
     // return image
@@ -319,6 +338,9 @@ void TexturePluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, C
             param->appendOption("Misc/Stripes");
             param->appendOption("Gradient/Regular");
             param->appendOption("Gradient/Radial");
+            param->appendOption("Misc/Loops 1");
+            param->appendOption("Misc/Loops 2");
+            param->appendOption("Misc/Loops 3");
         }
         else {
             param->appendOption("Plasma");
@@ -330,6 +352,9 @@ void TexturePluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, C
             param->appendOption("Stripes");
             param->appendOption("Gradient");
             param->appendOption("Gradient Radial");
+            param->appendOption("Loops 1");
+            param->appendOption("Loops 2");
+            param->appendOption("Loops 3");
         }
         param->setDefault(kParamEffectDefault);
         param->setAnimates(true);
