@@ -9,40 +9,40 @@ Plugins
 
  * **Image**
    * ReadPSD
-     * Read Photoshop/GIMP/Cinepaint images/layers with RGB/CMYK/GRAY color management
+     * *Read Photoshop/GIMP/Cinepaint RGB/CMYK/GRAY images/layers*
    * ReadSVG
-     * Read SVG vector images
+     * *Read SVG vector images*
  * **Filter**
    * Charcoal
-     * Charcoal paint effect
+     * *Charcoal paint effect*
    * Oilpaint
-     * Oil paint effect
+     * *Oil paint effect*
    * Sketch
-     * Sketch paint effect
+     * *Sketch paint effect*
  * **Transform**
    * Arc
-     * Arch distortion
+     * *Arc distortion*
    * Polar
-     * Polar distortion
+     * *Polar distortion*
    * Polaroid
-     * Simulate a polaroid image with text
+     * *Simulate a polaroid image with text*
    * Reflection
-     * Mirror/Reflects image in various ways
+     * *Mirror/Reflects image in various ways*
    * Roll
-     * Roll image
+     * *Roll image*
    * Swirl
-     * Swirl image
+     * *Swirl image*
    * Tile
-     * Tile image
+     * *Tile image*
    * Wave
-     * Wave effect
+     * *Wave effect*
  * **Draw**
    * Text
-     * Text generator with several options
+     * *Text generator with several options*
    * TextPango
-     * Advanced text generator using Pango Markup
+     * *Advanced text generator using Pango markup*
    * Texture
-     * Texture/Background generator
+     * *Texture/Background generator*
 
 Downloads
 =========
