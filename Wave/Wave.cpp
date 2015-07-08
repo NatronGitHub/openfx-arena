@@ -41,7 +41,7 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include <cmath>
 
 #define kPluginName "Wave"
-#define kPluginGrouping "Filter"
+#define kPluginGrouping "Transform"
 #define kPluginIdentifier "net.fxarena.openfx.Wave"
 #define kPluginVersionMajor 1
 #define kPluginVersionMinor 0
@@ -215,8 +215,7 @@ void WavePluginFactory::describe(OFX::ImageEffectDescriptor &desc)
     desc.setLabel(kPluginName);
     desc.setPluginGrouping(kPluginGrouping);
     std::string magickV = MagickCore::GetMagickVersion(NULL);
-    std::string delegates = MagickCore::GetMagickDelegates();
-    desc.setPluginDescription("Wave filter for Natron.\n\nWritten by Ole-André Rodlie <olear@fxarena.net>\n\n Powered by "+magickV+"\n\nFeatures: "+delegates);
+    desc.setPluginDescription("Wave filter for Natron.\n\nWritten by Ole-André Rodlie <olear@fxarena.net>\n\nPowered by "+magickV);
 
     // add the supported contexts
     desc.addSupportedContext(eContextGeneral);

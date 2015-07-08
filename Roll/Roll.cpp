@@ -214,8 +214,7 @@ void RollPluginFactory::describe(OFX::ImageEffectDescriptor &desc)
     desc.setLabel(kPluginName);
     desc.setPluginGrouping(kPluginGrouping);
     std::string magickV = MagickCore::GetMagickVersion(NULL);
-    std::string delegates = MagickCore::GetMagickDelegates();
-    desc.setPluginDescription("Roll filter for Natron.\n\nWritten by Ole-André Rodlie <olear@fxarena.net>\n\n Powered by "+magickV+"\n\nFeatures: "+delegates);
+    desc.setPluginDescription("Roll filter for Natron.\n\nWritten by Ole-André Rodlie <olear@fxarena.net>\n\nPowered by "+magickV);
 
     // add the supported contexts
     desc.addSupportedContext(eContextGeneral);

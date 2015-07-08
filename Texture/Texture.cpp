@@ -43,7 +43,7 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 #define kPluginIdentifier "net.fxarena.openfx.Texture"
 #define kPluginVersionMajor 3
-#define kPluginVersionMinor 1
+#define kPluginVersionMinor 5
 
 #define kSupportsTiles 0
 #define kSupportsMultiResolution 1
@@ -59,7 +59,7 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #define kParamSeed "seed"
 #define kParamSeedLabel "Seed"
 #define kParamSeedHint "Seed the random generator"
-#define kParamSeedDefault 4321
+#define kParamSeedDefault 0
 
 #define kParamWidth "width"
 #define kParamWidthLabel "Width"
@@ -71,8 +71,26 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #define kParamHeightHint "Set canvas height, default (0) is project format"
 #define kParamHeightDefault 0
 
+#define kParamFromColor "fromColor"
+#define kParamFromColorLabel "Color from"
+#define kParamFromColorHint "Set start color, you must set a end color for this to work. Valid values are: none (transparent), color name (red, blue etc) or hex colors"
+
+#define kParamToColor "toColor"
+#define kParamToColorLabel "Color to"
+#define kParamToColorHint "Set end color, you must set a start color for this to work. Valid values are : none (transparent), color name (red, blue etc) or hex colors"
+
 using namespace OFX;
 static bool gHostIsNatron = false;
+
+static unsigned int hash(unsigned int a)
+{
+    a = (a ^ 61) ^ (a >> 16);
+    a = a + (a << 3);
+    a = a ^ (a >> 4);
+    a = a * 0x27d4eb2d;
+    a = a ^ (a >> 15);
+    return a;
+}
 
 class TexturePlugin : public OFX::ImageEffect
 {
@@ -87,6 +105,8 @@ private:
     OFX::IntParam *seed_;
     OFX::IntParam *width_;
     OFX::IntParam *height_;
+    OFX::StringParam *fromColor_;
+    OFX::StringParam *toColor_;
 };
 
 TexturePlugin::TexturePlugin(OfxImageEffectHandle handle)
@@ -104,8 +124,10 @@ TexturePlugin::TexturePlugin(OfxImageEffectHandle handle)
     seed_ = fetchIntParam(kParamSeed);
     width_ = fetchIntParam(kParamWidth);
     height_ = fetchIntParam(kParamHeight);
+    fromColor_ = fetchStringParam(kParamFromColor);
+    toColor_ = fetchStringParam(kParamToColor);
 
-    assert(effect_ && seed_ && width_ && height_);
+    assert(effect_ && seed_ && width_ && height_ && fromColor_ && toColor_);
 }
 
 TexturePlugin::~TexturePlugin()
@@ -163,8 +185,11 @@ void TexturePlugin::render(const OFX::RenderArguments &args)
 
     // Get params
     int effect,seed;
+    std::string fromColor, toColor;
     effect_->getValueAtTime(args.time, effect);
     seed_->getValueAtTime(args.time, seed);
+    fromColor_->getValueAtTime(args.time, fromColor);
+    toColor_->getValueAtTime(args.time, toColor);
 
     // Generate empty image
     int width = dstRod.x2-dstRod.x1;
@@ -172,123 +197,69 @@ void TexturePlugin::render(const OFX::RenderArguments &args)
     Magick::Image image(Magick::Geometry(width,height),Magick::Color("rgba(0,0,0,0)"));
 
     // Set seed
-    if (seed!=0)
-        Magick::SetRandomSeed(seed);
+    Magick::SetRandomSeed(hash((unsigned)(args.time)^seed));
 
     // generate background
     switch (effect) {
     case 0: // Plasma
-        image.read("plasma:");
+        if (fromColor.empty() && toColor.empty())
+            image.read("plasma:");
+        else
+            image.read("plasma:"+fromColor+"-"+toColor);
         break;
-    case 1: // Plasma
-        image.read("plasma:grey-grey");
-        break;
-    case 2: // Plasma
-        image.read("plasma:white-blue");
-        break;
-    case 3: // Plasma
-        image.read("plasma:green-yellow");
-        break;
-    case 4: // Plasma
-        image.read("plasma:red-blue");
-        break;
-    case 5: // Plasma
-        image.read("plasma:tomato-steelblue");
-        break;
-    case 6: // Plasma Fractal
+    case 1: // Plasma Fractal
         image.read("plasma:fractal");
         break;
-    case 7: // GaussianNoise
+    case 2: // GaussianNoise
         image.addNoise(Magick::GaussianNoise);
         break;
-    case 8: // ImpulseNoise
+    case 3: // ImpulseNoise
         image.addNoise(Magick::ImpulseNoise);
         break;
-    case 9: // LaplacianNoise
+    case 4: // LaplacianNoise
         image.addNoise(Magick::LaplacianNoise);
         break;
-    case 10: // checkerboard
+    case 5: // checkerboard
         image.read("pattern:checkerboard");
         break;
-    case 11: // stripes
+    case 6: // stripes
         image.extent(Magick::Geometry(width,1));
         image.addNoise(Magick::GaussianNoise);
         image.channel(Magick::GreenChannel);
         image.negate();
         image.scale(Magick::Geometry(width,height));
         break;
-    case 12:
-        image.read("gradient:");
+    case 7: // gradient
+        if (fromColor.empty() && toColor.empty())
+            image.read("gradient:");
+        else
+            image.read("gradient:"+fromColor+"-"+toColor);
         break;
-    case 13:
-        image.read("gradient:blue");
+    case 8: // radial-gradient
+        if (fromColor.empty() && toColor.empty())
+            image.read("radial-gradient:");
+        else
+            image.read("radial-gradient:"+fromColor+"-"+toColor);
         break;
-    case 14:
-        image.read("gradient:yellow");
+    case 9: // loops1
+        image.addNoise(Magick::GaussianNoise);
         break;
-    case 15:
-        image.read("gradient:green-yellow");
+    case 10: // loops2
+        image.addNoise(Magick::ImpulseNoise);
         break;
-    case 16:
-        image.read("gradient:red-blue");
+    case 11: // loops3
+        image.addNoise(Magick::LaplacianNoise);
         break;
-    case 17:
-        image.read("gradient:tomato-steelblue");
-        break;
-    case 18:
-        image.read("gradient:snow-navy");
-        break;
-    case 19:
-        image.read("gradient:gold-firebrick");
-        break;
-    case 20:
-        image.read("gradient:yellow-limegreen");
-        break;
-    case 21:
-        image.read("gradient:khaki-tomato");
-        break;
-    case 22:
-        image.read("gradient:darkcyan-snow");
-        break;
-    case 23:
-        image.read("gradient:none-firebrick");
-        break;
-    case 24:
-        image.read("gradient:none-yellow");
-        break;
-    case 25:
-        image.read("gradient:none-steelblue");
-        break;
-    case 26:
-        image.read("gradient:none-navy");
-        break;
-    case 27:
-        image.read("gradient:none-gold");
-        break;
-    case 28:
-        image.read("gradient:none-orange");
-        break;
-    case 29:
-        image.read("gradient:none-tomato");
-        break;
-    case 30:
-        image.read("radial-gradient:");
-        break;
-    case 31:
-        image.read("radial-gradient:blue");
-        break;
-    case 32:
-        image.read("radial-gradient:yellow");
-        break;
-    case 33:
-        image.read("radial-gradient:green-yellow");
-        break;
-    case 34:
-        image.read("radial-gradient:red-blue");
-        break;
-    case 35:
-        image.read("radial-gradient:tomato-steelblue");
-        break;
+    }
+
+    if (effect>8 && effect<12) { // loops 1 2 3
+        image.matte(false);
+        image.blur(0,10);
+        image.normalize();
+        image.fx("sin(u*4*pi)*100");
+        image.edge(1);
+        image.blur(0,10);
+        image.matte(true);
     }
 
     // return image
@@ -329,8 +300,7 @@ void TexturePluginFactory::describe(OFX::ImageEffectDescriptor &desc)
     desc.setLabel(kPluginName);
     desc.setPluginGrouping(kPluginGrouping);
     std::string magickV = MagickCore::GetMagickVersion(NULL);
-    std::string delegates = MagickCore::GetMagickDelegates();
-    desc.setPluginDescription("Texture/Background generator for Natron.\n\nWritten by Ole-André Rodlie <olear@fxarena.net>\n\n Powered by "+magickV+"\n\nFeatures: "+delegates);
+    desc.setPluginDescription("Texture/Background generator for Natron.\n\nWritten by Ole-André Rodlie <olear@fxarena.net>\n\nPowered by "+magickV);
 
     // add the supported contexts
     desc.addSupportedContext(eContextGeneral);
@@ -370,11 +340,6 @@ void TexturePluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, C
         if (gHostIsNatron) {
             param->setCascading(OFX::getImageEffectHostDescription()->supportsCascadingChoices);
             param->appendOption("Plasma/Regular");
-            param->appendOption("Plasma/grey-grey");
-            param->appendOption("Plasma/white-blue");
-            param->appendOption("Plasma/green-yellow");
-            param->appendOption("Plasma/red-blue");
-            param->appendOption("Plasma/tomato-steelblue");
             param->appendOption("Plasma/Fractal");
             param->appendOption("Noise/Gaussian");
             param->appendOption("Noise/Impulse");
@@ -382,37 +347,13 @@ void TexturePluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, C
             param->appendOption("Misc/Checkerboard");
             param->appendOption("Misc/Stripes");
             param->appendOption("Gradient/Regular");
-            param->appendOption("Gradient/Blue");
-            param->appendOption("Gradient/Yellow");
-            param->appendOption("Gradient/green-yellow");
-            param->appendOption("Gradient/red-blue");
-            param->appendOption("Gradient/tomato-steelblue");
-            param->appendOption("Gradient/snow-navy");
-            param->appendOption("Gradient/gold-firebrick");
-            param->appendOption("Gradient/yellow-limegreen");
-            param->appendOption("Gradient/khaki-tomato");
-            param->appendOption("Gradient/darkcyan-snow");
-            param->appendOption("Gradient/none-firebrick");
-            param->appendOption("Gradient/none-yellow");
-            param->appendOption("Gradient/none-steelblue");
-            param->appendOption("Gradient/none-navy");
-            param->appendOption("Gradient/none-gold");
-            param->appendOption("Gradient/none-orange");
-            param->appendOption("Gradient/none-tomato");
-            param->appendOption("Gradient/Radial/Regular");
-            param->appendOption("Gradient/Radial/Blue");
-            param->appendOption("Gradient/Radial/Yellow");
-            param->appendOption("Gradient/Radial/green-yellow");
-            param->appendOption("Gradient/Radial/red-blue");
-            param->appendOption("Gradient/Radial/tomato-steelblue");
+            param->appendOption("Gradient/Radial");
+            param->appendOption("Misc/Loops 1");
+            param->appendOption("Misc/Loops 2");
+            param->appendOption("Misc/Loops 3");
         }
         else {
             param->appendOption("Plasma");
-            param->appendOption("Plasma grey-grey");
-            param->appendOption("Plasma white-blue");
-            param->appendOption("Plasma green-yellow");
-            param->appendOption("Plasma red-blue");
-            param->appendOption("Plasma tomato-steelblue");
             param->appendOption("Plasma Fractal");
             param->appendOption("GaussianNoise");
             param->appendOption("ImpulseNoise");
@@ -420,29 +361,10 @@ void TexturePluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, C
             param->appendOption("Checkerboard");
             param->appendOption("Stripes");
             param->appendOption("Gradient");
-            param->appendOption("Gradient blue");
-            param->appendOption("Gradient yellow");
-            param->appendOption("Gradient green-yellow");
-            param->appendOption("Gradient red-blue");
-            param->appendOption("Gradient tomato-steelblue");
-            param->appendOption("Gradient snow-navy");
-            param->appendOption("Gradient gold-firebrick");
-            param->appendOption("Gradient yellow-limegreen");
-            param->appendOption("Gradient khaki-tomato");
-            param->appendOption("Gradient darkcyan-snow");
-            param->appendOption("Gradient none-firebrick");
-            param->appendOption("Gradient none-yellow");
-            param->appendOption("Gradient none-steelblue");
-            param->appendOption("Gradient none-navy");
-            param->appendOption("Gradient none-gold");
-            param->appendOption("Gradient none-orange");
-            param->appendOption("Gradient none-tomato");
             param->appendOption("Gradient Radial");
-            param->appendOption("Gradient Radial blue");
-            param->appendOption("Gradient Radial yellow");
-            param->appendOption("Gradient Radial green-yellow");
-            param->appendOption("Gradient Radial red-blue");
-            param->appendOption("Gradient Radial tomato-steelblue");
+            param->appendOption("Loops 1");
+            param->appendOption("Loops 2");
+            param->appendOption("Loops 3");
         }
         param->setDefault(kParamEffectDefault);
         param->setAnimates(true);
@@ -473,6 +395,22 @@ void TexturePluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, C
         param->setRange(0, 10000);
         param->setDisplayRange(0, 4000);
         param->setDefault(kParamHeightDefault);
+        page->addChild(*param);
+    }
+    {
+        StringParamDescriptor* param = desc.defineStringParam(kParamFromColor);
+        param->setLabel(kParamFromColorLabel);
+        param->setHint(kParamFromColorHint);
+        param->setStringType(eStringTypeSingleLine);
+        param->setAnimates(true);
+        page->addChild(*param);
+    }
+    {
+        StringParamDescriptor* param = desc.defineStringParam(kParamToColor);
+        param->setLabel(kParamToColorLabel);
+        param->setHint(kParamToColorHint);
+        param->setStringType(eStringTypeSingleLine);
+        param->setAnimates(true);
         page->addChild(*param);
     }
 }

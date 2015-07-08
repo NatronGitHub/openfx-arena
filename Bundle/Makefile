@@ -1,5 +1,4 @@
 PLUGINOBJECTS = \
-        Mirror.o \
         Texture.o \
         Tile.o \
         Reflection.o \
@@ -10,20 +9,22 @@ PLUGINOBJECTS = \
         Wave.o \
         Swirl.o \
         Implode.o \
-        Emboss.o \
         Charcoal.o \
         Oilpaint.o \
         TextPango.o \
+        ReadPSD.o \
+        ReadSVG.o \
+        Sketch.o \
+        Polaroid.o \
         ofxsOGLTextRenderer.o \
         ofxsOGLFontData.o \
         ofxsRectangleInteract.o \
         PluginRegistrationCombined.o \
+        GenericReader.o GenericOCIO.o SequenceParsing.o
 
 PLUGINNAME = Arena
 
 RESOURCES = \
-../Mirror/net.fxarena.openfx.Mirror.png \
-../Mirror/net.fxarena.openfx.Mirror.svg \
 ../Texture/net.fxarena.openfx.Texture.png \
 ../Texture/net.fxarena.openfx.Texture.svg \
 ../Tile/net.fxarena.openfx.Tile.png \
@@ -44,17 +45,22 @@ RESOURCES = \
 ../Swirl/net.fxarena.openfx.Swirl.svg \
 ../Implode/net.fxarena.openfx.Implode.png \
 ../Implode/net.fxarena.openfx.Implode.svg \
-../Emboss/net.fxarena.openfx.Emboss.png \
-../Emboss/net.fxarena.openfx.Emboss.svg \
 ../Charcoal/net.fxarena.openfx.Charcoal.png \
 ../Charcoal/net.fxarena.openfx.Charcoal.svg \
 ../Oilpaint/net.fxarena.openfx.Oilpaint.png \
 ../Oilpaint/net.fxarena.openfx.Oilpaint.svg \
 ../TextPango/net.fxarena.openfx.TextPango.png \
 ../TextPango/net.fxarena.openfx.TextPango.svg \
+../ReadPSD/net.fxarena.openfx.ReadPSD.png \
+../ReadPSD/net.fxarena.openfx.ReadPSD.svg \
+../ReadSVG/net.fxarena.openfx.ReadSVG.png \
+../ReadSVG/net.fxarena.openfx.ReadSVG.svg \
+../Sketch/net.fxarena.openfx.Sketch.png \
+../Sketch/net.fxarena.openfx.Sketch.svg \
+../Polaroid/net.fxarena.openfx.Polaroid.png \
+../Polaroid/net.fxarena.openfx.Polaroid.svg \
 
 VPATH += \
-../Mirror \
 ../Texture \
 ../Tile \
 ../Reflection \
@@ -65,15 +71,18 @@ VPATH += \
 ../Wave \
 ../Swirl \
 ../Implode \
-../Emboss \
 ../Charcoal \
 ../Oilpaint \
 ../TextPango \
+../ReadPSD \
+../ReadSVG \
+../Sketch \
+../Polaroid \
 
 include ../Makefile.master
+include ../Makefile.io
 
 CXXFLAGS += \
--I../Mirror \
 -I../Texture \
 -I../Tile \
 -I../Reflection \
@@ -84,10 +93,13 @@ CXXFLAGS += \
 -I../Wave \
 -I../Swirl \
 -I../Implode \
--I../Emboss \
 -I../Charcoal \
 -I../Oilpaint \
 -I../TextPango \
+-I../ReadPSD \
+-I../ReadSVG \
+-I../Sketch \
+-I../Polaroid \
 
 CXXFLAGS  += $(MAGICK_CXXFLAGS)
 LINKFLAGS += $(MAGICK_LINKFLAGS)

@@ -41,7 +41,7 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include <cmath>
 
 #define kPluginName "Implode"
-#define kPluginGrouping "Filter"
+#define kPluginGrouping "Transform"
 #define kPluginIdentifier "net.fxarena.openfx.Implode"
 #define kPluginVersionMajor 1
 #define kPluginVersionMinor 0
@@ -206,8 +206,7 @@ void ImplodePluginFactory::describe(OFX::ImageEffectDescriptor &desc)
     desc.setLabel(kPluginName);
     desc.setPluginGrouping(kPluginGrouping);
     std::string magickV = MagickCore::GetMagickVersion(NULL);
-    std::string delegates = MagickCore::GetMagickDelegates();
-    desc.setPluginDescription("Implode filter for Natron.\n\nWritten by Ole-André Rodlie <olear@fxarena.net>\n\n Powered by "+magickV+"\n\nFeatures: "+delegates);
+    desc.setPluginDescription("Implode filter for Natron.\n\nWritten by Ole-André Rodlie <olear@fxarena.net>\n\nPowered by "+magickV);
 
     // add the supported contexts
     desc.addSupportedContext(eContextGeneral);
@@ -244,7 +243,7 @@ void ImplodePluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, C
         param->setLabel(kParamImplodeLabel);
         param->setHint(kParamImplodeHint);
         param->setRange(-100, 100);
-        param->setDisplayRange(-3, 3);
+        param->setDisplayRange(-5, 5);
         param->setDefault(kParamImplodeDefault);
         page->addChild(*param);
     }

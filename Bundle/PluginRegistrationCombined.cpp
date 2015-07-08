@@ -1,5 +1,4 @@
 #include "ofxsImageEffect.h"
-#include "Mirror.h"
 #include "Texture.h"
 #include "Tile.h"
 #include "Reflection.h"
@@ -10,10 +9,13 @@
 #include "Wave.h"
 #include "Swirl.h"
 #include "Implode.h"
-#include "Emboss.h"
 #include "Charcoal.h"
 #include "Oilpaint.h"
 #include "TextPango.h"
+#include "ReadPSD.h"
+#include "ReadSVG.h"
+#include "Sketch.h"
+#include "Polaroid.h"
 
 namespace OFX
 {
@@ -21,7 +23,6 @@ namespace OFX
     {
         void getPluginIDs(OFX::PluginFactoryArray &ids)
         {
-            getMirrorPluginID(ids);
             getTexturePluginID(ids);
             getTilePluginID(ids);
             getReflectionPluginID(ids);
@@ -32,10 +33,13 @@ namespace OFX
             getWavePluginID(ids);
             getSwirlPluginID(ids);
             getImplodePluginID(ids);
-            getEmbossPluginID(ids);
             getCharcoalPluginID(ids);
             getOilpaintPluginID(ids);
             getTextPangoPluginID(ids);
+            getReadPSDPluginID(ids);
+            getReadSVGPluginID(ids);
+            getSketchPluginID(ids);
+            getPolaroidPluginID(ids);
         }
     }
 }

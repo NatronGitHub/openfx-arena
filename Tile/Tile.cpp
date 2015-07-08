@@ -61,7 +61,7 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 #define kParamTileTimeOffsetFirst "keepFirst"
 #define kParamTileTimeOffsetFirstLabel "Keep first frame"
-#define kParamTileTimeOffsetFirstHint "Stay on first frame is offset"
+#define kParamTileTimeOffsetFirstHint "Stay on first frame if offset"
 #define kParamTileTimeOffsetFirstDefault true
 
 #define kParamMatte "matte"
@@ -310,8 +310,7 @@ void TilePluginFactory::describe(OFX::ImageEffectDescriptor &desc)
     desc.setLabel(kPluginName);
     desc.setPluginGrouping(kPluginGrouping);
     std::string magickV = MagickCore::GetMagickVersion(NULL);
-    std::string delegates = MagickCore::GetMagickDelegates();
-    desc.setPluginDescription("Tile filter for Natron.\n\nWritten by Ole-André Rodlie <olear@fxarena.net>\n\n Powered by "+magickV+"\n\nFeatures: "+delegates);
+    desc.setPluginDescription("Tile filter for Natron.\n\nWritten by Ole-André Rodlie <olear@fxarena.net>\n\nPowered by "+magickV);
 
     // add the supported contexts
     desc.addSupportedContext(eContextGeneral);

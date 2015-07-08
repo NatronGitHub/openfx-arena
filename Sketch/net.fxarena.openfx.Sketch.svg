@@ -7,14 +7,17 @@
    xmlns="http://www.w3.org/2000/svg"
    xmlns:sodipodi="http://sodipodi.sourceforge.net/DTD/sodipodi-0.dtd"
    xmlns:inkscape="http://www.inkscape.org/namespaces/inkscape"
-   height="1024"
-   width="1024"
-   id="svg3786"
+   height="1000"
+   width="928"
+   id="svg3757"
    version="1.1"
    inkscape:version="0.47 r22583"
-   sodipodi:docname="1429873609_mirror.svg">
+   sodipodi:docname="net.fxarena.openfx.Charcoal.svg"
+   inkscape:export-filename="/home/olear/Projects/opensource/openfx-arena/Charcoal/net.fxarena.openfx.Charcoal.png"
+   inkscape:export-xdpi="11.540948"
+   inkscape:export-ydpi="11.540948">
   <metadata
-     id="metadata3794">
+     id="metadata3765">
     <rdf:RDF>
       <cc:Work
          rdf:about="">
@@ -26,14 +29,14 @@
     </rdf:RDF>
   </metadata>
   <defs
-     id="defs3792">
+     id="defs3763">
     <inkscape:perspective
        sodipodi:type="inkscape:persp3d"
-       inkscape:vp_x="0 : 512 : 1"
+       inkscape:vp_x="0 : 500 : 1"
        inkscape:vp_y="0 : 1000 : 0"
-       inkscape:vp_z="1024 : 512 : 1"
-       inkscape:persp3d-origin="512 : 341.33333 : 1"
-       id="perspective3796" />
+       inkscape:vp_z="928 : 500 : 1"
+       inkscape:persp3d-origin="464 : 333.33333 : 1"
+       id="perspective3767" />
   </defs>
   <sodipodi:namedview
      pagecolor="#ffffff"
@@ -44,19 +47,20 @@
      guidetolerance="10"
      inkscape:pageopacity="0"
      inkscape:pageshadow="2"
-     inkscape:window-width="942"
-     inkscape:window-height="764"
-     id="namedview3790"
+     inkscape:window-width="700"
+     inkscape:window-height="491"
+     id="namedview3761"
      showgrid="false"
-     inkscape:zoom="0.23046875"
-     inkscape:cx="-290.71186"
-     inkscape:cy="512"
+     inkscape:zoom="0.236"
+     inkscape:cx="464"
+     inkscape:cy="500"
      inkscape:window-x="0"
-     inkscape:window-y="0"
+     inkscape:window-y="25"
      inkscape:window-maximized="0"
-     inkscape:current-layer="svg3786" />
+     inkscape:current-layer="svg3757" />
   <path
-     d="M320 320L128 512l192 192V576h384v128l192-192L704 320v128H320V320zM512 0L0 320v704l512-256 512 256V320L512 0zM960 896L576 704v-64H448v64L64 896V384l384-256v256h128V128l384 256V896z"
-     id="path3788"
+     d="M353 723.5q0 92 -65.5 157.5t-157.5 65.5q-62 0 -112 -30 52 -29 82 -80.5t30 -112.5q0 -46 33 -79t78.5 -33 78.5 33 33 79zm525.5 -637.5q32.5 32.5 32.5 79t-33 79.5l-422 421q-16 -58 -58 -100t-99 -57l421 -423q32 -32 79 -32t79.5 32.5z"
+     fill="#000000"
+     id="path3759"
      style="fill:#ffffff;fill-opacity:1" />
 </svg>
