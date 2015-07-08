@@ -40,7 +40,7 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include <stdint.h>
 #include <cmath>
 
-#define kPluginName "Emboss"
+#define kPluginName "EmbossOFX"
 #define kPluginGrouping "Filter"
 #define kPluginIdentifier "net.fxarena.openfx.Emboss"
 #define kPluginVersionMajor 1

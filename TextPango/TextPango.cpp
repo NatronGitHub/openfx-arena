@@ -39,7 +39,7 @@
 #include <iostream>
 #include <stdint.h>
 
-#define kPluginName "TextPango"
+#define kPluginName "TextPangoOFX"
 #define kPluginGrouping "Draw"
 #define kPluginIdentifier "net.fxarena.openfx.TextPango"
 #define kPluginVersionMajor 1

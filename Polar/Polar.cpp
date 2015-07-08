@@ -40,7 +40,7 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include <stdint.h>
 #include <cmath>
 
-#define kPluginName "Polar"
+#define kPluginName "PolarOFX"
 #define kPluginGrouping "Transform"
 #define kPluginIdentifier "net.fxarena.openfx.Polar"
 #define kPluginVersionMajor 1

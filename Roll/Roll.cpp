@@ -40,7 +40,7 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include <stdint.h>
 #include <cmath>
 
-#define kPluginName "Roll"
+#define kPluginName "RollOFX"
 #define kPluginGrouping "Transform"
 #define kPluginIdentifier "net.fxarena.openfx.Roll"
 #define kPluginVersionMajor 1

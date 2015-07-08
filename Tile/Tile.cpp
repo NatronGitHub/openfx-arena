@@ -38,7 +38,7 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include <Magick++.h>
 #include <iostream>
 
-#define kPluginName "Tile"
+#define kPluginName "TileOFX"
 #define kPluginGrouping "Transform"
 #define kPluginIdentifier "net.fxarena.openfx.Tile"
 #define kPluginVersionMajor 2

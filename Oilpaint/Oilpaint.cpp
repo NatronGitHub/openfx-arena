@@ -40,7 +40,7 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include <stdint.h>
 #include <cmath>
 
-#define kPluginName "Oilpaint"
+#define kPluginName "OilpaintOFX"
 #define kPluginGrouping "Filter"
 #define kPluginIdentifier "net.fxarena.openfx.Oilpaint"
 #define kPluginVersionMajor 1

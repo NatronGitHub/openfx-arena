@@ -42,7 +42,7 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include "ofxNatron.h"
 #include <cstring>
 
-#define kPluginName "Polaroid"
+#define kPluginName "PolaroidOFX"
 #define kPluginGrouping "Transform"
 #define kPluginIdentifier "net.fxarena.openfx.Polaroid"
 #define kPluginVersionMajor 1

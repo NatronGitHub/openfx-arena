@@ -81,7 +81,7 @@
 
 #define CLAMP(value, min, max) (((value) >(max)) ? (max) : (((value) <(min)) ? (min) : (value)))
 
-#define kPluginName "Text"
+#define kPluginName "TextOFX"
 #define kPluginGrouping "Draw"
 #define kPluginIdentifier "net.fxarena.openfx.Text"
 #define kPluginVersionMajor 5

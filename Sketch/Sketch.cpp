@@ -40,7 +40,7 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include <stdint.h>
 #include <cmath>
 
-#define kPluginName "Sketch"
+#define kPluginName "SketchOFX"
 #define kPluginGrouping "Filter"
 #define kPluginIdentifier "net.fxarena.openfx.Sketch"
 #define kPluginVersionMajor 1

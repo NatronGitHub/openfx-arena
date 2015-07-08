@@ -38,7 +38,7 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include "ofxNatron.h"
 #include <Magick++.h>
 
-#define kPluginName "Texture"
+#define kPluginName "TextureOFX"
 #define kPluginGrouping "Draw"
 
 #define kPluginIdentifier "net.fxarena.openfx.Texture"

@@ -40,7 +40,7 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include <stdint.h>
 #include <cmath>
 
-#define kPluginName "Charcoal"
+#define kPluginName "CharcoalOFX"
 #define kPluginGrouping "Filter"
 #define kPluginIdentifier "net.fxarena.openfx.Charcoal"
 #define kPluginVersionMajor 1
