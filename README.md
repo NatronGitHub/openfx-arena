@@ -7,23 +7,15 @@ A set of [OpenFX](http://openfx.sf.net) visual effect plugins designed for [Natr
 Downloads
 =========
 
-See latest releases for binary downloads.
+See latest [release](https://github.com/olear/openfx-arena/releases) for binary downloads.
 
 Source
 ======
 
-Get latest stable source:
+Get latest source:
 ```
 git clone https://github.com/olear/openfx-arena
 cd openfx-arena
-git submodule update -i --recursive
-```
-
-Get latest development source:
-```
-git clone https://github.com/olear/openfx-arena
-cd openfx-arena
-git checkout trunk
 git submodule update -i --recursive
 ```
 
@@ -62,6 +54,10 @@ sh deploy.sh
 Replace 'sh' with 'bash' on Debian/Ubuntu.
 
 You can also build manually using 'make'. Please note that then you must have libpng-devel and ImageMagick-devel installed prior to build. Using other version of ImageMagick than the one built using 'deploy.sh' is not supported or recommended.
+
+**Windows**
+
+Can be built using MinGW/MSYS(2), note that depends must be installed before running 'deploy.sh'.
 
 License
 =======
