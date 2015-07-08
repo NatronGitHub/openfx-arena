@@ -4,6 +4,46 @@ OpenFX-Arena [![Build Status](https://travis-ci.org/olear/openfx-arena.svg)](htt
 ![screenshot-3](https://cloud.githubusercontent.com/assets/7461595/8152563/e60b18c4-131e-11e5-8bd7-6fd6d3dd2db7.png)
 A set of [OpenFX](http://openfx.sf.net) visual effect plugins designed for [Natron](http://natron.inria.fr).
 
+Plugins
+=======
+
+ * **Image**
+   * ReadPSD
+     * Read Photoshop/GIMP/Cinepaint images/layers with RGB/CMYK/GRAY color management
+   * ReadSVG
+     * Read SVG vector images
+ * **Filter**
+   * Charcoal
+     * Charcoal paint effect
+   * Oilpaint
+     * Oil paint effect
+   * Sketch
+     * Sketch paint effect
+ * **Transform**
+   * Arc
+     * Arch distortion
+   * Polar
+     * Polar distortion
+   * Polaroid
+     * Simulate a polaroid image with text
+   * Reflection
+     * Mirror/Reflects image in various ways
+   * Roll
+     * Roll image
+   * Swirl
+     * Swirl image
+   * Tile
+     * Tile image
+   * Wave
+     * Wave effect
+ * **Draw**
+   * Text
+     * Text generator with several options
+   * TextPango
+     * Advanced text generator using Pango Markup
+   * Texture
+     * Texture/Background generator
+
 Downloads
 =========
 
