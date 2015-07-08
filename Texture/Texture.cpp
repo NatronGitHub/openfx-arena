@@ -43,7 +43,7 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 #define kPluginIdentifier "net.fxarena.openfx.Texture"
 #define kPluginVersionMajor 3
-#define kPluginVersionMinor 5
+#define kPluginVersionMinor 6
 
 #define kSupportsTiles 0
 #define kSupportsMultiResolution 1
@@ -99,6 +99,7 @@ public:
     virtual ~TexturePlugin();
     virtual void render(const OFX::RenderArguments &args) OVERRIDE FINAL;
     virtual bool getRegionOfDefinition(const OFX::RegionOfDefinitionArguments &args, OfxRectD &rod) OVERRIDE FINAL;
+    virtual void getClipPreferences(OFX::ClipPreferencesSetter &clipPreferences) OVERRIDE FINAL;
 private:
     OFX::Clip *dstClip_;
     OFX::ChoiceParam *effect_;
@@ -132,6 +133,12 @@ TexturePlugin::TexturePlugin(OfxImageEffectHandle handle)
 
 TexturePlugin::~TexturePlugin()
 {
+}
+
+/* set the frame varying flag */
+void TexturePlugin::getClipPreferences(OFX::ClipPreferencesSetter &clipPreferences)
+{
+    clipPreferences.setOutputFrameVarying(true);
 }
 
 /* Override the render */
