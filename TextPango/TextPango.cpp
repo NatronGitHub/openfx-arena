@@ -255,19 +255,11 @@ void TextPangoPlugin::render(const OFX::RenderArguments &args)
     int width = dstRod.x2-dstRod.x1;
     int height = dstRod.y2-dstRod.y1;
     Magick::Image image;
-    image.size(Magick::Geometry(width,height));
-
     #ifdef DEBUG
     image.debug(true);
     #endif
-
-    // set background
-    try {
-        image.backgroundColor("none");
-    }
-    catch(Magick::Exception) { // catch to avoid render fail on warn
-        image.backgroundColor("none"); // and try again (second time will not fail) ...
-    }
+    image.size(Magick::Geometry(width,height));
+    image.backgroundColor(Magick::Color("rgb(0,0,0,0)"));
 
     /*switch(gravity) {
     case 1: // natural

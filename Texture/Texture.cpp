@@ -37,13 +37,14 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include "ofxsMacros.h"
 #include "ofxNatron.h"
 #include <Magick++.h>
+#include <iostream>
 
 #define kPluginName "TextureOFX"
 #define kPluginGrouping "Draw"
 
 #define kPluginIdentifier "net.fxarena.openfx.Texture"
 #define kPluginVersionMajor 3
-#define kPluginVersionMinor 6
+#define kPluginVersionMinor 7
 
 #define kSupportsTiles 0
 #define kSupportsMultiResolution 1
@@ -202,71 +203,80 @@ void TexturePlugin::render(const OFX::RenderArguments &args)
     int width = dstRod.x2-dstRod.x1;
     int height = dstRod.y2-dstRod.y1;
     Magick::Image image(Magick::Geometry(width,height),Magick::Color("rgba(0,0,0,0)"));
+    #ifdef DEBUG
+    image.debug(true);
+    #endif
 
     // Set seed
     Magick::SetRandomSeed(hash((unsigned)(args.time)^seed));
 
     // generate background
-    switch (effect) {
-    case 0: // Plasma
-        if (fromColor.empty() && toColor.empty())
-            image.read("plasma:");
-        else
-            image.read("plasma:"+fromColor+"-"+toColor);
-        break;
-    case 1: // Plasma Fractal
-        image.read("plasma:fractal");
-        break;
-    case 2: // GaussianNoise
-        image.addNoise(Magick::GaussianNoise);
-        break;
-    case 3: // ImpulseNoise
-        image.addNoise(Magick::ImpulseNoise);
-        break;
-    case 4: // LaplacianNoise
-        image.addNoise(Magick::LaplacianNoise);
-        break;
-    case 5: // checkerboard
-        image.read("pattern:checkerboard");
-        break;
-    case 6: // stripes
-        image.extent(Magick::Geometry(width,1));
-        image.addNoise(Magick::GaussianNoise);
-        image.channel(Magick::GreenChannel);
-        image.negate();
-        image.scale(Magick::Geometry(width,height));
-        break;
-    case 7: // gradient
-        if (fromColor.empty() && toColor.empty())
-            image.read("gradient:");
-        else
-            image.read("gradient:"+fromColor+"-"+toColor);
-        break;
-    case 8: // radial-gradient
-        if (fromColor.empty() && toColor.empty())
-            image.read("radial-gradient:");
-        else
-            image.read("radial-gradient:"+fromColor+"-"+toColor);
-        break;
-    case 9: // loops1
-        image.addNoise(Magick::GaussianNoise);
-        break;
-    case 10: // loops2
-        image.addNoise(Magick::ImpulseNoise);
-        break;
-    case 11: // loops3
-        image.addNoise(Magick::LaplacianNoise);
-        break;
+    try {
+        switch (effect) {
+        case 0: // Plasma
+            if (fromColor.empty() && toColor.empty())
+                image.read("plasma:");
+            else
+                image.read("plasma:"+fromColor+"-"+toColor);
+            break;
+        case 1: // Plasma Fractal
+            image.read("plasma:fractal");
+            break;
+        case 2: // GaussianNoise
+            image.addNoise(Magick::GaussianNoise);
+            break;
+        case 3: // ImpulseNoise
+            image.addNoise(Magick::ImpulseNoise);
+            break;
+        case 4: // LaplacianNoise
+            image.addNoise(Magick::LaplacianNoise);
+            break;
+        case 5: // checkerboard
+            image.read("pattern:checkerboard");
+            break;
+        case 6: // stripes
+            image.extent(Magick::Geometry(width,1));
+            image.addNoise(Magick::GaussianNoise);
+            image.channel(Magick::GreenChannel);
+            image.negate();
+            image.scale(Magick::Geometry(width,height));
+            break;
+        case 7: // gradient
+            if (fromColor.empty() && toColor.empty())
+                image.read("gradient:");
+            else
+                image.read("gradient:"+fromColor+"-"+toColor);
+            break;
+        case 8: // radial-gradient
+            if (fromColor.empty() && toColor.empty())
+                image.read("radial-gradient:");
+            else
+                image.read("radial-gradient:"+fromColor+"-"+toColor);
+            break;
+        case 9: // loops1
+            image.addNoise(Magick::GaussianNoise);
+            break;
+        case 10: // loops2
+            image.addNoise(Magick::ImpulseNoise);
+            break;
+        case 11: // loops3
+            image.addNoise(Magick::LaplacianNoise);
+            break;
+        }
+        if (effect>8 && effect<12) { // loops 1 2 3
+            image.matte(false);
+            image.blur(0,10);
+            image.normalize();
+            image.fx("sin(u*4*pi)*100");
+            image.edge(1);
+            image.blur(0,10);
+            image.matte(true);
+        }
     }
-
-    if (effect>8 && effect<12) { // loops 1 2 3
-        image.matte(false);
-        image.blur(0,10);
-        image.normalize();
-        image.fx("sin(u*4*pi)*100");
-        image.edge(1);
-        image.blur(0,10);
-        image.matte(true);
+    catch(Magick::Warning &warning) { // ignore since warns interupt render
+        #ifdef DEBUG
+        std::cout << warning.what() << std::endl;
+        #endif
     }
 
     // return image
