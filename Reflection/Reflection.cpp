@@ -226,6 +226,10 @@ void ReflectionPlugin::render(const OFX::RenderArguments &args)
     if (srcClip_ && srcClip_->isConnected())
         image.read(srcWidth,srcHeight,"RGBA",Magick::FloatPixel,(float*)srcImg->getPixelData());
 
+    #ifdef DEBUG
+    image.debug(true);
+    #endif
+
     if (matte) {
         image.matte(false);
         image.matte(true);

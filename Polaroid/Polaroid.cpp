@@ -225,6 +225,10 @@ void PolaroidPlugin::render(const OFX::RenderArguments &args)
     if (srcClip_ && srcClip_->isConnected())
         image.read(width,height,"RGBA",Magick::FloatPixel,(float*)srcImg->getPixelData());
 
+    #ifdef DEBUG
+    image.debug(true);
+    #endif
+
     // polaroid
     image.flip();
     image.fontPointsize(std::floor(fontSize * args.renderScale.x + 0.5));

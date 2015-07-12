@@ -408,6 +408,10 @@ void TextPlugin::render(const OFX::RenderArguments &args)
     int height = dstRod.y2-dstRod.y1;
     Magick::Image image(Magick::Geometry(width,height),Magick::Color("rgba(0,0,0,0)"));
 
+    #ifdef DEBUG
+    image.debug(true);
+    #endif
+
     // Convert colors to int
     int rI = ((uint8_t)(255.0f *CLAMP(r, 0.0, 1.0)));
     int gI = ((uint8_t)(255.0f *CLAMP(g, 0.0, 1.0)));

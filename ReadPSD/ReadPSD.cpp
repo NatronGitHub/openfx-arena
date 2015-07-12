@@ -538,6 +538,9 @@ void ReadPSDPlugin::restoreState(const std::string& filename)
         OFX::throwSuiteStatusException(kOfxStatErrFormat);
     }
     genLayerMenu();
+    #ifdef DEBUG
+    _psd[layer].debug(true);
+    #endif
     if (_psd[layer].columns()>0 && _psd[layer].rows()>0) {
         _filename = filename;
         for (int i = 0; i < (int)_psd.size(); i++) {

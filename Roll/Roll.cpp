@@ -182,6 +182,10 @@ void RollPlugin::render(const OFX::RenderArguments &args)
     if (srcClip_ && srcClip_->isConnected())
         image.read(width,height,"RGBA",Magick::FloatPixel,(float*)srcImg->getPixelData());
 
+    #ifdef DEBUG
+    image.debug(true);
+    #endif
+
     // roll image
     image.roll(std::floor(x * args.renderScale.x + 0.5),std::floor(y * args.renderScale.x + 0.5));
 

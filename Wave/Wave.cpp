@@ -182,6 +182,10 @@ void WavePlugin::render(const OFX::RenderArguments &args)
     if (srcClip_ && srcClip_->isConnected())
         image.read(width,height,"RGBA",Magick::FloatPixel,(float*)srcImg->getPixelData());
 
+    #ifdef DEBUG
+    image.debug(true);
+    #endif
+
     // wave
     image.backgroundColor(Magick::Color("rgba(0,0,0,0)"));
     image.wave(std::floor(waveAmp * args.renderScale.x + 0.5),std::floor(waveLength * args.renderScale.x + 0.5));

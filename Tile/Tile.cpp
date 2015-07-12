@@ -222,6 +222,10 @@ void TilePlugin::render(const OFX::RenderArguments &args)
     if (srcClip_ && srcClip_->isConnected())
         image.read(srcWidth,srcHeight,"RGBA",Magick::FloatPixel,(float*)srcImg->getPixelData());
 
+    #ifdef DEBUG
+    image.debug(true);
+    #endif
+
     // setup montage
     std::string fontFile;
     char **fonts;

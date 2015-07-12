@@ -224,6 +224,9 @@ void ReadSVGPlugin::onInputFileChanged(const std::string& newFile,
     int dpi;
     dpi_->getValue(dpi);
     Magick::Image image;
+    #ifdef DEBUG
+    image.debug(true);
+    #endif
     image.resolutionUnits(Magick::PixelsPerInchResolution);
     image.density(Magick::Geometry(dpi,dpi));
     try {

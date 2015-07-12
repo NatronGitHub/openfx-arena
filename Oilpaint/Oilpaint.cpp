@@ -174,6 +174,10 @@ void OilpaintPlugin::render(const OFX::RenderArguments &args)
     if (srcClip_ && srcClip_->isConnected())
         image.read(width,height,"RGBA",Magick::FloatPixel,(float*)srcImg->getPixelData());
 
+    #ifdef DEBUG
+    image.debug(true);
+    #endif
+
     // oilpaint
     if (radius>0)
         image.oilPaint(std::floor(radius * args.renderScale.x + 0.5));
