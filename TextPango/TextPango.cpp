@@ -43,7 +43,7 @@
 #define kPluginGrouping "Draw"
 #define kPluginIdentifier "net.fxarena.openfx.TextPango"
 #define kPluginVersionMajor 1
-#define kPluginVersionMinor 0
+#define kPluginVersionMinor 1
 
 #define kSupportsTiles 0
 #define kSupportsMultiResolution 1
@@ -257,11 +257,18 @@ void TextPangoPlugin::render(const OFX::RenderArguments &args)
     Magick::Image image;
     image.size(Magick::Geometry(width,height));
 
-    // Flip image
-    image.flip();
+    #ifdef DEBUG
+    image.debug(true);
+    #endif
 
-    // Pango
-    image.backgroundColor("none");
+    // set background
+    try {
+        image.backgroundColor("none");
+    }
+    catch(Magick::Exception) { // catch to avoid render fail on warn
+        image.backgroundColor("none"); // and try again (second time will not fail) ...
+    }
+
     /*switch(gravity) {
     case 1: // natural
         image.defineValue("pango","gravity-hint","natural");
