@@ -254,12 +254,19 @@ void TextPangoPlugin::render(const OFX::RenderArguments &args)
     // Generate empty image
     int width = dstRod.x2-dstRod.x1;
     int height = dstRod.y2-dstRod.y1;
-    Magick::Image image;
+    Magick::Image image(Magick::Geometry(width,height),Magick::Color("rgba(0,0,0,0)"));
     #ifdef DEBUG
     image.debug(true);
     #endif
-    image.size(Magick::Geometry(width,height));
-    image.backgroundColor(Magick::Color("rgb(0,0,0,0)"));
+
+    try {
+        image.backgroundColor("none"); // must be set to avoid bg
+    }
+    catch(Magick::Warning &warning) { // ignore since warns interupt render
+        #ifdef DEBUG
+        std::cout << warning.what() << std::endl;
+        #endif
+    }
 
     /*switch(gravity) {
     case 1: // natural
