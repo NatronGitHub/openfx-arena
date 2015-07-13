@@ -48,7 +48,7 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #define kPluginGrouping "Image/Readers"
 #define kPluginIdentifier "net.fxarena.openfx.ReadSVG"
 #define kPluginVersionMajor 1
-#define kPluginVersionMinor 2
+#define kPluginVersionMinor 3
 
 #define kParamDpi "dpi"
 #define kParamDpiLabel "DPI"
@@ -169,9 +169,10 @@ void ReadSVGPlugin::restoreState(const std::string& filename)
     try {
         image.read(filename);
     }
-    catch(Magick::Exception) {
-        setPersistentMessage(OFX::Message::eMessageError, "", "Unable to read image");
-        OFX::throwSuiteStatusException(kOfxStatErrFormat);
+    catch(Magick::Warning &warning) { // ignore since warns interupt render
+        #ifdef DEBUG
+        std::cout << warning.what() << std::endl;
+        #endif
     }
     if (image.columns()>0 && image.rows()>0) {
         width_ = image.columns();
