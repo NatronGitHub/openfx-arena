@@ -48,12 +48,12 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #define kPluginGrouping "Image/Readers"
 #define kPluginIdentifier "net.fxarena.openfx.ReadSVG"
 #define kPluginVersionMajor 1
-#define kPluginVersionMinor 3
+#define kPluginVersionMinor 4
 
 #define kParamDpi "dpi"
 #define kParamDpiLabel "DPI"
-#define kParamDpiHint "Dots-per-inch"
-#define kParamDpiDefault 72
+#define kParamDpiHint "Dots-per-inch (0 is default)"
+#define kParamDpiDefault 0
 
 #define kSupportsRGBA true
 #define kSupportsRGB false
@@ -119,11 +119,13 @@ ReadSVGPlugin::decode(const std::string& filename,
     image.resolutionUnits(Magick::PixelsPerInchResolution);
     image.density(Magick::Geometry(dpi,dpi));
     try {
+        image.backgroundColor("none"); // must be set to avoid bg
         image.read(filename);
     }
-    catch(Magick::Exception) {
-        setPersistentMessage(OFX::Message::eMessageError, "", "Unable to read image");
-        OFX::throwSuiteStatusException(kOfxStatErrFormat);
+    catch(Magick::Warning &warning) { // ignore since warns interupt render
+        #ifdef DEBUG
+        std::cout << warning.what() << std::endl;
+        #endif
     }
     if (image.columns()>0 && image.rows()>0) {
         Magick::Image container(Magick::Geometry(bounds.x2,bounds.y2),Magick::Color("rgba(0,0,0,0)"));
@@ -200,9 +202,10 @@ void ReadSVGPlugin::changedParam(const OFX::InstanceChangedArgs &args, const std
         try {
             image.read(imageFile);
         }
-        catch(Magick::Exception) {
-            setPersistentMessage(OFX::Message::eMessageError, "", "Unable to read image");
-            OFX::throwSuiteStatusException(kOfxStatErrFormat);
+        catch(Magick::Warning &warning) { // ignore since warns interupt render
+            #ifdef DEBUG
+            std::cout << warning.what() << std::endl;
+            #endif
         }
         if (image.columns()>0 && image.rows()>0) {
             width_ = image.columns();
@@ -233,9 +236,10 @@ void ReadSVGPlugin::onInputFileChanged(const std::string& newFile,
     try {
         image.read(newFile);
     }
-    catch(Magick::Exception) {
-        setPersistentMessage(OFX::Message::eMessageError, "", "Unable to read image");
-        OFX::throwSuiteStatusException(kOfxStatErrFormat);
+    catch(Magick::Warning &warning) { // ignore since warns interupt render
+        #ifdef DEBUG
+        std::cout << warning.what() << std::endl;
+        #endif
     }
     if (image.columns()>0 && image.rows()>0) {
         width_ = image.columns();
