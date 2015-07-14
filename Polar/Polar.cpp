@@ -43,8 +43,8 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #define kPluginName "PolarOFX"
 #define kPluginGrouping "Transform"
 #define kPluginIdentifier "net.fxarena.openfx.Polar"
-#define kPluginVersionMajor 1
-#define kPluginVersionMinor 1
+#define kPluginVersionMajor 2
+#define kPluginVersionMinor 0
 
 #define kParamVPixel "pixel"
 #define kParamVPixelLabel "Virtual Pixel"
@@ -65,6 +65,11 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #define kParamPolarFlipLabel "Flip"
 #define kParamPolarFlipHint "Polar Flip"
 #define kParamPolarFlipDefault false
+
+#define kParamScale "scale"
+#define kParamScaleLabel "Scale"
+#define kParamScaleHint "Force scale to original image size"
+#define kParamScaleDefault true
 
 #define kParamMatte "matte"
 #define kParamMatteLabel "Matte"
@@ -94,6 +99,7 @@ private:
     OFX::BooleanParam *polarFlip_;
     OFX::BooleanParam *dePolar_;
     OFX::BooleanParam *matte_;
+    OFX::BooleanParam *scale_;
 };
 
 PolarPlugin::PolarPlugin(OfxImageEffectHandle handle)
@@ -112,8 +118,9 @@ PolarPlugin::PolarPlugin(OfxImageEffectHandle handle)
     polarFlip_ = fetchBooleanParam(kParamPolarFlip);
     dePolar_ = fetchBooleanParam(kParamDePolar);
     matte_ = fetchBooleanParam(kParamMatte);
+    scale_ = fetchBooleanParam(kParamScale);
 
-    assert(vpixel_ && polarRotate_ && polarFlip_ && dePolar_ && matte_);
+    assert(vpixel_ && polarRotate_ && polarFlip_ && dePolar_ && matte_ && scale_);
 }
 
 PolarPlugin::~PolarPlugin()
@@ -195,11 +202,13 @@ void PolarPlugin::render(const OFX::RenderArguments &args)
     bool polarFlip = false;
     bool dePolar = false;
     bool matte = false;
+    bool scale = false;
     vpixel_->getValueAtTime(args.time, vpixel);
     polarRotate_->getValueAtTime(args.time, polarRotate);
     polarFlip_->getValueAtTime(args.time, polarFlip);
     dePolar_->getValueAtTime(args.time, dePolar);
     matte_->getValueAtTime(args.time, matte);
+    scale_->getValueAtTime(args.time, scale);
 
     // setup
     int width = srcRod.x2-srcRod.x1;
@@ -269,12 +278,8 @@ void PolarPlugin::render(const OFX::RenderArguments &args)
         break;
     }
 
-    // distort method
+    // distort
     double distortArgs[0];
-    std::ostringstream scaleW;
-    scaleW << width << "x";
-    std::ostringstream scaleH;
-    scaleH << "x" << height;
     image.backgroundColor(Magick::Color("rgba(0,0,0,0)"));
     if (matte) {
         image.matte(false);
@@ -286,17 +291,27 @@ void PolarPlugin::render(const OFX::RenderArguments &args)
         image.distort(Magick::DePolarDistortion, 0, distortArgs, Magick::MagickFalse);
     else
         image.distort(Magick::PolarDistortion, 0, distortArgs, Magick::MagickTrue);
-    std::size_t rows = height;
-    if (image.rows()>rows)
-        image.scale(scaleH.str());
     if (polarRotate!=0)
         image.rotate(polarRotate);
-    image.flip();
-    image.extent(Magick::Geometry(width,height),Magick::CenterGravity);
+
+    if (scale) {
+        std::ostringstream scaleW;
+        scaleW << width << "x";
+        std::ostringstream scaleH;
+        scaleH << "x" << height;
+        std::size_t rows = height;
+        if (image.rows()>rows)
+            image.scale(scaleH.str());
+    }
 
     // return image
+    if (scale)
+        image.extent(Magick::Geometry(width,height),Magick::CenterGravity);
+    else
+        image.extent(Magick::Geometry(dstBounds.x2,dstBounds.y2),Magick::CenterGravity);
+    image.flip();
     if (dstClip_ && dstClip_->isConnected() && srcClip_ && srcClip_->isConnected())
-        image.write(0,0,width,height,"RGBA",Magick::FloatPixel,(float*)dstImg->getPixelData());
+        image.write(0,0,dstBounds.x2,dstBounds.y2,"RGBA",Magick::FloatPixel,(float*)dstImg->getPixelData());
 }
 
 bool PolarPlugin::getRegionOfDefinition(const OFX::RegionOfDefinitionArguments &args, OfxRectD &rod)
@@ -306,7 +321,35 @@ bool PolarPlugin::getRegionOfDefinition(const OFX::RegionOfDefinitionArguments &
         return false;
     }
     if (srcClip_ && srcClip_->isConnected()) {
-        rod = srcClip_->getRegionOfDefinition(args.time);
+        bool scale = false;
+        scale_->getValueAtTime(args.time, scale);
+        if (!scale) {
+            double polarRotate;
+            bool dePolar = false;
+            polarRotate_->getValueAtTime(args.time, polarRotate);
+            dePolar_->getValueAtTime(args.time, dePolar);
+            const OfxRectD& srcRod = srcClip_->getRegionOfDefinition(args.time);
+            int width = srcRod.x2-srcRod.x1;
+            int height = srcRod.y2-srcRod.y1;
+            double distortArgs[0];
+            Magick::Image image;
+            image.size(Magick::Geometry(width,height));
+            if (dePolar)
+                image.distort(Magick::DePolarDistortion, 0, distortArgs, Magick::MagickFalse);
+            else
+                image.distort(Magick::PolarDistortion, 0, distortArgs, Magick::MagickTrue);
+            if (polarRotate!=0)
+                image.rotate(polarRotate);
+            int w = (int)image.columns();
+            int h = (int)image.rows();
+            rod = srcRod;
+            rod.x1 = 0;
+            rod.x2 = w;
+            rod.y1 = 0;
+            rod.y2 = h;
+        }
+        else
+            rod = srcClip_->getRegionOfDefinition(args.time);
     } else {
         rod.x1 = rod.y1 = kOfxFlagInfiniteMin;
         rod.x2 = rod.y2 = kOfxFlagInfiniteMax;
@@ -377,6 +420,14 @@ void PolarPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, Con
         param->setLabel(kParamPolarFlipLabel);
         param->setHint(kParamPolarFlipHint);
         param->setDefault(kParamPolarFlipDefault);
+        param->setAnimates(true);
+        page->addChild(*param);
+    }
+    {
+        BooleanParamDescriptor *param = desc.defineBooleanParam(kParamScale);
+        param->setLabel(kParamScaleLabel);
+        param->setHint(kParamScaleHint);
+        param->setDefault(kParamScaleDefault);
         param->setAnimates(true);
         page->addChild(*param);
     }
