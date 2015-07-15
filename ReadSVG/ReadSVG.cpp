@@ -180,10 +180,10 @@ void ReadSVGPlugin::restoreState(const std::string& filename)
         width_ = image.columns();
         height_ = image.rows();
     }
-    else {
+    /*else {
         setPersistentMessage(OFX::Message::eMessageError, "", "Unable to read image");
         OFX::throwSuiteStatusException(kOfxStatErrFormat);
-    }
+    }*/
 }
 
 void ReadSVGPlugin::changedParam(const OFX::InstanceChangedArgs &args, const std::string &paramName)
