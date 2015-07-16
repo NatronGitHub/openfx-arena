@@ -102,7 +102,6 @@ Can be built using MinGW/MSYS(2), note that depends must be installed before run
 License
 =======
 ```
-Copyright (c) 2015, Ole-André Rodlie <olear@fxarena.net>
 Copyright (c) 2015, FxArena DA <mail@fxarena.net>
 All rights reserved.
 
