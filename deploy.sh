@@ -6,31 +6,14 @@
 # Options:
 #
 # CLEAN=1 : Clean tmp folder before build
-# MAGICK_BETA=1 : Build ImageMagick snapshot/beta
-# MAGICK_STRIP=1 : Build ImageMagick without font stuff
-# MAGICK_MOD=1 : Apply ImageMagick mod
-# MAGICK_LEGACY=1 : Build against ImageMagick 6.8 (recommended)
 # PACKAGE=foo : Only build one plugin, not bundle
 # VERSION=foo : Override package version
 #
 
 CWD=$(pwd)
 
-MAGICK_LEGACY=1
-MAGICK_MOD=1
-
-MAGICK_WIN=6.8.9-10 # higher is broken on mingw
-if [ "$MAGICK_LEGACY" == "1" ]; then
-  MAGICK_UNIX=$MAGICK_WIN
-else
-  MAGICK_UNIX=6.9.1-5
-fi
-MAGICK_UNIX_BETA_MAJOR=6.9.1-6
-MAGICK_UNIX_BETA_MINOR=beta20150613
-MAGICK_REL_URL=ftp://ftp.sunet.se/pub/multimedia/graphics/ImageMagick
-MAGICK_BETA_URL=http://www.imagemagick.org/download/beta
-GMAGICK_URL=ftp://ftp.graphicsmagick.org/pub/GraphicsMagick/snapshots
-GMAGICK=1.4.020150607
+MAGICK=6.8.9-10
+MAGICK_URL=https://github.com/olear/openfx-arena/releases/download/0.8.1/ImageMagick-6.8.9-10.tar.gz
 if [ -z "$QUANTUM" ]; then
   Q=32
 else
@@ -45,21 +28,8 @@ else
 fi
 MAGICK_OPT="--disable-docs --disable-deprecated --with-magick-plus-plus=yes --with-quantum-depth=${Q} --without-dps --without-djvu --without-fftw --without-fpx --without-gslib --without-gvc --without-jbig --without-jpeg --without-lcms --with-lcms2 --without-openjp2 --without-lqr --without-lzma --without-openexr --with-pango --with-png --with-rsvg --without-tiff --without-webp --with-xml --with-zlib --without-bzlib --enable-static --disable-shared --enable-hdri --with-freetype --with-fontconfig --without-x --without-modules $CL_CONF"
 
-if [ "$OS" == "Msys" ]; then
-  MAGICK=$MAGICK_WIN
-else
-  if [ "$MAGICK_BETA" == "1" ]; then
-    MAGICK="${MAGICK_UNIX_BETA_MAJOR}~${MAGICK_UNIX_BETA_MINOR}"
-    MAGICK_URL=$MAGICK_BETA_URL/ImageMagick-$MAGICK.tar.gz
-  else
-    MAGICK=$MAGICK_UNIX
-    MAGICK_URL=$MAGICK_REL_URL/ImageMagick-$MAGICK.tar.gz
-  fi
-fi
-GMAGICK_URL=$GMAGICK_URL/GraphicsMagick-$GMAGICK.tar.gz
-
 PNG=1.2.52
-PNG_URL=http://prdownloads.sourceforge.net/libpng/libpng-${PNG}.tar.gz?download
+PNG_URL=https://github.com/olear/openfx-arena/releases/download/0.8.1/libpng-1.2.52.tar.gz
 
 if [ -z "$VERSION" ]; then
   ARENA=0.8
@@ -174,10 +144,8 @@ if [ ! -f ${PREFIX}/lib/libMagick++-6.Q${Q}HDRI.a ]; then
   else
     cd $CWD/3rdparty/ImageMagick-$MAGICK || exit 1
   fi
-  if [ "$MAGICK_MOD" == "1" ]; then
-    cat $CWD/3rdparty/composite-private.h > magick/composite-private.h || exit 1
-  fi
   if [ "$MAGICK" == "6.8.9-10" ]; then
+    cat $CWD/3rdparty/composite-private.h > magick/composite-private.h || exit 1
     patch -p0< $CWD/3rdparty/magick-seed.diff || exit 1
     patch -p0< $CWD/3rdparty/magick-svg.diff || exit 1
   fi
@@ -192,25 +160,6 @@ if [ ! -f ${PREFIX}/lib/libMagick++-6.Q${Q}HDRI.a ]; then
   else
     rm -rf ImageMagick-$MAGICK || exit 1
   fi
-fi
-
-# gmagick
-if [ "$CLEAN" == "1" ]; then
-  rm -rf $CWD/3rdparty/GraphicsMagick-$GMAGICK
-fi
-if [ ! -f ${PREFIX}/lib/libGraphicsMagick++.a ] && [ "$GM" == "1" ]; then
-  if [ ! -f $CWD/3rdparty/GraphicsMagick-$GMAGICK.tar.gz ]; then
-    wget $GMAGICK_URL -O $CWD/3rdparty/GraphicsMagick-$GMAGICK.tar.gz || exit 1
-  fi
-  if [ ! -d $CWD/3rdparty/GraphicsMagick-$GMAGICK ]; then
-    tar xvf $CWD/3rdparty/GraphicsMagick-$GMAGICK.tar.gz -C $CWD/3rdparty/ || exit 1
-  fi
-  cd $CWD/3rdparty/GraphicsMagick-$GMAGICK || exit 1
-  $MAKE distclean
-  CFLAGS="-m${BIT} ${BF}" CXXFLAGS="-m${BIT} ${BF} ${BSD} -I${PREFIX}/include" CPPFLAGS="-I${PREFIX}/include -L${PREFIX}/lib" ./configure --libdir=${PREFIX}/lib --prefix=${PREFIX} --with-lcms=no --with-lcms2=no --with-magick-plus-plus=yes --with-tiff=no --with-trio=no --with-jpeg=no --with-jp2=no --with-ttf=no --with-png=no --with-xml=no --with-wmf=no --with-lzma=no --with-bzlib=no --with-zlib=no --with-quantum-depth=${Q} --with-x=no --enable-static --disable-shared || exit 1
-  $MAKE -j$JOBS install || exit 1
-  cd .. || exit 1
-  rm -rf GraphicsMagick-$GMAGICK || exit 1
 fi
 
 cd $CWD || exit 1
