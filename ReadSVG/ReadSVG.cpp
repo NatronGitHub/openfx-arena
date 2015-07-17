@@ -120,13 +120,14 @@ ReadSVGPlugin::decode(const std::string& filename,
     image.density(Magick::Geometry(dpi,dpi));
     try {
         image.backgroundColor("none"); // must be set to avoid bg
-        image.read(filename);
     }
     catch(Magick::Warning &warning) { // ignore since warns interupt render
         #ifdef DEBUG
         std::cout << warning.what() << std::endl;
         #endif
     }
+    image.backgroundColor("none"); // must be set to avoid bg
+    image.read(filename);
     if (image.columns()>0 && image.rows()>0) {
         Magick::Image container(Magick::Geometry(bounds.x2,bounds.y2),Magick::Color("rgba(0,0,0,0)"));
         container.composite(image,0,0,Magick::OverCompositeOp);
