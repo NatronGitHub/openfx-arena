@@ -36,6 +36,7 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include "ReadPSD.h"
 #include <iostream>
 #include <string>
+#include <sys/stat.h>
 #include <Magick++.h>
 #include "GenericReader.h"
 #include "GenericOCIO.h"
@@ -52,7 +53,7 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #define kPluginGrouping "Image/Readers"
 #define kPluginIdentifier "net.fxarena.openfx.ReadPSD"
 #define kPluginVersionMajor 2
-#define kPluginVersionMinor 0
+#define kPluginVersionMinor 1
 
 #define kSupportsRGBA true
 #define kSupportsRGB false
@@ -116,6 +117,28 @@ void _getProFiles(std::vector<std::string> &files, bool desc, std::string filter
     paths.push_back("/usr/share/color/icc/");
     paths.push_back("\\Windows\\system32\\spool\\drivers\\color\\");
     paths.push_back("/Library/ColorSync/Profiles/");
+
+    // get subfolders
+    for (unsigned int i = 0; i < paths.size(); i++) {
+        DIR *dp;
+        struct dirent *dirp;
+        if ((dp=opendir(paths[i].c_str())) != NULL) {
+            while ((dirp=readdir(dp)) != NULL) {
+                std::ostringstream path;
+                std::string proFile = dirp->d_name;
+                path << paths[i] << proFile;
+                struct stat sb;
+                if (stat(path.str().c_str(), &sb) == 0 && S_ISDIR(sb.st_mode)) {
+                    if (proFile !="." && proFile != "..")
+                        paths.push_back(path.str()+"/");
+                }
+            }
+        }
+        if (dp)
+            closedir(dp);
+    }
+
+    // get profiles from paths
     for (unsigned int i = 0; i < paths.size(); i++) {
         DIR *dp;
         struct dirent *dirp;
