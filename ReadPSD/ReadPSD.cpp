@@ -252,7 +252,7 @@ void ReadPSDPlugin::genLayerMenu()
     if (gHostIsNatron) {
         _imageLayer->resetOptions();
         int startLayer = 0;
-        if (_psd[0].format()=="Adobe Photoshop bitmap") {
+        if (!_psd.empty() && _psd[0].format() == "Adobe Photoshop bitmap") {
             _imageLayer->appendOption("Default");
             startLayer++; // first layer in a PSD is a comp
         }
@@ -276,7 +276,7 @@ void ReadPSDPlugin::getClipComponents(const OFX::ClipComponentsArguments& args, 
     clipComponents.setPassThroughClip(NULL, args.time, args.view);
     if (_psd.size()>0 && gHostIsNatron) { // what about nuke?
         int startLayer = 0;
-        if (_psd[0].format()=="Adobe Photoshop bitmap")
+        if (!_psd.empty() && _psd[0].format() == "Adobe Photoshop bitmap")
             startLayer++; // first layer in a PSD is a comp
         for (int i = startLayer; i < (int)_psd.size(); i++) {
             std::ostringstream layerName;
@@ -531,7 +531,9 @@ void ReadPSDPlugin::restoreState(const std::string& filename)
     int layer = 0;
     _imageLayer->getValue(layer);
     try {
-        Magick::readImages(&_psd, filename);
+        if (!filename.empty()) {
+            Magick::readImages(&_psd, filename);
+        }
     }
     catch(Magick::Exception) {
         setPersistentMessage(OFX::Message::eMessageError, "", "Unable to read image");
@@ -541,7 +543,7 @@ void ReadPSDPlugin::restoreState(const std::string& filename)
     #ifdef DEBUG
     _psd[layer].debug(true);
     #endif
-    if (_psd[layer].columns()>0 && _psd[layer].rows()>0) {
+    if (!_psd.empty() && _psd[layer].columns()>0 && _psd[layer].rows()>0) {
         _filename = filename;
         for (int i = 0; i < (int)_psd.size(); i++) {
             if ((int)_psd[i].columns()>_maxWidth)
@@ -555,7 +557,9 @@ void ReadPSDPlugin::restoreState(const std::string& filename)
         _maxWidth = 0;
         _maxHeight = 0;
         setPersistentMessage(OFX::Message::eMessageError, "", "Unable to read image");
-        OFX::throwSuiteStatusException(kOfxStatErrFormat);
+        
+        //Don't throw an exception here otherwise the node will never be created since we are in the createInstanceAction
+        //OFX::throwSuiteStatusException(kOfxStatErrFormat);
     }
 }
 
@@ -570,11 +574,12 @@ void ReadPSDPlugin::onInputFileChanged(const std::string& newFile,
     if (newFile!=_filename)
         restoreState(newFile);
     # ifdef OFX_IO_USING_OCIO
-    switch(_psd[0].colorSpace()) {
-    default:
+    // what is this?
+    //switch(_psd[0].colorSpace()) {
+    //default:
         _ocio->setInputColorspace("sRGB");
-        break;
-    }
+      //  break;
+    //}
     # endif // OFX_IO_USING_OCIO
     *components = OFX::ePixelComponentRGBA;
     *premult = OFX::eImageOpaque;
