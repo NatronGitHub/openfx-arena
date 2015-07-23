@@ -202,10 +202,10 @@ void WavePlugin::render(const OFX::RenderArguments &args)
         if (maskWidth>0 && maskHeight>0) {
             Magick::Image mask(maskWidth,maskHeight,"A",Magick::FloatPixel,(float*)maskImg->getPixelData());
             image.composite(mask,0,0,Magick::CopyOpacityCompositeOp);
+            Magick::Image container(Magick::Geometry(width,height),Magick::Color("rgba(0,0,0,0)"));
+            container.composite(image,0,0,Magick::OverCompositeOp);
+            image=container;
         }
-        Magick::Image container(Magick::Geometry(width,height),Magick::Color("rgba(0,0,0,0)"));
-        container.composite(image,0,0,Magick::OverCompositeOp);
-        image=container;
     }
 
     // wave
