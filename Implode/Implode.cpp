@@ -43,7 +43,7 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #define kPluginName "ImplodeOFX"
 #define kPluginGrouping "Transform"
 #define kPluginIdentifier "net.fxarena.openfx.Implode"
-#define kPluginVersionMajor 1
+#define kPluginVersionMajor 2
 #define kPluginVersionMinor 0
 
 #define kParamImplode "factor"
@@ -69,6 +69,7 @@ public:
 private:
     OFX::Clip *dstClip_;
     OFX::Clip *srcClip_;
+    OFX::Clip *maskClip_;
     OFX::DoubleParam *implode_;
 };
 
@@ -82,6 +83,8 @@ ImplodePlugin::ImplodePlugin(OfxImageEffectHandle handle)
     assert(dstClip_ && dstClip_->getPixelComponents() == OFX::ePixelComponentRGBA);
     srcClip_ = fetchClip(kOfxImageEffectSimpleSourceClipName);
     assert(srcClip_ && srcClip_->getPixelComponents() == OFX::ePixelComponentRGBA);
+    maskClip_ = getContext() == OFX::eContextFilter ? NULL : fetchClip(getContext() == OFX::eContextPaint ? "Brush" : "Mask");
+    assert(!maskClip_ || maskClip_->getPixelComponents() == OFX::ePixelComponentAlpha);
 
     implode_ = fetchDoubleParam(kParamImplode);
 
@@ -119,6 +122,12 @@ void ImplodePlugin::render(const OFX::RenderArguments &args)
             return;
         }
     }
+
+    // Get mask clip
+    std::auto_ptr<const OFX::Image> maskImg((getContext() != OFX::eContextFilter && maskClip_ && maskClip_->isConnected()) ? maskClip_->fetchImage(args.time) : 0);
+    OfxRectI maskRod;
+    if (getContext() != OFX::eContextFilter && maskClip_ && maskClip_->isConnected())
+        maskRod=maskImg->getRegionOfDefinition();
 
     // get dest clip
     if (!dstClip_) {
@@ -178,6 +187,19 @@ void ImplodePlugin::render(const OFX::RenderArguments &args)
     image.debug(true);
     #endif
 
+    // apply mask
+    if (maskClip_ && maskClip_->isConnected()) {
+        int maskWidth = maskRod.x2-maskRod.x1;
+        int maskHeight = maskRod.y2-maskRod.y1;
+        if (maskWidth>0 && maskHeight>0) {
+            Magick::Image mask(maskWidth,maskHeight,"A",Magick::FloatPixel,(float*)maskImg->getPixelData());
+            image.composite(mask,0,0,Magick::CopyOpacityCompositeOp);
+            Magick::Image container(Magick::Geometry(width,height),Magick::Color("rgba(0,0,0,0)"));
+            container.composite(image,0,0,Magick::OverCompositeOp);
+            image=container;
+        }
+    }
+
     // swirl
     image.implode(implode);
 
@@ -234,6 +256,14 @@ void ImplodePluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, C
     srcClip->setTemporalClipAccess(false);
     srcClip->setSupportsTiles(kSupportsTiles);
     srcClip->setIsMask(false);
+
+    // create optional mask clip
+    ClipDescriptor *maskClip = desc.defineClip("Mask");
+    maskClip->addSupportedComponent(OFX::ePixelComponentAlpha);
+    maskClip->setTemporalClipAccess(false);
+    maskClip->setOptional(true);
+    maskClip->setSupportsTiles(kSupportsTiles);
+    maskClip->setIsMask(true);
 
     // create the mandated output clip
     ClipDescriptor *dstClip = desc.defineClip(kOfxImageEffectOutputClipName);
