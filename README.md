@@ -44,11 +44,6 @@ Plugins
    * Texture
      * *Texture/Background generator*
 
-Downloads
-=========
-
-See latest [release](https://github.com/olear/openfx-arena/releases) for binary downloads.
-
 Source
 ======
 
