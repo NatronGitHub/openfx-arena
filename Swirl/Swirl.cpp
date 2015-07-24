@@ -44,12 +44,17 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #define kPluginGrouping "Transform"
 #define kPluginIdentifier "net.fxarena.openfx.Swirl"
 #define kPluginVersionMajor 2
-#define kPluginVersionMinor 0
+#define kPluginVersionMinor 1
 
 #define kParamSwirl "degree"
 #define kParamSwirlLabel "Degree"
 #define kParamSwirlHint "Swirl image by degree"
 #define kParamSwirlDefault 60
+
+#define kParamMatte "matte"
+#define kParamMatteLabel "Matte"
+#define kParamMatteHint "Merge Alpha before applying effect"
+#define kParamMatteDefault false
 
 #define kSupportsTiles 0
 #define kSupportsMultiResolution 1
@@ -71,6 +76,7 @@ private:
     OFX::Clip *srcClip_;
     OFX::Clip *maskClip_;
     OFX::DoubleParam *swirl_;
+    OFX::BooleanParam *matte_;
 };
 
 SwirlPlugin::SwirlPlugin(OfxImageEffectHandle handle)
@@ -87,8 +93,9 @@ SwirlPlugin::SwirlPlugin(OfxImageEffectHandle handle)
     assert(!maskClip_ || maskClip_->getPixelComponents() == OFX::ePixelComponentAlpha);
 
     swirl_ = fetchDoubleParam(kParamSwirl);
+    matte_ = fetchBooleanParam(kParamMatte);
 
-    assert(swirl_);
+    assert(swirl_ && matte_);
 }
 
 SwirlPlugin::~SwirlPlugin()
@@ -172,7 +179,9 @@ void SwirlPlugin::render(const OFX::RenderArguments &args)
 
     // get params
     double swirl;
+    bool matte = false;
     swirl_->getValueAtTime(args.time, swirl);
+    matte_->getValueAtTime(args.time, matte);
 
     // setup
     int width = srcRod.x2-srcRod.x1;
@@ -198,6 +207,11 @@ void SwirlPlugin::render(const OFX::RenderArguments &args)
             container.composite(image,0,0,Magick::OverCompositeOp);
             image=container;
         }
+    }
+
+    if (matte) {
+        image.matte(false);
+        image.matte(true);
     }
 
     // swirl
@@ -279,6 +293,14 @@ void SwirlPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, Con
         param->setRange(-360, 360);
         param->setDisplayRange(-360, 360);
         param->setDefault(kParamSwirlDefault);
+        page->addChild(*param);
+    }
+    {
+        BooleanParamDescriptor *param = desc.defineBooleanParam(kParamMatte);
+        param->setLabel(kParamMatteLabel);
+        param->setHint(kParamMatteHint);
+        param->setDefault(kParamMatteDefault);
+        param->setAnimates(true);
         page->addChild(*param);
     }
 }
