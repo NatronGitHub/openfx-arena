@@ -43,7 +43,7 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #define kPluginName "ArcOFX"
 #define kPluginGrouping "Transform"
 #define kPluginIdentifier "net.fxarena.openfx.Arc"
-#define kPluginVersionMajor 2
+#define kPluginVersionMajor 3
 #define kPluginVersionMinor 0
 
 #define kParamVPixel "pixel"
@@ -99,6 +99,7 @@ public:
 private:
     OFX::Clip *dstClip_;
     OFX::Clip *srcClip_;
+    OFX::Clip *maskClip_;
     OFX::ChoiceParam *vpixel_;
     OFX::DoubleParam *arcAngle_;
     OFX::DoubleParam *arcRotate_;
@@ -118,6 +119,8 @@ ArcPlugin::ArcPlugin(OfxImageEffectHandle handle)
     assert(dstClip_ && dstClip_->getPixelComponents() == OFX::ePixelComponentRGBA);
     srcClip_ = fetchClip(kOfxImageEffectSimpleSourceClipName);
     assert(srcClip_ && srcClip_->getPixelComponents() == OFX::ePixelComponentRGBA);
+    maskClip_ = getContext() == OFX::eContextFilter ? NULL : fetchClip(getContext() == OFX::eContextPaint ? "Brush" : "Mask");
+    assert(!maskClip_ || maskClip_->getPixelComponents() == OFX::ePixelComponentAlpha);
 
     vpixel_ = fetchChoiceParam(kParamVPixel);
     arcAngle_ = fetchDoubleParam(kParamArcAngle);
@@ -161,6 +164,12 @@ void ArcPlugin::render(const OFX::RenderArguments &args)
             return;
         }
     }
+
+    // Get mask clip
+    std::auto_ptr<const OFX::Image> maskImg((getContext() != OFX::eContextFilter && maskClip_ && maskClip_->isConnected()) ? maskClip_->fetchImage(args.time) : 0);
+    OfxRectI maskRod;
+    if (getContext() != OFX::eContextFilter && maskClip_ && maskClip_->isConnected())
+        maskRod=maskImg->getRegionOfDefinition();
 
     // get dest clip
     if (!dstClip_) {
@@ -228,6 +237,19 @@ void ArcPlugin::render(const OFX::RenderArguments &args)
     #ifdef DEBUG
     image.debug(true);
     #endif
+
+    // apply mask
+    if (maskClip_ && maskClip_->isConnected()) {
+        int maskWidth = maskRod.x2-maskRod.x1;
+        int maskHeight = maskRod.y2-maskRod.y1;
+        if (maskWidth>0 && maskHeight>0) {
+            Magick::Image mask(maskWidth,maskHeight,"A",Magick::FloatPixel,(float*)maskImg->getPixelData());
+            image.composite(mask,0,0,Magick::CopyOpacityCompositeOp);
+            Magick::Image container(Magick::Geometry(width,height),Magick::Color("rgba(0,0,0,0)"));
+            container.composite(image,0,0,Magick::OverCompositeOp);
+            image=container;
+        }
+    }
 
     // flip
     image.flip();
@@ -430,6 +452,14 @@ void ArcPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, Conte
     srcClip->setTemporalClipAccess(false);
     srcClip->setSupportsTiles(kSupportsTiles);
     srcClip->setIsMask(false);
+
+    // create optional mask clip
+    ClipDescriptor *maskClip = desc.defineClip("Mask");
+    maskClip->addSupportedComponent(OFX::ePixelComponentAlpha);
+    maskClip->setTemporalClipAccess(false);
+    maskClip->setOptional(true);
+    maskClip->setSupportsTiles(kSupportsTiles);
+    maskClip->setIsMask(true);
 
     // create the mandated output clip
     ClipDescriptor *dstClip = desc.defineClip(kOfxImageEffectOutputClipName);
