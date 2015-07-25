@@ -85,7 +85,7 @@
 #define kPluginGrouping "Draw"
 #define kPluginIdentifier "net.fxarena.openfx.Text"
 #define kPluginVersionMajor 5
-#define kPluginVersionMinor 0
+#define kPluginVersionMinor 1
 
 #define kSupportsTiles 0
 #define kSupportsMultiResolution 1
@@ -411,6 +411,12 @@ void TextPlugin::render(const OFX::RenderArguments &args)
     #ifdef DEBUG
     image.debug(true);
     #endif
+
+    // no fonts?
+    if (fontName.empty()) {
+        setPersistentMessage(OFX::Message::eMessageError, "", "No fonts found, please check installation");
+        OFX::throwSuiteStatusException(kOfxStatFailed);
+    }
 
     // Convert colors to int
     int rI = ((uint8_t)(255.0f *CLAMP(r, 0.0, 1.0)));

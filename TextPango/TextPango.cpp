@@ -43,7 +43,7 @@
 #define kPluginGrouping "Draw"
 #define kPluginIdentifier "net.fxarena.openfx.TextPango"
 #define kPluginVersionMajor 1
-#define kPluginVersionMinor 1
+#define kPluginVersionMinor 2
 
 #define kSupportsTiles 0
 #define kSupportsMultiResolution 1
@@ -258,6 +258,19 @@ void TextPangoPlugin::render(const OFX::RenderArguments &args)
     #ifdef DEBUG
     image.debug(true);
     #endif
+
+    // check for fonts
+    std::string fontFile;
+    char **fonts;
+    std::size_t fontList;
+    fonts=MagickCore::MagickQueryFonts("*",&fontList);
+    fontFile = fonts[0];
+    for (size_t i = 0; i < fontList; i++)
+        free(fonts[i]);
+    if (fontFile.empty()) {
+        setPersistentMessage(OFX::Message::eMessageError, "", "No fonts found, please check installation");
+        OFX::throwSuiteStatusException(kOfxStatFailed);
+    }
 
     try {
         image.backgroundColor("none"); // must be set to avoid bg

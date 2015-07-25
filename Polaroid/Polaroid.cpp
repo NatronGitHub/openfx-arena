@@ -46,7 +46,7 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #define kPluginGrouping "Transform"
 #define kPluginIdentifier "net.fxarena.openfx.Polaroid"
 #define kPluginVersionMajor 1
-#define kPluginVersionMinor 0
+#define kPluginVersionMinor 1
 
 #define kParamText "caption"
 #define kParamTextLabel "Caption"
@@ -228,6 +228,12 @@ void PolaroidPlugin::render(const OFX::RenderArguments &args)
     #ifdef DEBUG
     image.debug(true);
     #endif
+
+    // no fonts?
+    if (fontName.empty()) {
+        setPersistentMessage(OFX::Message::eMessageError, "", "No fonts found, please check installation");
+        OFX::throwSuiteStatusException(kOfxStatFailed);
+    }
 
     // polaroid
     image.flip();

@@ -42,7 +42,7 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #define kPluginGrouping "Transform"
 #define kPluginIdentifier "net.fxarena.openfx.Tile"
 #define kPluginVersionMajor 3
-#define kPluginVersionMinor 0
+#define kPluginVersionMinor 1
 
 #define kParamRows "rows"
 #define kParamRowsLabel "Rows"
@@ -258,7 +258,10 @@ void TilePlugin::render(const OFX::RenderArguments &args)
     for (size_t i = 0; i < fontList; i++)
         free(fonts[i]);
 
-    montage.font(fontFile); // avoid warn, set default font
+    if (!fontFile.empty())
+        montage.font(fontFile); // avoid warn, set default font
+    else // broken installation
+        setPersistentMessage(OFX::Message::eMessageError, "", "No fonts found, please check installation");
     montage.shadow(false);
     montage.backgroundColor(Magick::Color("rgba(0,0,0,0)"));
     montage.geometry(thumb);
