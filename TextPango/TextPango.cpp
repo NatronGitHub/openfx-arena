@@ -43,7 +43,7 @@
 #define kPluginGrouping "Draw"
 #define kPluginIdentifier "net.fxarena.openfx.TextPango"
 #define kPluginVersionMajor 1
-#define kPluginVersionMinor 2
+#define kPluginVersionMinor 3
 
 #define kSupportsTiles 0
 #define kSupportsMultiResolution 1
@@ -280,6 +280,8 @@ void TextPangoPlugin::render(const OFX::RenderArguments &args)
         std::cout << warning.what() << std::endl;
         #endif
     }
+
+    image.backgroundColor("none"); // must be set to avoid bg
 
     /*switch(gravity) {
     case 1: // natural
