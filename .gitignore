@@ -1,7 +1,7 @@
 *.tar*
 *-release
 *-debug
-ImageMagick-*
+ImageMagick-*tar*
 libpng-*
 tmp
 *.ofx.bundle*

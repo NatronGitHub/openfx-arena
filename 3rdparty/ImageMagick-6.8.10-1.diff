@@ -1,0 +1,493 @@
+--- magick/composite-private.h.orig	2015-08-05 13:20:19.664390472 +0200
++++ magick/composite-private.h	2015-08-05 13:20:24.661279401 +0200
+@@ -1,5 +1,5 @@
+ /*
+-  Copyright 1999-2014 ImageMagick Studio LLC, a non-profit organization
++  Copyright 1999-2015 ImageMagick Studio LLC, a non-profit organization
+   dedicated to making software imaging solutions freely available.
+ 
+   You may not use this file except in compliance with the License.
+@@ -38,44 +38,44 @@
+ static inline MagickRealType MagickOver_(const MagickRealType p,
+   const MagickRealType alpha,const MagickRealType q,const MagickRealType beta)
+ {
+-  return((1.0-QuantumScale*alpha)*p+(1.0-QuantumScale*beta)*q*
+-    QuantumScale*alpha);
++  MagickRealType
++    Da,
++    Sa;
++
++  Sa=1.0-QuantumScale*alpha;
++  Da=1.0-QuantumScale*beta;
++  return(QuantumRange*(QuantumScale*Sa*p+QuantumScale*Da*q*(1.0-Sa)));
+ }
+ 
+ static inline void MagickCompositeOver(const PixelPacket *p,
+   const MagickRealType alpha,const PixelPacket *q,const MagickRealType beta,
+   PixelPacket *composite)
+ {
+-  double
+-    gamma;
++  MagickRealType
++    Da,
++    Sa;
+ 
+   /*
+     Compose pixel p over pixel q with the given opacities.
+   */
+-  if (alpha == TransparentOpacity)
+-    {
+-      if (composite != q)
+-        *composite=(*q);
+-      return;
+-    }
+-  gamma=1.0-QuantumScale*QuantumScale*alpha*beta;
++  Sa=1.0-QuantumScale*alpha;
++  Da=1.0-QuantumScale*beta;
+ #if !defined(MAGICKCORE_HDRI_SUPPORT)
+-  composite->opacity=(Quantum) (QuantumRange*(1.0-gamma)+0.5);
+-  gamma=PerceptibleReciprocal(gamma);
+-  SetPixelRed(composite,gamma*MagickOver_((MagickRealType)
++  SetPixelOpacity(composite,(MagickRealType) (QuantumRange*
++    (1.0-RoundToUnity(Sa+Da-Sa*Da))+0.5));
++  SetPixelRed(composite,MagickOver_((MagickRealType)
+     GetPixelRed(p),alpha,(MagickRealType) GetPixelRed(q),beta)+0.5);
+-  SetPixelGreen(composite,gamma*MagickOver_((MagickRealType)
++  SetPixelGreen(composite,MagickOver_((MagickRealType)
+     GetPixelGreen(p),alpha,(MagickRealType) GetPixelGreen(q),beta)+0.5);
+-  SetPixelBlue(composite,gamma*MagickOver_((MagickRealType)
++  SetPixelBlue(composite,MagickOver_((MagickRealType)
+     GetPixelBlue(p),alpha,(MagickRealType) GetPixelBlue(q),beta)+0.5);
+ #else
+-  SetPixelOpacity(composite,QuantumRange*(1.0-gamma));
+-  gamma=PerceptibleReciprocal(gamma);
+-  SetPixelRed(composite,gamma*MagickOver_((MagickRealType)
++  SetPixelOpacity(composite,QuantumRange*(1.0-RoundToUnity(Sa+Da-Sa*Da)));
++  SetPixelRed(composite,MagickOver_((MagickRealType)
+     GetPixelRed(p),alpha,(MagickRealType) GetPixelRed(q),beta));
+-  SetPixelGreen(composite,gamma*MagickOver_((MagickRealType)
++  SetPixelGreen(composite,MagickOver_((MagickRealType)
+     GetPixelGreen(p),alpha,(MagickRealType) GetPixelGreen(q),beta));
+-  SetPixelBlue(composite,gamma*MagickOver_((MagickRealType)
++  SetPixelBlue(composite,MagickOver_((MagickRealType)
+     GetPixelBlue(p),alpha,(MagickRealType) GetPixelBlue(q),beta));
+ #endif
+ }
+@@ -84,25 +84,22 @@
+   const MagickRealType alpha,const MagickPixelPacket *q,
+   const MagickRealType beta,MagickPixelPacket *composite)
+ {
+-  double
+-    gamma;
++  MagickRealType
++    Da,
++    Sa;
+ 
+   /*
+     Compose pixel p over pixel q with the given opacities.
+   */
+-  if (alpha == OpaqueOpacity)
+-    {
+-      *composite=(*p);
+-      return;
+-    }
+-  gamma=1.0-QuantumScale*QuantumScale*alpha*beta;
+-  composite->opacity=(MagickRealType) QuantumRange*(1.0-gamma);
+-  gamma=PerceptibleReciprocal(gamma);
+-  composite->red=gamma*MagickOver_(p->red,alpha,q->red,beta);
+-  composite->green=gamma*MagickOver_(p->green,alpha,q->green,beta);
+-  composite->blue=gamma*MagickOver_(p->blue,alpha,q->blue,beta);
++  Sa=1.0-QuantumScale*alpha;
++  Da=1.0-QuantumScale*beta;
++  composite->opacity=(MagickRealType) (QuantumRange*(1.0-
++    RoundToUnity(Sa+Da-Sa*Da)));
++  composite->red=MagickOver_(p->red,alpha,q->red,beta);
++  composite->green=MagickOver_(p->green,alpha,q->green,beta);
++  composite->blue=MagickOver_(p->blue,alpha,q->blue,beta);
+   if (q->colorspace == CMYKColorspace)
+-    composite->index=gamma*MagickOver_(p->index,alpha,q->index,beta);
++    composite->index=MagickOver_(p->index,alpha,q->index,beta);
+ }
+ 
+ static inline void MagickPixelCompositePlus(const MagickPixelPacket *p,
+diff -burN Magick++.orig/lib/Functions.cpp Magick++/lib/Functions.cpp
+--- Magick++.orig/lib/Functions.cpp	2014-06-18 00:12:25.000000000 +0200
++++ Magick++/lib/Functions.cpp	2015-05-25 17:47:46.617371888 +0200
+@@ -56,6 +56,12 @@
+     magick_initialized=true;
+ }
+ 
++// Random seed
++MagickPPExport void Magick::SetRandomSeed(const unsigned long seed) 
++{ 
++  MagickCore::SetRandomSecretKey(seed); 
++} 
++
+ //
+ // Create a local wrapper around MagickCoreTerminus
+ //
+diff -burN Magick++.orig/lib/Magick++/Functions.h Magick++/lib/Magick++/Functions.h
+--- Magick++.orig/lib/Magick++/Functions.h	2014-04-09 00:59:33.000000000 +0200
++++ Magick++/lib/Magick++/Functions.h	2015-05-25 17:48:18.169855728 +0200
+@@ -26,5 +26,7 @@
+ 
+   // C library initialization routine
+   MagickPPExport void InitializeMagick(const char *path_);
++  // Seed a new sequence of pseudo-random numbers 
++  MagickPPExport void SetRandomSeed(const unsigned long seed); 
+ }
+ #endif // Magick_Functions_header
+--- coders/svg.c.orig	2015-06-22 08:22:46.149506379 +0200
++++ coders/svg.c	2015-06-22 08:22:56.070338195 +0200
+@@ -18,7 +18,7 @@
+ %                                March 2000                                   %
+ %                                                                             %
+ %                                                                             %
+-%  Copyright 1999-2014 ImageMagick Studio LLC, a non-profit organization      %
++%  Copyright 1999-2015 ImageMagick Studio LLC, a non-profit organization      %
+ %  dedicated to making software imaging solutions freely available.           %
+ %                                                                             %
+ %  You may not use this file except in compliance with the License.  You may  %
+@@ -2754,7 +2754,8 @@
+     *file;
+ 
+   Image
+-    *image;
++    *image,
++    *next;
+ 
+   int
+     status,
+@@ -2818,9 +2819,10 @@
+           char
+             background[MaxTextExtent],
+             command[MaxTextExtent],
+-            density[MaxTextExtent],
+-            filename[MaxTextExtent],
++            *density,
++            input_filename[MaxTextExtent],
+             opacity[MaxTextExtent],
++            output_filename[MaxTextExtent],
+             unique[MaxTextExtent];
+ 
+           int
+@@ -2832,8 +2834,10 @@
+           /*
+             Our best hope for compliance to the SVG standard.
+           */
+-          (void) AcquireUniqueFilename(filename);
++          status=AcquireUniqueSymbolicLink(image->filename,input_filename);
++          (void) AcquireUniqueFilename(output_filename);
+           (void) AcquireUniqueFilename(unique);
++          density=AcquireString("");
+           (void) FormatLocaleString(density,MaxTextExtent,"%.20g,%.20g",
+             image->x_resolution,image->y_resolution);
+           (void) FormatLocaleString(background,MaxTextExtent,
+@@ -2843,28 +2847,44 @@
+             100.0*QuantumScale*image->background_color.blue);
+           (void) FormatLocaleString(opacity,MaxTextExtent,"%.20g",QuantumScale*
+             (QuantumRange-image->background_color.opacity));
+-          (void) FormatLocaleString(command,MaxTextExtent,
+-            GetDelegateCommands(delegate_info),image->filename,filename,density,
+-              background,opacity,unique);
++          (void) FormatLocaleString(command,MaxTextExtent,GetDelegateCommands(
++            delegate_info),input_filename,output_filename,density,background,
++            opacity,unique);
++          density=DestroyString(density);
+           status=ExternalDelegateCommand(MagickFalse,image_info->verbose,
+             command,(char *) NULL,exception);
+           (void) RelinquishUniqueFileResource(unique);
+-          if ((status == 0) && (stat(filename,&attributes) == 0) &&
++          (void) RelinquishUniqueFileResource(input_filename);
++          if ((status == 0) && (stat(output_filename,&attributes) == 0) &&
+               (attributes.st_size != 0))
+             {
++              Image
++                *svg_image;
++
+               ImageInfo
+                 *read_info;
+ 
+               read_info=CloneImageInfo(image_info);
+-              (void) CopyMagickString(read_info->filename,filename,
++              (void) CopyMagickString(read_info->filename,output_filename,
+                 MaxTextExtent);
+-              image=ReadImage(read_info,exception);
++              svg_image=ReadImage(read_info,exception);
+               read_info=DestroyImageInfo(read_info);
+-              (void) RelinquishUniqueFileResource(filename);
+-              if (image != (Image *) NULL)
+-                return(image);
++              (void) RelinquishUniqueFileResource(output_filename);
++              if (svg_image != (Image *) NULL)
++                {
++                  for (next=GetFirstImageInList(svg_image); next != (Image *) NULL; )
++                  {
++                    (void) CopyMagickString(next->filename,image->filename,
++                      MaxTextExtent);
++                    (void) CopyMagickString(next->magick,image->magick,
++                      MaxTextExtent);
++                    next=GetNextImageInList(next);
++                  }
++                  image=DestroyImage(image);
++                  return(svg_image);
+             }
+-          (void) RelinquishUniqueFileResource(filename);
++            }
++          (void) RelinquishUniqueFileResource(output_filename);
+         }
+       {
+ #if defined(MAGICKCORE_RSVG_DELEGATE)
+@@ -2893,7 +2913,6 @@
+ 
+         register const guchar
+           *p;
+-
+ #endif
+ 
+         GError
+@@ -2943,6 +2962,12 @@
+         image->columns=gdk_pixbuf_get_width(pixel_buffer);
+         image->rows=gdk_pixbuf_get_height(pixel_buffer);
+ #endif
++        status=SetImageExtent(image,image->columns,image->rows);
++        if (status == MagickFalse)
++          {
++            InheritException(exception,&image->exception);
++            return(DestroyImageList(image));
++          }
+         image->matte=MagickTrue;
+         SetImageProperty(image,"svg:base-uri",
+           rsvg_handle_get_base_uri(svg_handle));
+@@ -3052,6 +3077,12 @@
+         g_object_unref(G_OBJECT(pixel_buffer));
+ #endif
+         (void) CloseBlob(image);
++        for (next=GetFirstImageInList(image); next != (Image *) NULL; )
++        {
++          (void) CopyMagickString(next->filename,image->filename,MaxTextExtent);
++          (void) CopyMagickString(next->magick,image->magick,MaxTextExtent);
++          next=GetNextImageInList(next);
++        }
+         return(GetFirstImageInList(image));
+ #endif
+       }
+@@ -3074,8 +3105,6 @@
+   /*
+     Parse SVG file.
+   */
+-  if (image == (Image *) NULL)
+-    return((Image *) NULL);
+   svg_info=AcquireSVGInfo();
+   if (svg_info == (SVGInfo *) NULL)
+     {
+@@ -3181,6 +3210,12 @@
+     }
+   svg_info=DestroySVGInfo(svg_info);
+   (void) RelinquishUniqueFileResource(filename);
++  for (next=GetFirstImageInList(image); next != (Image *) NULL; )
++  {
++    (void) CopyMagickString(next->filename,image->filename,MaxTextExtent);
++    (void) CopyMagickString(next->magick,image->magick,MaxTextExtent);
++    next=GetNextImageInList(next);
++  }
+   return(GetFirstImageInList(image));
+ }
+ #endif
+@@ -3498,12 +3533,18 @@
+     (void) WriteBlobString(image,
+       "<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"no\"?>\n");
+     (void) WriteBlobString(image,
+-      "<!DOCTYPE svg PUBLIC \"-//W3C//DTD SVG 20010904//EN\"\n");
++      "<!DOCTYPE svg PUBLIC \"-//W3C//DTD SVG 1.1//EN\"");
+     (void) WriteBlobString(image,
+-      "  \"http://www.w3.org/TR/2001/REC-SVG-20010904/DTD/svg10.dtd\">\n");
++      " \"http://www.w3.org/Graphics/SVG/1.1/DTD/svg11.dtd\">\n");
+     (void) FormatLocaleString(message,MaxTextExtent,
+-      "<svg width=\"%.20g\" height=\"%.20g\">\n",(double) image->columns,
+-      (double) image->rows);
++      "<svg version=\"1.1\" id=\"Layer_1\" "
++      "xmlns=\"http://www.w3.org/2000/svg\" "
++      "xmlns:xlink=\"http://www.w3.org/1999/xlink\" x=\"0px\" y=\"0px\" "
++      "width=\"%.20gpx\" height=\"%.20gpx\" viewBox=\"0 0 %.20g %.20g\" "
++      "enable-background=\"new 0 0 %.20g %.20g\" xml:space=\"preserve\">",
++      (double) image->columns,(double) image->rows,
++      (double) image->columns,(double) image->rows,
++      (double) image->columns,(double) image->rows);
+     (void) WriteBlobString(image,message);
+     clone_image=CloneImage(image,0,0,MagickTrue,exception);
+     if (clone_image == (Image *) NULL)
+@@ -3513,6 +3554,10 @@
+     blob_length=2048;
+     blob=(unsigned char *) ImageToBlob(image_info,clone_image,&blob_length,
+       exception);
++    clone_image=DestroyImage(clone_image);
++    image_info=DestroyImageInfo(image_info);
++    if (blob == (unsigned char *) NULL)
++      return(MagickFalse);
+     encode_length=0;
+     base64=Base64Encode(blob,blob_length,&encode_length);
+     blob=(unsigned char *) RelinquishMagickMemory(blob);
+@@ -3531,6 +3576,7 @@
+       if (i > 76)
+         (void) WriteBlobString(image,"\n");
+     }
++    base64=DestroyString(base64);
+     (void) WriteBlobString(image,"\" />\n");
+     (void) WriteBlobString(image,"</svg>\n");
+   }
+--- magick/version.h.in.orig	2015-08-05 14:30:52.026824406 +0200
++++ magick/version.h.in	2015-08-05 14:33:20.878054021 +0200
+@@ -28,10 +28,10 @@
+ #define MagickPackageName "@PACKAGE_NAME@"
+ #define MagickCopyright  "Copyright (C) 1999-2014 ImageMagick Studio LLC"
+ #define MagickSVNRevision  "16910"
+-#define MagickLibVersion  @PACKAGE_LIB_VERSION@
+-#define MagickLibVersionText  "@MAGICK_LIB_VERSION_TEXT@"
++#define MagickLibVersion  0x6810
++#define MagickLibVersionText  "6.8.10"
+ #define MagickLibVersionNumber  @MAGICK_LIB_VERSION_NUMBER@
+-#define MagickLibAddendum  "@PACKAGE_VERSION_ADDENDUM@"
++#define MagickLibAddendum  "-1"
+ #define MagickLibInterface  @MAGICK_LIBRARY_CURRENT@
+ #define MagickLibMinInterface  @MAGICK_LIBRARY_CURRENT_MIN@
+ #if defined(_WINDOWS)
+@@ -43,13 +43,13 @@
+ #else
+ #define MagickPlatform  "@MAGICK_TARGET_CPU@"
+ #endif
+-#define MagickppLibVersionText  "@MAGICKPP_LIB_VERSION_TEXT@"
++#define MagickppLibVersionText  "6.8.10"
+ #define MagickppLibVersionNumber  @MAGICKPP_LIBRARY_VERSION_INFO@
+-#define MagickppLibAddendum  "@PACKAGE_VERSION_ADDENDUM@"
++#define MagickppLibAddendum  "-1"
+ #define MagickppLibInterface  @MAGICKPP_LIBRARY_CURRENT@
+ #define MagickppLibMinInterface  @MAGICKPP_LIBRARY_CURRENT_MIN@
+ #define MagickReleaseDate  "@PACKAGE_RELEASE_DATE@"
+-#define MagickChangeDate   "@PACKAGE_CHANGE_DATE@"
++#define MagickChangeDate   "20150805"
+ #define MagickFeatures "@MAGICK_FEATURES@"
+ #define MagickDelegates "@MAGICK_DELEGATES@"
+ #define MagickHomeURL  "file://@DOCUMENTATION_PATH@/index.html"
+--- configure.ac.orig	2015-08-05 15:58:22.408807498 +0200
++++ configure.ac	2015-08-05 15:58:38.031559145 +0200
+@@ -22,8 +22,8 @@
+ 
+ m4_define([magick_major_version], [6])
+ m4_define([magick_minor_version], [8])
+-m4_define([magick_micro_version], [9])
+-m4_define([magick_patchlevel_version], [10])
++m4_define([magick_micro_version], [10])
++m4_define([magick_patchlevel_version], [1])
+ m4_define([magick_version],
+           [magick_major_version.magick_minor_version.magick_micro_version-magick_patchlevel_version])
+ m4_define([magick_svn_revision], esyscmd([sh -c "(svnversion .) | awk '{ print \$1 }' | tr -d '\n'"]))
+--- version.sh.orig	2015-08-05 16:19:38.150668040 +0200
++++ version.sh	2015-08-05 16:20:03.124274961 +0200
+@@ -10,11 +10,11 @@
+ #
+ # Package version.  This is is the numeric version suffix applied to
+ # PACKAGE_NAME (e.g. "1.0.0").
+-PACKAGE_VERSION='6.8.9'
+-PACKAGE_PERL_VERSION='6.89'
+-PACKAGE_LIB_VERSION="0x689"
+-PACKAGE_RELEASE="10"
+-PACKAGE_LIB_VERSION_NUMBER="6,8,9,${PACKAGE_RELEASE}"
++PACKAGE_VERSION='6.8.10'
++PACKAGE_PERL_VERSION='6.810'
++PACKAGE_LIB_VERSION="0x6810"
++PACKAGE_RELEASE="1"
++PACKAGE_LIB_VERSION_NUMBER="6,8,10,${PACKAGE_RELEASE}"
+ PACKAGE_RELEASE_DATE=`date +%F`
+ PACKAGE_STRING="$PACKAGE_NAME $PACKAGE_VERSION"
+ 
+--- configure.orig	2015-08-05 16:24:07.662427659 +0200
++++ configure	2015-08-05 16:23:42.907816993 +0200
+@@ -1,6 +1,6 @@
+ #! /bin/sh
+ # Guess values for system-dependent variables and create Makefiles.
+-# Generated by GNU Autoconf 2.69 for ImageMagick 6.8.9-10.
++# Generated by GNU Autoconf 2.69 for ImageMagick 6.8.10-1.
+ #
+ # Report bugs to <http://www.imagemagick.org>.
+ #
+@@ -590,8 +590,8 @@
+ # Identity of this package.
+ PACKAGE_NAME='ImageMagick'
+ PACKAGE_TARNAME='ImageMagick'
+-PACKAGE_VERSION='6.8.9-10'
+-PACKAGE_STRING='ImageMagick 6.8.9-10'
++PACKAGE_VERSION='6.8.10-1'
++PACKAGE_STRING='ImageMagick 6.8.10-1'
+ PACKAGE_BUGREPORT='http://www.imagemagick.org'
+ PACKAGE_URL=''
+ 
+@@ -1771,7 +1771,7 @@
+   # Omit some internal or obsolete options to make the list less imposing.
+   # This message is too long to be a string in the A/UX 3.1 sh.
+   cat <<_ACEOF
+-\`configure' configures ImageMagick 6.8.9-10 to adapt to many kinds of systems.
++\`configure' configures ImageMagick 6.8.10-1 to adapt to many kinds of systems.
+ 
+ Usage: $0 [OPTION]... [VAR=VALUE]...
+ 
+@@ -1846,7 +1846,7 @@
+ 
+ if test -n "$ac_init_help"; then
+   case $ac_init_help in
+-     short | recursive ) echo "Configuration of ImageMagick 6.8.9-10:";;
++     short | recursive ) echo "Configuration of ImageMagick 6.8.10-1:";;
+    esac
+   cat <<\_ACEOF
+ 
+@@ -2081,7 +2081,7 @@
+ test -n "$ac_init_help" && exit $ac_status
+ if $ac_init_version; then
+   cat <<\_ACEOF
+-ImageMagick configure 6.8.9-10
++ImageMagick configure 6.8.10-1
+ generated by GNU Autoconf 2.69
+ 
+ Copyright (C) 2012 Free Software Foundation, Inc.
+@@ -3132,7 +3132,7 @@
+ This file contains any messages produced by compilers while
+ running configure, to aid debugging if configure makes a mistake.
+ 
+-It was created by ImageMagick $as_me 6.8.9-10, which was
++It was created by ImageMagick $as_me 6.8.10-1, which was
+ generated by GNU Autoconf 2.69.  Invocation command line was
+ 
+   $ $0 $@
+@@ -3688,11 +3688,11 @@
+ 
+ MAGICK_MINOR_VERSION=8
+ 
+-MAGICK_MICRO_VERSION=9
++MAGICK_MICRO_VERSION=10
+ 
+-MAGICK_PATCHLEVEL_VERSION=10
++MAGICK_PATCHLEVEL_VERSION=1
+ 
+-MAGICK_VERSION=6.8.9-10
++MAGICK_VERSION=6.8.10-1
+ 
+ MAGICK_SVN_REVISION=Unversioned
+ 
+@@ -36737,7 +36737,7 @@
+ # report actual input values of CONFIG_FILES etc. instead of their
+ # values after options handling.
+ ac_log="
+-This file was extended by ImageMagick $as_me 6.8.9-10, which was
++This file was extended by ImageMagick $as_me 6.8.10-1, which was
+ generated by GNU Autoconf 2.69.  Invocation command line was
+ 
+   CONFIG_FILES    = $CONFIG_FILES
+@@ -36803,7 +36803,7 @@
+ cat >>$CONFIG_STATUS <<_ACEOF || ac_write_fail=1
+ ac_cs_config="`$as_echo "$ac_configure_args" | sed 's/^ //; s/[\\""\`\$]/\\\\&/g'`"
+ ac_cs_version="\\
+-ImageMagick config.status 6.8.9-10
++ImageMagick config.status 6.8.10-1
+ configured by $0, generated by GNU Autoconf 2.69,
+   with options \\"\$ac_cs_config\\"
+ 

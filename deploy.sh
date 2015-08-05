@@ -145,9 +145,7 @@ if [ ! -f ${PREFIX}/lib/libMagick++-6.Q${Q}HDRI.a ]; then
     cd $CWD/3rdparty/ImageMagick-$MAGICK || exit 1
   fi
   if [ "$MAGICK" == "6.8.9-10" ]; then
-    cat $CWD/3rdparty/composite-private.h > magick/composite-private.h || exit 1
-    patch -p0< $CWD/3rdparty/magick-seed.diff || exit 1
-    patch -p0< $CWD/3rdparty/magick-svg.diff || exit 1
+    patch -p0< $CWD/3rdparty/ImageMagick-6.8.10-1.diff || exit 1
   fi
   $MAKE distclean
   CFLAGS="-m${BIT} ${BF}" CXXFLAGS="-m${BIT} ${BF} ${BSD} -I${PREFIX}/include" CPPFLAGS="-I${PREFIX}/include -L${PREFIX}/lib $CL_FLAGS" ./configure --libdir=${PREFIX}/lib --prefix=${PREFIX} $MAGICK_OPT || exit 1
