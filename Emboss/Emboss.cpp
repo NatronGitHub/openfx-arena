@@ -45,6 +45,7 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #define kPluginIdentifier "net.fxarena.openfx.Emboss"
 #define kPluginVersionMajor 1
 #define kPluginVersionMinor 1
+#define kPluginMagickVersion 26640
 
 #define kParamEmbossRadius "radius"
 #define kParamEmbossRadiusLabel "Radius"
@@ -231,7 +232,10 @@ void EmbossPluginFactory::describe(OFX::ImageEffectDescriptor &desc)
     // basic labels
     desc.setLabel(kPluginName);
     desc.setPluginGrouping(kPluginGrouping);
-    std::string magickV = MagickCore::GetMagickVersion(NULL);
+    size_t magickNumber;
+    std::string magickString = MagickCore::GetMagickVersion(&magickNumber);
+    if (magickNumber != kPluginMagickVersion)
+        magickString.append("\n\nWarning! You are using an unsupported version of ImageMagick.");
     std::string delegates = MagickCore::GetMagickDelegates();
     desc.setPluginDescription("Emboss filter for Natron.\n\nWritten by Ole-André Rodlie <olear@fxarena.net>\n\n Powered by "+magickV+"\n\nFeatures: "+delegates);
 

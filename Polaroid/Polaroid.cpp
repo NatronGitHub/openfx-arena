@@ -47,6 +47,7 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #define kPluginIdentifier "net.fxarena.openfx.Polaroid"
 #define kPluginVersionMajor 1
 #define kPluginVersionMinor 1
+#define kPluginMagickVersion 26640
 
 #define kParamText "caption"
 #define kParamTextLabel "Caption"
@@ -285,9 +286,12 @@ void PolaroidPluginFactory::describe(OFX::ImageEffectDescriptor &desc)
     // basic labels
     desc.setLabel(kPluginName);
     desc.setPluginGrouping(kPluginGrouping);
-    std::string magickV = MagickCore::GetMagickVersion(NULL);
+    size_t magickNumber;
+    std::string magickString = MagickCore::GetMagickVersion(&magickNumber);
+    if (magickNumber != kPluginMagickVersion)
+        magickString.append("\n\nWarning! You are using an unsupported version of ImageMagick.");
     std::string delegates = MagickCore::GetMagickDelegates();
-    desc.setPluginDescription("Polaroid filter for Natron.\n\nWritten by Ole-André Rodlie <olear@fxarena.net>\n\nPowered by "+magickV+"\n\nFeatures: "+delegates);
+    desc.setPluginDescription("Polaroid filter for Natron.\n\nWritten by Ole-André Rodlie <olear@fxarena.net>\n\nPowered by "+magickString+"\n\nFeatures: "+delegates);
 
     // add the supported contexts
     desc.addSupportedContext(eContextGeneral);

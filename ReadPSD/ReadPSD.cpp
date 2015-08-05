@@ -54,6 +54,7 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #define kPluginIdentifier "net.fxarena.openfx.ReadPSD"
 #define kPluginVersionMajor 2
 #define kPluginVersionMinor 1
+#define kPluginMagickVersion 26640
 
 #define kSupportsRGBA true
 #define kSupportsRGB false
@@ -624,8 +625,11 @@ void ReadPSDPluginFactory::describe(OFX::ImageEffectDescriptor &desc)
     desc.setPluginEvaluation(92);
     #endif
 
-    std::string magickV = MagickCore::GetMagickVersion(NULL);
-    desc.setPluginDescription("Read Photoshop/GIMP/Cinepaint image formats.\n\nWritten by Ole-André Rodlie <olear@fxarena.net>\n\nPowered by "+magickV);
+    size_t magickNumber;
+    std::string magickString = MagickCore::GetMagickVersion(&magickNumber);
+    if (magickNumber != kPluginMagickVersion)
+        magickString.append("\n\nWarning! You are using an unsupported version of ImageMagick.");
+    desc.setPluginDescription("Read Photoshop/GIMP/Cinepaint image formats.\n\nWritten by Ole-André Rodlie <olear@fxarena.net>\n\nPowered by "+magickString);
 }
 
 /** @brief The describe in context function, passed a plugin descriptor and a context */

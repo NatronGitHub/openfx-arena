@@ -86,6 +86,7 @@
 #define kPluginIdentifier "net.fxarena.openfx.Text"
 #define kPluginVersionMajor 5
 #define kPluginVersionMinor 1
+#define kPluginMagickVersion 26640
 
 #define kSupportsTiles 0
 #define kSupportsMultiResolution 1
@@ -595,9 +596,12 @@ void TextPluginFactory::describe(OFX::ImageEffectDescriptor &desc)
     // basic labels
     desc.setLabel(kPluginName);
     desc.setPluginGrouping(kPluginGrouping);
-    std::string magickV = MagickCore::GetMagickVersion(NULL);
+    size_t magickNumber;
+    std::string magickString = MagickCore::GetMagickVersion(&magickNumber);
+    if (magickNumber != kPluginMagickVersion)
+        magickString.append("\n\nWarning! You are using an unsupported version of ImageMagick.");
     std::string delegates = MagickCore::GetMagickDelegates();
-    desc.setPluginDescription("Text generator for Natron.\n\nWritten by Ole-André Rodlie <olear@fxarena.net>\n\nPowered by "+magickV+"\n\nFeatures: "+delegates);
+    desc.setPluginDescription("Text generator for Natron.\n\nWritten by Ole-André Rodlie <olear@fxarena.net>\n\nPowered by "+magickString+"\n\nFeatures: "+delegates);
 
     // add the supported contexts
     desc.addSupportedContext(eContextGeneral);

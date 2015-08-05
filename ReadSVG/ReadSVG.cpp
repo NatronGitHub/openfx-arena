@@ -49,6 +49,7 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #define kPluginIdentifier "net.fxarena.openfx.ReadSVG"
 #define kPluginVersionMajor 1
 #define kPluginVersionMinor 4
+#define kPluginMagickVersion 26640
 
 #define kParamDpi "dpi"
 #define kParamDpiLabel "DPI"
@@ -286,9 +287,12 @@ void ReadSVGPluginFactory::describe(OFX::ImageEffectDescriptor &desc)
     desc.setPluginEvaluation(50);
     #endif
 
-    std::string magickV = MagickCore::GetMagickVersion(NULL);
+    size_t magickNumber;
+    std::string magickString = MagickCore::GetMagickVersion(&magickNumber);
+    if (magickNumber != kPluginMagickVersion)
+        magickString.append("\n\nWarning! You are using an unsupported version of ImageMagick.");
     std::string delegates = MagickCore::GetMagickDelegates();
-    desc.setPluginDescription("Read SVG image format.\n\nWritten by Ole-André Rodlie <olear@fxarena.net>\n\nPowered by "+magickV+"\n\nFeatures: "+delegates);
+    desc.setPluginDescription("Read SVG image format.\n\nWritten by Ole-André Rodlie <olear@fxarena.net>\n\nPowered by "+magickString+"\n\nFeatures: "+delegates);
 }
 
 /** @brief The describe in context function, passed a plugin descriptor and a context */

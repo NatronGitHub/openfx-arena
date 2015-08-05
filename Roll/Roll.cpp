@@ -45,6 +45,7 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #define kPluginIdentifier "net.fxarena.openfx.Roll"
 #define kPluginVersionMajor 2
 #define kPluginVersionMinor 0
+#define kPluginMagickVersion 26640
 
 #define kParamRollX "x"
 #define kParamRollXLabel "X"
@@ -239,8 +240,11 @@ void RollPluginFactory::describe(OFX::ImageEffectDescriptor &desc)
     // basic labels
     desc.setLabel(kPluginName);
     desc.setPluginGrouping(kPluginGrouping);
-    std::string magickV = MagickCore::GetMagickVersion(NULL);
-    desc.setPluginDescription("Roll filter for Natron.\n\nWritten by Ole-André Rodlie <olear@fxarena.net>\n\nPowered by "+magickV);
+    size_t magickNumber;
+    std::string magickString = MagickCore::GetMagickVersion(&magickNumber);
+    if (magickNumber != kPluginMagickVersion)
+        magickString.append("\n\nWarning! You are using an unsupported version of ImageMagick.");
+    desc.setPluginDescription("Roll filter for Natron.\n\nWritten by Ole-André Rodlie <olear@fxarena.net>\n\nPowered by "+magickString);
 
     // add the supported contexts
     desc.addSupportedContext(eContextGeneral);
