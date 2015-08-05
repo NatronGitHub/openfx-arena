@@ -1,3 +1,6 @@
+# ImageMagick patches for openfx-arena, requires a clean ImageMagick 6.8.9-10.
+# olear@fxarena.net
+
 --- magick/composite-private.h.orig	2015-08-05 13:20:19.664390472 +0200
 +++ magick/composite-private.h	2015-08-05 13:20:24.661279401 +0200
 @@ -1,5 +1,5 @@

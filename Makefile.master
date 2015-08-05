@@ -9,13 +9,13 @@ endif
 CXXFLAGS += -DOFX_EXTENSIONS_VEGAS -DOFX_EXTENSIONS_NUKE -DOFX_EXTENSIONS_TUTTLE -DOFX_EXTENSIONS_NATRON -I../SupportExt
 VPATH += ../SupportExt
 
-# GraphicsMagick
-GMAGICK_CXXFLAGS = `GraphicsMagick++-config --cppflags --cxxflags`
-GMAGICK_LINKFLAGS = `GraphicsMagick++-config --ldflags --libs` 
-
 # ImageMagick
 MAGICK_CXXFLAGS = `Magick++-config --cppflags --cxxflags`
 MAGICK_LINKFLAGS = `Magick++-config --ldflags --libs`
+GOT_MAGICK := $(shell pkg-config Magick++ --exact-version=6.8.10 && echo yes)
+ifneq ($(GOT_MAGICK),yes)
+  $(warning **** UNSUPPORTED IMAGEMAGICK VERSION DETECTED, PLUGINS WILL NOT WORK AS EXPECTED ****)
+endif
 ifeq ($(STATIC),1)
   ifeq ($(OPENCL),1)
     MAGICK_LINKFLAGS += -lXext -lXt -lSM -lICE -lX11
