@@ -53,7 +53,7 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #define kPluginGrouping "Image/Readers"
 #define kPluginIdentifier "net.fxarena.openfx.ReadPSD"
 #define kPluginVersionMajor 2
-#define kPluginVersionMinor 1
+#define kPluginVersionMinor 2
 #define kPluginMagickVersion 26640
 
 #define kSupportsRGBA true
@@ -295,6 +295,7 @@ void ReadPSDPlugin::getClipComponents(const OFX::ClipComponentsArguments& args, 
     #ifdef DEBUG
     std::cout << "getClipComponents ..." << std::endl;
     #endif
+
     assert(isMultiPlanar());
     clipComponents.addClipComponents(*_outputClip, getOutputComponents());
     clipComponents.setPassThroughClip(NULL, args.time, args.view);
@@ -322,9 +323,13 @@ void ReadPSDPlugin::getClipComponents(const OFX::ClipComponentsArguments& args, 
     }
 }
 
-void ReadPSDPlugin::decodePlane(const std::string& /*filename*/, OfxTime time, const OfxRectI& /*renderWindow*/, float *pixelData, const OfxRectI& bounds,
+void ReadPSDPlugin::decodePlane(const std::string& filename, OfxTime time, const OfxRectI& /*renderWindow*/, float *pixelData, const OfxRectI& bounds,
                                  OFX::PixelComponentEnum /*pixelComponents*/, int /*pixelComponentCount*/, const std::string& rawComponents, int /*rowBytes*/)
 {
+    #ifdef DEBUG
+    std::cout << "decodePlane ..." << std::endl;
+    #endif
+
     int offsetX = 0;
     int offsetY = 0;
     int layer = 0;
@@ -408,7 +413,13 @@ void ReadPSDPlugin::decodePlane(const std::string& /*filename*/, OfxTime time, c
 
     // Get image
     Magick::Image image;
-    image = _psd[layer];
+    if (_filename!=filename) { // anim?
+        std::ostringstream newFile;
+        newFile << filename << "[" << layer << "]";
+        image.read(newFile.str().c_str());
+    }
+    else
+        image = _psd[layer];
 
     // color management
     if (color && _hasLCMS) {
@@ -537,6 +548,10 @@ bool ReadPSDPlugin::getFrameBounds(const std::string& /*filename*/,
                               double *par,
                               std::string */*error*/)
 {
+    #ifdef DEBUG
+    std::cout << "getFrameBounds ..." << std::endl;
+    #endif
+
     if (_maxWidth>0 && _maxHeight>0) {
         bounds->x1 = 0;
         bounds->x2 = _maxWidth;
@@ -549,6 +564,10 @@ bool ReadPSDPlugin::getFrameBounds(const std::string& /*filename*/,
 
 void ReadPSDPlugin::restoreState(const std::string& filename)
 {
+    #ifdef DEBUG
+    std::cout << "restoreState ..." << std::endl;
+    #endif
+
     _psd.clear();
     _maxWidth = 0;
     _maxHeight = 0;
@@ -564,9 +583,11 @@ void ReadPSDPlugin::restoreState(const std::string& filename)
         OFX::throwSuiteStatusException(kOfxStatErrFormat);
     }
     genLayerMenu();
+
     #ifdef DEBUG
     _psd[layer].debug(true);
     #endif
+
     if (!_psd.empty() && _psd[layer].columns()>0 && _psd[layer].rows()>0) {
         _filename = filename;
         for (int i = 0; i < (int)_psd.size(); i++) {
@@ -581,9 +602,6 @@ void ReadPSDPlugin::restoreState(const std::string& filename)
         _maxWidth = 0;
         _maxHeight = 0;
         setPersistentMessage(OFX::Message::eMessageError, "", "Unable to read image");
-        
-        //Don't throw an exception here otherwise the node will never be created since we are in the createInstanceAction
-        //OFX::throwSuiteStatusException(kOfxStatErrFormat);
     }
 }
 
@@ -594,16 +612,12 @@ void ReadPSDPlugin::onInputFileChanged(const std::string& newFile,
     #ifdef DEBUG
     std::cout << "onInputFileChanged ..." << std::endl;
     #endif
+
     assert(premult && components);
     if (newFile!=_filename)
         restoreState(newFile);
     # ifdef OFX_IO_USING_OCIO
-    // what is this?
-    //switch(_psd[0].colorSpace()) {
-    //default:
-        _ocio->setInputColorspace("sRGB");
-      //  break;
-    //}
+    _ocio->setInputColorspace("sRGB");
     # endif // OFX_IO_USING_OCIO
     *components = OFX::ePixelComponentRGBA;
     *premult = OFX::eImageOpaque;
