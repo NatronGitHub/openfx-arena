@@ -1,13 +1,13 @@
 #!/bin/sh
-# Build and deploy plugin
+# Build and deploy plugins
 #
-# Works on Linux, FreeBSD and Windows(MSYS)
+# Copyright (c) 2015, FxArena DA <mail@fxarena.net>
+# All rights reserved.
 #
-# Options:
+# OpenFX-Arena is free software: you can redistribute it and/or modify it under the terms of the GNU General Public License version 2. You should have received a copy of the GNU General Public License version 2 along with OpenFX-Arena. If not, see http://www.gnu.org/licenses/.
+# OpenFX-Arena is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
 #
-# CLEAN=1 : Clean tmp folder before build
-# PACKAGE=foo : Only build one plugin, not bundle
-# VERSION=foo : Override package version
+# Need custom licensing terms or conditions? Commercial license for proprietary software? Contact us.
 #
 
 CWD=$(pwd)
@@ -32,7 +32,7 @@ PNG=1.2.52
 PNG_URL=https://github.com/olear/openfx-arena/releases/download/0.8.1/libpng-1.2.52.tar.gz
 
 if [ -z "$VERSION" ]; then
-  ARENA=0.8
+  ARENA=2.0.0
 else
   ARENA=$VERSION
 fi
