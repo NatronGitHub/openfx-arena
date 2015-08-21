@@ -15,10 +15,6 @@
 #include <iostream>
 #include <stdint.h>
 
-#if defined(__APPLE__)
-#include <fontconfig/fontconfig.h>
-#endif
-
 #define kPluginName "TextPangoOFX"
 #define kPluginGrouping "Draw"
 #define kPluginIdentifier "net.fxarena.openfx.TextPango"
@@ -241,10 +237,6 @@ void TextPangoPlugin::render(const OFX::RenderArguments &args)
     #endif
 
     // check for fonts
-    #if defined(__APPLE__)
-    FcConfig *fcConfig = FcInitLoadConfig();
-    FcConfigBuildFonts(fcConfig);
-    #endif
     std::string fontFile;
     char **fonts;
     std::size_t fontList;
