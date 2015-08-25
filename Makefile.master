@@ -15,8 +15,8 @@ CXXFLAGS += -DOFX_EXTENSIONS_VEGAS -DOFX_EXTENSIONS_NUKE -DOFX_EXTENSIONS_TUTTLE
 VPATH += ../SupportExt
 
 # ImageMagick
-MAGICK_CXXFLAGS = `Magick++-config --cppflags --cxxflags`
-MAGICK_LINKFLAGS = `Magick++-config --ldflags --libs`
+MAGICK_CXXFLAGS = $(shell Magick++-config --cppflags --cxxflags)
+MAGICK_LINKFLAGS = $(shell Magick++-config --ldflags --libs)
 GOT_MAGICK := $(shell pkg-config Magick++ --exact-version=6.8.10 && echo yes)
 ifneq ($(GOT_MAGICK),yes)
   $(warning **** UNSUPPORTED IMAGEMAGICK VERSION DETECTED, PLUGINS WILL NOT WORK AS EXPECTED ****)
@@ -35,17 +35,17 @@ endif
 
 # Pango
 ifeq ($(USE_PANGO),1)
-  MAGICK_LINKFLAGS += `pkg-config pangocairo --libs --static`
+  MAGICK_LINKFLAGS += $(shell pkg-config pangocairo --libs --static)
 endif
 
 # SVG
 ifeq ($(USE_SVG),1)
-  MAGICK_LINKFLAGS += `pkg-config librsvg-2.0 --libs --static`
-  MAGICK_LINKFLAGS += `pkg-config libxml-2.0 --libs --static`
+  MAGICK_LINKFLAGS += $(shell pkg-config librsvg-2.0 --libs --static)
+  MAGICK_LINKFLAGS += $(shell pkg-config libxml-2.0 --libs --static)
 endif
 
 #lcms
-MAGICK_LINKFLAGS += `pkg-config lcms2 --libs --static`
+MAGICK_LINKFLAGS += $(shell pkg-config lcms2 --libs --static)
 
 # Static
 ifeq ($(STATIC),1)
