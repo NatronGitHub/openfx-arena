@@ -8,17 +8,3 @@ OpenFX-Arena is distributed in the hope that it will be useful, but WITHOUT ANY 
 
 Need custom licensing terms or conditions? Commercial license for proprietary software? Contact us.
 
-Additional rights granted beyond the GPL (the "Exception").
-
-As a special exception to the terms and conditions of version 2.0 of the GPL, FxArena DA hereby grants Natron <www.natron.fr> the rights described below:
-
-1) The right to use Open Source Licenses not compatible with the GNU General Public License: You may link Natron <www.natron.fr> against OpenFX-Arena and/or distribute binaries of Natron <www.natron.fr> linked against OpenFX-Arena, provided that:
-
-Natron <www.natron.fr> is licensed under one of the following licenses:
-
-   * BSD license
-   * MIT License
-   * Mozilla Public License (MPL)
-
-2) Nothing in this Exception gives Natron <www.natron.fr> or anyone else the right to change the licensing terms of OpenFX-Arena.
-
