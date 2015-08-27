@@ -12,8 +12,8 @@
 
 CWD=$(pwd)
 
-MAGICK=6.8.9-10
-MAGICK_URL=https://github.com/olear/openfx-arena/releases/download/0.8.1/ImageMagick-6.8.9-10.tar.gz
+MAGICK=6.8.10-1
+MAGICK_URL=https://github.com/olear/openfx-arena/releases/download/1.9.0/openfx-ImageMagick-6.8.10-1.tar.gz
 if [ -z "$QUANTUM" ]; then
   Q=32
 else
@@ -28,8 +28,8 @@ else
 fi
 MAGICK_OPT="--disable-docs --disable-deprecated --with-magick-plus-plus=yes --with-quantum-depth=${Q} --without-dps --without-djvu --without-fftw --without-fpx --without-gslib --without-gvc --without-jbig --without-jpeg --without-lcms --with-lcms2 --without-openjp2 --without-lqr --without-lzma --without-openexr --with-pango --with-png --with-rsvg --without-tiff --without-webp --with-xml --with-zlib --without-bzlib --enable-static --disable-shared --enable-hdri --with-freetype --with-fontconfig --without-x --without-modules $CL_CONF"
 
-PNG=1.2.52
-PNG_URL=https://github.com/olear/openfx-arena/releases/download/0.8.1/libpng-1.2.52.tar.gz
+PNG=1.2.53
+PNG_URL=https://github.com/olear/openfx-arena/releases/download/1.9.0/libpng-1.2.53.tar.gz
 
 if [ -z "$VERSION" ]; then
   ARENA=2.0.0
@@ -43,6 +43,9 @@ else
 fi
 if [ -z "$PREFIX" ]; then
   PREFIX=$CWD/tmp
+fi
+if [ ! -d $CWD/3rdparty ]; then
+  mkdir -p $CWD/3rdparty || exit 1
 fi
 if [ -z "$JOBS" ]; then
   JOBS=4
@@ -139,25 +142,14 @@ if [ ! -f ${PREFIX}/lib/libMagick++-6.Q${Q}HDRI.a ]; then
   if [ ! -d $CWD/3rdparty/ImageMagick-$MAGICK ]; then
     tar xvf $CWD/3rdparty/ImageMagick-$MAGICK.tar.gz -C $CWD/3rdparty/ || exit 1
   fi
-  if [ "$MAGICK_BETA" == "1" ]; then
-    cd $CWD/3rdparty/ImageMagick-$MAGICK_UNIX_BETA_MAJOR || exit 1
-  else
-    cd $CWD/3rdparty/ImageMagick-$MAGICK || exit 1
-  fi
-  if [ "$MAGICK" == "6.8.9-10" ]; then
-    patch -p0< $CWD/3rdparty/ImageMagick-6.8.10-1.diff || exit 1
-  fi
+  cd $CWD/3rdparty/ImageMagick-$MAGICK || exit 1
   $MAKE distclean
   CFLAGS="-m${BIT} ${BF}" CXXFLAGS="-m${BIT} ${BF} ${BSD} -I${PREFIX}/include" CPPFLAGS="-I${PREFIX}/include -L${PREFIX}/lib $CL_FLAGS" ./configure --libdir=${PREFIX}/lib --prefix=${PREFIX} $MAGICK_OPT || exit 1
   $MAKE -j$JOBS install || exit 1
   mkdir -p $PREFIX/share/doc/ImageMagick/ || exit 1
   cp LICENSE $PREFIX/share/doc/ImageMagick/ || exit 1
   cd .. || exit 1
-  if [ "$MAGICK_BETA" == "1" ]; then
-    rm -rf ImageMagick-$MAGICK_UNIX_BETA_MAJOR || exit 1
-  else
-    rm -rf ImageMagick-$MAGICK || exit 1
-  fi
+  rm -rf ImageMagick-$MAGICK || exit 1
 fi
 
 cd $CWD || exit 1
@@ -179,7 +171,7 @@ if [ -d $PKG ]; then
   rm -rf $PKG || exit 1
 fi
 mkdir $CWD/$PKG || exit 1
-cp LICENSE README.md $CWD/$PKG/ || exit 1
+cp LICENSE COPYING README.md $CWD/$PKG/ || exit 1
 cp $PREFIX/share/doc/ImageMagick/LICENSE $CWD/$PKG/LICENSE.ImageMagick || exit 1
 cp OpenFX/Support/LICENSE $CWD/$PKG/LICENSE.OpenFX || exit 1
 cp OpenFX-IO/LICENSE $CWD/$PKG/LICENSE.OpenFX-IO || exit 1
