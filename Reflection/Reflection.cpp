@@ -18,7 +18,7 @@
 #define kPluginGrouping "Transform"
 #define kPluginIdentifier "net.fxarena.openfx.Reflection"
 #define kPluginVersionMajor 3
-#define kPluginVersionMinor 0
+#define kPluginVersionMinor 1
 #define kPluginMagickVersion 26640
 
 #define kParamSpace "spacing"
@@ -319,8 +319,16 @@ void ReflectionPlugin::render(const OFX::RenderArguments &args)
         offset = std::floor(offset * args.renderScale.x + 0.5);
         if (offset>=mirrorHeight)
             offset=mirrorHeight-1;
-        image0.crop(Magick::Geometry(srcWidth,mirrorHeight-offset,0,offset+offset));
-        image.crop(Magick::Geometry(srcWidth,mirrorHeight+offset,0,mirrorHeight-offset));
+        if (offset<0) {
+            if ((offset-offset*2)>=mirrorHeight)
+                offset = (mirrorHeight*-1)+1;
+            image0.crop(Magick::Geometry(srcWidth,mirrorHeight-offset,0,offset-offset));
+            image.crop(Magick::Geometry(srcWidth,mirrorHeight+offset,0,mirrorHeight+offset));
+        }
+        else {
+            image0.crop(Magick::Geometry(srcWidth,mirrorHeight-offset,0,offset+offset));
+            image.crop(Magick::Geometry(srcWidth,mirrorHeight+offset,0,mirrorHeight-offset));
+        }
         if (maskClip_ && maskClip_->isConnected()) {
             int maskWidth = maskRod.x2-maskRod.x1;
             int maskHeight = maskRod.y2-maskRod.y1;
@@ -412,8 +420,8 @@ void ReflectionPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc
         IntParamDescriptor *param = desc.defineIntParam(kParamOffset);
         param->setLabel(kParamOffsetLabel);
         param->setHint(kParamOffsetHint);
-        param->setRange(0, 2000);
-        param->setDisplayRange(0, 500);
+        param->setRange(-2000, 2000);
+        param->setDisplayRange(-500, 500);
         param->setDefault(kParamOffsetDefault);
         page->addChild(*param);
     }
