@@ -26,6 +26,7 @@
 #include "ReadSVG.h"
 #include "Sketch.h"
 #include "Polaroid.h"
+#include "Edges.h"
 
 namespace OFX
 {
@@ -50,6 +51,7 @@ namespace OFX
             getReadSVGPluginID(ids);
             getSketchPluginID(ids);
             getPolaroidPluginID(ids);
+            getEdgesPluginID(ids);
         }
     }
 }
