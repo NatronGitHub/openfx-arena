@@ -18,8 +18,8 @@
 #define kPluginName "EdgesOFX"
 #define kPluginGrouping "Filter"
 #define kPluginIdentifier "net.fxarena.openfx.Edges"
-#define kPluginVersionMajor 0
-#define kPluginVersionMinor 1
+#define kPluginVersionMajor 1
+#define kPluginVersionMinor 0
 #define kPluginMagickVersion 26640
 
 #define kParamWidth "width"
@@ -37,9 +37,14 @@
 #define kParamSmoothingHint "Adjust edge smoothing"
 #define kParamSmoothingDefault 1
 
+#define kParamGray "gray"
+#define kParamGrayLabel "Grayscale"
+#define kParamGrayHint "Conver to grayscale before effect"
+#define kParamGrayDefault false
+
 #define kSupportsTiles 0
 #define kSupportsMultiResolution 0
-#define kSupportsRenderScale 0 // TODO support renderscale
+#define kSupportsRenderScale 1
 #define kRenderThreadSafety eRenderFullySafe
 #define kHostFrameThreading false
 
@@ -58,6 +63,7 @@ private:
     OFX::DoubleParam *brightness_;
     OFX::DoubleParam *smoothing_;
     OFX::IntParam *width_;
+    OFX::BooleanParam *gray_;
 };
 
 EdgesPlugin::EdgesPlugin(OfxImageEffectHandle handle)
@@ -74,8 +80,9 @@ EdgesPlugin::EdgesPlugin(OfxImageEffectHandle handle)
     brightness_ = fetchDoubleParam(kParamBrightness);
     smoothing_ = fetchDoubleParam(kParamSmoothing);
     width_ = fetchIntParam(kParamWidth);
+    gray_ = fetchBooleanParam(kParamGray);
 
-    assert(brightness_ && smoothing_ && width_);
+    assert(brightness_ && smoothing_ && width_ && gray_);
 }
 
 EdgesPlugin::~EdgesPlugin()
@@ -154,9 +161,11 @@ void EdgesPlugin::render(const OFX::RenderArguments &args)
     // get params
     double brightness,smoothing;
     int edge;
+    bool gray = false;
     brightness_->getValueAtTime(args.time, brightness);
     smoothing_->getValueAtTime(args.time, smoothing);
     width_->getValueAtTime(args.time, edge);
+    gray_->getValueAtTime(args.time, gray);
 
     // setup
     int width = srcRod.x2-srcRod.x1;
@@ -171,18 +180,23 @@ void EdgesPlugin::render(const OFX::RenderArguments &args)
     image.debug(true);
     #endif
 
+    // grayscale
+    if (gray) {
+        image.quantizeColorSpace(Magick::GRAYColorspace);
+        image.quantize();
+    }
     // blur
     if (smoothing>0)
-        image.blur(0,smoothing);
+        image.blur(0,std::floor(smoothing * args.renderScale.x));
     // edge
     std::ostringstream edgeWidth;
-    edgeWidth<<edge;
+    edgeWidth<<std::floor((edge/2) * args.renderScale.x);
     image.morphology(Magick::EdgeMorphology,Magick::DiamondKernel,edgeWidth.str());
     // multiply
     if (brightness>0) {
-        image.quantumOperator(Magick::RedChannel,Magick::MultiplyEvaluateOperator,brightness);
-        image.quantumOperator(Magick::GreenChannel,Magick::MultiplyEvaluateOperator,brightness);
-        image.quantumOperator(Magick::BlueChannel,Magick::MultiplyEvaluateOperator,brightness);
+        image.quantumOperator(Magick::RedChannel,Magick::MultiplyEvaluateOperator,std::floor(brightness * args.renderScale.x+0.5));
+        image.quantumOperator(Magick::GreenChannel,Magick::MultiplyEvaluateOperator,std::floor(brightness * args.renderScale.x+0.5));
+        image.quantumOperator(Magick::BlueChannel,Magick::MultiplyEvaluateOperator,std::floor(brightness * args.renderScale.x+0.5));
     }
 
     // return image
@@ -274,6 +288,13 @@ void EdgesPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, Con
         param->setRange(0, 10);
         param->setDisplayRange(0, 10);
         param->setDefault(kParamSmoothingDefault);
+        page->addChild(*param);
+    }
+    {
+        BooleanParamDescriptor *param = desc.defineBooleanParam(kParamGray);
+        param->setLabel(kParamGrayLabel);
+        param->setHint(kParamGrayHint);
+        param->setDefault(kParamGrayDefault);
         page->addChild(*param);
     }
 }
