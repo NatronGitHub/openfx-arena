@@ -44,7 +44,7 @@
 
 #define kSupportsTiles 0
 #define kSupportsMultiResolution 0
-#define kSupportsRenderScale 1
+#define kSupportsRenderScale 0 // TODO fix
 #define kRenderThreadSafety eRenderFullySafe
 #define kHostFrameThreading false
 
@@ -187,16 +187,16 @@ void EdgesPlugin::render(const OFX::RenderArguments &args)
     }
     // blur
     if (smoothing>0)
-        image.blur(0,std::floor(smoothing * args.renderScale.x));
+        image.blur(0,smoothing);
     // edge
     std::ostringstream edgeWidth;
-    edgeWidth<<std::floor((edge/2) * args.renderScale.x);
+    edgeWidth<<edge/2;
     image.morphology(Magick::EdgeMorphology,Magick::DiamondKernel,edgeWidth.str());
     // multiply
     if (brightness>0) {
-        image.quantumOperator(Magick::RedChannel,Magick::MultiplyEvaluateOperator,std::floor(brightness * args.renderScale.x+0.5));
-        image.quantumOperator(Magick::GreenChannel,Magick::MultiplyEvaluateOperator,std::floor(brightness * args.renderScale.x+0.5));
-        image.quantumOperator(Magick::BlueChannel,Magick::MultiplyEvaluateOperator,std::floor(brightness * args.renderScale.x+0.5));
+        image.quantumOperator(Magick::RedChannel,Magick::MultiplyEvaluateOperator,brightness);
+        image.quantumOperator(Magick::GreenChannel,Magick::MultiplyEvaluateOperator,brightness);
+        image.quantumOperator(Magick::BlueChannel,Magick::MultiplyEvaluateOperator,brightness);
     }
 
     // return image
