@@ -26,7 +26,6 @@
 #include "ReadSVG.h"
 #include "Sketch.h"
 #include "Polaroid.h"
-#include "DaveHill.h"
 #include "Edges.h"
 
 namespace OFX
@@ -52,7 +51,6 @@ namespace OFX
             getReadSVGPluginID(ids);
             getSketchPluginID(ids);
             getPolaroidPluginID(ids);
-            getDaveHillPluginID(ids);
             getEdgesPluginID(ids);
         }
     }
