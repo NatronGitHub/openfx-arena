@@ -28,7 +28,7 @@
 #define kParamRadiusDefault 1
 
 #define kSupportsTiles 0
-#define kSupportsMultiResolution 1
+#define kSupportsMultiResolution 0
 #define kSupportsRenderScale 1
 #define kRenderThreadSafety eRenderFullySafe
 #define kHostFrameThreading false
