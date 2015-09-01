@@ -19,6 +19,8 @@ Plugins
      * *Oil paint effect*
    * Sketch
      * *Sketch paint effect*
+   * Edges
+     * *Edge extraction effect*
  * **Transform**
    * Arc
      * *Arc distortion*

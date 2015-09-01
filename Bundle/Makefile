@@ -75,7 +75,6 @@ RESOURCES = \
 ../Edges/net.fxarena.openfx.Edges.png \
 ../Edges/net.fxarena.openfx.Edges.svg \
 
-
 VPATH += \
 ../Texture \
 ../Tile \
