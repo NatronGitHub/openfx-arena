@@ -266,7 +266,7 @@ void PolaroidPluginFactory::describe(OFX::ImageEffectDescriptor &desc)
     if (magickNumber != kPluginMagickVersion)
         magickString.append("\n\nWarning! You are using an unsupported version of ImageMagick.");
     std::string delegates = MagickCore::GetMagickDelegates();
-    desc.setPluginDescription("Polaroid filter for Natron.\n\nWritten by Ole-André Rodlie <olear@fxarena.net>\n\nPowered by "+magickString+"\n\nFeatures: "+delegates);
+    desc.setPluginDescription("Polaroid image effect node.\n\nPowered by "+magickString+"\n\nFeatures: "+delegates);
 
     // add the supported contexts
     desc.addSupportedContext(eContextGeneral);

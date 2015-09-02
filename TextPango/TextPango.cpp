@@ -374,7 +374,7 @@ void TextPangoPluginFactory::describe(OFX::ImageEffectDescriptor &desc)
     if (magickNumber != kPluginMagickVersion)
         magickString.append("\n\nWarning! You are using an unsupported version of ImageMagick.");
     std::string delegates = MagickCore::GetMagickDelegates();
-    desc.setPluginDescription("Pango text generator for Natron.\n\nWritten by Ole-André Rodlie <olear@fxarena.net>\n\nPowered by "+magickString+"\n\nFeatures: "+delegates+"\n\nVisit https://github.com/olear/openfx-arena/wiki/Pango for more info regarding usage of the TextPango node.");
+    desc.setPluginDescription("Pango text generator node.\n\nPowered by "+magickString+"\n\nFeatures: "+delegates+"\n\nVisit https://github.com/olear/openfx-arena/wiki/Pango for more info regarding usage of the TextPango node.");
 
     // add the supported contexts
     desc.addSupportedContext(eContextGeneral);

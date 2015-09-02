@@ -8,24 +8,39 @@
 # Need custom licensing terms or conditions? Commercial license for proprietary software? Contact us.
 */
 
-#include "Oilpaint.h"
+#include "Dragan.h"
 #include "ofxsMacros.h"
 #include <Magick++.h>
 #include <iostream>
 #include <stdint.h>
 #include <cmath>
 
-#define kPluginName "OilpaintOFX"
+#define kPluginName "DraganOFX"
 #define kPluginGrouping "Filter"
-#define kPluginIdentifier "net.fxarena.openfx.Oilpaint"
-#define kPluginVersionMajor 2
-#define kPluginVersionMinor 0
+#define kPluginIdentifier "net.fxarena.openfx.Dragan"
+#define kPluginVersionMajor 0
+#define kPluginVersionMinor 1
 #define kPluginMagickVersion 26640
 
-#define kParamRadius "radius"
-#define kParamRadiusLabel "Radius"
-#define kParamRadiusHint "Adjust radius"
-#define kParamRadiusDefault 1
+#define kParamBrightness "brightness"
+#define kParamBrightnessLabel "Brightness"
+#define kParamBrightnessHint "Adjust brightness factor"
+#define kParamBrightnessDefault 1
+
+#define kParamContrast "contrast"
+#define kParamContrastLabel "Contrast"
+#define kParamContrastHint "Adjust contrast"
+#define kParamContrastDefault 0
+
+#define kParamDarkness "darkness"
+#define kParamDarknessLabel "Darkness"
+#define kParamDarknessHint "Adjust shadow darkness"
+#define kParamDarknessDefault 1
+
+#define kParamSaturation "saturation"
+#define kParamSaturationLabel "Saturation"
+#define kParamSaturationHint "Adjust saturation"
+#define kParamSaturationDefault 150
 
 #define kSupportsTiles 0
 #define kSupportsMultiResolution 0
@@ -35,43 +50,46 @@
 
 using namespace OFX;
 
-class OilpaintPlugin : public OFX::ImageEffect
+class DraganPlugin : public OFX::ImageEffect
 {
 public:
-    OilpaintPlugin(OfxImageEffectHandle handle);
-    virtual ~OilpaintPlugin();
+    DraganPlugin(OfxImageEffectHandle handle);
+    virtual ~DraganPlugin();
     virtual void render(const OFX::RenderArguments &args) OVERRIDE FINAL;
     virtual bool getRegionOfDefinition(const OFX::RegionOfDefinitionArguments &args, OfxRectD &rod) OVERRIDE FINAL;
 private:
     OFX::Clip *dstClip_;
     OFX::Clip *srcClip_;
-    OFX::Clip *maskClip_;
-    OFX::DoubleParam *radius_;
+    OFX::DoubleParam *brightness_;
+    OFX::DoubleParam *contrast_;
+    OFX::DoubleParam *darkness_;
+    OFX::IntParam *saturation_;
 };
 
-OilpaintPlugin::OilpaintPlugin(OfxImageEffectHandle handle)
+DraganPlugin::DraganPlugin(OfxImageEffectHandle handle)
 : OFX::ImageEffect(handle)
 , dstClip_(0)
 , srcClip_(0)
 {
     Magick::InitializeMagick(NULL);
     dstClip_ = fetchClip(kOfxImageEffectOutputClipName);
-    assert(dstClip_ && dstClip_->getPixelComponents() == OFX::ePixelComponentRGBA);
+    assert(dstClip_ && dstClip_->getPixelComponents() == OFX::ePixelComponentRGB);
     srcClip_ = fetchClip(kOfxImageEffectSimpleSourceClipName);
-    assert(srcClip_ && srcClip_->getPixelComponents() == OFX::ePixelComponentRGBA);
-    maskClip_ = getContext() == OFX::eContextFilter ? NULL : fetchClip(getContext() == OFX::eContextPaint ? "Brush" : "Mask");
-    assert(!maskClip_ || maskClip_->getPixelComponents() == OFX::ePixelComponentAlpha);
+    assert(srcClip_ && srcClip_->getPixelComponents() == OFX::ePixelComponentRGB);
 
-    radius_ = fetchDoubleParam(kParamRadius);
+    brightness_ = fetchDoubleParam(kParamBrightness);
+    contrast_ = fetchDoubleParam(kParamContrast);
+    darkness_ = fetchDoubleParam(kParamDarkness);
+    saturation_ = fetchIntParam(kParamSaturation);
 
-    assert(radius_);
+    assert(brightness_ && contrast_ && darkness_ && saturation_);
 }
 
-OilpaintPlugin::~OilpaintPlugin()
+DraganPlugin::~DraganPlugin()
 {
 }
 
-void OilpaintPlugin::render(const OFX::RenderArguments &args)
+void DraganPlugin::render(const OFX::RenderArguments &args)
 {
     // render scale
     if (!kSupportsRenderScale && (args.renderScale.x != 1. || args.renderScale.y != 1.)) {
@@ -98,12 +116,6 @@ void OilpaintPlugin::render(const OFX::RenderArguments &args)
             return;
         }
     }
-
-    // Get mask clip
-    std::auto_ptr<const OFX::Image> maskImg((getContext() != OFX::eContextFilter && maskClip_ && maskClip_->isConnected()) ? maskClip_->fetchImage(args.time) : 0);
-    OfxRectI maskRod;
-    if (getContext() != OFX::eContextFilter && maskClip_ && maskClip_->isConnected())
-        maskRod=maskImg->getRegionOfDefinition();
 
     // get dest clip
     if (!dstClip_) {
@@ -133,7 +145,7 @@ void OilpaintPlugin::render(const OFX::RenderArguments &args)
 
     // get pixel component
     OFX::PixelComponentEnum dstComponents  = dstImg->getPixelComponents();
-    if (dstComponents != OFX::ePixelComponentRGBA || (srcImg.get() && (dstComponents != srcImg->getPixelComponents()))) {
+    if (dstComponents != OFX::ePixelComponentRGB || (srcImg.get() && (dstComponents != srcImg->getPixelComponents()))) {
         OFX::throwSuiteStatusException(kOfxStatErrFormat);
         return;
     }
@@ -147,45 +159,87 @@ void OilpaintPlugin::render(const OFX::RenderArguments &args)
     }
 
     // get params
-    double radius;
-    radius_->getValueAtTime(args.time, radius);
+    double brightness,contrast, darkness;
+    int saturation;
+    brightness_->getValueAtTime(args.time, brightness);
+    contrast_->getValueAtTime(args.time, contrast);
+    darkness_->getValueAtTime(args.time, darkness);
+    saturation_->getValueAtTime(args.time, saturation);
 
     // setup
     int width = srcRod.x2-srcRod.x1;
     int height = srcRod.y2-srcRod.y1;
 
     // read image
-    Magick::Image image(Magick::Geometry(width,height),Magick::Color("rgba(0,0,0,0)"));
+    Magick::Image image(Magick::Geometry(width,height),Magick::Color("rgb(0,0,0)"));
     if (srcClip_ && srcClip_->isConnected())
-        image.read(width,height,"RGBA",Magick::FloatPixel,(float*)srcImg->getPixelData());
+        image.read(width,height,"RGB",Magick::FloatPixel,(float*)srcImg->getPixelData());
 
     #ifdef DEBUG
     image.debug(true);
     #endif
 
-    // apply mask
-    if (maskClip_ && maskClip_->isConnected()) {
-        int maskWidth = maskRod.x2-maskRod.x1;
-        int maskHeight = maskRod.y2-maskRod.y1;
-        if (maskWidth>0 && maskHeight>0) {
-            Magick::Image mask(maskWidth,maskHeight,"A",Magick::FloatPixel,(float*)maskImg->getPixelData());
-            image.composite(mask,0,0,Magick::CopyOpacityCompositeOp);
-            Magick::Image container(Magick::Geometry(width,height),Magick::Color("rgba(0,0,0,0)"));
-            container.composite(image,0,0,Magick::OverCompositeOp);
-            image=container;
-        }
-    }
 
-    // oilpaint
-    if (radius>0)
-        image.oilPaint(std::floor(radius * args.renderScale.x + 0.5));
+    // WIP, still not done!!
+
+    std::cout << "b:" << brightness << " c: " << contrast << " d: " << darkness << " s: " << saturation << std::endl;
+
+    // enhance brightness, apply sigmoidal-contrast and saturation
+    if (brightness>1) {
+        image.quantumOperator(Magick::RedChannel,Magick::MultiplyEvaluateOperator,brightness);
+        image.quantumOperator(Magick::GreenChannel,Magick::MultiplyEvaluateOperator,brightness);
+        image.quantumOperator(Magick::BlueChannel,Magick::MultiplyEvaluateOperator,brightness);
+    }
+    //contrast
+      if (contrast!=0)
+        image.sigmoidalContrast(0,abs(contrast),50);
+
+    image.modulate(100,saturation,100);
+
+    // Clone, desaturate, darken and compose multiply with input
+    Magick::Image image2;
+    image2=image;
+    image2.modulate(100,0,100);
+    if (darkness>=1) {
+        image2.quantumOperator(Magick::RedChannel,Magick::MultiplyEvaluateOperator,3/darkness);
+        image2.quantumOperator(Magick::GreenChannel,Magick::MultiplyEvaluateOperator,3/darkness);
+        image2.quantumOperator(Magick::BlueChannel,Magick::MultiplyEvaluateOperator,3/darkness);
+        image2.clamp();
+    }
+    image2.composite(image,0,0,Magick::MultiplyCompositeOp);
+    image2.clamp();
+
+    //image=image2;
+
+    // Clone previous result and apply high pass filter using DoG
+    Magick::Image image3;
+    image3=image2;
+    image3.defineValue("convolve","scale","1");
+    image3.artifact("convolve:bias","50%");
+    image3.morphology(Magick::ConvolveMorphology,Magick::DoGKernel,"0,0,5");
+    image3.clamp();
+
+    // Clone both use overlay composite to apply high pass filter to enhanced input
+    //Magick::Image image4;
+    //image4=image;
+    image2.composite(image3,0,0,Magick::OverlayCompositeOp);
+
+    // Clone enhanced input and desaturate
+    Magick::Image image5;
+    image5=image2;
+    image5.modulate(100,0,100);
+
+    // Use hardlight composite to apply desaturated image to enhanced image
+    image2.composite(image5,0,0,Magick::SoftLightCompositeOp);
+    image=image2;
+
 
     // return image
     if (dstClip_ && dstClip_->isConnected() && srcClip_ && srcClip_->isConnected())
-        image.write(0,0,width,height,"RGBA",Magick::FloatPixel,(float*)dstImg->getPixelData());
+        image.write(0,0,width,height,"RGB",Magick::FloatPixel,(float*)dstImg->getPixelData());
 }
 
-bool OilpaintPlugin::getRegionOfDefinition(const OFX::RegionOfDefinitionArguments &args, OfxRectD &rod)
+bool DraganPlugin::getRegionOfDefinition(const OFX::RegionOfDefinitionArguments &args, OfxRectD &rod)
 {
     if (!kSupportsRenderScale && (args.renderScale.x != 1. || args.renderScale.y != 1.)) {
         OFX::throwSuiteStatusException(kOfxStatFailed);
@@ -200,10 +254,10 @@ bool OilpaintPlugin::getRegionOfDefinition(const OFX::RegionOfDefinitionArgument
     return true;
 }
 
-mDeclarePluginFactory(OilpaintPluginFactory, {}, {});
+mDeclarePluginFactory(DraganPluginFactory, {}, {});
 
 /** @brief The basic describe function, passed a plugin descriptor */
-void OilpaintPluginFactory::describe(OFX::ImageEffectDescriptor &desc)
+void DraganPluginFactory::describe(OFX::ImageEffectDescriptor &desc)
 {
     // basic labels
     desc.setLabel(kPluginName);
@@ -212,7 +266,7 @@ void OilpaintPluginFactory::describe(OFX::ImageEffectDescriptor &desc)
     std::string magickString = MagickCore::GetMagickVersion(&magickNumber);
     if (magickNumber != kPluginMagickVersion)
         magickString.append("\n\nWarning! You are using an unsupported version of ImageMagick.");
-    desc.setPluginDescription("Oilpaint filter node.\n\nPowered by "+magickString);
+    desc.setPluginDescription("Dragan-like effect filter node.\n\nPowered by "+magickString);
 
     // add the supported contexts
     desc.addSupportedContext(eContextGeneral);
@@ -228,49 +282,68 @@ void OilpaintPluginFactory::describe(OFX::ImageEffectDescriptor &desc)
 }
 
 /** @brief The describe in context function, passed a plugin descriptor and a context */
-void OilpaintPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, ContextEnum /*context*/)
+void DraganPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, ContextEnum /*context*/)
 {
     // create the mandated source clip
     ClipDescriptor *srcClip = desc.defineClip(kOfxImageEffectSimpleSourceClipName);
-    srcClip->addSupportedComponent(ePixelComponentRGBA);
+    srcClip->addSupportedComponent(ePixelComponentRGB);
     srcClip->setTemporalClipAccess(false);
     srcClip->setSupportsTiles(kSupportsTiles);
     srcClip->setIsMask(false);
 
-    // create optional mask clip
-    ClipDescriptor *maskClip = desc.defineClip("Mask");
-    maskClip->addSupportedComponent(OFX::ePixelComponentAlpha);
-    maskClip->setTemporalClipAccess(false);
-    maskClip->setOptional(true);
-    maskClip->setSupportsTiles(kSupportsTiles);
-    maskClip->setIsMask(true);
-
     // create the mandated output clip
     ClipDescriptor *dstClip = desc.defineClip(kOfxImageEffectOutputClipName);
-    dstClip->addSupportedComponent(ePixelComponentRGBA);
+    dstClip->addSupportedComponent(ePixelComponentRGB);
     dstClip->setSupportsTiles(kSupportsTiles);
 
     // make some pages
     PageParamDescriptor *page = desc.definePageParam(kPluginName);
     {
-        DoubleParamDescriptor *param = desc.defineDoubleParam(kParamRadius);
-        param->setLabel(kParamRadiusLabel);
-        param->setHint(kParamRadiusHint);
-        param->setRange(0, 1000);
-        param->setDisplayRange(0, 50);
-        param->setDefault(kParamRadiusDefault);
+        DoubleParamDescriptor *param = desc.defineDoubleParam(kParamBrightness);
+        param->setLabel(kParamBrightnessLabel);
+        param->setHint(kParamBrightnessHint);
+        param->setRange(0, 100);
+        param->setDisplayRange(0, 10);
+        param->setDefault(kParamBrightnessDefault);
+        page->addChild(*param);
+    }
+    {
+        DoubleParamDescriptor *param = desc.defineDoubleParam(kParamContrast);
+        param->setLabel(kParamContrastLabel);
+        param->setHint(kParamContrastHint);
+        param->setRange(-100, 100);
+        param->setDisplayRange(-10, 10);
+        param->setDefault(kParamContrastDefault);
+        page->addChild(*param);
+    }
+    {
+        DoubleParamDescriptor *param = desc.defineDoubleParam(kParamDarkness);
+        param->setLabel(kParamDarknessLabel);
+        param->setHint(kParamDarknessHint);
+        param->setRange(1, 100);
+        param->setDisplayRange(1, 10);
+        param->setDefault(kParamDarknessDefault);
+        page->addChild(*param);
+    }
+    {
+        IntParamDescriptor *param = desc.defineIntParam(kParamSaturation);
+        param->setLabel(kParamSaturationLabel);
+        param->setHint(kParamSaturationHint);
+        param->setRange(0, 200);
+        param->setDisplayRange(0, 200);
+        param->setDefault(kParamSaturationDefault);
         page->addChild(*param);
     }
 }
 
 /** @brief The create instance function, the plugin must return an object derived from the \ref OFX::ImageEffect class */
-ImageEffect* OilpaintPluginFactory::createInstance(OfxImageEffectHandle handle, ContextEnum /*context*/)
+ImageEffect* DraganPluginFactory::createInstance(OfxImageEffectHandle handle, ContextEnum /*context*/)
 {
-    return new OilpaintPlugin(handle);
+    return new DraganPlugin(handle);
 }
 
-void getOilpaintPluginID(OFX::PluginFactoryArray &ids)
+void getDraganPluginID(OFX::PluginFactoryArray &ids)
 {
-    static OilpaintPluginFactory p(kPluginIdentifier, kPluginVersionMajor, kPluginVersionMinor);
+    static DraganPluginFactory p(kPluginIdentifier, kPluginVersionMajor, kPluginVersionMinor);
     ids.push_back(&p);
 }

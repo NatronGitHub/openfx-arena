@@ -391,11 +391,6 @@ void TextPlugin::render(const OFX::RenderArguments &args)
     int tmp_height = dstBounds.y2 - dstBounds.y1;
     ytext = tmp_y + ((tmp_y+tmp_height-1) - ytext);
 
-
-    //double dashArray[2] {1,10};
-    //image.strokeDashArray(dashArray);
-
-
     // Setup text draw
     std::list<Magick::Drawable> draw;
     switch(direction) {
@@ -541,7 +536,7 @@ void TextPluginFactory::describe(OFX::ImageEffectDescriptor &desc)
     if (magickNumber != kPluginMagickVersion)
         magickString.append("\n\nWarning! You are using an unsupported version of ImageMagick.");
     std::string delegates = MagickCore::GetMagickDelegates();
-    desc.setPluginDescription("Text generator for Natron.\n\nWritten by Ole-André Rodlie <olear@fxarena.net>\n\nPowered by "+magickString+"\n\nFeatures: "+delegates);
+    desc.setPluginDescription("Text generator node.\n\nPowered by "+magickString+"\n\nFeatures: "+delegates);
 
     // add the supported contexts
     desc.addSupportedContext(eContextGeneral);

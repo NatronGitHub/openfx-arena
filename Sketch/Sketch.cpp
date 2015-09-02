@@ -227,7 +227,7 @@ void SketchPluginFactory::describe(OFX::ImageEffectDescriptor &desc)
     std::string magickString = MagickCore::GetMagickVersion(&magickNumber);
     if (magickNumber != kPluginMagickVersion)
         magickString.append("\n\nWarning! You are using an unsupported version of ImageMagick.");
-    desc.setPluginDescription("Sketch filter for Natron.\n\nWritten by Ole-André Rodlie <olear@fxarena.net>\n\nPowered by "+magickString);
+    desc.setPluginDescription("Sketch effect node.\n\nPowered by "+magickString);
 
     // add the supported contexts
     desc.addSupportedContext(eContextGeneral);

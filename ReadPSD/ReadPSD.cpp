@@ -358,10 +358,8 @@ void ReadPSDPlugin::decodePlane(const std::string& filename, OfxTime time, const
                 foundLayer = true;
             if (foundLayer) {
                 if (offsetLayer) {
-                    //if ((int)_psd[i].columns()!=bounds.x2)
-                        offsetX = _psd[i].page().xOff();
-                    //if ((int)_psd[i].rows()!=bounds.y2)
-                        offsetY = _psd[i].page().yOff();
+                    offsetX = _psd[i].page().xOff();
+                    offsetY = _psd[i].page().yOff();
                 }
                 layer = i;
                 break;
@@ -369,18 +367,10 @@ void ReadPSDPlugin::decodePlane(const std::string& filename, OfxTime time, const
         }
     }
     else { // no multiplane
-        /*if (imageLayer==0 && _psd[imageLayer].format()=="Adobe Photoshop bitmap") {
-            if ((int)_psd[imageLayer].columns()<width)
-                offsetX = width-(int)_psd[imageLayer].columns();
-            if ((int)_psd[imageLayer].rows()<height)
-                offsetY = height-(int)_psd[imageLayer].rows();
-        }*/
         if (imageLayer>0 || _psd[imageLayer].format()!="Adobe Photoshop bitmap") {
             if (offsetLayer) {
-                //if ((int)_psd[imageLayer].columns()!=bounds.x2)
-                    offsetX = _psd[imageLayer].page().xOff();
-                //if ((int)_psd[imageLayer].rows()!=bounds.y2)
-                    offsetY = _psd[imageLayer].page().yOff();
+                offsetX = _psd[imageLayer].page().xOff();
+                offsetY = _psd[imageLayer].page().yOff();
             }
         }
         layer = imageLayer;
@@ -510,7 +500,7 @@ void ReadPSDPlugin::decodePlane(const std::string& filename, OfxTime time, const
         setPersistentMessage(OFX::Message::eMessageError, "", "LCMS support missing, unable to use color management");
     }
 
-    // Return image (comping on a empty canvas makes things easier, modify when #126 is done)
+    // Return image
     Magick::Image container(Magick::Geometry(width,height),Magick::Color("rgba(0,0,0,0)"));
     container.composite(image,offsetX,offsetY,Magick::OverCompositeOp);
     container.flip();
@@ -618,7 +608,7 @@ void ReadPSDPluginFactory::describe(OFX::ImageEffectDescriptor &desc)
     std::string magickString = MagickCore::GetMagickVersion(&magickNumber);
     if (magickNumber != kPluginMagickVersion)
         magickString.append("\n\nWarning! You are using an unsupported version of ImageMagick.");
-    desc.setPluginDescription("Read Photoshop/GIMP/Cinepaint image formats.\n\nWritten by Ole-André Rodlie <olear@fxarena.net>\n\nPowered by "+magickString);
+    desc.setPluginDescription("Read Photoshop/GIMP/Cinepaint (RGB/CMYK/GRAY) image formats with ICC color management.\n\nPowered by Little CMS v2 http://www.littlecms.com/ and "+magickString);
 }
 
 /** @brief The describe in context function, passed a plugin descriptor and a context */
