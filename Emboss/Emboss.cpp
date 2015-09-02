@@ -212,7 +212,7 @@ void EmbossPluginFactory::describe(OFX::ImageEffectDescriptor &desc)
     if (magickNumber != kPluginMagickVersion)
         magickString.append("\n\nWarning! You are using an unsupported version of ImageMagick.");
     std::string delegates = MagickCore::GetMagickDelegates();
-    desc.setPluginDescription("Emboss filter node.\n\n Powered by "+magickV+"\n\nFeatures: "+delegates);
+    desc.setPluginDescription("Emboss filter node.\n\n Powered by "+magickString+"\n\nFeatures: "+delegates);
 
     // add the supported contexts
     desc.addSupportedContext(eContextGeneral);
