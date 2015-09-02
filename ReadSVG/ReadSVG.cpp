@@ -281,6 +281,7 @@ void ReadSVGPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, C
         param->setRange(0, 10000);
         param->setDisplayRange(0, 500);
         param->setDefault(kParamDpiDefault);
+        param->setAnimates(false);
         page->addChild(*param);
     }
     GenericReaderDescribeInContextEnd(desc, context, page, "reference", "reference");

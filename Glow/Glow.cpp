@@ -160,8 +160,6 @@ void GlowPlugin::render(const OFX::RenderArguments &args)
     #endif
 
     // glow
-    Magick::Image image2;
-    image2=image;
     if (amount<1)
         amount=1;
     if (soft==0) {
@@ -170,6 +168,8 @@ void GlowPlugin::render(const OFX::RenderArguments &args)
         image.quantumOperator(Magick::BlueChannel,Magick::MultiplyEvaluateOperator,amount);
     }
     else if (soft>0&&amount>1){
+        Magick::Image image2;
+        image2=image;
         double multiply = amount-0.8;
         image2.quantumOperator(Magick::RedChannel,Magick::MultiplyEvaluateOperator,multiply);
         image2.quantumOperator(Magick::GreenChannel,Magick::MultiplyEvaluateOperator,multiply);
