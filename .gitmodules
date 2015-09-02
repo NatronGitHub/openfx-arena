@@ -7,3 +7,6 @@
 [submodule "OpenFX-IO"]
 	path = OpenFX-IO
 	url = https://github.com/MrKepzie/openfx-io.git
+[submodule "OpenCL"]
+	path = OpenCL
+	url = https://github.com/olear/OpenCL
