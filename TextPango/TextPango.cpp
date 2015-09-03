@@ -10,6 +10,7 @@
 
 #include "TextPango.h"
 #include "ofxsMacros.h"
+#include "ofxsMultiThread.h"
 #include <Magick++.h>
 #include <sstream>
 #include <iostream>
@@ -227,6 +228,16 @@ void TextPangoPlugin::render(const OFX::RenderArguments &args)
     justify_->getValueAtTime(args.time, justify);
     wrap_->getValueAtTime(args.time, wrap);
     //ellipsize_->getValueAtTime(args.time, ellipsize);
+
+    // Set max threads allowed by host
+    unsigned int threads = 0;
+    threads = OFX::MultiThread::getNumCPUs();
+    if (threads>0) {
+        Magick::ResourceLimits::thread(threads);
+        #ifdef DEBUG
+        std::cout << "Setting max threads to " << threads << std::endl;
+        #endif
+    }
 
     // Generate empty image
     int width = dstRod.x2-dstRod.x1;

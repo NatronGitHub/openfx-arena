@@ -15,6 +15,7 @@
 #include "GenericReader.h"
 #include "GenericOCIO.h"
 #include "ofxsMacros.h"
+#include "ofxsMultiThread.h"
 #ifdef OFX_IO_USING_OCIO
 #include <OpenColorIO/OpenColorIO.h>
 #endif
@@ -87,6 +88,17 @@ ReadSVGPlugin::decode(const std::string& filename,
     #ifdef DEBUG
     std::cout << "decode ..." << std::endl;
     #endif
+
+    // Set max threads allowed by host
+    unsigned int threads = 0;
+    threads = OFX::MultiThread::getNumCPUs();
+    if (threads>0) {
+        Magick::ResourceLimits::thread(threads);
+        #ifdef DEBUG
+        std::cout << "Setting max threads to " << threads << std::endl;
+        #endif
+    }
+
     if (!hasRSVG_)
         setPersistentMessage(OFX::Message::eMessageError, "", "librsvg missing, some features may not work as expected");
     int dpi = 0;
@@ -140,6 +152,17 @@ void ReadSVGPlugin::restoreState(const std::string& filename)
     #ifdef DEBUG
     std::cout << "restoreState ..." << std::endl;
     #endif
+
+    // Set max threads allowed by host
+    unsigned int threads = 0;
+    threads = OFX::MultiThread::getNumCPUs();
+    if (threads>0) {
+        Magick::ResourceLimits::thread(threads);
+        #ifdef DEBUG
+        std::cout << "Setting max threads to " << threads << std::endl;
+        #endif
+    }
+
     Magick::Image image;
     int dpi;
     dpi_->getValue(dpi);
@@ -168,6 +191,17 @@ void ReadSVGPlugin::changedParam(const OFX::InstanceChangedArgs &args, const std
     #ifdef DEBUG
     std::cout << "changedParam ..." << std::endl;
     #endif
+
+    // Set max threads allowed by host
+    unsigned int threads = 0;
+    threads = OFX::MultiThread::getNumCPUs();
+    if (threads>0) {
+        Magick::ResourceLimits::thread(threads);
+        #ifdef DEBUG
+        std::cout << "Setting max threads to " << threads << std::endl;
+        #endif
+    }
+
     if (paramName == kParamDpi) {
         int dpi;
         std::string imageFile;
@@ -201,6 +235,17 @@ void ReadSVGPlugin::onInputFileChanged(const std::string& newFile,
     #ifdef DEBUG
     std::cout << "onInputFileChanged ..." << std::endl;
     #endif
+
+    // Set max threads allowed by host
+    unsigned int threads = 0;
+    threads = OFX::MultiThread::getNumCPUs();
+    if (threads>0) {
+        Magick::ResourceLimits::thread(threads);
+        #ifdef DEBUG
+        std::cout << "Setting max threads to " << threads << std::endl;
+        #endif
+    }
+
     assert(premult && components);
     int dpi;
     dpi_->getValue(dpi);

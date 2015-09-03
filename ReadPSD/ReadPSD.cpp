@@ -16,6 +16,7 @@
 #include "GenericReader.h"
 #include "GenericOCIO.h"
 #include "ofxsMacros.h"
+#include "ofxsMultiThread.h"
 #include <lcms2.h>
 #include <dirent.h>
 #include <ofxNatron.h>
@@ -305,6 +306,16 @@ void ReadPSDPlugin::decodePlane(const std::string& filename, OfxTime time, const
     std::cout << "decodePlane ..." << std::endl;
     #endif
 
+    // Set max threads allowed by host
+    unsigned int threads = 0;
+    threads = OFX::MultiThread::getNumCPUs();
+    if (threads>0) {
+        Magick::ResourceLimits::thread(threads);
+        #ifdef DEBUG
+        std::cout << "Setting max threads to " << threads << std::endl;
+        #endif
+    }
+
     int offsetX = 0;
     int offsetY = 0;
     int layer = 0;
@@ -532,6 +543,16 @@ void ReadPSDPlugin::restoreState(const std::string& filename)
     #ifdef DEBUG
     std::cout << "restoreState ..." << std::endl;
     #endif
+
+    // Set max threads allowed by host
+    unsigned int threads = 0;
+    threads = OFX::MultiThread::getNumCPUs();
+    if (threads>0) {
+        Magick::ResourceLimits::thread(threads);
+        #ifdef DEBUG
+        std::cout << "Setting max threads to " << threads << std::endl;
+        #endif
+    }
 
     _psd.clear();
     _maxWidth = 0;
