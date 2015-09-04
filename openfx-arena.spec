@@ -6,7 +6,7 @@ Release: 1%{dist}
 License: GPLv2
 
 Group: System Environment/Base
-URL: https://github.com/olear/openfx.arena
+URL: https://github.com/olear/openfx-arena
 
 Packager: Ole-André Rodlie, <olear@fxarena.net>
 Vendor: FxArena DA, https://fxarena.net
