@@ -404,14 +404,14 @@ void TextPlugin::render(const OFX::RenderArguments &args)
 
     // Setup text draw
     std::list<Magick::Drawable> draw;
-    switch(direction) {
+    /*switch(direction) {
     case 1:
         draw.push_back(Magick::DrawableTextDirection(Magick::RightToLeftDirection));
         break;
     default:
         draw.push_back(Magick::DrawableTextDirection(Magick::UndefinedDirection));
         break;
-    }
+    }*/
     switch(gravity) {
     case 1:
         xtext = xtext-(width/2);
@@ -814,6 +814,7 @@ void TextPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, Cont
         param->appendOption("Left");
         param->appendOption("Right");
         param->setAnimates(true);
+        param->setIsSecret(true); // buggy on "right", disable until fixed in IM
         page->addChild(*param);
     }
     {
