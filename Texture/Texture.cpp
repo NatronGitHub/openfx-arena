@@ -16,8 +16,7 @@
 #include <iostream>
 
 #define kPluginName "TextureOFX"
-#define kPluginGrouping "Draw"
-
+#define kPluginGrouping "Arena"
 #define kPluginIdentifier "net.fxarena.openfx.Texture"
 #define kPluginVersionMajor 3
 #define kPluginVersionMinor 7

@@ -14,7 +14,7 @@
 #include <Magick++.h>
 
 #define kPluginName "ModulateOFX"
-#define kPluginGrouping "Color"
+#define kPluginGrouping "Arena"
 #define kPluginIdentifier "net.fxarena.openfx.Modulate"
 #define kPluginVersionMajor 1
 #define kPluginVersionMinor 0

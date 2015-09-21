@@ -12,7 +12,6 @@
 #include "Texture.h"
 #include "Tile.h"
 #include "Reflection.h"
-#include "Text.h"
 #include "Arc.h"
 #include "Polar.h"
 #include "Roll.h"
@@ -21,9 +20,6 @@
 #include "Implode.h"
 #include "Charcoal.h"
 #include "Oilpaint.h"
-#include "TextPango.h"
-#include "ReadPSD.h"
-#include "ReadSVG.h"
 #include "Sketch.h"
 #include "Polaroid.h"
 #include "Edges.h"
@@ -38,7 +34,6 @@ namespace OFX
             getTexturePluginID(ids);
             getTilePluginID(ids);
             getReflectionPluginID(ids);
-            getTextPluginID(ids);
             getArcPluginID(ids);
             getPolarPluginID(ids);
             getRollPluginID(ids);
@@ -47,9 +42,6 @@ namespace OFX
             getImplodePluginID(ids);
             getCharcoalPluginID(ids);
             getOilpaintPluginID(ids);
-            getTextPangoPluginID(ids);
-            getReadPSDPluginID(ids);
-            getReadSVGPluginID(ids);
             getSketchPluginID(ids);
             getPolaroidPluginID(ids);
             getEdgesPluginID(ids);

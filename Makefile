@@ -7,7 +7,7 @@
 # Need custom licensing terms or conditions? Commercial license for proprietary software? Contact us.
 #
 
-SUBDIRS = Bundle
+SUBDIRS = Bundle TextFX ExtraIO ExtraFX
 
 SUBDIRS_NOMULTI = \
 Arc \

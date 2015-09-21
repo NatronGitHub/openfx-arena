@@ -17,7 +17,7 @@
 #include <cmath>
 
 #define kPluginName "ImplodeOFX"
-#define kPluginGrouping "Transform"
+#define kPluginGrouping "Arena"
 #define kPluginIdentifier "net.fxarena.openfx.Implode"
 #define kPluginVersionMajor 2
 #define kPluginVersionMinor 0

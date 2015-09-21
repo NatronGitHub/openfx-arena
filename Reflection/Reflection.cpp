@@ -17,7 +17,7 @@
 #include <iostream>
 
 #define kPluginName "ReflectionOFX"
-#define kPluginGrouping "Transform"
+#define kPluginGrouping "Arena"
 #define kPluginIdentifier "net.fxarena.openfx.Reflection"
 #define kPluginVersionMajor 3
 #define kPluginVersionMinor 1

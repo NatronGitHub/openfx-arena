@@ -11,7 +11,6 @@ PLUGINOBJECTS = \
         Texture.o \
         Tile.o \
         Reflection.o \
-        Text.o \
         Arc.o \
         Polar.o \
         Roll.o \
@@ -20,20 +19,13 @@ PLUGINOBJECTS = \
         Implode.o \
         Charcoal.o \
         Oilpaint.o \
-        TextPango.o \
-        ReadPSD.o \
-        ReadSVG.o \
         Sketch.o \
         Polaroid.o \
         Edges.o \
         Modulate.o \
-        ofxsOGLTextRenderer.o \
-        ofxsOGLFontData.o \
-        ofxsRectangleInteract.o \
-        PluginRegistrationCombined.o \
-        GenericReader.o GenericOCIO.o SequenceParsing.o
+        PluginRegistrationCombined.o
 
-PLUGINNAME = Arena
+PLUGINNAME = ExtraFX
 
 RESOURCES = \
 ../Bundle/Arena.png \
@@ -44,8 +36,6 @@ RESOURCES = \
 ../Tile/net.fxarena.openfx.Tile.svg \
 ../Reflection/net.fxarena.openfx.Reflection.png \
 ../Reflection/net.fxarena.openfx.Reflection.svg \
-../Text/net.fxarena.openfx.Text.png \
-../Text/net.fxarena.openfx.Text.svg \
 ../Arc/net.fxarena.openfx.Arc.png \
 ../Arc/net.fxarena.openfx.Arc.svg \
 ../Polar/net.fxarena.openfx.Polar.png \
@@ -62,12 +52,6 @@ RESOURCES = \
 ../Charcoal/net.fxarena.openfx.Charcoal.svg \
 ../Oilpaint/net.fxarena.openfx.Oilpaint.png \
 ../Oilpaint/net.fxarena.openfx.Oilpaint.svg \
-../TextPango/net.fxarena.openfx.TextPango.png \
-../TextPango/net.fxarena.openfx.TextPango.svg \
-../ReadPSD/net.fxarena.openfx.ReadPSD.png \
-../ReadPSD/net.fxarena.openfx.ReadPSD.svg \
-../ReadSVG/net.fxarena.openfx.ReadSVG.png \
-../ReadSVG/net.fxarena.openfx.ReadSVG.svg \
 ../Sketch/net.fxarena.openfx.Sketch.png \
 ../Sketch/net.fxarena.openfx.Sketch.svg \
 ../Polaroid/net.fxarena.openfx.Polaroid.png \
@@ -81,7 +65,6 @@ VPATH += \
 ../Texture \
 ../Tile \
 ../Reflection \
-../Text \
 ../Arc \
 ../Polar \
 ../Roll \
@@ -90,22 +73,17 @@ VPATH += \
 ../Implode \
 ../Charcoal \
 ../Oilpaint \
-../TextPango \
-../ReadPSD \
-../ReadSVG \
 ../Sketch \
 ../Polaroid \
 ../Edges \
 ../Modulate
 
 include ../Makefile.master
-include ../Makefile.io
 
 CXXFLAGS += \
 -I../Texture \
 -I../Tile \
 -I../Reflection \
--I../Text \
 -I../Arc \
 -I../Polar \
 -I../Roll \
@@ -114,9 +92,6 @@ CXXFLAGS += \
 -I../Implode \
 -I../Charcoal \
 -I../Oilpaint \
--I../TextPango \
--I../ReadPSD \
--I../ReadSVG \
 -I../Sketch \
 -I../Polaroid \
 -I../Edges \

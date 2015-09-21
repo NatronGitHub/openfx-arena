@@ -17,7 +17,7 @@
 #include <cmath>
 
 #define kPluginName "PolarOFX"
-#define kPluginGrouping "Transform"
+#define kPluginGrouping "Arena"
 #define kPluginIdentifier "net.fxarena.openfx.Polar"
 #define kPluginVersionMajor 3
 #define kPluginVersionMinor 0

@@ -17,7 +17,7 @@
 #include <cmath>
 
 #define kPluginName "WaveOFX"
-#define kPluginGrouping "Transform"
+#define kPluginGrouping "Arena"
 #define kPluginIdentifier "net.fxarena.openfx.Wave"
 #define kPluginVersionMajor 2
 #define kPluginVersionMinor 0
