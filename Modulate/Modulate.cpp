@@ -11,6 +11,7 @@
 #include "Modulate.h"
 #include "ofxsMacros.h"
 #include "ofxsMultiThread.h"
+#include <iostream>
 #include <Magick++.h>
 
 #define kPluginName "ModulateOFX"
