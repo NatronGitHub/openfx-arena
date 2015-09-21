@@ -44,7 +44,7 @@
 #define kParamGrayDefault false
 
 #define kSupportsTiles 0
-#define kSupportsMultiResolution 0
+#define kSupportsMultiResolution 1
 #define kSupportsRenderScale 0 // TODO fix
 #define kRenderThreadSafety eRenderFullySafe
 #define kHostFrameThreading false
