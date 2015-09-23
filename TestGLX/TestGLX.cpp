@@ -17,18 +17,23 @@
 #include <GL/glx.h>
 
 #define kPluginName "TestGLX"
-#define kPluginGrouping "Other/Test"
-
+#define kPluginGrouping "Arena"
 #define kPluginIdentifier "net.fxarena.openfx.TestGLX"
 #define kPluginVersionMajor 1
 #define kPluginVersionMinor 0
 
 #define kSupportsTiles 0
-#define kSupportsMultiResolution 0
+#define kSupportsMultiResolution 1
 #define kSupportsRenderScale 0
 #define kRenderThreadSafety eRenderFullySafe
+#define kHostFrameThreading false
+
+#define OGL_MAJOR 3
+#define OGL_MINOR 0
 
 using namespace OFX;
+
+// GLX
 typedef GLXContext (*glXCreateContextAttribsARBProc)(Display*,GLXFBConfig,GLXContext,Bool,const int*);
 typedef Bool (*glXMakeContextCurrentARBProc)(Display*,GLXDrawable,GLXDrawable,GLXContext);
 static glXCreateContextAttribsARBProc glXCreateContextAttribsARB = 0;
@@ -43,102 +48,49 @@ public:
     virtual bool getRegionOfDefinition(const OFX::RegionOfDefinitionArguments &args, OfxRectD &rod) OVERRIDE FINAL;
 private:
     OFX::Clip *dstClip_;
+    OFX::Clip *srcClip_;
+    OFX::Clip *maskClip_;
+    GLXContext ctx;
+    Display* dpy;
+    GLXFBConfig* fbc;
 };
 
 TestGLXPlugin::TestGLXPlugin(OfxImageEffectHandle handle)
 : OFX::ImageEffect(handle)
 , dstClip_(0)
+, srcClip_(0)
 {
     dstClip_ = fetchClip(kOfxImageEffectOutputClipName);
-    assert(dstClip_ && (dstClip_->getPixelComponents() == OFX::ePixelComponentRGBA || dstClip_->getPixelComponents() == OFX::ePixelComponentRGB));
-}
+    assert(dstClip_ && dstClip_->getPixelComponents() == OFX::ePixelComponentRGBA);
+    srcClip_ = fetchClip(kOfxImageEffectSimpleSourceClipName);
+    assert(srcClip_ && srcClip_->getPixelComponents() == OFX::ePixelComponentRGBA);
 
-TestGLXPlugin::~TestGLXPlugin()
-{
-}
-
-/* Override the render */
-void TestGLXPlugin::render(const OFX::RenderArguments &args)
-{
-    if (!kSupportsRenderScale && (args.renderScale.x != 1. || args.renderScale.y != 1.)) {
-        OFX::throwSuiteStatusException(kOfxStatFailed);
-        return;
-    }
-
-    if (!dstClip_) {
-        OFX::throwSuiteStatusException(kOfxStatFailed);
-        return;
-    }
-    assert(dstClip_);
-
-    std::auto_ptr<OFX::Image> dstImg(dstClip_->fetchImage(args.time));
-    if (!dstImg.get()) {
-        OFX::throwSuiteStatusException(kOfxStatFailed);
-        return;
-    }
-
-    if (dstImg->getRenderScale().x != args.renderScale.x ||
-        dstImg->getRenderScale().y != args.renderScale.y ||
-        dstImg->getField() != args.fieldToRender) {
-        setPersistentMessage(OFX::Message::eMessageError, "", "OFX Host gave image with wrong scale or field properties");
-        OFX::throwSuiteStatusException(kOfxStatFailed);
-        return;
-    }
-
-    OFX::BitDepthEnum dstBitDepth = dstImg->getPixelDepth();
-    if (dstBitDepth != OFX::eBitDepthFloat && dstBitDepth != OFX::eBitDepthUShort && dstBitDepth != OFX::eBitDepthUByte) {
-        OFX::throwSuiteStatusException(kOfxStatErrFormat);
-        return;
-    }
-
-    OFX::PixelComponentEnum dstComponents  = dstImg->getPixelComponents();
-    if ((dstComponents != OFX::ePixelComponentRGBA && dstComponents != OFX::ePixelComponentRGB && dstComponents != OFX::ePixelComponentAlpha)) {
-        OFX::throwSuiteStatusException(kOfxStatErrFormat);
-        return;
-    }
-
-    // are we in the image bounds
-    OfxRectI dstBounds = dstImg->getBounds();
-    OfxRectI dstRod = dstImg->getRegionOfDefinition();
-    if(args.renderWindow.x1 < dstBounds.x1 || args.renderWindow.x1 >= dstBounds.x2 || args.renderWindow.y1 < dstBounds.y1 || args.renderWindow.y1 >= dstBounds.y2 ||
-       args.renderWindow.x2 <= dstBounds.x1 || args.renderWindow.x2 > dstBounds.x2 || args.renderWindow.y2 <= dstBounds.y1 || args.renderWindow.y2 > dstBounds.y2) {
-        OFX::throwSuiteStatusException(kOfxStatErrValue);
-        return;
-    }
-
-    // image size
-    int width = dstRod.x2-dstRod.x1;
-    int height = dstRod.y2-dstRod.y1;
-
-    // setup glx
+    // Setup glx
     static int visual_attribs[] = {
             None
     };
     int context_attribs[] = {
-            GLX_CONTEXT_MAJOR_VERSION_ARB, 3,
-            GLX_CONTEXT_MINOR_VERSION_ARB, 0,
+            GLX_CONTEXT_MAJOR_VERSION_ARB, OGL_MAJOR,
+            GLX_CONTEXT_MINOR_VERSION_ARB, OGL_MINOR,
             None
     };
-
-    Display* dpy = XOpenDisplay(0);
+    dpy = XOpenDisplay(0);
     int fbcount = 0;
-    GLXFBConfig* fbc = NULL;
-    GLXContext ctx;
-    GLXPbuffer pbuf;
+    fbc = NULL;
 
-    // open display
+    // Open display
     if (!(dpy = XOpenDisplay(0))){
         setPersistentMessage(OFX::Message::eMessageError, "", "Failed to open X11 display");
         OFX::throwSuiteStatusException(kOfxStatFailed);
     }
 
-    // get framebuffer configs
+    // Get framebuffer configs
     if (!(fbc = glXChooseFBConfig(dpy,DefaultScreen(dpy),visual_attribs,&fbcount))) {
         setPersistentMessage(OFX::Message::eMessageError, "", "Failed to get framebuffer");
         OFX::throwSuiteStatusException(kOfxStatFailed);
     }
 
-    // get extensions
+    // Get extensions
     glXCreateContextAttribsARB = (glXCreateContextAttribsARBProc)glXGetProcAddressARB( (const GLubyte *) "glXCreateContextAttribsARB");
     glXMakeContextCurrentARB = (glXMakeContextCurrentARBProc)glXGetProcAddressARB( (const GLubyte *) "glXMakeContextCurrent");
     if (!(glXCreateContextAttribsARB && glXMakeContextCurrentARB)) {
@@ -147,21 +99,101 @@ void TestGLXPlugin::render(const OFX::RenderArguments &args)
         OFX::throwSuiteStatusException(kOfxStatFailed);
     }
 
-    // create a context using glXCreateContextAttribsARB
+    // Create a context using glXCreateContextAttribsARB
     if (!( ctx = glXCreateContextAttribsARB(dpy,fbc[0],0,True,context_attribs))) {
-        setPersistentMessage(OFX::Message::eMessageError, "", "Failed to create OpenGL context");
+        setPersistentMessage(OFX::Message::eMessageError, "", "Failed to create OpenGL context, OpenGL 3.0(+) is needed");
         XFree(fbc);
         OFX::throwSuiteStatusException(kOfxStatFailed);
     }
+}
 
-    // create temporary buffer
+TestGLXPlugin::~TestGLXPlugin()
+{
+    XFree(fbc);
+    XSync(dpy,False);
+}
+
+void TestGLXPlugin::render(const OFX::RenderArguments &args)
+{
+    // render scale
+    if (!kSupportsRenderScale && (args.renderScale.x != 1. || args.renderScale.y != 1.)) {
+        OFX::throwSuiteStatusException(kOfxStatFailed);
+        return;
+    }
+
+    // get src clip
+    if (!srcClip_) {
+        OFX::throwSuiteStatusException(kOfxStatFailed);
+        return;
+    }
+    assert(srcClip_);
+    std::auto_ptr<const OFX::Image> srcImg(srcClip_->fetchImage(args.time));
+    OfxRectI srcRod,srcBounds;
+    if (srcImg.get()) {
+        srcRod = srcImg->getRegionOfDefinition();
+        srcBounds = srcImg->getBounds();
+        if (srcImg->getRenderScale().x != args.renderScale.x ||
+            srcImg->getRenderScale().y != args.renderScale.y ||
+            srcImg->getField() != args.fieldToRender) {
+            setPersistentMessage(OFX::Message::eMessageError, "", "OFX Host gave image with wrong scale or field properties");
+            OFX::throwSuiteStatusException(kOfxStatFailed);
+            return;
+        }
+    }
+
+    // get dest clip
+    if (!dstClip_) {
+        OFX::throwSuiteStatusException(kOfxStatFailed);
+        return;
+    }
+    assert(dstClip_);
+    std::auto_ptr<OFX::Image> dstImg(dstClip_->fetchImage(args.time));
+    if (!dstImg.get()) {
+        OFX::throwSuiteStatusException(kOfxStatFailed);
+        return;
+    }
+    if (dstImg->getRenderScale().x != args.renderScale.x ||
+        dstImg->getRenderScale().y != args.renderScale.y ||
+        dstImg->getField() != args.fieldToRender) {
+        setPersistentMessage(OFX::Message::eMessageError, "", "OFX Host gave image with wrong scale or field properties");
+        OFX::throwSuiteStatusException(kOfxStatFailed);
+        return;
+    }
+
+    // get bit depth
+    OFX::BitDepthEnum dstBitDepth = dstImg->getPixelDepth();
+    if (dstBitDepth != OFX::eBitDepthFloat || (srcImg.get() && (dstBitDepth != srcImg->getPixelDepth()))) {
+        OFX::throwSuiteStatusException(kOfxStatErrFormat);
+        return;
+    }
+
+    // get pixel component
+    OFX::PixelComponentEnum dstComponents  = dstImg->getPixelComponents();
+    if (dstComponents != OFX::ePixelComponentRGBA || (srcImg.get() && (dstComponents != srcImg->getPixelComponents()))) {
+        OFX::throwSuiteStatusException(kOfxStatErrFormat);
+        return;
+    }
+
+    // are we in the image bounds?
+    OfxRectI dstBounds = dstImg->getBounds();
+    if(args.renderWindow.x1 < dstBounds.x1 || args.renderWindow.x1 >= dstBounds.x2 || args.renderWindow.y1 < dstBounds.y1 || args.renderWindow.y1 >= dstBounds.y2 ||
+       args.renderWindow.x2 <= dstBounds.x1 || args.renderWindow.x2 > dstBounds.x2 || args.renderWindow.y2 <= dstBounds.y1 || args.renderWindow.y2 > dstBounds.y2) {
+        OFX::throwSuiteStatusException(kOfxStatErrValue);
+        return;
+    }
+
+    // Setup
+    int width = srcRod.x2-srcRod.x1;
+    int height = srcRod.y2-srcRod.y1;
+    GLXPbuffer pbuf;
+
+    // Create temporary buffer
     int pbuffer_attribs[] = {
         GLX_PBUFFER_WIDTH, width,
         GLX_PBUFFER_HEIGHT, height,
         None
     };
     pbuf = glXCreatePbuffer(dpy,fbc[0],pbuffer_attribs);
-    XFree(fbc);
     XSync(dpy,False);
 
     // try to make it the current context
@@ -172,8 +204,6 @@ void TestGLXPlugin::render(const OFX::RenderArguments &args)
         }
     }
 
-    //std::cout << "using OpenGL " << glGetString(GL_VERSION) << std::endl;
-
     //Initialize Projection Matrix
     glMatrixMode(GL_PROJECTION);
     glLoadIdentity();
@@ -182,30 +212,47 @@ void TestGLXPlugin::render(const OFX::RenderArguments &args)
     glMatrixMode(GL_MODELVIEW);
     glLoadIdentity();
 
-    //Initialize clear color
+    // Initialize clear color
     glClearColor(0.f,0.f,0.f,1.f);
 
-    //Clear color buffer
+    // Clear color buffer
     glClear(GL_COLOR_BUFFER_BIT);
 
-    //Render something
-    glBegin(GL_QUADS);
-        glVertex2f(-0.5f,-0.5f);
-        glVertex2f(0.5f,-0.5f);
-        glVertex2f(0.5f,0.5f);
-        glVertex2f(-0.5f,0.5f);
-    glEnd();
+    // Disabling the depth test
+    glDisable(GL_DEPTH_TEST);
 
-    // output
-    float *pixels;
-    float *output;
-    output = (float*)dstImg->getPixelData();
-    pixels = new float[width*height*4];
-    for(int i=0; i <(width*height*4); i++ )
-        pixels[i]=0;
-    glReadPixels(0,0,width,height,GL_RGBA,GL_FLOAT,pixels);
-    for(int i=0; i <(width*height*4); i++ )
-        output[i]=pixels[i];
+    // Generate a texture
+    GLuint mTextureID;
+    glGenTextures(1,&mTextureID);
+
+    // Enable texturing
+    glEnable(GL_TEXTURE_2D);
+    glEnable(GL_NORMALIZE);
+
+    // Specify texture to use
+    glBindTexture(GL_TEXTURE_2D,0);
+
+    // Set texturing parameters
+    glTexParameteri(GL_TEXTURE_2D,GL_TEXTURE_MAG_FILTER,GL_LINEAR);
+    glTexParameteri(GL_TEXTURE_2D,GL_TEXTURE_MIN_FILTER,GL_LINEAR);
+    glTexParameteri(GL_TEXTURE_2D,GL_TEXTURE_WRAP_S,GL_REPEAT);
+    glTexParameteri(GL_TEXTURE_2D,GL_TEXTURE_WRAP_T,GL_REPEAT);
+    glTexImage2D(GL_TEXTURE_2D,0,GL_RGBA,width,height,0,GL_RGBA,GL_FLOAT,srcImg->getPixelData());
+
+    // Quads
+    glBegin (GL_QUADS);
+    glTexCoord2f(0.f,1.f);
+    glVertex2f(-1.0,1.0);
+    glTexCoord2f(0.f,0.f);
+    glVertex2f(-1.0,-1.0);
+    glTexCoord2f(1.f,0.f);
+    glVertex2f(1.0,-1.0);
+    glTexCoord2f(1.f,1.f);
+    glVertex2f(1.0,1.0);
+    glEnd ();
+
+    // Return
+    glReadPixels(0,0,width,height,GL_RGBA,GL_FLOAT,dstImg->getPixelData());
 }
 
 bool TestGLXPlugin::getRegionOfDefinition(const OFX::RegionOfDefinitionArguments &args, OfxRectD &rod)
@@ -214,10 +261,12 @@ bool TestGLXPlugin::getRegionOfDefinition(const OFX::RegionOfDefinitionArguments
         OFX::throwSuiteStatusException(kOfxStatFailed);
         return false;
     }
-
-    rod.x1 = rod.y1 = kOfxFlagInfiniteMin;
-    rod.x2 = rod.y2 = kOfxFlagInfiniteMax;
-
+    if (srcClip_ && srcClip_->isConnected()) {
+        rod = srcClip_->getRegionOfDefinition(args.time);
+    } else {
+        rod.x1 = rod.y1 = kOfxFlagInfiniteMin;
+        rod.x2 = rod.y2 = kOfxFlagInfiniteMax;
+    }
     return true;
 }
 
@@ -229,11 +278,11 @@ void TestGLXPluginFactory::describe(OFX::ImageEffectDescriptor &desc)
     // basic labels
     desc.setLabel(kPluginName);
     desc.setPluginGrouping(kPluginGrouping);
-    desc.setPluginDescription("GLX (OpenGL 3.0+) test node, draws a white rectangle");
+    desc.setPluginDescription("GLX test node, made by @olear and @johnwo");
 
     // add the supported contexts
     desc.addSupportedContext(eContextGeneral);
-    desc.addSupportedContext(eContextGenerator);
+    desc.addSupportedContext(eContextFilter);
 
     // add supported pixel depths
     desc.addSupportedBitDepth(eBitDepthFloat);
@@ -241,16 +290,18 @@ void TestGLXPluginFactory::describe(OFX::ImageEffectDescriptor &desc)
     desc.setSupportsTiles(kSupportsTiles);
     desc.setSupportsMultiResolution(kSupportsMultiResolution);
     desc.setRenderThreadSafety(kRenderThreadSafety);
+    desc.setHostFrameThreading(kHostFrameThreading);
 }
 
 /** @brief The describe in context function, passed a plugin descriptor and a context */
 void TestGLXPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, ContextEnum /*context*/)
-{   
-    // there has to be an input clip, even for generators
-    ClipDescriptor* srcClip = desc.defineClip(kOfxImageEffectSimpleSourceClipName);
+{
+    // create the mandated source clip
+    ClipDescriptor *srcClip = desc.defineClip(kOfxImageEffectSimpleSourceClipName);
     srcClip->addSupportedComponent(ePixelComponentRGBA);
+    srcClip->setTemporalClipAccess(false);
     srcClip->setSupportsTiles(kSupportsTiles);
-    srcClip->setOptional(true);
+    srcClip->setIsMask(false);
 
     // create the mandated output clip
     ClipDescriptor *dstClip = desc.defineClip(kOfxImageEffectOutputClipName);
