@@ -24,9 +24,8 @@
 
 #define kSupportsTiles 0
 #define kSupportsMultiResolution 1
-#define kSupportsRenderScale 0
+#define kSupportsRenderScale 1
 #define kRenderThreadSafety eRenderFullySafe
-#define kHostFrameThreading false
 
 #define OGL_MAJOR 3
 #define OGL_MINOR 0
@@ -49,7 +48,6 @@ public:
 private:
     OFX::Clip *dstClip_;
     OFX::Clip *srcClip_;
-    OFX::Clip *maskClip_;
     GLXContext ctx;
     Display* dpy;
     GLXFBConfig* fbc;
@@ -240,7 +238,7 @@ void TestGLXPlugin::render(const OFX::RenderArguments &args)
     glTexImage2D(GL_TEXTURE_2D,0,GL_RGBA,width,height,0,GL_RGBA,GL_FLOAT,srcImg->getPixelData());
 
     // Quads
-    glBegin (GL_QUADS);
+    glBegin(GL_QUADS);
     glTexCoord2f(0.f,1.f);
     glVertex2f(-1.0,1.0);
     glTexCoord2f(0.f,0.f);
@@ -249,7 +247,7 @@ void TestGLXPlugin::render(const OFX::RenderArguments &args)
     glVertex2f(1.0,-1.0);
     glTexCoord2f(1.f,1.f);
     glVertex2f(1.0,1.0);
-    glEnd ();
+    glEnd();
 
     // Return
     glReadPixels(0,0,width,height,GL_RGBA,GL_FLOAT,dstImg->getPixelData());
@@ -290,7 +288,6 @@ void TestGLXPluginFactory::describe(OFX::ImageEffectDescriptor &desc)
     desc.setSupportsTiles(kSupportsTiles);
     desc.setSupportsMultiResolution(kSupportsMultiResolution);
     desc.setRenderThreadSafety(kRenderThreadSafety);
-    desc.setHostFrameThreading(kHostFrameThreading);
 }
 
 /** @brief The describe in context function, passed a plugin descriptor and a context */
