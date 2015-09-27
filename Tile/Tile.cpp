@@ -129,7 +129,7 @@ void TilePlugin::render(const OFX::RenderArguments &args)
     // Get mask clip
     std::auto_ptr<const OFX::Image> maskImg((getContext() != OFX::eContextFilter && maskClip_ && maskClip_->isConnected()) ? maskClip_->fetchImage(args.time) : 0);
     OfxRectI maskRod;
-    if (getContext() != OFX::eContextFilter && maskClip_ && maskClip_->isConnected())
+    if (maskImg.get())
         maskRod=maskImg->getRegionOfDefinition();
 
     // get dest clip
@@ -224,7 +224,7 @@ void TilePlugin::render(const OFX::RenderArguments &args)
     #endif
 
     // apply mask
-    if (maskClip_ && maskClip_->isConnected()) {
+    if (maskImg.get()) {
         int maskWidth = maskRod.x2-maskRod.x1;
         int maskHeight = maskRod.y2-maskRod.y1;
         if (maskWidth>0 && maskHeight>0) {

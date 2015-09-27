@@ -131,7 +131,7 @@ void ReflectionPlugin::render(const OFX::RenderArguments &args)
     // Get mask clip
     std::auto_ptr<const OFX::Image> maskImg((getContext() != OFX::eContextFilter && maskClip_ && maskClip_->isConnected()) ? maskClip_->fetchImage(args.time) : 0);
     OfxRectI maskRod;
-    if (getContext() != OFX::eContextFilter && maskClip_ && maskClip_->isConnected())
+    if (maskImg.get())
         maskRod=maskImg->getRegionOfDefinition();
 
     // get dest clip
@@ -341,7 +341,7 @@ void ReflectionPlugin::render(const OFX::RenderArguments &args)
             image0.crop(Magick::Geometry(srcWidth,mirrorHeight-offset,0,offset+offset));
             image.crop(Magick::Geometry(srcWidth,mirrorHeight+offset,0,mirrorHeight-offset));
         }
-        if (maskClip_ && maskClip_->isConnected()) {
+        if (maskImg.get()) {
             int maskWidth = maskRod.x2-maskRod.x1;
             int maskHeight = maskRod.y2-maskRod.y1;
             if (maskWidth>0&&maskHeight>0) {
