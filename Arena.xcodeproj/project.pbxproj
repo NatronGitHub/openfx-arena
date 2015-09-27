@@ -13,6 +13,30 @@
 		AC93A1821BB7EE17000E4A0C /* Arc.cpp in Sources */ = {isa = PBXBuildFile; fileRef = ACE3C9271BB7E19A0042BAF9 /* Arc.cpp */; };
 		AC93A1831BB7EE28000E4A0C /* ofxsShutter.cpp in Sources */ = {isa = PBXBuildFile; fileRef = ACE3CED41BB7E19D0042BAF9 /* ofxsShutter.cpp */; };
 		AC93A1841BB7EE3B000E4A0C /* Implode.cpp in Sources */ = {isa = PBXBuildFile; fileRef = ACE3C9831BB7E19A0042BAF9 /* Implode.cpp */; };
+		AC93A1BE1BB7F1BF000E4A0C /* net.fxarena.openfx.Arc.png in CopyFiles */ = {isa = PBXBuildFile; fileRef = ACE3C92B1BB7E19A0042BAF9 /* net.fxarena.openfx.Arc.png */; };
+		AC93A2071BB7F1C5000E4A0C /* net.fxarena.openfx.Charcoal.png in CopyFiles */ = {isa = PBXBuildFile; fileRef = ACE3C9331BB7E19A0042BAF9 /* net.fxarena.openfx.Charcoal.png */; };
+		AC93A2081BB7F1C8000E4A0C /* Arena.png in CopyFiles */ = {isa = PBXBuildFile; fileRef = ACE3CFE71BB7E1CE0042BAF9 /* Arena.png */; };
+		AC93A2091BB7F1CB000E4A0C /* net.fxarena.openfx.DaveHill.png in CopyFiles */ = {isa = PBXBuildFile; fileRef = ACE3C93B1BB7E19A0042BAF9 /* net.fxarena.openfx.DaveHill.png */; };
+		AC93A20A1BB7F1CD000E4A0C /* net.fxarena.openfx.Dragan.png in CopyFiles */ = {isa = PBXBuildFile; fileRef = ACE3C9431BB7E19A0042BAF9 /* net.fxarena.openfx.Dragan.png */; };
+		AC93A20B1BB7F1CF000E4A0C /* net.fxarena.openfx.Edges.png in CopyFiles */ = {isa = PBXBuildFile; fileRef = ACE3C94B1BB7E19A0042BAF9 /* net.fxarena.openfx.Edges.png */; };
+		AC93A20C1BB7F1D1000E4A0C /* net.fxarena.openfx.Emboss.png in CopyFiles */ = {isa = PBXBuildFile; fileRef = ACE3C9531BB7E19A0042BAF9 /* net.fxarena.openfx.Emboss.png */; };
+		AC93A20D1BB7F1D4000E4A0C /* net.fxarena.openfx.Glow.png in CopyFiles */ = {isa = PBXBuildFile; fileRef = ACE3C97F1BB7E19A0042BAF9 /* net.fxarena.openfx.Glow.png */; };
+		AC93A20E1BB7F1D6000E4A0C /* net.fxarena.openfx.Implode.png in CopyFiles */ = {isa = PBXBuildFile; fileRef = ACE3C9871BB7E19A0042BAF9 /* net.fxarena.openfx.Implode.png */; };
+		AC93A20F1BB7F1D7000E4A0C /* net.fxarena.openfx.Modulate.png in CopyFiles */ = {isa = PBXBuildFile; fileRef = ACE3C9931BB7E19A0042BAF9 /* net.fxarena.openfx.Modulate.png */; };
+		AC93A2101BB7F1D9000E4A0C /* net.fxarena.openfx.Oilpaint.png in CopyFiles */ = {isa = PBXBuildFile; fileRef = ACE3C9991BB7E19A0042BAF9 /* net.fxarena.openfx.Oilpaint.png */; };
+		AC93A2111BB7F1DB000E4A0C /* net.fxarena.openfx.Polar.png in CopyFiles */ = {isa = PBXBuildFile; fileRef = ACE3CE831BB7E19C0042BAF9 /* net.fxarena.openfx.Polar.png */; };
+		AC93A2121BB7F1DB000E4A0C /* net.fxarena.openfx.Polaroid.png in CopyFiles */ = {isa = PBXBuildFile; fileRef = ACE3CE8B1BB7E19D0042BAF9 /* net.fxarena.openfx.Polaroid.png */; };
+		AC93A2131BB7F1DD000E4A0C /* net.fxarena.openfx.ReadPSD.png in CopyFiles */ = {isa = PBXBuildFile; fileRef = ACE3CE931BB7E19D0042BAF9 /* net.fxarena.openfx.ReadPSD.png */; };
+		AC93A2141BB7F1DE000E4A0C /* net.fxarena.openfx.ReadSVG.png in CopyFiles */ = {isa = PBXBuildFile; fileRef = ACE3CE9B1BB7E19D0042BAF9 /* net.fxarena.openfx.ReadSVG.png */; };
+		AC93A2151BB7F1E4000E4A0C /* net.fxarena.openfx.Reflection.png in CopyFiles */ = {isa = PBXBuildFile; fileRef = ACE3CEA31BB7E19D0042BAF9 /* net.fxarena.openfx.Reflection.png */; };
+		AC93A2161BB7F1E6000E4A0C /* net.fxarena.openfx.Roll.png in CopyFiles */ = {isa = PBXBuildFile; fileRef = ACE3CEAB1BB7E19D0042BAF9 /* net.fxarena.openfx.Roll.png */; };
+		AC93A2171BB7F1E7000E4A0C /* net.fxarena.openfx.Sketch.png in CopyFiles */ = {isa = PBXBuildFile; fileRef = ACE3CEB31BB7E19D0042BAF9 /* net.fxarena.openfx.Sketch.png */; };
+		AC93A2181BB7F1EB000E4A0C /* net.fxarena.openfx.Swirl.png in CopyFiles */ = {isa = PBXBuildFile; fileRef = ACE3CEE11BB7E19D0042BAF9 /* net.fxarena.openfx.Swirl.png */; };
+		AC93A2191BB7F1ED000E4A0C /* net.fxarena.openfx.Text.png in CopyFiles */ = {isa = PBXBuildFile; fileRef = ACE3CEF11BB7E19D0042BAF9 /* net.fxarena.openfx.Text.png */; };
+		AC93A21A1BB7F1EF000E4A0C /* net.fxarena.openfx.TextPango.png in CopyFiles */ = {isa = PBXBuildFile; fileRef = ACE3CF061BB7E19D0042BAF9 /* net.fxarena.openfx.TextPango.png */; };
+		AC93A21B1BB7F1F1000E4A0C /* net.fxarena.openfx.Texture.png in CopyFiles */ = {isa = PBXBuildFile; fileRef = ACE3CF0E1BB7E19D0042BAF9 /* net.fxarena.openfx.Texture.png */; };
+		AC93A21C1BB7F1F3000E4A0C /* net.fxarena.openfx.Tile.png in CopyFiles */ = {isa = PBXBuildFile; fileRef = ACE3CF161BB7E19D0042BAF9 /* net.fxarena.openfx.Tile.png */; };
+		AC93A21D1BB7F1F7000E4A0C /* net.fxarena.openfx.Wave.png in CopyFiles */ = {isa = PBXBuildFile; fileRef = ACE3CF1E1BB7E19D0042BAF9 /* net.fxarena.openfx.Wave.png */; };
 		ACE3CFEB1BB7EC370042BAF9 /* PluginRegistrationCombined.cpp in Sources */ = {isa = PBXBuildFile; fileRef = ACE3C9241BB7E1600042BAF9 /* PluginRegistrationCombined.cpp */; };
 		ACE3CFEC1BB7EC3A0042BAF9 /* Charcoal.cpp in Sources */ = {isa = PBXBuildFile; fileRef = ACE3C92F1BB7E19A0042BAF9 /* Charcoal.cpp */; };
 		ACE3CFED1BB7EC3E0042BAF9 /* DaveHill.cpp in Sources */ = {isa = PBXBuildFile; fileRef = ACE3C9371BB7E19A0042BAF9 /* DaveHill.cpp */; };
@@ -497,6 +521,30 @@
 			dstPath = "";
 			dstSubfolderSpec = 7;
 			files = (
+				AC93A20A1BB7F1CD000E4A0C /* net.fxarena.openfx.Dragan.png in CopyFiles */,
+				AC93A1BE1BB7F1BF000E4A0C /* net.fxarena.openfx.Arc.png in CopyFiles */,
+				AC93A2071BB7F1C5000E4A0C /* net.fxarena.openfx.Charcoal.png in CopyFiles */,
+				AC93A2081BB7F1C8000E4A0C /* Arena.png in CopyFiles */,
+				AC93A20E1BB7F1D6000E4A0C /* net.fxarena.openfx.Implode.png in CopyFiles */,
+				AC93A20C1BB7F1D1000E4A0C /* net.fxarena.openfx.Emboss.png in CopyFiles */,
+				AC93A2111BB7F1DB000E4A0C /* net.fxarena.openfx.Polar.png in CopyFiles */,
+				AC93A2101BB7F1D9000E4A0C /* net.fxarena.openfx.Oilpaint.png in CopyFiles */,
+				AC93A2131BB7F1DD000E4A0C /* net.fxarena.openfx.ReadPSD.png in CopyFiles */,
+				AC93A2181BB7F1EB000E4A0C /* net.fxarena.openfx.Swirl.png in CopyFiles */,
+				AC93A20F1BB7F1D7000E4A0C /* net.fxarena.openfx.Modulate.png in CopyFiles */,
+				AC93A2161BB7F1E6000E4A0C /* net.fxarena.openfx.Roll.png in CopyFiles */,
+				AC93A20B1BB7F1CF000E4A0C /* net.fxarena.openfx.Edges.png in CopyFiles */,
+				AC93A2191BB7F1ED000E4A0C /* net.fxarena.openfx.Text.png in CopyFiles */,
+				AC93A21B1BB7F1F1000E4A0C /* net.fxarena.openfx.Texture.png in CopyFiles */,
+				AC93A21D1BB7F1F7000E4A0C /* net.fxarena.openfx.Wave.png in CopyFiles */,
+				AC93A21A1BB7F1EF000E4A0C /* net.fxarena.openfx.TextPango.png in CopyFiles */,
+				AC93A2121BB7F1DB000E4A0C /* net.fxarena.openfx.Polaroid.png in CopyFiles */,
+				AC93A21C1BB7F1F3000E4A0C /* net.fxarena.openfx.Tile.png in CopyFiles */,
+				AC93A2171BB7F1E7000E4A0C /* net.fxarena.openfx.Sketch.png in CopyFiles */,
+				AC93A2151BB7F1E4000E4A0C /* net.fxarena.openfx.Reflection.png in CopyFiles */,
+				AC93A2141BB7F1DE000E4A0C /* net.fxarena.openfx.ReadSVG.png in CopyFiles */,
+				AC93A20D1BB7F1D4000E4A0C /* net.fxarena.openfx.Glow.png in CopyFiles */,
+				AC93A2091BB7F1CB000E4A0C /* net.fxarena.openfx.DaveHill.png in CopyFiles */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -2304,11 +2352,11 @@
 		ACE3CA1B1BB7E19A0042BAF9 /* Products */ = {
 			isa = PBXGroup;
 			children = (
-				ACE3CF6C1BB7E19D0042BAF9 /* basics.ofx.bundle */,
+				ACE3CF6C1BB7E19D0042BAF9 /* basic.ofx.bundle */,
 				ACE3CF6E1BB7E19D0042BAF9 /* invert.ofx.bundle */,
-				ACE3CF701BB7E19D0042BAF9 /* gain.ofx.bundle */,
+				ACE3CF701BB7E19D0042BAF9 /* custom.ofx.bundle */,
 				ACE3CF721BB7E19D0042BAF9 /* saturation.ofx.bundle */,
-				ACE3CF741BB7E19D0042BAF9 /* circle.ofx.bundle */,
+				ACE3CF741BB7E19D0042BAF9 /* rectangle.ofx.bundle */,
 			);
 			name = Products;
 			sourceTree = "<group>";
@@ -3582,11 +3630,11 @@
 		ACE3CCA91BB7E19C0042BAF9 /* Products */ = {
 			isa = PBXGroup;
 			children = (
-				ACE3CF5C1BB7E19D0042BAF9 /* basics.ofx.bundle */,
+				ACE3CF5C1BB7E19D0042BAF9 /* basic.ofx.bundle */,
 				ACE3CF5E1BB7E19D0042BAF9 /* invert.ofx.bundle */,
-				ACE3CF601BB7E19D0042BAF9 /* gain.ofx.bundle */,
+				ACE3CF601BB7E19D0042BAF9 /* custom.ofx.bundle */,
 				ACE3CF621BB7E19D0042BAF9 /* saturation.ofx.bundle */,
-				ACE3CF641BB7E19D0042BAF9 /* circle.ofx.bundle */,
+				ACE3CF641BB7E19D0042BAF9 /* rectangle.ofx.bundle */,
 			);
 			name = Products;
 			sourceTree = "<group>";
@@ -4927,9 +4975,10 @@
 			remoteRef = ACE3CF531BB7E19D0042BAF9 /* PBXContainerItemProxy */;
 			sourceTree = BUILT_PRODUCTS_DIR;
 		};
-		ACE3CF5C1BB7E19D0042BAF9 /* basics.ofx.bundle */ = {
+		ACE3CF5C1BB7E19D0042BAF9 /* basic.ofx.bundle */ = {
 			isa = PBXReferenceProxy;
 			fileType = wrapper.cfbundle;
+			name = basic.ofx.bundle;
 			path = basics.ofx.bundle;
 			remoteRef = ACE3CF5B1BB7E19D0042BAF9 /* PBXContainerItemProxy */;
 			sourceTree = BUILT_PRODUCTS_DIR;
@@ -4941,9 +4990,10 @@
 			remoteRef = ACE3CF5D1BB7E19D0042BAF9 /* PBXContainerItemProxy */;
 			sourceTree = BUILT_PRODUCTS_DIR;
 		};
-		ACE3CF601BB7E19D0042BAF9 /* gain.ofx.bundle */ = {
+		ACE3CF601BB7E19D0042BAF9 /* custom.ofx.bundle */ = {
 			isa = PBXReferenceProxy;
 			fileType = wrapper.cfbundle;
+			name = custom.ofx.bundle;
 			path = gain.ofx.bundle;
 			remoteRef = ACE3CF5F1BB7E19D0042BAF9 /* PBXContainerItemProxy */;
 			sourceTree = BUILT_PRODUCTS_DIR;
@@ -4955,16 +5005,18 @@
 			remoteRef = ACE3CF611BB7E19D0042BAF9 /* PBXContainerItemProxy */;
 			sourceTree = BUILT_PRODUCTS_DIR;
 		};
-		ACE3CF641BB7E19D0042BAF9 /* circle.ofx.bundle */ = {
+		ACE3CF641BB7E19D0042BAF9 /* rectangle.ofx.bundle */ = {
 			isa = PBXReferenceProxy;
 			fileType = wrapper.cfbundle;
+			name = rectangle.ofx.bundle;
 			path = circle.ofx.bundle;
 			remoteRef = ACE3CF631BB7E19D0042BAF9 /* PBXContainerItemProxy */;
 			sourceTree = BUILT_PRODUCTS_DIR;
 		};
-		ACE3CF6C1BB7E19D0042BAF9 /* basics.ofx.bundle */ = {
+		ACE3CF6C1BB7E19D0042BAF9 /* basic.ofx.bundle */ = {
 			isa = PBXReferenceProxy;
 			fileType = wrapper.cfbundle;
+			name = basic.ofx.bundle;
 			path = basics.ofx.bundle;
 			remoteRef = ACE3CF6B1BB7E19D0042BAF9 /* PBXContainerItemProxy */;
 			sourceTree = BUILT_PRODUCTS_DIR;
@@ -4976,9 +5028,10 @@
 			remoteRef = ACE3CF6D1BB7E19D0042BAF9 /* PBXContainerItemProxy */;
 			sourceTree = BUILT_PRODUCTS_DIR;
 		};
-		ACE3CF701BB7E19D0042BAF9 /* gain.ofx.bundle */ = {
+		ACE3CF701BB7E19D0042BAF9 /* custom.ofx.bundle */ = {
 			isa = PBXReferenceProxy;
 			fileType = wrapper.cfbundle;
+			name = custom.ofx.bundle;
 			path = gain.ofx.bundle;
 			remoteRef = ACE3CF6F1BB7E19D0042BAF9 /* PBXContainerItemProxy */;
 			sourceTree = BUILT_PRODUCTS_DIR;
@@ -4990,9 +5043,10 @@
 			remoteRef = ACE3CF711BB7E19D0042BAF9 /* PBXContainerItemProxy */;
 			sourceTree = BUILT_PRODUCTS_DIR;
 		};
-		ACE3CF741BB7E19D0042BAF9 /* circle.ofx.bundle */ = {
+		ACE3CF741BB7E19D0042BAF9 /* rectangle.ofx.bundle */ = {
 			isa = PBXReferenceProxy;
 			fileType = wrapper.cfbundle;
+			name = rectangle.ofx.bundle;
 			path = circle.ofx.bundle;
 			remoteRef = ACE3CF731BB7E19D0042BAF9 /* PBXContainerItemProxy */;
 			sourceTree = BUILT_PRODUCTS_DIR;
