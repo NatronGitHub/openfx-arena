@@ -130,6 +130,8 @@ void PolaroidPlugin::render(const OFX::RenderArguments &args)
             OFX::throwSuiteStatusException(kOfxStatFailed);
             return;
         }
+    } else {
+        OFX::throwSuiteStatusException(kOfxStatFailed);
     }
 
     // get dest clip
