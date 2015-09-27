@@ -186,7 +186,7 @@ void DraganPlugin::render(const OFX::RenderArguments &args)
     if (srcClip_ && srcClip_->isConnected())
         image.read(width,height,"RGB",Magick::FloatPixel,(float*)srcImg->getPixelData());
 
-    #ifdef DEBUG
+    #ifdef DEBUG_MAGICK
     image.debug(true);
     #endif
 

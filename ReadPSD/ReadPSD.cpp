@@ -570,7 +570,7 @@ void ReadPSDPlugin::restoreState(const std::string& filename)
     }
     genLayerMenu();
 
-    #ifdef DEBUG
+    #ifdef DEBUG_MAGICK
     _psd[layer].debug(true);
     #endif
 

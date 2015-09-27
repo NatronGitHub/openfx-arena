@@ -360,7 +360,7 @@ void TextPlugin::render(const OFX::RenderArguments &args)
     int height = dstRod.y2-dstRod.y1;
     Magick::Image image(Magick::Geometry(width,height),Magick::Color("rgba(0,0,0,0)"));
 
-    #ifdef DEBUG
+    #ifdef DEBUG_MAGICK
     image.debug(true);
     #endif
 
