@@ -116,6 +116,8 @@ void DraganPlugin::render(const OFX::RenderArguments &args)
             OFX::throwSuiteStatusException(kOfxStatFailed);
             return;
         }
+    } else {
+        OFX::throwSuiteStatusException(kOfxStatFailed);
     }
 
     // get dest clip
@@ -203,7 +205,7 @@ void DraganPlugin::render(const OFX::RenderArguments &args)
     }
     //contrast
       if (contrast!=0)
-        image.sigmoidalContrast(0,abs(contrast),50);
+        image.sigmoidalContrast(0,fabs(contrast),50);
 
     image.modulate(100,saturation,100);
 

@@ -133,6 +133,8 @@ void PolarPlugin::render(const OFX::RenderArguments &args)
             OFX::throwSuiteStatusException(kOfxStatFailed);
             return;
         }
+    } else {
+        OFX::throwSuiteStatusException(kOfxStatFailed);
     }
 
     // Get mask clip
