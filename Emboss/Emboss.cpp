@@ -236,6 +236,8 @@ void EmbossPluginFactory::describe(OFX::ImageEffectDescriptor &desc)
     desc.setSupportsMultiResolution(kSupportsMultiResolution);
     desc.setRenderThreadSafety(kRenderThreadSafety);
     desc.setHostFrameThreading(kHostFrameThreading);
+    desc.setHostMaskingEnabled(true);
+    desc.setHostMixingEnabled(true);
 }
 
 /** @brief The describe in context function, passed a plugin descriptor and a context */

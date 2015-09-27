@@ -46,7 +46,6 @@ public:
 private:
     OFX::Clip *dstClip_;
     OFX::Clip *srcClip_;
-    OFX::Clip *maskClip_;
     OFX::DoubleParam *radius_;
 };
 
@@ -60,8 +59,6 @@ OilpaintPlugin::OilpaintPlugin(OfxImageEffectHandle handle)
     assert(dstClip_ && dstClip_->getPixelComponents() == OFX::ePixelComponentRGBA);
     srcClip_ = fetchClip(kOfxImageEffectSimpleSourceClipName);
     assert(srcClip_ && srcClip_->getPixelComponents() == OFX::ePixelComponentRGBA);
-    maskClip_ = getContext() == OFX::eContextFilter ? NULL : fetchClip(getContext() == OFX::eContextPaint ? "Brush" : "Mask");
-    assert(!maskClip_ || maskClip_->getPixelComponents() == OFX::ePixelComponentAlpha);
 
     radius_ = fetchDoubleParam(kParamRadius);
 
@@ -99,12 +96,6 @@ void OilpaintPlugin::render(const OFX::RenderArguments &args)
             return;
         }
     }
-
-    // Get mask clip
-    std::auto_ptr<const OFX::Image> maskImg((getContext() != OFX::eContextFilter && maskClip_ && maskClip_->isConnected()) ? maskClip_->fetchImage(args.time) : 0);
-    OfxRectI maskRod;
-    if (maskImg.get())
-        maskRod=maskImg->getRegionOfDefinition();
 
     // get dest clip
     if (!dstClip_) {
@@ -174,25 +165,6 @@ void OilpaintPlugin::render(const OFX::RenderArguments &args)
     image.debug(true);
     #endif
 
-    // apply mask
-    if (maskImg.get()) {
-        int maskWidth = maskRod.x2-maskRod.x1;
-        int maskHeight = maskRod.y2-maskRod.y1;
-        if (maskWidth>0 && maskHeight>0) {
-            Magick::Image mask(maskWidth,maskHeight,"A",Magick::FloatPixel,(float*)maskImg->getPixelData());
-            int offsetX = 0;
-            int offsetY = 0;
-            if (maskRod.x1!=0)
-                offsetX = maskRod.x1;
-            if (maskRod.y1!=0)
-                offsetY = maskRod.y1;
-            image.composite(mask,offsetX,offsetY,Magick::CopyOpacityCompositeOp);
-            Magick::Image container(Magick::Geometry(width,height),Magick::Color("rgba(0,0,0,0)"));
-            container.composite(image,0,0,Magick::OverCompositeOp);
-            image=container;
-        }
-    }
-
     // oilpaint
     if (radius>0)
         image.oilPaint(std::floor(radius * args.renderScale.x + 0.5));
@@ -242,6 +214,8 @@ void OilpaintPluginFactory::describe(OFX::ImageEffectDescriptor &desc)
     desc.setSupportsMultiResolution(kSupportsMultiResolution);
     desc.setRenderThreadSafety(kRenderThreadSafety);
     desc.setHostFrameThreading(kHostFrameThreading);
+    desc.setHostMaskingEnabled(true);
+    desc.setHostMixingEnabled(true);
 }
 
 /** @brief The describe in context function, passed a plugin descriptor and a context */
@@ -253,14 +227,6 @@ void OilpaintPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, 
     srcClip->setTemporalClipAccess(false);
     srcClip->setSupportsTiles(kSupportsTiles);
     srcClip->setIsMask(false);
-
-    // create optional mask clip
-    ClipDescriptor *maskClip = desc.defineClip("Mask");
-    maskClip->addSupportedComponent(OFX::ePixelComponentAlpha);
-    maskClip->setTemporalClipAccess(false);
-    maskClip->setOptional(true);
-    maskClip->setSupportsTiles(kSupportsTiles);
-    maskClip->setIsMask(true);
 
     // create the mandated output clip
     ClipDescriptor *dstClip = desc.defineClip(kOfxImageEffectOutputClipName);

@@ -56,7 +56,6 @@ public:
 private:
     OFX::Clip *dstClip_;
     OFX::Clip *srcClip_;
-    OFX::Clip *maskClip_;
     OFX::DoubleParam *radius_;
     OFX::DoubleParam *sigma_;
     OFX::DoubleParam *angle_;
@@ -72,8 +71,6 @@ SketchPlugin::SketchPlugin(OfxImageEffectHandle handle)
     assert(dstClip_ && dstClip_->getPixelComponents() == OFX::ePixelComponentRGBA);
     srcClip_ = fetchClip(kOfxImageEffectSimpleSourceClipName);
     assert(srcClip_ && srcClip_->getPixelComponents() == OFX::ePixelComponentRGBA);
-    maskClip_ = getContext() == OFX::eContextFilter ? NULL : fetchClip(getContext() == OFX::eContextPaint ? "Brush" : "Mask");
-    assert(!maskClip_ || maskClip_->getPixelComponents() == OFX::ePixelComponentAlpha);
 
     radius_ = fetchDoubleParam(kParamRadius);
     sigma_ = fetchDoubleParam(kParamSigma);
@@ -113,12 +110,6 @@ void SketchPlugin::render(const OFX::RenderArguments &args)
             return;
         }
     }
-
-    // Get mask clip
-    std::auto_ptr<const OFX::Image> maskImg((getContext() != OFX::eContextFilter && maskClip_ && maskClip_->isConnected()) ? maskClip_->fetchImage(args.time) : 0);
-    OfxRectI maskRod;
-    if (maskImg.get())
-        maskRod=maskImg->getRegionOfDefinition();
 
     // get dest clip
     if (!dstClip_) {
@@ -190,25 +181,6 @@ void SketchPlugin::render(const OFX::RenderArguments &args)
     image.debug(true);
     #endif
 
-    // apply mask
-    if (maskImg.get()) {
-        int maskWidth = maskRod.x2-maskRod.x1;
-        int maskHeight = maskRod.y2-maskRod.y1;
-        if (maskWidth>0 && maskHeight>0) {
-            Magick::Image mask(maskWidth,maskHeight,"A",Magick::FloatPixel,(float*)maskImg->getPixelData());
-            int offsetX = 0;
-            int offsetY = 0;
-            if (maskRod.x1!=0)
-                offsetX = maskRod.x1;
-            if (maskRod.y1!=0)
-                offsetY = maskRod.y1;
-            image.composite(mask,offsetX,offsetY,Magick::CopyOpacityCompositeOp);
-            Magick::Image container(Magick::Geometry(width,height),Magick::Color("rgba(0,0,0,0)"));
-            container.composite(image,0,0,Magick::OverCompositeOp);
-            image=container;
-        }
-    }
-
     // sketch
     image.sketch(std::floor(radius * args.renderScale.x + 0.5),std::floor(sigma * args.renderScale.x + 0.5),angle);
 
@@ -257,6 +229,8 @@ void SketchPluginFactory::describe(OFX::ImageEffectDescriptor &desc)
     desc.setSupportsMultiResolution(kSupportsMultiResolution);
     desc.setRenderThreadSafety(kRenderThreadSafety);
     desc.setHostFrameThreading(kHostFrameThreading);
+    desc.setHostMaskingEnabled(true);
+    desc.setHostMixingEnabled(true);
 }
 
 /** @brief The describe in context function, passed a plugin descriptor and a context */

@@ -66,7 +66,6 @@ public:
 private:
     OFX::Clip *dstClip_;
     OFX::Clip *srcClip_;
-    OFX::Clip *maskClip_;
     OFX::IntParam *spacing_;
     OFX::IntParam *offset_;
     OFX::BooleanParam *matte_;
@@ -78,15 +77,13 @@ ReflectionPlugin::ReflectionPlugin(OfxImageEffectHandle handle)
 : OFX::ImageEffect(handle)
 , dstClip_(0)
 , srcClip_(0)
-, maskClip_(0)
 {
     Magick::InitializeMagick(NULL);
     dstClip_ = fetchClip(kOfxImageEffectOutputClipName);
     assert(dstClip_ && dstClip_->getPixelComponents() == OFX::ePixelComponentRGBA);
     srcClip_ = fetchClip(kOfxImageEffectSimpleSourceClipName);
     assert(srcClip_ && srcClip_->getPixelComponents() == OFX::ePixelComponentRGBA);
-    maskClip_ = getContext() == OFX::eContextFilter ? NULL : fetchClip(getContext() == OFX::eContextPaint ? "Brush" : "Mask");
-    assert(!maskClip_ || maskClip_->getPixelComponents() == OFX::ePixelComponentAlpha);
+
     spacing_ = fetchIntParam(kParamSpace);
     offset_ = fetchIntParam(kParamOffset);
     matte_ = fetchBooleanParam(kParamMatte);
@@ -127,12 +124,6 @@ void ReflectionPlugin::render(const OFX::RenderArguments &args)
             return;
         }
     }
-
-    // Get mask clip
-    std::auto_ptr<const OFX::Image> maskImg((getContext() != OFX::eContextFilter && maskClip_ && maskClip_->isConnected()) ? maskClip_->fetchImage(args.time) : 0);
-    OfxRectI maskRod;
-    if (maskImg.get())
-        maskRod=maskImg->getRegionOfDefinition();
 
     // get dest clip
     if (!dstClip_) {
@@ -341,7 +332,7 @@ void ReflectionPlugin::render(const OFX::RenderArguments &args)
             image0.crop(Magick::Geometry(srcWidth,mirrorHeight-offset,0,offset+offset));
             image.crop(Magick::Geometry(srcWidth,mirrorHeight+offset,0,mirrorHeight-offset));
         }
-        if (maskImg.get()) {
+        /*if (maskImg.get()) {
             int maskWidth = maskRod.x2-maskRod.x1;
             int maskHeight = maskRod.y2-maskRod.y1;
             if (maskWidth>0&&maskHeight>0) {
@@ -354,7 +345,7 @@ void ReflectionPlugin::render(const OFX::RenderArguments &args)
                     offsetY = maskRod.y1;
                 image0.composite(mask,offsetX,offsetY,Magick::CopyOpacityCompositeOp);
             }
-        }
+        }*/
         container.composite(image0,0,-spacing,Magick::OverCompositeOp);
         container.composite(image,0,mirrorHeight-offset,Magick::OverCompositeOp);
     }
@@ -407,6 +398,8 @@ void ReflectionPluginFactory::describe(OFX::ImageEffectDescriptor &desc)
     desc.setSupportsMultiResolution(kSupportsMultiResolution);
     desc.setRenderThreadSafety(kRenderThreadSafety);
     desc.setHostFrameThreading(kHostFrameThreading);
+    desc.setHostMaskingEnabled(true);
+    desc.setHostMixingEnabled(true);
 }
 
 /** @brief The describe in context function, passed a plugin descriptor and a context */
@@ -418,14 +411,6 @@ void ReflectionPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc
     srcClip->setTemporalClipAccess(false);
     srcClip->setSupportsTiles(kSupportsTiles);
     srcClip->setIsMask(false);
-
-    // create optional mask clip
-    ClipDescriptor *maskClip = desc.defineClip("Mask");
-    maskClip->addSupportedComponent(OFX::ePixelComponentAlpha);
-    maskClip->setTemporalClipAccess(false);
-    maskClip->setOptional(true);
-    maskClip->setSupportsTiles(kSupportsTiles);
-    maskClip->setIsMask(true);
 
     // create the mandated output clip
     ClipDescriptor *dstClip = desc.defineClip(kOfxImageEffectOutputClipName);
