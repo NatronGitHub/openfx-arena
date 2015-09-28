@@ -199,9 +199,10 @@ void EdgesPlugin::render(const OFX::RenderArguments &args)
         image.quantize();
     }
     // blur
-    if (smoothing>0)
+    if (smoothing>0) {
         smoothing *= args.renderScale.x;
         image.blur(0,smoothing);
+    }
     // edge
     std::ostringstream edgeWidth;
     edgeWidth<< (edge / 2) * args.renderScale.x;
