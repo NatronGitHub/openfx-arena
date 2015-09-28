@@ -45,7 +45,7 @@
 
 #define kSupportsTiles 0
 #define kSupportsMultiResolution 1
-#define kSupportsRenderScale 0 // TODO fix
+#define kSupportsRenderScale 1 
 #define kRenderThreadSafety eRenderFullySafe
 #define kHostFrameThreading false
 
@@ -200,10 +200,11 @@ void EdgesPlugin::render(const OFX::RenderArguments &args)
     }
     // blur
     if (smoothing>0)
+        smoothing *= args.renderScale.x;
         image.blur(0,smoothing);
     // edge
     std::ostringstream edgeWidth;
-    edgeWidth<<edge/2;
+    edgeWidth<< (edge / 2) * args.renderScale.x;
     image.morphology(Magick::EdgeMorphology,Magick::DiamondKernel,edgeWidth.str());
     // multiply
     if (brightness>0) {
