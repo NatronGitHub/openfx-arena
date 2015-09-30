@@ -318,12 +318,12 @@ void ArcPlugin::render(const OFX::RenderArguments &args)
 
     // return image
     if (!scale) // may be a diff of 1px, so to be safe just extend to dstBounds
-        image.extent(Magick::Geometry(dstBounds.x2,dstBounds.y2),Magick::CenterGravity);
+        image.extent(Magick::Geometry(dstBounds.x2-dstBounds.x1,dstBounds.y2-dstBounds.y1),Magick::CenterGravity);
     else
         image.extent(Magick::Geometry(width,height),Magick::CenterGravity);
     image.flip();
     if (dstClip_ && dstClip_->isConnected() && srcClip_ && srcClip_->isConnected())
-        image.write(0,0,width, height,"RGBA",Magick::FloatPixel,(float*)dstImg->getPixelData());
+        image.write(0,0,dstBounds.x2-dstBounds.x1, dstBounds.y2-dstBounds.y1,"RGBA",Magick::FloatPixel,(float*)dstImg->getPixelData());
 }
 
 bool ArcPlugin::getRegionOfDefinition(const OFX::RegionOfDefinitionArguments &args, OfxRectD &rod)
@@ -383,9 +383,9 @@ bool ArcPlugin::getRegionOfDefinition(const OFX::RegionOfDefinitionArguments &ar
             int w = (int)image.columns();
             int h = (int)image.rows();
             rod = srcRod;
-            rod.x1 = 0;
+            rod.x1 = srcRod.x1;
             rod.x2 = w;
-            rod.y1 = 0;
+            rod.y1 = srcRod.y1;
             rod.y2 = h;
         }
         else
