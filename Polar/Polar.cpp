@@ -297,10 +297,10 @@ void PolarPlugin::render(const OFX::RenderArguments &args)
     if (scale)
         image.extent(Magick::Geometry(width,height),Magick::CenterGravity);
     else
-        image.extent(Magick::Geometry(dstBounds.x2,dstBounds.y2),Magick::CenterGravity);
+        image.extent(Magick::Geometry(dstBounds.x2-dstBounds.x1,dstBounds.y2-dstBounds.y1),Magick::CenterGravity);
     image.flip();
     if (dstClip_ && dstClip_->isConnected() && srcClip_ && srcClip_->isConnected())
-        image.write(0,0,dstBounds.x2,dstBounds.y2,"RGBA",Magick::FloatPixel,(float*)dstImg->getPixelData());
+        image.write(0,0,dstBounds.x2-dstBounds.x1, dstBounds.y2-dstBounds.y1,"RGBA",Magick::FloatPixel,(float*)dstImg->getPixelData());
 }
 
 bool PolarPlugin::getRegionOfDefinition(const OFX::RegionOfDefinitionArguments &args, OfxRectD &rod)
