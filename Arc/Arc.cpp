@@ -323,7 +323,7 @@ void ArcPlugin::render(const OFX::RenderArguments &args)
         image.extent(Magick::Geometry(width,height),Magick::CenterGravity);
     image.flip();
     if (dstClip_ && dstClip_->isConnected() && srcClip_ && srcClip_->isConnected())
-        image.write(0,0,dstBounds.x2,dstBounds.y2,"RGBA",Magick::FloatPixel,(float*)dstImg->getPixelData());
+        image.write(0,0,width, height,"RGBA",Magick::FloatPixel,(float*)dstImg->getPixelData());
 }
 
 bool ArcPlugin::getRegionOfDefinition(const OFX::RegionOfDefinitionArguments &args, OfxRectD &rod)
