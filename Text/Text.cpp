@@ -599,7 +599,7 @@ void TextPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, Cont
         param->setAnimates(true);
         hostHasNativeOverlayForPosition = param->getHostHasNativeOverlayHandle();
         if (hostHasNativeOverlayForPosition)
-            param->setUseHostOverlayHandle(true);
+            param->setUseHostNativeOverlayHandle(true);
         page->addChild(*param);
     }
 
