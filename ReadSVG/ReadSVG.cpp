@@ -115,7 +115,8 @@ ReadSVGPlugin::decode(const std::string& filename,
         #endif
     }
     image.backgroundColor("none"); // must be set to avoid bg
-    image.read(filename);
+    if (!filename.empty())
+        image.read(filename);
     if (image.columns()>0 && image.rows()>0) {
         Magick::Image container(Magick::Geometry(bounds.x2,bounds.y2),Magick::Color("rgba(0,0,0,0)"));
         container.composite(image,0,0,Magick::OverCompositeOp);
@@ -169,7 +170,8 @@ void ReadSVGPlugin::restoreState(const std::string& filename)
     image.resolutionUnits(Magick::PixelsPerInchResolution);
     image.density(Magick::Geometry(dpi,dpi));
     try {
-        image.read(filename);
+        if (!filename.empty())
+            image.read(filename);
     }
     catch(Magick::Warning &warning) { // ignore since warns interupt render
         #ifdef DEBUG
@@ -211,7 +213,8 @@ void ReadSVGPlugin::changedParam(const OFX::InstanceChangedArgs &args, const std
         image.resolutionUnits(Magick::PixelsPerInchResolution);
         image.density(Magick::Geometry(dpi,dpi));
         try {
-            image.read(imageFile);
+            if (!imageFile.empty())
+                image.read(imageFile);
         }
         catch(Magick::Warning &warning) { // ignore since warns interupt render
             #ifdef DEBUG
@@ -312,7 +315,7 @@ void ReadSVGPluginFactory::describe(OFX::ImageEffectDescriptor &desc)
     if (magickNumber != kPluginMagickVersion)
         magickString.append("\n\nWarning! You are using an unsupported version of ImageMagick.");
     std::string delegates = MagickCore::GetMagickDelegates();
-    desc.setPluginDescription("Read SVG image format.\n\nPowered by "+magickString+"\n\nFeatures: "+delegates);
+    desc.setPluginDescription("Read SVG image format.\n\nPowered by "+magickString+"\n\nFeatures: "+delegates+"\n\nImageMagick (R) is Copyright 1999-2015 ImageMagick Studio LLC, a non-profit organization dedicated to making software imaging solutions freely available.\n\nImageMagick is distributed under the Apache 2.0 license.");
 }
 
 /** @brief The describe in context function, passed a plugin descriptor and a context */
