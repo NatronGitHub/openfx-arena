@@ -3,48 +3,6 @@ OpenFX-Arena [![Build Status](https://travis-ci.org/olear/openfx-arena.svg)](htt
 
 A set of [OpenFX](http://openfx.sf.net) visual effect plugins designed for [Natron](http://natron.fr).
 
-Plugins
-=======
-
- * **Image**
-   * ReadPSD
-     * *Read Photoshop/GIMP/Cinepaint RGB/CMYK/GRAY images/layers*
-   * ReadSVG
-     * *Read SVG vector images*
- * **Filter**
-   * Charcoal
-     * *Charcoal paint effect*
-   * Oilpaint
-     * *Oil paint effect*
-   * Sketch
-     * *Sketch paint effect*
-   * Edges
-     * *Edge extraction effect*
- * **Transform**
-   * Arc
-     * *Arc distortion*
-   * Polar
-     * *Polar distortion*
-   * Polaroid
-     * *Simulate a polaroid image with text*
-   * Reflection
-     * *Mirror/Reflects image in various ways*
-   * Roll
-     * *Roll image*
-   * Swirl
-     * *Swirl image*
-   * Tile
-     * *Tile image*
-   * Wave
-     * *Wave effect*
- * **Draw**
-   * Text
-     * *Text generator with several options*
-   * TextPango
-     * *Advanced text generator using Pango markup*
-   * Texture
-     * *Texture/Background generator*
-
 Source
 ======
 
@@ -57,16 +15,16 @@ git submodule update -i --recursive
 
 Requirements:
 
- * Freetype
- * Fontconfig
- * libpng
- * zlib
- * libxml2
- * librsvg
  * liblcms2
- * Pango
  * OpenColorIO
- * ImageMagick (6.8.10-1 **only**, [link](https://github.com/olear/openfx-arena/releases/download/1.9.0/openfx-ImageMagick-6.8.10-1.tar.gz), Q32 with freetype/fontconfig/zlib/pangocairo/rsvg/lcms2/xml2/png)
+ * [ImageMagick 6.8.10-1](https://github.com/olear/openfx-arena/releases/download/1.9.0/openfx-ImageMagick-6.8.10-1.tar.gz) Q32 with:
+   * Freetype
+   * Fontconfig
+   * libpng
+   * zlib
+   * libxml2
+   * librsvg
+   * Pango(Cairo)
 
 See 'openfx-arena.spec' or 'deploy.sh' for recommended build options. 
 
