@@ -409,7 +409,7 @@ void ArcPluginFactory::describe(OFX::ImageEffectDescriptor &desc)
     std::string magickString = MagickCore::GetMagickVersion(&magickNumber);
     if (magickNumber != kPluginMagickVersion)
         magickString.append("\n\nWarning! You are using an unsupported version of ImageMagick.");
-    desc.setPluginDescription("Arc Distort transform node.\n\nPowered by "+magickString);
+    desc.setPluginDescription("Arc Distort transform node.\n\nPowered by "+magickString+"\n\nImageMagick (R) is Copyright 1999-2015 ImageMagick Studio LLC, a non-profit organization dedicated to making software imaging solutions freely available.\n\nImageMagick is distributed under the Apache 2.0 license.");
 
     // add the supported contexts
     desc.addSupportedContext(eContextGeneral);

@@ -547,7 +547,7 @@ void TextPluginFactory::describe(OFX::ImageEffectDescriptor &desc)
     if (magickNumber != kPluginMagickVersion)
         magickString.append("\n\nWarning! You are using an unsupported version of ImageMagick.");
     std::string delegates = MagickCore::GetMagickDelegates();
-    desc.setPluginDescription("Text generator node.\n\nPowered by "+magickString+"\n\nFeatures: "+delegates);
+    desc.setPluginDescription("Text generator node.\n\nPowered by "+magickString+"\n\nFeatures: "+delegates+"\n\nImageMagick (R) is Copyright 1999-2015 ImageMagick Studio LLC, a non-profit organization dedicated to making software imaging solutions freely available.\n\nImageMagick is distributed under the Apache 2.0 license.");
 
     // add the supported contexts
     desc.addSupportedContext(eContextGeneral);

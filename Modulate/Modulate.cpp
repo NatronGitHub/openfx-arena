@@ -212,7 +212,7 @@ void ModulatePluginFactory::describe(OFX::ImageEffectDescriptor &desc)
     desc.setLabel(kPluginName);
     desc.setPluginGrouping(kPluginGrouping);
     std::string magickV = MagickCore::GetMagickVersion(NULL);
-    desc.setPluginDescription("Modulate color node.\n\nPowered by "+magickV);
+    desc.setPluginDescription("Modulate color node.\n\nPowered by "+magickV+"\n\nImageMagick (R) is Copyright 1999-2015 ImageMagick Studio LLC, a non-profit organization dedicated to making software imaging solutions freely available.\n\nImageMagick is distributed under the Apache 2.0 license.");
 
     // add the supported contexts
     desc.addSupportedContext(eContextGeneral);
