@@ -17,7 +17,7 @@
 #include <cmath>
 
 #define kPluginName "CharcoalOFX"
-#define kPluginGrouping "Arena"
+#define kPluginGrouping "Extra/Filter"
 #define kPluginIdentifier "net.fxarena.openfx.Charcoal"
 #define kPluginVersionMajor 2
 #define kPluginVersionMinor 0

@@ -17,7 +17,7 @@
 #include <cmath>
 
 #define kPluginName "SwirlOFX"
-#define kPluginGrouping "Arena"
+#define kPluginGrouping "Extra/Distort"
 #define kPluginIdentifier "net.fxarena.openfx.Swirl"
 #define kPluginVersionMajor 2
 #define kPluginVersionMinor 1

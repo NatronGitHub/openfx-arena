@@ -17,7 +17,7 @@
 #include <cmath>
 
 #define kPluginName "RollOFX"
-#define kPluginGrouping "Arena"
+#define kPluginGrouping "Extra/Transform"
 #define kPluginIdentifier "net.fxarena.openfx.Roll"
 #define kPluginVersionMajor 2
 #define kPluginVersionMinor 0
