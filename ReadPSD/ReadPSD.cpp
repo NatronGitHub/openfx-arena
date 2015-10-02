@@ -629,7 +629,11 @@ void ReadPSDPluginFactory::describe(OFX::ImageEffectDescriptor &desc)
     std::string magickString = MagickCore::GetMagickVersion(&magickNumber);
     if (magickNumber != kPluginMagickVersion)
         magickString.append("\n\nWarning! You are using an unsupported version of ImageMagick.");
-    desc.setPluginDescription("Read Photoshop/GIMP/Cinepaint (RGB/CMYK/GRAY) image formats with ICC color management.\n\nPowered by Little CMS v2 http://www.littlecms.com/ and "+magickString+"\n\nImageMagick (R) is Copyright 1999-2015 ImageMagick Studio LLC, a non-profit organization dedicated to making software imaging solutions freely available.\n\nImageMagick is distributed under the Apache 2.0 license.\n\nLittle CMS is Copyright 2010-2015 Marti Maria Saguer. All rights reserved.\n\nLittle CMS is distributed under the MIT license agreement.");
+    std::string plugCopyright = "\n\nImageMagick (R) is Copyright 1999-2015 ImageMagick Studio LLC, a non-profit organization dedicated to making software imaging solutions freely available.\n\nImageMagick is distributed under the Apache 2.0 license.\n\nLittle CMS is Copyright 2010-2015 Marti Maria Saguer. All rights reserved.\n\nLittle CMS is distributed under the MIT license agreement.";
+    # ifdef OFX_IO_USING_OCIO
+    plugCopyright.append("\n\nOpenColorIO is Copyright 2003-2010 Sony Pictures Imageworks Inc., et al. All Rights Reserved.\n\nOpenColorIO is distributed under a BSD license.");
+    # endif // OFX_IO_USING_OCIO
+    desc.setPluginDescription("Read Photoshop/GIMP/Cinepaint (RGB/CMYK/GRAY) image formats with ICC color management.\n\nPowered by Little CMS v2 http://www.littlecms.com/ and "+magickString+plugCopyright);
 }
 
 /** @brief The describe in context function, passed a plugin descriptor and a context */

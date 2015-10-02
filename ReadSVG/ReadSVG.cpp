@@ -315,7 +315,11 @@ void ReadSVGPluginFactory::describe(OFX::ImageEffectDescriptor &desc)
     if (magickNumber != kPluginMagickVersion)
         magickString.append("\n\nWarning! You are using an unsupported version of ImageMagick.");
     std::string delegates = MagickCore::GetMagickDelegates();
-    desc.setPluginDescription("Read SVG image format.\n\nPowered by "+magickString+"\n\nFeatures: "+delegates+"\n\nImageMagick (R) is Copyright 1999-2015 ImageMagick Studio LLC, a non-profit organization dedicated to making software imaging solutions freely available.\n\nImageMagick is distributed under the Apache 2.0 license.");
+    std::string plugCopyright = "\n\nImageMagick (R) is Copyright 1999-2015 ImageMagick Studio LLC, a non-profit organization dedicated to making software imaging solutions freely available.\n\nImageMagick is distributed under the Apache 2.0 license.";
+    # ifdef OFX_IO_USING_OCIO
+    plugCopyright.append("\n\nOpenColorIO is Copyright 2003-2010 Sony Pictures Imageworks Inc., et al. All Rights Reserved.\n\nOpenColorIO is distributed under a BSD license.");
+    # endif // OFX_IO_USING_OCIO
+    desc.setPluginDescription("Read SVG image format.\n\nPowered by "+magickString+"\n\nFeatures: "+delegates+plugCopyright);
 }
 
 /** @brief The describe in context function, passed a plugin descriptor and a context */
