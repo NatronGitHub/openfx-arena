@@ -1,21 +1,18 @@
 OpenFX-Arena [![Build Status](https://travis-ci.org/olear/openfx-arena.svg)](https://travis-ci.org/olear/openfx-arena)
 ============
 
-A set of [OpenFX](http://openfx.sf.net) visual effect plugins designed for [Natron](http://natron.fr).
+A set of [OpenFX](http://openfx.sf.net) plugins designed for [Natron](http://natron.fr).
 
-Source
-======
-
-Get latest source:
 ```
 git clone https://github.com/olear/openfx-arena
 cd openfx-arena
 git submodule update -i --recursive
+make
 ```
 
 Requirements:
 
- * liblcms2
+ * Little CMS v2 (lcms2)
  * OpenColorIO
  * [ImageMagick 6.8.10-1](https://github.com/olear/openfx-arena/releases/download/1.9.0/openfx-ImageMagick-6.8.10-1.tar.gz) Q32 with:
    * Freetype
@@ -30,8 +27,6 @@ See 'openfx-arena.spec' or 'deploy.sh' for recommended build options.
 
 *Builds not using the correct ImageMagick version/options are not supported, and will not function correctly.*
 
-License
-=======
 ```
 Copyright (c) 2015, FxArena DA <mail@fxarena.net>
 All rights reserved.
