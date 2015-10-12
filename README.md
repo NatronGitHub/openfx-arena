@@ -14,7 +14,7 @@ Requirements:
 
  * Little CMS v2 (lcms2)
  * OpenColorIO
- * ImageMagick 6.9.2+ with:
+ * ImageMagick (6.9.1-10 recommended) with:
    * Freetype
    * Fontconfig
    * libpng
@@ -23,10 +23,6 @@ Requirements:
    * librsvg
    * lcms2
    * Pango(Cairo)
-
-See 'openfx-arena.spec' or 'deploy.sh' for recommended build options. 
-
-*Builds not using the correct ImageMagick version/options are not supported, and will not function correctly.*
 
 ```
 Copyright (c) 2015, FxArena DA <mail@fxarena.net>
