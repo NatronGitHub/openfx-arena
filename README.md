@@ -21,6 +21,7 @@ Requirements:
    * zlib
    * libxml2
    * librsvg
+   * lcms2
    * Pango(Cairo)
 
 See 'openfx-arena.spec' or 'deploy.sh' for recommended build options. 

@@ -17,10 +17,6 @@ VPATH += ../SupportExt
 # ImageMagick
 MAGICK_CXXFLAGS = $(shell Magick++-config --cppflags --cxxflags)
 MAGICK_LINKFLAGS = $(shell Magick++-config --ldflags --libs)
-GOT_MAGICK := $(shell pkg-config Magick++ --exact-version=6.8.10 && echo yes)
-ifneq ($(GOT_MAGICK),yes)
-  $(warning **** UNSUPPORTED IMAGEMAGICK VERSION DETECTED, PLUGINS WILL NOT WORK AS EXPECTED ****)
-endif
 ifeq ($(STATIC),1)
   ifeq ($(OPENCL),1)
     MAGICK_LINKFLAGS += -lXext -lXt -lSM -lICE -lX11
@@ -32,6 +28,9 @@ ifeq ($(MINGW),1)
   MAGICK_LINKFLAGS += -lgdi32
   GMAGICK_LINKFLAGS += -lgdi32
 endif
+
+PANGO_CXXFLAGS = $(shell pkg-config pangocairo --cflags)
+PANGO_LINKFLAGS = $(shell pkg-config pangocairo --libs)
 
 # Pango
 ifeq ($(USE_PANGO),1)
