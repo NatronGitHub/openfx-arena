@@ -24,8 +24,7 @@
 #define kPluginGrouping "Image/Readers"
 #define kPluginIdentifier "net.fxarena.openfx.ReadSVG"
 #define kPluginVersionMajor 1
-#define kPluginVersionMinor 4
-#define kPluginMagickVersion 26640
+#define kPluginVersionMinor 5
 
 #define kParamDpi "dpi"
 #define kParamDpiLabel "DPI"
@@ -78,7 +77,7 @@ ReadSVGPlugin::~ReadSVGPlugin()
 void
 ReadSVGPlugin::decode(const std::string& filename,
                       OfxTime time,
-                      const OfxRectI& /*renderWindow*/,
+                      const OfxRectI& renderWindow,
                       float *pixelData,
                       const OfxRectI& bounds,
                       OFX::PixelComponentEnum /*pixelComponents*/,
@@ -121,7 +120,26 @@ ReadSVGPlugin::decode(const std::string& filename,
         Magick::Image container(Magick::Geometry(bounds.x2,bounds.y2),Magick::Color("rgba(0,0,0,0)"));
         container.composite(image,0,0,Magick::OverCompositeOp);
         container.flip();
-        container.write(0,0,bounds.x2,bounds.y2,"RGBA",Magick::FloatPixel,pixelData);
+        int width = bounds.x2;
+        int height = bounds.y2;
+        int widthstep = width*4;
+        int imageSize = width*height*4;
+        float* imageBlock;
+        imageBlock = new float[imageSize];
+        container.write(0,0,width,height,"RGBA",Magick::FloatPixel,imageBlock);
+        for(int y = renderWindow.y1; y < (renderWindow.y1 + height); y++) {
+            float *dstPix = (float*)(pixelData + y * widthstep + renderWindow.x1);
+            float *srcPix = (float*)(imageBlock + (y * widthstep + renderWindow.x1));
+            for(int x = renderWindow.x1; x < (renderWindow.x1 + width); x++) {
+                dstPix[0] = srcPix[0]*srcPix[3];
+                dstPix[1] = srcPix[1]*srcPix[3];
+                dstPix[2] = srcPix[2]*srcPix[3];
+                dstPix[3] = srcPix[3];
+                dstPix+=4;
+                srcPix+=4;
+            }
+        }
+        free(imageBlock);
     }
     else {
         setPersistentMessage(OFX::Message::eMessageError, "", "Unable to read image");
@@ -312,14 +330,11 @@ void ReadSVGPluginFactory::describe(OFX::ImageEffectDescriptor &desc)
 
     size_t magickNumber;
     std::string magickString = MagickCore::GetMagickVersion(&magickNumber);
-    if (magickNumber != kPluginMagickVersion)
-        magickString.append("\n\nWarning! You are using an unsupported version of ImageMagick.");
-    std::string delegates = MagickCore::GetMagickDelegates();
     std::string plugCopyright = "\n\nImageMagick (R) is Copyright 1999-2015 ImageMagick Studio LLC, a non-profit organization dedicated to making software imaging solutions freely available.\n\nImageMagick is distributed under the Apache 2.0 license.";
     # ifdef OFX_IO_USING_OCIO
     plugCopyright.append("\n\nOpenColorIO is Copyright 2003-2010 Sony Pictures Imageworks Inc., et al. All Rights Reserved.\n\nOpenColorIO is distributed under a BSD license.");
     # endif // OFX_IO_USING_OCIO
-    desc.setPluginDescription("Read SVG image format.\n\nPowered by "+magickString+"\n\nFeatures: "+delegates+plugCopyright);
+    desc.setPluginDescription("Read SVG image format.\n\nPowered by "+magickString+plugCopyright);
 }
 
 /** @brief The describe in context function, passed a plugin descriptor and a context */
