@@ -21,7 +21,6 @@
 #define kPluginIdentifier "net.fxarena.openfx.Swirl"
 #define kPluginVersionMajor 2
 #define kPluginVersionMinor 1
-#define kPluginMagickVersion 26640
 
 #define kParamSwirl "degree"
 #define kParamSwirlLabel "Degree"
@@ -185,8 +184,28 @@ void SwirlPlugin::render(const OFX::RenderArguments &args)
     image.swirl(swirl);
 
     // return image
-    if (dstClip_ && dstClip_->isConnected() && srcClip_ && srcClip_->isConnected())
-        image.write(0,0,width,height,"RGBA",Magick::FloatPixel,(float*)dstImg->getPixelData());
+    if (dstClip_ && dstClip_->isConnected()) {
+        width = dstBounds.x2-dstBounds.x1;
+        height = dstBounds.y2-dstBounds.y1;
+        int widthstep = width*4;
+        int imageSize = width*height*4;
+        float* imageBlock;
+        imageBlock = new float[imageSize];
+        image.write(0,0,width,height,"RGBA",Magick::FloatPixel,imageBlock);
+        for(int y = args.renderWindow.y1; y < (args.renderWindow.y1 + height); y++) {
+            OfxRGBAColourF *dstPix = (OfxRGBAColourF *)dstImg->getPixelAddress(args.renderWindow.x1, y);
+            float *srcPix = (float*)(imageBlock + y * widthstep + args.renderWindow.x1);
+            for(int x = args.renderWindow.x1; x < (args.renderWindow.x1 + width); x++) {
+                dstPix->r = srcPix[0]*srcPix[3];
+                dstPix->g = srcPix[1]*srcPix[3];
+                dstPix->b = srcPix[2]*srcPix[3];
+                dstPix->a = srcPix[3];
+                dstPix++;
+                srcPix+=4;
+            }
+        }
+        free(imageBlock);
+    }
 }
 
 bool SwirlPlugin::getRegionOfDefinition(const OFX::RegionOfDefinitionArguments &args, OfxRectD &rod)
@@ -214,8 +233,6 @@ void SwirlPluginFactory::describe(OFX::ImageEffectDescriptor &desc)
     desc.setPluginGrouping(kPluginGrouping);
     size_t magickNumber;
     std::string magickString = MagickCore::GetMagickVersion(&magickNumber);
-    if (magickNumber != kPluginMagickVersion)
-        magickString.append("\n\nWarning! You are using an unsupported version of ImageMagick.");
     desc.setPluginDescription("Swirl transform node.\n\nPowered by "+magickString+"\n\nImageMagick (R) is Copyright 1999-2015 ImageMagick Studio LLC, a non-profit organization dedicated to making software imaging solutions freely available.\n\nImageMagick is distributed under the Apache 2.0 license.");
 
     // add the supported contexts

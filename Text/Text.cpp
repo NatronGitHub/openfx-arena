@@ -26,8 +26,7 @@
 #define kPluginGrouping "Draw"
 #define kPluginIdentifier "net.fxarena.openfx.Text"
 #define kPluginVersionMajor 5
-#define kPluginVersionMinor 1
-#define kPluginMagickVersion 26640
+#define kPluginVersionMinor 3
 
 #define kSupportsTiles 0
 #define kSupportsMultiResolution 0
@@ -70,16 +69,6 @@
 #define kParamStrokeLabel "Width"
 #define kParamStrokeHint "Adjust stroke width"
 #define kParamStrokeDefault 0
-
-#define kParamStrokeCap "strokeLineCap"
-#define kParamStrokeCapLabel "Line cap"
-#define kParamStrokeCapHint "Adjust Line cap"
-#define kParamStrokeCapDefault 0
-
-#define kParamStrokeJoin "strokeLineJoin"
-#define kParamStrokeJoinLabel "Line join"
-#define kParamStrokeJoinHint "Adjust Line join"
-#define kParamStrokeJoinDefault 0
 
 #define kParamFontOverride "custom"
 #define kParamFontOverrideLabel "Custom font"
@@ -139,11 +128,6 @@
 #define kParamShadowBlurHint "Soften shadow"
 #define kParamShadowBlurDefault 0
 
-#define kParamDirection "direction"
-#define kParamDirectionLabel "Text direction"
-#define kParamDirectionHint "Text direction"
-#define kParamDirectionDefault 0
-
 #define kParamGravity "gravity"
 #define kParamGravityLabel "Gravity"
 #define kParamGravityHint "Select text gravity"
@@ -169,6 +153,7 @@ public:
 
 private:
     // do not need to delete these, the ImageEffect is managing them for us
+    OFX::Clip *srcClip_;
     OFX::Clip *dstClip_;
     OFX::Double2DParam *position_;
     OFX::StringParam *text_;
@@ -177,8 +162,6 @@ private:
     OFX::RGBAParam *textColor_;
     OFX::RGBAParam *strokeColor_;
     OFX::DoubleParam *strokeWidth_;
-    OFX::ChoiceParam *strokeCap_;
-    OFX::ChoiceParam *strokeJoin_;
     OFX::StringParam *fontOverride_;
     OFX::DoubleParam *shadowOpacity_;
     OFX::DoubleParam *shadowSigma_;
@@ -191,7 +174,6 @@ private:
     OFX::DoubleParam *shadowBlur_;
     OFX::IntParam *width_;
     OFX::IntParam *height_;
-    OFX::ChoiceParam *direction_;
     OFX::ChoiceParam *gravity_;
     bool has_fontconfig;
     bool has_freetype;
@@ -199,6 +181,7 @@ private:
 
 TextPlugin::TextPlugin(OfxImageEffectHandle handle)
 : OFX::ImageEffect(handle)
+, srcClip_(0)
 , dstClip_(0)
 , width_(0)
 , height_(0)
@@ -213,6 +196,9 @@ TextPlugin::TextPlugin(OfxImageEffectHandle handle)
     if (delegates.find("freetype") != std::string::npos)
         has_freetype = true;
 
+    srcClip_ = fetchClip(kOfxImageEffectSimpleSourceClipName);
+    assert(!srcClip_ || srcClip_->getPixelComponents() == OFX::ePixelComponentRGB);
+
     dstClip_ = fetchClip(kOfxImageEffectOutputClipName);
     assert(dstClip_ && dstClip_->getPixelComponents() == OFX::ePixelComponentRGBA);
 
@@ -223,8 +209,6 @@ TextPlugin::TextPlugin(OfxImageEffectHandle handle)
     textColor_ = fetchRGBAParam(kParamTextColor);
     strokeColor_ = fetchRGBAParam(kParamStrokeColor);
     strokeWidth_ = fetchDoubleParam(kParamStroke);
-    strokeCap_ = fetchChoiceParam(kParamStrokeCap);
-    strokeJoin_ = fetchChoiceParam(kParamStrokeJoin);
     fontOverride_ = fetchStringParam(kParamFontOverride);
     shadowOpacity_ = fetchDoubleParam(kParamShadowOpacity);
     shadowSigma_ = fetchDoubleParam(kParamShadowSigma);
@@ -237,10 +221,9 @@ TextPlugin::TextPlugin(OfxImageEffectHandle handle)
     shadowBlur_ = fetchDoubleParam(kParamShadowBlur);
     width_ = fetchIntParam(kParamWidth);
     height_ = fetchIntParam(kParamHeight);
-    direction_ = fetchChoiceParam(kParamDirection);
     gravity_ = fetchChoiceParam(kParamGravity);
 
-    assert(position_ && text_ && fontSize_ && fontName_ && textColor_ && strokeColor_ && strokeWidth_ && strokeCap_ && strokeJoin_ && fontOverride_ && shadowOpacity_ && shadowSigma_ && interlineSpacing_ && interwordSpacing_ && textSpacing_ && shadowColor_ && shadowX_ && shadowY_ && shadowBlur_ && width_ && height_ && direction_ && gravity_);
+    assert(position_ && text_ && fontSize_ && fontName_ && textColor_ && strokeColor_ && strokeWidth_ && fontOverride_ && shadowOpacity_ && shadowSigma_ && interlineSpacing_ && interwordSpacing_ && textSpacing_ && shadowColor_ && shadowX_ && shadowY_ && shadowBlur_ && width_ && height_ && gravity_);
 }
 
 TextPlugin::~TextPlugin()
@@ -311,7 +294,7 @@ void TextPlugin::render(const OFX::RenderArguments &args)
 
     // Get params
     double x, y, r, g, b, a, r_s, g_s, b_s, a_s, strokeWidth, shadowOpacity, shadowSigma, interlineSpacing, interwordSpacing, textSpacing, shadowR, shadowG, shadowB, shadowBlur;
-    int fontSize, fontID, shadowX, shadowY, strokeCap, strokeJoin, direction, gravity;
+    int fontSize, fontID, shadowX, shadowY, gravity,cwidth,cheight;
     std::string text, fontOverride, fontName;
 
     position_->getValueAtTime(args.time, x, y);
@@ -319,8 +302,6 @@ void TextPlugin::render(const OFX::RenderArguments &args)
     fontSize_->getValueAtTime(args.time, fontSize);
     fontName_->getValueAtTime(args.time, fontID);
     strokeWidth_->getValueAtTime(args.time, strokeWidth);
-    strokeCap_->getValueAtTime(args.time, strokeCap);
-    strokeJoin_->getValueAtTime(args.time, strokeJoin);
     fontOverride_->getValueAtTime(args.time, fontOverride);
     textColor_->getValueAtTime(args.time, r, g, b, a);
     strokeColor_->getValueAtTime(args.time, r_s, g_s, b_s, a_s);
@@ -333,8 +314,9 @@ void TextPlugin::render(const OFX::RenderArguments &args)
     shadowX_->getValueAtTime(args.time, shadowX);
     shadowY_->getValueAtTime(args.time, shadowY);
     shadowBlur_->getValueAtTime(args.time, shadowBlur);
-    direction_->getValueAtTime(args.time, direction);
     gravity_->getValueAtTime(args.time, gravity);
+    width_->getValueAtTime(args.time, cwidth);
+    height_->getValueAtTime(args.time, cheight);
     fontName_->getOption(fontID,fontName);
 
     // cascade menu
@@ -404,14 +386,6 @@ void TextPlugin::render(const OFX::RenderArguments &args)
 
     // Setup text draw
     std::list<Magick::Drawable> draw;
-    /*switch(direction) {
-    case 1:
-        draw.push_back(Magick::DrawableTextDirection(Magick::RightToLeftDirection));
-        break;
-    default:
-        draw.push_back(Magick::DrawableTextDirection(Magick::UndefinedDirection));
-        break;
-    }*/
     switch(gravity) {
     case 1:
         xtext = xtext-(width/2);
@@ -437,34 +411,6 @@ void TextPlugin::render(const OFX::RenderArguments &args)
     if (strokeWidth>0) {
         draw.push_back(Magick::DrawableStrokeColor(strokeRGBA.str()));
         draw.push_back(Magick::DrawableStrokeWidth(std::floor(strokeWidth * args.renderScale.x + 0.5)));
-        switch(strokeCap) {
-        case 1:
-            draw.push_back(Magick::DrawableStrokeLineCap(Magick::ButtCap));
-            break;
-        case 2:
-            draw.push_back(Magick::DrawableStrokeLineCap(Magick::RoundCap));
-            break;
-        case 3:
-            draw.push_back(Magick::DrawableStrokeLineCap(Magick::SquareCap));
-            break;
-        default:
-            draw.push_back(Magick::DrawableStrokeLineCap(Magick::UndefinedCap));
-            break;
-        }
-        switch(strokeJoin) {
-        case 1:
-            draw.push_back(Magick::DrawableStrokeLineJoin(Magick::MiterJoin));
-            break;
-        case 2:
-            draw.push_back(Magick::DrawableStrokeLineJoin(Magick::RoundJoin));
-            break;
-        case 3:
-            draw.push_back(Magick::DrawableStrokeLineJoin(Magick::BevelJoin));
-            break;
-        default:
-            draw.push_back(Magick::DrawableStrokeLineJoin(Magick::UndefinedJoin));
-            break;
-        }
     }
 
     // Draw
@@ -488,9 +434,39 @@ void TextPlugin::render(const OFX::RenderArguments &args)
     // Flip image
     image.flip();
 
+    // add src clip if any
+    if (srcClip_ && srcClip_->isConnected() && cwidth==0 && cheight==0) {
+        std::auto_ptr<const OFX::Image> srcImg(srcClip_->fetchImage(args.time));
+        if (srcImg.get()) {
+            Magick::Image input;
+            input.read(width,height,"RGB",Magick::FloatPixel,(float*)srcImg->getPixelData());
+            input.matte(true);
+            input.composite(image,0,0,Magick::OverCompositeOp);
+            image=input;
+        }
+    }
+
     // return image
-    if (dstClip_ && dstClip_->isConnected())
-        image.write(0,0,width,height,"RGBA",Magick::FloatPixel,(float*)dstImg->getPixelData());
+    if (dstClip_ && dstClip_->isConnected()) {
+        int widthstep = width*4;
+        int imageSize = width*height*4;
+        float* imageBlock;
+        imageBlock = new float[imageSize];
+        image.write(0,0,width,height,"RGBA",Magick::FloatPixel,imageBlock);
+        for(int y = args.renderWindow.y1; y < (args.renderWindow.y1 + height); y++) {
+            OfxRGBAColourF *dstPix = (OfxRGBAColourF *)dstImg->getPixelAddress(args.renderWindow.x1, y);
+            float *srcPix = (float*)(imageBlock + y * widthstep + args.renderWindow.x1);
+            for(int x = args.renderWindow.x1; x < (args.renderWindow.x1 + width); x++) {
+                dstPix->r = srcPix[0]*srcPix[3];
+                dstPix->g = srcPix[1]*srcPix[3];
+                dstPix->b = srcPix[2]*srcPix[3];
+                dstPix->a = srcPix[3];
+                dstPix++;
+                srcPix+=4;
+            }
+        }
+        free(imageBlock);
+    }
 }
 
 void TextPlugin::changedParam(const OFX::InstanceChangedArgs &args, const std::string &/*paramName*/)
@@ -499,7 +475,6 @@ void TextPlugin::changedParam(const OFX::InstanceChangedArgs &args, const std::s
         OFX::throwSuiteStatusException(kOfxStatFailed);
         return;
     }
-
     clearPersistentMessage();
 }
 
@@ -544,10 +519,7 @@ void TextPluginFactory::describe(OFX::ImageEffectDescriptor &desc)
     desc.setPluginGrouping(kPluginGrouping);
     size_t magickNumber;
     std::string magickString = MagickCore::GetMagickVersion(&magickNumber);
-    if (magickNumber != kPluginMagickVersion)
-        magickString.append("\n\nWarning! You are using an unsupported version of ImageMagick.");
-    std::string delegates = MagickCore::GetMagickDelegates();
-    desc.setPluginDescription("Text generator node.\n\nPowered by "+magickString+"\n\nFeatures: "+delegates+"\n\nImageMagick (R) is Copyright 1999-2015 ImageMagick Studio LLC, a non-profit organization dedicated to making software imaging solutions freely available.\n\nImageMagick is distributed under the Apache 2.0 license.");
+    desc.setPluginDescription("Text generator node.\n\nPowered by "+magickString+"\n\nImageMagick (R) is Copyright 1999-2015 ImageMagick Studio LLC, a non-profit organization dedicated to making software imaging solutions freely available.\n\nImageMagick is distributed under the Apache 2.0 license.");
 
     // add the supported contexts
     desc.addSupportedContext(eContextGeneral);
@@ -572,7 +544,7 @@ void TextPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, Cont
 
     // there has to be an input clip, even for generators
     ClipDescriptor* srcClip = desc.defineClip(kOfxImageEffectSimpleSourceClipName);
-    srcClip->addSupportedComponent(ePixelComponentRGBA);
+    srcClip->addSupportedComponent(ePixelComponentRGB);
     srcClip->setSupportsTiles(kSupportsTiles);
     srcClip->setOptional(true);
 
@@ -588,7 +560,11 @@ void TextPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, Cont
     GroupParamDescriptor *groupSpace = desc.defineGroupParam("Spacing");
     GroupParamDescriptor *groupCanvas = desc.defineGroupParam("Canvas");
 
+    groupCanvas->setOpen(false);
     bool hostHasNativeOverlayForPosition;
+    {
+        page->addChild(*groupCanvas);
+    }
     {
         Double2DParamDescriptor* param = desc.defineDouble2DParam(kParamPosition);
         param->setLabel(kParamPositionLabel);
@@ -602,7 +578,6 @@ void TextPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, Cont
             param->setUseHostNativeOverlayHandle(true);
         page->addChild(*param);
     }
-
     {
         BooleanParamDescriptor* param = desc.defineBooleanParam(kParamInteractive);
         param->setLabel(kParamInteractiveLabel);
@@ -693,6 +668,19 @@ void TextPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, Cont
         page->addChild(*param);
     }
     {
+        RGBAParamDescriptor* param = desc.defineRGBAParam(kParamTextColor);
+        param->setLabel(kParamTextColorLabel);
+        param->setHint(kParamTextColorHint);
+        param->setDefault(1., 1., 1., 1.);
+        param->setAnimates(true);
+        page->addChild(*param);
+    }
+    {
+         page->addChild(*groupStroke);
+         page->addChild(*groupShadow);
+         page->addChild(*groupSpace);
+    }
+    {
         DoubleParamDescriptor *param = desc.defineDoubleParam(kParamTextSpacing);
         param->setLabel(kParamTextSpacingLabel);
         param->setHint(kParamTextSpacingHint);
@@ -729,27 +717,11 @@ void TextPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, Cont
         param->setParent(*groupStroke);
     }
     {
-        ChoiceParamDescriptor *param = desc.defineChoiceParam(kParamStrokeCap);
-        param->setLabel(kParamStrokeCapLabel);
-        param->setHint(kParamStrokeCapHint);
-        param->appendOption("Undefined");
-        param->appendOption("ButtCap");
-        param->appendOption("RoundCap");
-        param->appendOption("SquareCap");
-        param->setDefault(kParamStrokeCapDefault);
-        param->setIsSecret(true); // disable until issue #89 is fixed
-        param->setParent(*groupStroke);
-    }
-    {
-        ChoiceParamDescriptor *param = desc.defineChoiceParam(kParamStrokeJoin);
-        param->setLabel(kParamStrokeJoinLabel);
-        param->setHint(kParamStrokeJoinHint);
-        param->appendOption("Undefined");
-        param->appendOption("MiterJoin");
-        param->appendOption("RoundJoin");
-        param->appendOption("BevelJoin");
-        param->setDefault(kParamStrokeJoinDefault);
-        param->setIsSecret(true); // disable until issue #89 is fixed
+        RGBAParamDescriptor* param = desc.defineRGBAParam(kParamStrokeColor);
+        param->setLabel(kParamStrokeColorLabel);
+        param->setHint(kParamStrokeColorHint);
+        param->setDefault(1., 1., 1., 1.);
+        param->setAnimates(true);
         param->setParent(*groupStroke);
     }
     {
@@ -800,32 +772,6 @@ void TextPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, Cont
         param->setParent(*groupShadow);
     }
     {
-        RGBAParamDescriptor* param = desc.defineRGBAParam(kParamTextColor);
-        param->setLabel(kParamTextColorLabel);
-        param->setHint(kParamTextColorHint);
-        param->setDefault(1., 1., 1., 1.);
-        param->setAnimates(true);
-        page->addChild(*param);
-    }
-    {
-        ChoiceParamDescriptor *param = desc.defineChoiceParam(kParamDirection);
-        param->setLabel(kParamDirectionLabel);
-        param->setHint(kParamDirectionHint);
-        param->appendOption("Left");
-        param->appendOption("Right");
-        param->setAnimates(true);
-        param->setIsSecret(true); // buggy on "right", disable until fixed in IM
-        page->addChild(*param);
-    }
-    {
-        RGBAParamDescriptor* param = desc.defineRGBAParam(kParamStrokeColor);
-        param->setLabel(kParamStrokeColorLabel);
-        param->setHint(kParamStrokeColorHint);
-        param->setDefault(1., 1., 1., 1.);
-        param->setAnimates(true);
-        param->setParent(*groupStroke);
-    }
-    {
         RGBParamDescriptor* param = desc.defineRGBParam(kParamShadowColor);
         param->setLabel(kParamShadowColorLabel);
         param->setHint(kParamShadowColorHint);
@@ -851,12 +797,6 @@ void TextPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, Cont
         param->setDefault(kParamHeightDefault);
         param->setParent(*groupCanvas);
     }
-    {
-         page->addChild(*groupStroke);
-         page->addChild(*groupShadow);
-         page->addChild(*groupSpace);
-         page->addChild(*groupCanvas);
-     }
 }
 
 /** @brief The create instance function, the plugin must return an object derived from the \ref OFX::ImageEffect class */

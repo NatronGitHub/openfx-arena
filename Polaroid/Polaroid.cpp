@@ -22,8 +22,7 @@
 #define kPluginGrouping "Extra/Misc"
 #define kPluginIdentifier "net.fxarena.openfx.Polaroid"
 #define kPluginVersionMajor 1
-#define kPluginVersionMinor 1
-#define kPluginMagickVersion 26640
+#define kPluginVersionMinor 2
 
 #define kParamText "caption"
 #define kParamTextLabel "Caption"
@@ -90,7 +89,7 @@ PolaroidPlugin::PolaroidPlugin(OfxImageEffectHandle handle)
     dstClip_ = fetchClip(kOfxImageEffectOutputClipName);
     assert(dstClip_ && dstClip_->getPixelComponents() == OFX::ePixelComponentRGBA);
     srcClip_ = fetchClip(kOfxImageEffectSimpleSourceClipName);
-    assert(srcClip_ && srcClip_->getPixelComponents() == OFX::ePixelComponentRGBA);
+    assert(srcClip_ && srcClip_->getPixelComponents() == OFX::ePixelComponentRGB);
 
     text_ = fetchStringParam(kParamText);
     angle_ = fetchDoubleParam(kParamAngle);
@@ -169,7 +168,7 @@ void PolaroidPlugin::render(const OFX::RenderArguments &args)
 
     // get pixel component
     OFX::PixelComponentEnum dstComponents  = dstImg->getPixelComponents();
-    if (dstComponents != OFX::ePixelComponentRGBA || (srcImg.get() && (dstComponents != srcImg->getPixelComponents()))) {
+    if (dstComponents != OFX::ePixelComponentRGBA) {
         OFX::throwSuiteStatusException(kOfxStatErrFormat);
         return;
     }
@@ -212,7 +211,9 @@ void PolaroidPlugin::render(const OFX::RenderArguments &args)
     // read image
     Magick::Image image(Magick::Geometry(width,height),Magick::Color("rgba(0,0,0,0)"));
     if (srcClip_ && srcClip_->isConnected())
-        image.read(width,height,"RGBA",Magick::FloatPixel,(float*)srcImg->getPixelData());
+        image.read(width,height,"RGB",Magick::FloatPixel,(float*)srcImg->getPixelData());
+    if (!image.matte())
+        image.matte(true);
 
     #ifdef DEBUG_MAGICK
     image.debug(true);
@@ -247,8 +248,28 @@ void PolaroidPlugin::render(const OFX::RenderArguments &args)
     image.extent(Magick::Geometry(width,height),Magick::CenterGravity);
 
     // return image
-    if (dstClip_ && dstClip_->isConnected() && srcClip_ && srcClip_->isConnected())
-        image.write(0,0,width,height,"RGBA",Magick::FloatPixel,(float*)dstImg->getPixelData());
+    if (dstClip_ && dstClip_->isConnected()) {
+        width = dstBounds.x2-dstBounds.x1;
+        height = dstBounds.y2-dstBounds.y1;
+        int widthstep = width*4;
+        int imageSize = width*height*4;
+        float* imageBlock;
+        imageBlock = new float[imageSize];
+        image.write(0,0,width,height,"RGBA",Magick::FloatPixel,imageBlock);
+        for(int y = args.renderWindow.y1; y < (args.renderWindow.y1 + height); y++) {
+            OfxRGBAColourF *dstPix = (OfxRGBAColourF *)dstImg->getPixelAddress(args.renderWindow.x1, y);
+            float *srcPix = (float*)(imageBlock + y * widthstep + args.renderWindow.x1);
+            for(int x = args.renderWindow.x1; x < (args.renderWindow.x1 + width); x++) {
+                dstPix->r = srcPix[0]*srcPix[3];
+                dstPix->g = srcPix[1]*srcPix[3];
+                dstPix->b = srcPix[2]*srcPix[3];
+                dstPix->a = srcPix[3];
+                dstPix++;
+                srcPix+=4;
+            }
+        }
+        free(imageBlock);
+    }
 }
 
 bool PolaroidPlugin::getRegionOfDefinition(const OFX::RegionOfDefinitionArguments &args, OfxRectD &rod)
@@ -276,10 +297,7 @@ void PolaroidPluginFactory::describe(OFX::ImageEffectDescriptor &desc)
     desc.setPluginGrouping(kPluginGrouping);
     size_t magickNumber;
     std::string magickString = MagickCore::GetMagickVersion(&magickNumber);
-    if (magickNumber != kPluginMagickVersion)
-        magickString.append("\n\nWarning! You are using an unsupported version of ImageMagick.");
-    std::string delegates = MagickCore::GetMagickDelegates();
-    desc.setPluginDescription("Polaroid image effect node.\n\nPowered by "+magickString+"\n\nFeatures: "+delegates+"\n\nImageMagick (R) is Copyright 1999-2015 ImageMagick Studio LLC, a non-profit organization dedicated to making software imaging solutions freely available.\n\nImageMagick is distributed under the Apache 2.0 license.");
+    desc.setPluginDescription("Polaroid image effect node.\n\nPowered by "+magickString+"\n\nImageMagick (R) is Copyright 1999-2015 ImageMagick Studio LLC, a non-profit organization dedicated to making software imaging solutions freely available.\n\nImageMagick is distributed under the Apache 2.0 license.");
 
     // add the supported contexts
     desc.addSupportedContext(eContextGeneral);
@@ -303,7 +321,7 @@ void PolaroidPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, 
 
     // create the mandated source clip
     ClipDescriptor *srcClip = desc.defineClip(kOfxImageEffectSimpleSourceClipName);
-    srcClip->addSupportedComponent(ePixelComponentRGBA);
+    srcClip->addSupportedComponent(ePixelComponentRGB);
     srcClip->setTemporalClipAccess(false);
     srcClip->setSupportsTiles(kSupportsTiles);
     srcClip->setIsMask(false);

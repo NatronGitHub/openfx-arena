@@ -20,13 +20,17 @@
 #define kPluginGrouping "Extra/Distort"
 #define kPluginIdentifier "net.fxarena.openfx.Implode"
 #define kPluginVersionMajor 2
-#define kPluginVersionMinor 0
-#define kPluginMagickVersion 26640
+#define kPluginVersionMinor 1
 
 #define kParamImplode "factor"
 #define kParamImplodeLabel "Factor"
 #define kParamImplodeHint "Implode image by factor"
 #define kParamImplodeDefault 0.5
+
+#define kParamMatte "matte"
+#define kParamMatteLabel "Matte"
+#define kParamMatteHint "Merge Alpha before applying effect"
+#define kParamMatteDefault false
 
 #define kSupportsTiles 0
 #define kSupportsMultiResolution 1
@@ -47,6 +51,7 @@ private:
     OFX::Clip *dstClip_;
     OFX::Clip *srcClip_;
     OFX::DoubleParam *implode_;
+    OFX::BooleanParam *matte_;
 };
 
 ImplodePlugin::ImplodePlugin(OfxImageEffectHandle handle)
@@ -61,8 +66,9 @@ ImplodePlugin::ImplodePlugin(OfxImageEffectHandle handle)
     assert(srcClip_ && srcClip_->getPixelComponents() == OFX::ePixelComponentRGBA);
 
     implode_ = fetchDoubleParam(kParamImplode);
+    matte_ = fetchBooleanParam(kParamMatte);
 
-    assert(implode_);
+    assert(implode_ && matte_);
 }
 
 ImplodePlugin::~ImplodePlugin()
@@ -142,7 +148,9 @@ void ImplodePlugin::render(const OFX::RenderArguments &args)
 
     // get params
     double implode;
+    bool matte = false;
     implode_->getValueAtTime(args.time, implode);
+    matte_->getValueAtTime(args.time, matte);
 
     // setup
     int width = srcRod.x2-srcRod.x1;
@@ -167,12 +175,37 @@ void ImplodePlugin::render(const OFX::RenderArguments &args)
     image.debug(true);
     #endif
 
+    if (matte) {
+        image.matte(false);
+        image.matte(true);
+    }
+
     // swirl
     image.implode(implode);
 
     // return image
-    if (dstClip_ && dstClip_->isConnected() && srcClip_ && srcClip_->isConnected())
-        image.write(0,0,width,height,"RGBA",Magick::FloatPixel,(float*)dstImg->getPixelData());
+    if (dstClip_ && dstClip_->isConnected()) {
+        width = dstBounds.x2-dstBounds.x1;
+        height = dstBounds.y2-dstBounds.y1;
+        int widthstep = width*4;
+        int imageSize = width*height*4;
+        float* imageBlock;
+        imageBlock = new float[imageSize];
+        image.write(0,0,width,height,"RGBA",Magick::FloatPixel,imageBlock);
+        for(int y = args.renderWindow.y1; y < (args.renderWindow.y1 + height); y++) {
+            OfxRGBAColourF *dstPix = (OfxRGBAColourF *)dstImg->getPixelAddress(args.renderWindow.x1, y);
+            float *srcPix = (float*)(imageBlock + y * widthstep + args.renderWindow.x1);
+            for(int x = args.renderWindow.x1; x < (args.renderWindow.x1 + width); x++) {
+                dstPix->r = srcPix[0]*srcPix[3];
+                dstPix->g = srcPix[1]*srcPix[3];
+                dstPix->b = srcPix[2]*srcPix[3];
+                dstPix->a = srcPix[3];
+                dstPix++;
+                srcPix+=4;
+            }
+        }
+        free(imageBlock);
+    }
 }
 
 bool ImplodePlugin::getRegionOfDefinition(const OFX::RegionOfDefinitionArguments &args, OfxRectD &rod)
@@ -200,8 +233,6 @@ void ImplodePluginFactory::describe(OFX::ImageEffectDescriptor &desc)
     desc.setPluginGrouping(kPluginGrouping);
     size_t magickNumber;
     std::string magickString = MagickCore::GetMagickVersion(&magickNumber);
-    if (magickNumber != kPluginMagickVersion)
-        magickString.append("\n\nWarning! You are using an unsupported version of ImageMagick.");
     desc.setPluginDescription("Implode transform node.\n\nPowered by "+magickString+"\n\nImageMagick (R) is Copyright 1999-2015 ImageMagick Studio LLC, a non-profit organization dedicated to making software imaging solutions freely available.\n\nImageMagick is distributed under the Apache 2.0 license.");
 
     // add the supported contexts
@@ -243,6 +274,14 @@ void ImplodePluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, C
         param->setRange(-100, 100);
         param->setDisplayRange(-5, 5);
         param->setDefault(kParamImplodeDefault);
+        page->addChild(*param);
+    }
+    {
+        BooleanParamDescriptor *param = desc.defineBooleanParam(kParamMatte);
+        param->setLabel(kParamMatteLabel);
+        param->setHint(kParamMatteHint);
+        param->setDefault(kParamMatteDefault);
+        param->setAnimates(true);
         page->addChild(*param);
     }
 }

@@ -14,7 +14,7 @@ Requirements:
 
  * Little CMS v2 (lcms2)
  * OpenColorIO
- * [ImageMagick 6.8.10-1](https://github.com/olear/openfx-arena/releases/download/1.9.0/openfx-ImageMagick-6.8.10-1.tar.gz) Q32 with:
+ * ImageMagick 6.9.2+ with:
    * Freetype
    * Fontconfig
    * libpng

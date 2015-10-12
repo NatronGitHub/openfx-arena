@@ -12,8 +12,8 @@
 
 CWD=$(pwd)
 
-MAGICK=6.8.10-1
-MAGICK_URL=https://github.com/olear/openfx-arena/releases/download/1.9.0/openfx-ImageMagick-6.8.10-1.tar.gz
+MAGICK=6.9.2-4
+MAGICK_URL=http://ftp.nluug.nl/ImageMagick/ImageMagick-6.9.2-4.tar.gz
 if [ -z "$QUANTUM" ]; then
   Q=32
 else
