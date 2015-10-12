@@ -30,7 +30,6 @@
 #define kPluginIdentifier "net.fxarena.openfx.ReadPSD"
 #define kPluginVersionMajor 2
 #define kPluginVersionMinor 2
-#define kPluginMagickVersion 26640
 
 #define kSupportsRGBA true
 #define kSupportsRGB false
@@ -299,7 +298,7 @@ void ReadPSDPlugin::getClipComponents(const OFX::ClipComponentsArguments& args, 
     }
 }
 
-void ReadPSDPlugin::decodePlane(const std::string& filename, OfxTime time, const OfxRectI& /*renderWindow*/, float *pixelData, const OfxRectI& bounds,
+void ReadPSDPlugin::decodePlane(const std::string& filename, OfxTime time, const OfxRectI& renderWindow, float *pixelData, const OfxRectI& bounds,
                                  OFX::PixelComponentEnum /*pixelComponents*/, int /*pixelComponentCount*/, const std::string& rawComponents, int /*rowBytes*/)
 {
     #ifdef DEBUG
@@ -515,7 +514,26 @@ void ReadPSDPlugin::decodePlane(const std::string& filename, OfxTime time, const
     Magick::Image container(Magick::Geometry(width,height),Magick::Color("rgba(0,0,0,0)"));
     container.composite(image,offsetX,offsetY,Magick::OverCompositeOp);
     container.flip();
-    container.write(0,0,width,height,"RGBA",Magick::FloatPixel,pixelData);
+    //width = bounds.x2;
+    //height = bounds.y2;
+    int widthstep = width*4;
+    int imageSize = width*height*4;
+    float* imageBlock;
+    imageBlock = new float[imageSize];
+    container.write(0,0,width,height,"RGBA",Magick::FloatPixel,imageBlock);
+    for(int y = renderWindow.y1; y < (renderWindow.y1 + height); y++) {
+        float *dstPix = (float*)(pixelData + y * widthstep + renderWindow.x1);
+        float *srcPix = (float*)(imageBlock + (y * widthstep + renderWindow.x1));
+        for(int x = renderWindow.x1; x < (renderWindow.x1 + width); x++) {
+            dstPix[0] = srcPix[0]*srcPix[3];
+            dstPix[1] = srcPix[1]*srcPix[3];
+            dstPix[2] = srcPix[2]*srcPix[3];
+            dstPix[3] = srcPix[3];
+            dstPix+=4;
+            srcPix+=4;
+        }
+    }
+    free(imageBlock);
 }
 
 bool ReadPSDPlugin::getFrameBounds(const std::string& /*filename*/,
@@ -627,8 +645,6 @@ void ReadPSDPluginFactory::describe(OFX::ImageEffectDescriptor &desc)
 
     size_t magickNumber;
     std::string magickString = MagickCore::GetMagickVersion(&magickNumber);
-    if (magickNumber != kPluginMagickVersion)
-        magickString.append("\n\nWarning! You are using an unsupported version of ImageMagick.");
     std::string plugCopyright = "\n\nImageMagick (R) is Copyright 1999-2015 ImageMagick Studio LLC, a non-profit organization dedicated to making software imaging solutions freely available.\n\nImageMagick is distributed under the Apache 2.0 license.\n\nLittle CMS is Copyright 2010-2015 Marti Maria Saguer. All rights reserved.\n\nLittle CMS is distributed under the MIT license agreement.";
     # ifdef OFX_IO_USING_OCIO
     plugCopyright.append("\n\nOpenColorIO is Copyright 2003-2010 Sony Pictures Imageworks Inc., et al. All Rights Reserved.\n\nOpenColorIO is distributed under a BSD license.");
