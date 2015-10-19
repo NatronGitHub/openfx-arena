@@ -17,31 +17,6 @@ VPATH += ../SupportExt
 # ImageMagick
 MAGICK_CXXFLAGS = $(shell Magick++-config --cppflags --cxxflags)
 MAGICK_LINKFLAGS = $(shell Magick++-config --ldflags --libs)
-ifeq ($(STATIC),1)
-  ifeq ($(OPENCL),1)
-    MAGICK_LINKFLAGS += -lXext -lXt -lSM -lICE -lX11
-  endif
-endif
-
-# MinGW
-ifeq ($(MINGW),1)
-  MAGICK_LINKFLAGS += -lgdi32
-  GMAGICK_LINKFLAGS += -lgdi32
-endif
-
-PANGO_CXXFLAGS = $(shell pkg-config pangocairo --cflags)
-PANGO_LINKFLAGS = $(shell pkg-config pangocairo --libs)
-
-# Pango
-ifeq ($(USE_PANGO),1)
-  MAGICK_LINKFLAGS += $(shell pkg-config pangocairo --libs --static)
-endif
-
-# SVG
-ifeq ($(USE_SVG),1)
-  MAGICK_LINKFLAGS += $(shell pkg-config librsvg-2.0 --libs --static)
-  MAGICK_LINKFLAGS += $(shell pkg-config libxml-2.0 --libs --static)
-endif
 
 #lcms
 MAGICK_CXXFLAGS += $(shell pkg-config lcms2 --cflags)
@@ -49,10 +24,15 @@ MAGICK_LINKFLAGS += $(shell pkg-config lcms2 --libs --static)
 
 # Static
 ifeq ($(STATIC),1)
+  MAGICK_LINKFLAGS += $(shell pkg-config librsvg-2.0 --libs --static)
+  MAGICK_LINKFLAGS += $(shell pkg-config libxml-2.0 --libs --static)
+  MAGICK_LINKFLAGS += $(shell pkg-config pangocairo --libs --static)
   MAGICK_LINKFLAGS += -lgomp -lm -lpthread
-  GMAGICK_LINKFLAGS += -lgomp -lm -lpthread
   ifeq ($(MINGW),1)
-    MAGICK_LINKFLAGS += -lfontconfig -lfreetype -lexpat -lpng -lz
+    MAGICK_LINKFLAGS += -lgdi32 -lfontconfig -lfreetype -lexpat -lpng -lz
+  endif
+  ifeq ($(OPENCL),1)
+    MAGICK_LINKFLAGS += -lXext -lXt -lSM -lICE -lX11
   endif
 endif
 
