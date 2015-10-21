@@ -203,7 +203,7 @@ void PovRayPlugin::render(const OFX::RenderArguments &args)
     std::ostringstream povray_command;
     std::ostringstream povimg;
     povimg << scenetemp << ".png";
-    povray_command << povray_exe << " +i" << scenetemp << " -D0 +H" << height << " +W" << width << " +Q" << quality;
+    povray_command << povray_exe << " +i" << scenetemp << " +UA -D0 +H" << height << " +W" << width << " +Q" << quality;
     if (antialiasing>0)
         povray_command << " +A0." << antialiasing;
     if (system(NULL))
