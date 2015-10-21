@@ -20,8 +20,7 @@
 #define kPluginGrouping "Draw"
 #define kPluginIdentifier "net.fxarena.openfx.TextPango"
 #define kPluginVersionMajor 1
-#define kPluginVersionMinor 3
-#define kPluginMagickVersion 26640
+#define kPluginVersionMinor 4
 
 #define kSupportsTiles 0
 #define kSupportsMultiResolution 0
@@ -98,6 +97,7 @@ public:
 private:
     // do not need to delete these, the ImageEffect is managing them for us
     OFX::Clip *dstClip_;
+    OFX::Clip *srcClip_;
     OFX::StringParam *text_;
     OFX::IntParam *width_;
     OFX::IntParam *height_;
@@ -135,6 +135,8 @@ TextPangoPlugin::TextPangoPlugin(OfxImageEffectHandle handle)
 
     dstClip_ = fetchClip(kOfxImageEffectOutputClipName);
     assert(dstClip_ && dstClip_->getPixelComponents() == OFX::ePixelComponentRGBA);
+    srcClip_ = fetchClip(kOfxImageEffectSimpleSourceClipName);
+    assert(!srcClip_ && srcClip_->getPixelComponents() == OFX::ePixelComponentRGBA);
 
     text_ = fetchStringParam(kParamText);
     width_ = fetchIntParam(kParamWidth);
@@ -218,7 +220,7 @@ void TextPangoPlugin::render(const OFX::RenderArguments &args)
 
     // Get params
     std::string text;
-    int /*gravity,*/ hinting, indent, wrap/*, ellipsize*/;
+    int /*gravity,*/ hinting, indent, wrap/*, ellipsize*/, cwidth, cheight;
     bool justify = false;
     bool single = false;
     text_->getValueAtTime(args.time, text);
@@ -228,6 +230,8 @@ void TextPangoPlugin::render(const OFX::RenderArguments &args)
     justify_->getValueAtTime(args.time, justify);
     wrap_->getValueAtTime(args.time, wrap);
     //ellipsize_->getValueAtTime(args.time, ellipsize);
+    width_->getValueAtTime(args.time, cwidth);
+    height_->getValueAtTime(args.time, cheight);
 
     // Set max threads allowed by host
     unsigned int threads = 0;
@@ -243,6 +247,7 @@ void TextPangoPlugin::render(const OFX::RenderArguments &args)
     int width = dstRod.x2-dstRod.x1;
     int height = dstRod.y2-dstRod.y1;
     Magick::Image image(Magick::Geometry(width,height),Magick::Color("rgba(0,0,0,0)"));
+
     #ifdef DEBUG_MAGICK
     image.debug(true);
     #endif
@@ -334,9 +339,39 @@ void TextPangoPlugin::render(const OFX::RenderArguments &args)
     // Flip image
     image.flip();
 
+    // add src clip if any
+    if (srcClip_ && srcClip_->isConnected() && cwidth==0 && cheight==0) {
+        std::auto_ptr<const OFX::Image> srcImg(srcClip_->fetchImage(args.time));
+        if (srcImg.get()) {
+            Magick::Image input;
+            input.read(width,height,"RGB",Magick::FloatPixel,(float*)srcImg->getPixelData());
+            input.matte(true);
+            input.composite(image,0,0,Magick::OverCompositeOp);
+            image=input;
+        }
+    }
+
     // return image
-    if (dstClip_ && dstClip_->isConnected())
-        image.write(0,0,width,height,"RGBA",Magick::FloatPixel,(float*)dstImg->getPixelData());
+    if (dstClip_ && dstClip_->isConnected()) {
+        int widthstep = width*4;
+        int imageSize = width*height*4;
+        float* imageBlock;
+        imageBlock = new float[imageSize];
+        image.write(0,0,width,height,"RGBA",Magick::FloatPixel,imageBlock);
+        for(int y = args.renderWindow.y1; y < (args.renderWindow.y1 + height); y++) {
+            OfxRGBAColourF *dstPix = (OfxRGBAColourF *)dstImg->getPixelAddress(args.renderWindow.x1, y);
+            float *srcPix = (float*)(imageBlock + y * widthstep + args.renderWindow.x1);
+            for(int x = args.renderWindow.x1; x < (args.renderWindow.x1 + width); x++) {
+                dstPix->r = srcPix[0]*srcPix[3];
+                dstPix->g = srcPix[1]*srcPix[3];
+                dstPix->b = srcPix[2]*srcPix[3];
+                dstPix->a = srcPix[3];
+                dstPix++;
+                srcPix+=4;
+            }
+        }
+        free(imageBlock);
+    }
 }
 
 void TextPangoPlugin::changedParam(const OFX::InstanceChangedArgs &args, const std::string &/*paramName*/)
@@ -382,10 +417,7 @@ void TextPangoPluginFactory::describe(OFX::ImageEffectDescriptor &desc)
     desc.setPluginGrouping(kPluginGrouping);
     size_t magickNumber;
     std::string magickString = MagickCore::GetMagickVersion(&magickNumber);
-    if (magickNumber != kPluginMagickVersion)
-        magickString.append("\n\nWarning! You are using an unsupported version of ImageMagick.");
-    std::string delegates = MagickCore::GetMagickDelegates();
-    desc.setPluginDescription("Pango text generator node.\n\nPowered by "+magickString+"\n\nFeatures: "+delegates+"\n\nImageMagick (R) is Copyright 1999-2015 ImageMagick Studio LLC, a non-profit organization dedicated to making software imaging solutions freely available.\n\nImageMagick is distributed under the Apache 2.0 license.");
+    desc.setPluginDescription("Pango text generator node.\n\nPowered by "+magickString+"\n\nImageMagick (R) is Copyright 1999-2015 ImageMagick Studio LLC, a non-profit organization dedicated to making software imaging solutions freely available.\n\nImageMagick is distributed under the Apache 2.0 license.");
 
     // add the supported contexts
     desc.addSupportedContext(eContextGeneral);
@@ -406,7 +438,7 @@ void TextPangoPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc,
 {   
     // there has to be an input clip, even for generators
     ClipDescriptor* srcClip = desc.defineClip(kOfxImageEffectSimpleSourceClipName);
-    srcClip->addSupportedComponent(ePixelComponentRGBA);
+    srcClip->addSupportedComponent(ePixelComponentRGB);
     srcClip->setSupportsTiles(kSupportsTiles);
     srcClip->setOptional(true);
 

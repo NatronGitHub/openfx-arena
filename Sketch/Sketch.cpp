@@ -20,8 +20,7 @@
 #define kPluginGrouping "Extra/Filter"
 #define kPluginIdentifier "net.fxarena.openfx.Sketch"
 #define kPluginVersionMajor 2
-#define kPluginVersionMinor 0
-#define kPluginMagickVersion 26640
+#define kPluginVersionMinor 1
 
 #define kParamRadius "radius"
 #define kParamRadiusLabel "Radius"
@@ -70,7 +69,7 @@ SketchPlugin::SketchPlugin(OfxImageEffectHandle handle)
     dstClip_ = fetchClip(kOfxImageEffectOutputClipName);
     assert(dstClip_ && dstClip_->getPixelComponents() == OFX::ePixelComponentRGBA);
     srcClip_ = fetchClip(kOfxImageEffectSimpleSourceClipName);
-    assert(srcClip_ && srcClip_->getPixelComponents() == OFX::ePixelComponentRGBA);
+    assert(srcClip_ && srcClip_->getPixelComponents() == OFX::ePixelComponentRGB);
 
     radius_ = fetchDoubleParam(kParamRadius);
     sigma_ = fetchDoubleParam(kParamSigma);
@@ -141,7 +140,7 @@ void SketchPlugin::render(const OFX::RenderArguments &args)
 
     // get pixel component
     OFX::PixelComponentEnum dstComponents  = dstImg->getPixelComponents();
-    if (dstComponents != OFX::ePixelComponentRGBA || (srcImg.get() && (dstComponents != srcImg->getPixelComponents()))) {
+    if (dstComponents != OFX::ePixelComponentRGBA) {
         OFX::throwSuiteStatusException(kOfxStatErrFormat);
         return;
     }
@@ -177,7 +176,9 @@ void SketchPlugin::render(const OFX::RenderArguments &args)
     // read image
     Magick::Image image(Magick::Geometry(width,height),Magick::Color("rgba(0,0,0,0)"));
     if (srcClip_ && srcClip_->isConnected())
-        image.read(width,height,"RGBA",Magick::FloatPixel,(float*)srcImg->getPixelData());
+        image.read(width,height,"RGB",Magick::FloatPixel,(float*)srcImg->getPixelData());
+    if (!image.matte())
+        image.matte(true);
 
     #ifdef DEBUG_MAGICK
     image.debug(true);
@@ -216,8 +217,6 @@ void SketchPluginFactory::describe(OFX::ImageEffectDescriptor &desc)
     desc.setPluginGrouping(kPluginGrouping);
     size_t magickNumber;
     std::string magickString = MagickCore::GetMagickVersion(&magickNumber);
-    if (magickNumber != kPluginMagickVersion)
-        magickString.append("\n\nWarning! You are using an unsupported version of ImageMagick.");
     desc.setPluginDescription("Sketch effect node.\n\nPowered by "+magickString+"\n\nImageMagick (R) is Copyright 1999-2015 ImageMagick Studio LLC, a non-profit organization dedicated to making software imaging solutions freely available.\n\nImageMagick is distributed under the Apache 2.0 license.");
 
     // add the supported contexts
@@ -240,18 +239,10 @@ void SketchPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, Co
 {
     // create the mandated source clip
     ClipDescriptor *srcClip = desc.defineClip(kOfxImageEffectSimpleSourceClipName);
-    srcClip->addSupportedComponent(ePixelComponentRGBA);
+    srcClip->addSupportedComponent(ePixelComponentRGB);
     srcClip->setTemporalClipAccess(false);
     srcClip->setSupportsTiles(kSupportsTiles);
     srcClip->setIsMask(false);
-
-    // create optional mask clip
-    ClipDescriptor *maskClip = desc.defineClip("Mask");
-    maskClip->addSupportedComponent(OFX::ePixelComponentAlpha);
-    maskClip->setTemporalClipAccess(false);
-    maskClip->setOptional(true);
-    maskClip->setSupportsTiles(kSupportsTiles);
-    maskClip->setIsMask(true);
 
     // create the mandated output clip
     ClipDescriptor *dstClip = desc.defineClip(kOfxImageEffectOutputClipName);

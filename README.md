@@ -12,20 +12,17 @@ make
 
 Requirements:
 
- * Little CMS v2 (lcms2)
- * OpenColorIO
- * [ImageMagick 6.8.10-1](https://github.com/olear/openfx-arena/releases/download/1.9.0/openfx-ImageMagick-6.8.10-1.tar.gz) Q32 with:
-   * Freetype
-   * Fontconfig
+ * Little CMS v2 (Required by ReadPSD)
+ * OpenColorIO (Required by ReadPSD/ReadSVG)
+ * ImageMagick (6.9.2-5+ Q32HDRI recommended) with:
+   * Freetype (Required by TextOFX)
+   * Fontconfig (Required by TextOFX)
    * libpng
    * zlib
    * libxml2
-   * librsvg
-   * Pango(Cairo)
-
-See 'openfx-arena.spec' or 'deploy.sh' for recommended build options. 
-
-*Builds not using the correct ImageMagick version/options are not supported, and will not function correctly.*
+   * librsvg (Required by ReadSVG)
+   * lcms2 (Required by ReadPSD)
+   * Pangocairo (Required by TextPango)
 
 ```
 Copyright (c) 2015, FxArena DA <mail@fxarena.net>

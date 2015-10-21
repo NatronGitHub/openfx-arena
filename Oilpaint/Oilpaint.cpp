@@ -21,7 +21,6 @@
 #define kPluginIdentifier "net.fxarena.openfx.Oilpaint"
 #define kPluginVersionMajor 2
 #define kPluginVersionMinor 0
-#define kPluginMagickVersion 26640
 
 #define kParamRadius "radius"
 #define kParamRadiusLabel "Radius"
@@ -201,8 +200,6 @@ void OilpaintPluginFactory::describe(OFX::ImageEffectDescriptor &desc)
     desc.setPluginGrouping(kPluginGrouping);
     size_t magickNumber;
     std::string magickString = MagickCore::GetMagickVersion(&magickNumber);
-    if (magickNumber != kPluginMagickVersion)
-        magickString.append("\n\nWarning! You are using an unsupported version of ImageMagick.");
     desc.setPluginDescription("Oilpaint filter node.\n\nPowered by "+magickString+"\n\nImageMagick (R) is Copyright 1999-2015 ImageMagick Studio LLC, a non-profit organization dedicated to making software imaging solutions freely available.\n\nImageMagick is distributed under the Apache 2.0 license.");
 
     // add the supported contexts

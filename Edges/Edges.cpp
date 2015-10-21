@@ -20,8 +20,7 @@
 #define kPluginGrouping "Extra/Filter"
 #define kPluginIdentifier "net.fxarena.openfx.Edges"
 #define kPluginVersionMajor 1
-#define kPluginVersionMinor 0
-#define kPluginMagickVersion 26640
+#define kPluginVersionMinor 1
 
 #define kParamWidth "width"
 #define kParamWidthLabel "Width"
@@ -244,9 +243,7 @@ void EdgesPluginFactory::describe(OFX::ImageEffectDescriptor &desc)
     desc.setPluginGrouping(kPluginGrouping);
     size_t magickNumber;
     std::string magickString = MagickCore::GetMagickVersion(&magickNumber);
-    if (magickNumber != kPluginMagickVersion)
-        magickString.append("\n\nWarning! You are using an unsupported version of ImageMagick.");
-    desc.setPluginDescription("Edge extraction filter node.\n\nPowered by "+magickString+"\n\nImageMagick (R) is Copyright 1999-2015 ImageMagick Studio LLC, a non-profit organization dedicated to making software imaging solutions freely available.\n\nImageMagick is distributed under the Apache 2.0 license.");
+    desc.setPluginDescription("Edge extraction node.\n\nPowered by "+magickString+"\n\nImageMagick (R) is Copyright 1999-2015 ImageMagick Studio LLC, a non-profit organization dedicated to making software imaging solutions freely available.\n\nImageMagick is distributed under the Apache 2.0 license.");
 
     // add the supported contexts
     desc.addSupportedContext(eContextGeneral);
@@ -284,8 +281,8 @@ void EdgesPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, Con
         IntParamDescriptor *param = desc.defineIntParam(kParamWidth);
         param->setLabel(kParamWidthLabel);
         param->setHint(kParamWidthHint);
-        param->setRange(0, 100);
-        param->setDisplayRange(0, 100);
+        param->setRange(2, 100);
+        param->setDisplayRange(2, 100);
         param->setDefault(kParamWidthDefault);
         page->addChild(*param);
     }
