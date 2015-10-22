@@ -215,7 +215,7 @@ void EdgesPlugin::render(const OFX::RenderArguments &args)
 
     // return image
     if (dstClip_ && dstClip_->isConnected() && srcClip_ && srcClip_->isConnected())
-        image.write(0,0,width,height,"RGB",Magick::FloatPixel,(float*)dstImg->getPixelData());
+        image.write(0,0,args.renderWindow.x2 - args.renderWindow.x1,args.renderWindow.y2 - args.renderWindow.y1,"RGB",Magick::FloatPixel,(float*)dstImg->getPixelData());
 }
 
 bool EdgesPlugin::getRegionOfDefinition(const OFX::RegionOfDefinitionArguments &args, OfxRectD &rod)
