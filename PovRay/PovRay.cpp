@@ -20,7 +20,7 @@
 #include <cstdio>
 
 #define kPluginName "PovRayOFX"
-#define kPluginGrouping "3D"
+#define kPluginGrouping "Extra/3D"
 #define kPluginIdentifier "net.fxarena.openfx.PovRay"
 #define kPluginVersionMajor 0
 #define kPluginVersionMinor 9
