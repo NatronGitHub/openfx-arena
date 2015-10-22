@@ -83,6 +83,9 @@ fi
 if [ "$OS" = "Msys" ]; then
   PKGOS=Windows
 fi
+if [ "$OS" = "Darwin" ]; then
+  PKGOS=Mac
+fi
 if [ "$DEBUG" = "1" ]; then
   TAG=debug
 else
@@ -215,7 +218,7 @@ if [ "$PKGOS" = "Windows" ]; then
   mv $PKGSRC/$(uname -s)-$BIT-$TAG/$PKGNAME.ofx.bundle $CWD/$PKG/ || exit 1
 else
   if [ "$TAG" = "release" ]; then
-    strip -s $PKGSRC/$(uname -s)-$BIT-$TAG/$PKGNAME.ofx.bundle/Contents/$PKGOS-$PKGBIT/$PKGNAME.ofx || exit 1
+    strip -s $PKGSRC/$(uname -s)-$BIT-$TAG/$PKGNAME.ofx.bundle/Contents/$PKGOS-$PKGBIT/$PKGNAME.ofx
   fi
   mv $PKGSRC/$(uname -s)-$BIT-$TAG/$PKGNAME.ofx.bundle $CWD/$PKG/ || exit 1
 fi
