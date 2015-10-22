@@ -8,6 +8,8 @@
 # Need custom licensing terms or conditions? Commercial license for proprietary software? Contact us.
 */
 
+#ifndef _WINDOWS // "povray on windows" is not the same as "povray on unix". We need a "povray for unix" build on mingw for this plugin to work on windows.
+
 #include "PovRay.h"
 #include "ofxsMacros.h"
 #include <Magick++.h>
@@ -172,11 +174,7 @@ void PovRayPlugin::render(const OFX::RenderArguments &args)
     antialiasing_->getValueAtTime(args.time, antialiasing);
 
     // Temp scene
-    #ifdef _WINDOWS
-    const char *folder = getenv("TMP");
-    #else
     const char *folder = getenv("TMPDIR");
-    #endif
     if (folder==0)
         folder = "/tmp";
     std::string temp_path = folder;
@@ -367,3 +365,5 @@ void getPovRayPluginID(OFX::PluginFactoryArray &ids)
     static PovRayPluginFactory p(kPluginIdentifier, kPluginVersionMajor, kPluginVersionMinor);
     ids.push_back(&p);
 }
+
+#endif // _WINDOWS
