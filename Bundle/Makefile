@@ -27,12 +27,15 @@ PLUGINOBJECTS = \
         Polaroid.o \
         Edges.o \
         Modulate.o \
-        PovRay.o \
         ofxsOGLTextRenderer.o \
         ofxsOGLFontData.o \
         ofxsRectangleInteract.o \
         PluginRegistrationCombined.o \
         GenericReader.o GenericOCIO.o SequenceParsing.o
+
+ifeq ($(OS),$(filter $(OS),Linux FreeBSD Darwin))
+    PLUGINOBJECTS += PovRay.o
+endif
 
 PLUGINNAME = Arena
 
@@ -76,9 +79,12 @@ RESOURCES = \
 ../Edges/net.fxarena.openfx.Edges.png \
 ../Edges/net.fxarena.openfx.Edges.svg \
 ../Modulate/net.fxarena.openfx.Modulate.png \
-../Modulate/net.fxarena.openfx.Modulate.svg \
-../PovRay/net.fxarena.openfx.PovRay.png \
-../PovRay/net.fxarena.openfx.PovRay.svg
+../Modulate/net.fxarena.openfx.Modulate.svg
+
+ifeq ($(OS),$(filter $(OS),Linux FreeBSD Darwin))
+    RESOURCES +=../PovRay/net.fxarena.openfx.PovRay.png
+    RESOURCES +=../PovRay/net.fxarena.openfx.PovRay.svg
+endif
 
 VPATH += \
 ../Texture \
@@ -99,8 +105,11 @@ VPATH += \
 ../Sketch \
 ../Polaroid \
 ../Edges \
-../Modulate \
-../PovRay
+../Modulate
+
+ifeq ($(OS),$(filter $(OS),Linux FreeBSD Darwin))
+    VPATH += ../PovRay
+endif
 
 include ../Makefile.master
 include ../Makefile.io
@@ -124,8 +133,11 @@ CXXFLAGS += \
 -I../Sketch \
 -I../Polaroid \
 -I../Edges \
--I../Modulate \
--I../PovRay
+-I../Modulate
+
+ifeq ($(OS),$(filter $(OS),Linux FreeBSD Darwin))
+    CXXFLAGS += -I../PovRay
+endif
 
 CXXFLAGS  += $(MAGICK_CXXFLAGS)
 LINKFLAGS += $(MAGICK_LINKFLAGS)
