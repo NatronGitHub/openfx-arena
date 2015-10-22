@@ -655,7 +655,7 @@ void ReadPSDPluginFactory::describe(OFX::ImageEffectDescriptor &desc)
 /** @brief The describe in context function, passed a plugin descriptor and a context */
 void ReadPSDPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, ContextEnum context)
 {
-    gHostIsNatron = (OFX::getImageEffectHostDescription()->hostName == kNatronOfxHostName);
+    gHostIsNatron = (OFX::getImageEffectHostDescription()->isNatron);
 
     PageParamDescriptor *page = GenericReaderDescribeInContextBegin(desc, context, isVideoStreamPlugin(), kSupportsRGBA, kSupportsRGB, kSupportsAlpha, kSupportsTiles);
     {

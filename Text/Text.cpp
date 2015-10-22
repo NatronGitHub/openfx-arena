@@ -540,7 +540,7 @@ void TextPluginFactory::describe(OFX::ImageEffectDescriptor &desc)
 void TextPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, ContextEnum /*context*/)
 {   
     // natron?
-    gHostIsNatron = (OFX::getImageEffectHostDescription()->hostName == kNatronOfxHostName);
+    gHostIsNatron = (OFX::getImageEffectHostDescription()->isNatron);
 
     // there has to be an input clip, even for generators
     ClipDescriptor* srcClip = desc.defineClip(kOfxImageEffectSimpleSourceClipName);
