@@ -28,6 +28,7 @@
 #include "Polaroid.h"
 #include "Edges.h"
 #include "Modulate.h"
+#include "PovRay.h"
 
 namespace OFX
 {
@@ -54,6 +55,7 @@ namespace OFX
             getPolaroidPluginID(ids);
             getEdgesPluginID(ids);
             getModulatePluginID(ids);
+            getPovRayPluginID(ids);
         }
     }
 }

@@ -27,6 +27,7 @@ PLUGINOBJECTS = \
         Polaroid.o \
         Edges.o \
         Modulate.o \
+        PovRay.o \
         ofxsOGLTextRenderer.o \
         ofxsOGLFontData.o \
         ofxsRectangleInteract.o \
@@ -75,7 +76,9 @@ RESOURCES = \
 ../Edges/net.fxarena.openfx.Edges.png \
 ../Edges/net.fxarena.openfx.Edges.svg \
 ../Modulate/net.fxarena.openfx.Modulate.png \
-../Modulate/net.fxarena.openfx.Modulate.svg
+../Modulate/net.fxarena.openfx.Modulate.svg \
+../PovRay/net.fxarena.openfx.PovRay.png \
+../PovRay/net.fxarena.openfx.PovRay.svg
 
 VPATH += \
 ../Texture \
@@ -96,7 +99,8 @@ VPATH += \
 ../Sketch \
 ../Polaroid \
 ../Edges \
-../Modulate
+../Modulate \
+../PovRay
 
 include ../Makefile.master
 include ../Makefile.io
@@ -120,7 +124,8 @@ CXXFLAGS += \
 -I../Sketch \
 -I../Polaroid \
 -I../Edges \
--I../Modulate
+-I../Modulate \
+-I../PovRay
 
 CXXFLAGS  += $(MAGICK_CXXFLAGS)
 LINKFLAGS += $(MAGICK_LINKFLAGS)

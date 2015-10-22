@@ -32,7 +32,8 @@ Text \
 TextPango \
 Texture \
 Tile \
-Wave
+Wave \
+PovRay
 
 all: subdirs
 
