@@ -28,7 +28,9 @@
 #include "Polaroid.h"
 #include "Edges.h"
 #include "Modulate.h"
-#if !defined(_WIN32) && !defined(__MINGW__)
+
+#if !defined(_WIN32) && !defined(__MINGW__) && !defined(__APPLE__) && defined(DEBUG)
+#define USE_POV_RAY
 #include "PovRay.h"
 #endif
 
@@ -57,7 +59,7 @@ namespace OFX
             getPolaroidPluginID(ids);
             getEdgesPluginID(ids);
             getModulatePluginID(ids);
-            #if !defined(_WIN32) && !defined(__MINGW__)
+            #ifdef USE_POV_RAY
             getPovRayPluginID(ids);
             #endif
         }
