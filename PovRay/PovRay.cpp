@@ -18,12 +18,13 @@
 #include <sys/stat.h>
 #include <unistd.h>
 #include <cstdio>
+#include <fstream>
 
 #define kPluginName "PovRayOFX"
 #define kPluginGrouping "Extra/3D"
 #define kPluginIdentifier "net.fxarena.openfx.PovRay"
-#define kPluginVersionMajor 0
-#define kPluginVersionMinor 9
+#define kPluginVersionMajor 1
+#define kPluginVersionMinor 0
 
 #define kSupportsTiles 0
 #define kSupportsMultiResolution 0
@@ -46,6 +47,11 @@
 #define kParamAntialiasingHint "Set render antialiasing"
 #define kParamAntialiasingDefault 0
 
+#define kParamAlpha "alpha"
+#define kParamAlphaLabel "Alpha"
+#define kParamAlphaHint "Use alpha channel for transparency mask"
+#define kParamAlphaDefault true
+
 #define kParamWidth "width"
 #define kParamWidthLabel "Width"
 #define kParamWidthHint "Set canvas width, default (0) is project format"
@@ -56,9 +62,26 @@
 #define kParamHeightHint "Set canvas height, default (0) is project format"
 #define kParamHeightDefault 0
 
+#define kParamPovPath "povPath"
+#define kParamPovPathLabel "POV-Ray Path"
+#define kParamPovPathHint "Path to POV-Ray executable"
+#define kParamPovPathDefault "povray"
+
+#define kParamPovInc "povInc"
+#define kParamPovIncLabel "POV-Ray Includes"
+#define kParamPovIncHint "Path to POV-Ray includes"
+
 // TODO! add more options
 
 using namespace OFX;
+
+static bool fileExists(const std::string& filename)
+{
+    std::ifstream f(filename.c_str());
+    bool ret = f.good();
+    f.close();
+    return ret;
+}
 
 class PovRayPlugin : public OFX::ImageEffect
 {
@@ -83,6 +106,9 @@ private:
     OFX::IntParam *height_;
     OFX::IntParam *quality_;
     OFX::IntParam *antialiasing_;
+    OFX::BooleanParam *alpha_;
+    OFX::StringParam *povpath_;
+    OFX::StringParam *povinc_;
 };
 
 PovRayPlugin::PovRayPlugin(OfxImageEffectHandle handle)
@@ -101,8 +127,11 @@ PovRayPlugin::PovRayPlugin(OfxImageEffectHandle handle)
     height_ = fetchIntParam(kParamHeight);
     quality_ = fetchIntParam(kParamQuality);
     antialiasing_ = fetchIntParam(kParamAntialiasing);
+    alpha_ = fetchBooleanParam(kParamAlpha);
+    povpath_ = fetchStringParam(kParamPovPath);
+    povinc_ = fetchStringParam(kParamPovInc);
 
-    assert(scene_ && width_ && height_ && quality_ && antialiasing_);
+    assert(scene_ && width_ && height_ && quality_ && antialiasing_ && alpha_ && povpath_ && povinc_);
 }
 
 PovRayPlugin::~PovRayPlugin()
@@ -165,13 +194,17 @@ void PovRayPlugin::render(const OFX::RenderArguments &args)
     }
 
     // Get params
-    std::string scene;
+    std::string scene, povpath, povinc;
     int quality, antialiasing;
     int width = dstRod.x2-dstRod.x1;
     int height = dstRod.y2-dstRod.y1;
+    bool alpha = false;
     scene_->getValueAtTime(args.time, scene);
     quality_->getValueAtTime(args.time, quality);
     antialiasing_->getValueAtTime(args.time, antialiasing);
+    alpha_->getValueAtTime(args.time, alpha);
+    povpath_->getValueAtTime(args.time, povpath);
+    povinc_->getValueAtTime(args.time, povinc);
 
     // Temp scene
     const char *folder = getenv("TMPDIR");
@@ -181,6 +214,7 @@ void PovRayPlugin::render(const OFX::RenderArguments &args)
     temp_path += "/povray_XXXXXX";
     char *scenetemp = &temp_path[0u];
     int scene_fd = mkstemp(scenetemp);
+    std::ostringstream sceneimg;
     if (scene_fd<0) {
         setPersistentMessage(OFX::Message::eMessageError, "", "Failed to create temp file, please check permissions");
         OFX::throwSuiteStatusException(kOfxStatFailed);
@@ -195,20 +229,39 @@ void PovRayPlugin::render(const OFX::RenderArguments &args)
     }
 
     // Render
-    int povray;
-    std::string povray_exe;
-    povray_exe = "povray";
-    std::ostringstream povray_command;
-    std::ostringstream povimg;
-    povimg << scenetemp << ".png";
-    povray_command << povray_exe << " +i" << scenetemp << " +UA -D0 +H" << height << " +W" << width << " +Q" << quality;
-    if (antialiasing>0)
-        povray_command << " +A0." << antialiasing;
-    if (system(NULL))
-        povray=system(povray_command.str().c_str());
-    (void)unlink(scenetemp);
-    if (povray!=0) {
-        setPersistentMessage(OFX::Message::eMessageError, "", "POV-Ray failed, please check terminal for more info");
+    if (fileExists(scenetemp)) {
+        int povray = 1;
+        std::ostringstream povray_command;
+        if (povpath.empty())
+            povpath = "povray";
+        sceneimg << scenetemp << ".png";
+        povray_command << povpath << " +I\"" << scenetemp << "\" -D0 +H" << height << " +W" << width << " +Q" << quality;
+        if (antialiasing>0)
+            povray_command << " +A0." << antialiasing;
+        if (alpha)
+            povray_command << " +UA";
+        if (!povinc.empty())
+            povray_command << " +L\""+povinc+"\"";
+        const char *deployFolder = getenv("POV_OFX_INCLUDE"); // optional include path for deployment
+        if (deployFolder!=0) {
+            std::string deployInc = deployFolder;
+            povray_command << " +L\""+deployInc+"\"";
+        }
+        if (system(NULL)) {
+            #ifdef DEBUG
+            std::cout << "Running POV-Ray using: " << povray_command.str() << std::endl;
+            #endif
+            povray=system(povray_command.str().c_str());
+        }
+        (void)unlink(scenetemp);
+        if (povray!=0) {
+            setPersistentMessage(OFX::Message::eMessageError, "", "POV-Ray failed, please check terminal for more info");
+            OFX::throwSuiteStatusException(kOfxStatFailed);
+            return;
+        }
+    }
+    else {
+        setPersistentMessage(OFX::Message::eMessageError, "", "Temp scene not found");
         OFX::throwSuiteStatusException(kOfxStatFailed);
         return;
     }
@@ -217,16 +270,53 @@ void PovRayPlugin::render(const OFX::RenderArguments &args)
     Magick::Image image(Magick::Geometry(width,height),Magick::Color("rgba(0,0,0,0)"));
 
     // Read render result
-    if (povray==0) {
-        image.read(povimg.str().c_str());
-        std::remove(povimg.str().c_str());
+    if (fileExists(sceneimg.str())) {
+        #ifdef DEBUG
+        image.debug(true);
+        #endif
+        try {
+            image.read(sceneimg.str().c_str());
+        }
+        catch(Magick::Error &error) {
+            setPersistentMessage(OFX::Message::eMessageError, "", error.what());
+            std::remove(sceneimg.str().c_str());
+            OFX::throwSuiteStatusException(kOfxStatFailed);
+            return;
+        }
+        #ifdef DEBUG
+        image.debug(false);
+        #endif
+        std::remove(sceneimg.str().c_str());
         image.flip();
         image.colorSpace(Magick::RGBColorspace);
     }
+    else {
+        setPersistentMessage(OFX::Message::eMessageError, "", "Temp image not found");
+        OFX::throwSuiteStatusException(kOfxStatFailed);
+        return;
+    }
 
     // return image
-    if (dstClip_ && dstClip_->isConnected())
-        image.write(0,0,width,height,"RGBA",Magick::FloatPixel,(float*)dstImg->getPixelData());
+    if (dstClip_ && dstClip_->isConnected()) {
+        int widthstep = width*4;
+        int imageSize = width*height*4;
+        float* imageBlock;
+        imageBlock = new float[imageSize];
+        image.write(0,0,width,height,"RGBA",Magick::FloatPixel,imageBlock);
+        for(int y = args.renderWindow.y1; y < (args.renderWindow.y1 + height); y++) {
+            OfxRGBAColourF *dstPix = (OfxRGBAColourF *)dstImg->getPixelAddress(args.renderWindow.x1, y);
+            float *srcPix = (float*)(imageBlock + y * widthstep + args.renderWindow.x1);
+            for(int x = args.renderWindow.x1; x < (args.renderWindow.x1 + width); x++) {
+                dstPix->r = srcPix[0]*srcPix[3];
+                dstPix->g = srcPix[1]*srcPix[3];
+                dstPix->b = srcPix[2]*srcPix[3];
+                dstPix->a = srcPix[3];
+                dstPix++;
+                srcPix+=4;
+            }
+        }
+        free(imageBlock);
+    }
 }
 
 void PovRayPlugin::changedParam(const OFX::InstanceChangedArgs &args, const std::string &/*paramName*/)
@@ -270,7 +360,7 @@ void PovRayPluginFactory::describe(OFX::ImageEffectDescriptor &desc)
     // basic labels
     desc.setLabel(kPluginName);
     desc.setPluginGrouping(kPluginGrouping);
-    desc.setPluginDescription("Persistence of Vision raytracer generic node.\n\nPOV-Ray is not included and must be installed (in PATH) prior to using this node.\n\nPowered by POV-Ray and ImageMagick.\n\nPOV-Ray is Copyright 2003-2015 Persistence of Vision Raytracer Pty. Ltd.\n\nThe terms \"POV-Ray\" and \"Persistence of Vision Raytracer\" are trademarks of Persistence of Vision Raytracer Pty. Ltd.\n\nPOV-Ray is distributed under the AGPL3 license.\n\nImageMagick (R) is Copyright 1999-2015 ImageMagick Studio LLC, a non-profit organization dedicated to making software imaging solutions freely available.\n\nImageMagick is distributed under the Apache 2.0 license.");
+    desc.setPluginDescription("Persistence of Vision raytracer generic node.\n\nPOV-Ray is not included and must be installed (in PATH) prior to using this node.\n\nhttps://github.com/olear/openfx-arena/wiki/PovRay for more information regarding usage and installation.\n\nPowered by POV-Ray and ImageMagick.\n\nPOV-Ray is Copyright 2003-2015 Persistence of Vision Raytracer Pty. Ltd.\n\nThe terms \"POV-Ray\" and \"Persistence of Vision Raytracer\" are trademarks of Persistence of Vision Raytracer Pty. Ltd.\n\nPOV-Ray is distributed under the AGPL3 license.\n\nImageMagick (R) is Copyright 1999-2015 ImageMagick Studio LLC, a non-profit organization dedicated to making software imaging solutions freely available.\n\nImageMagick is distributed under the Apache 2.0 license.");
 
     // add the supported contexts
     desc.addSupportedContext(eContextGeneral);
@@ -291,7 +381,7 @@ void PovRayPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, Co
 {   
     // there has to be an input clip, even for generators
     ClipDescriptor* srcClip = desc.defineClip(kOfxImageEffectSimpleSourceClipName);
-    srcClip->addSupportedComponent(ePixelComponentRGB);
+    srcClip->addSupportedComponent(ePixelComponentRGBA);
     srcClip->setSupportsTiles(kSupportsTiles);
     srcClip->setOptional(true);
 
@@ -303,9 +393,12 @@ void PovRayPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, Co
     // make some pages
     PageParamDescriptor *page = desc.definePageParam(kPluginName);
     GroupParamDescriptor *groupCanvas = desc.defineGroupParam("Canvas");
+    GroupParamDescriptor *groupAdvanced = desc.defineGroupParam("Advanced");
     groupCanvas->setOpen(false);
+    groupAdvanced->setOpen(false);
     {
         page->addChild(*groupCanvas);
+        page->addChild(*groupAdvanced);
     }
     {
         StringParamDescriptor* param = desc.defineStringParam(kParamScene);
@@ -351,6 +444,30 @@ void PovRayPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, Co
         param->setDisplayRange(0, 9);
         param->setDefault(kParamAntialiasingDefault);
         page->addChild(*param);
+    }
+    {
+        BooleanParamDescriptor* param = desc.defineBooleanParam(kParamAlpha);
+        param->setLabel(kParamAlphaLabel);
+        param->setHint(kParamAlphaHint);
+        param->setDefault(kParamAlphaDefault);
+        page->addChild(*param);
+    }
+    {
+        StringParamDescriptor* param = desc.defineStringParam(kParamPovPath);
+        param->setLabel(kParamPovPathLabel);
+        param->setHint(kParamPovPathHint);
+        param->setStringType(eStringTypeSingleLine);
+        param->setAnimates(true);
+        param->setDefault(kParamPovPathDefault);
+        param->setParent(*groupAdvanced);
+    }
+    {
+        StringParamDescriptor* param = desc.defineStringParam(kParamPovInc);
+        param->setLabel(kParamPovIncLabel);
+        param->setHint(kParamPovIncHint);
+        param->setStringType(eStringTypeSingleLine);
+        param->setAnimates(true);
+        param->setParent(*groupAdvanced);
     }
 }
 
