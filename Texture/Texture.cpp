@@ -336,6 +336,11 @@ void TexturePluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, C
 
     // make some pages
     PageParamDescriptor *page = desc.definePageParam(kPluginName);
+    GroupParamDescriptor *groupCanvas = desc.defineGroupParam("Canvas");
+    groupCanvas->setOpen(false);
+    {
+        page->addChild(*groupCanvas);
+    }
     {
         ChoiceParamDescriptor *param = desc.defineChoiceParam(kParamEffect);
         param->setLabel(kParamEffectLabel);
@@ -389,7 +394,7 @@ void TexturePluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, C
         param->setRange(0, 10000);
         param->setDisplayRange(0, 4000);
         param->setDefault(kParamWidthDefault);
-        page->addChild(*param);
+        param->setParent(*groupCanvas);
     }
     {
         IntParamDescriptor* param = desc.defineIntParam(kParamHeight);
@@ -398,7 +403,7 @@ void TexturePluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, C
         param->setRange(0, 10000);
         param->setDisplayRange(0, 4000);
         param->setDefault(kParamHeightDefault);
-        page->addChild(*param);
+        param->setParent(*groupCanvas);
     }
     {
         StringParamDescriptor* param = desc.defineStringParam(kParamFromColor);
