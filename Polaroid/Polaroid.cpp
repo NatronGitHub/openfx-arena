@@ -22,7 +22,7 @@
 #define kPluginGrouping "Extra/Misc"
 #define kPluginIdentifier "net.fxarena.openfx.Polaroid"
 #define kPluginVersionMajor 1
-#define kPluginVersionMinor 2
+#define kPluginVersionMinor 3
 
 #define kParamText "caption"
 #define kParamTextLabel "Caption"
@@ -44,6 +44,10 @@
 #define kParamFontNameDefault "Arial"
 #define kParamFontNameAltDefault "DejaVu-Sans" // failsafe on Linux/BSD
 
+#define kParamFont "selectedFont"
+#define kParamFontLabel "Font"
+#define kParamFontHint "Selected font"
+
 #define kSupportsTiles 0
 #define kSupportsMultiResolution 1
 #define kSupportsRenderScale 1
@@ -59,6 +63,7 @@ public:
     PolaroidPlugin(OfxImageEffectHandle handle);
     virtual ~PolaroidPlugin();
     virtual void render(const OFX::RenderArguments &args) OVERRIDE FINAL;
+    virtual void changedParam(const OFX::InstanceChangedArgs &args, const std::string &paramName) OVERRIDE FINAL;
     virtual bool getRegionOfDefinition(const OFX::RegionOfDefinitionArguments &args, OfxRectD &rod) OVERRIDE FINAL;
 private:
     OFX::Clip *dstClip_;
@@ -67,6 +72,7 @@ private:
     OFX::DoubleParam *angle_;
     OFX::IntParam *fontSize_;
     OFX::ChoiceParam *fontName_;
+    OFX::StringParam *font_;
     bool has_fontconfig;
     bool has_freetype;
 };
@@ -95,8 +101,35 @@ PolaroidPlugin::PolaroidPlugin(OfxImageEffectHandle handle)
     angle_ = fetchDoubleParam(kParamAngle);
     fontSize_ = fetchIntParam(kParamFontSize);
     fontName_ = fetchChoiceParam(kParamFontName);
+    font_ = fetchStringParam(kParamFont);
 
-    assert(text_ && angle_ && fontSize_ && fontName_);
+    assert(text_ && angle_ && fontSize_ && fontName_ && font_);
+
+    // Setup selected font
+    std::string fontString, fontCombo;
+    font_->getValue(fontString);
+    int fontID;
+    int fontCount = fontName_->getNOptions();
+    fontName_->getValue(fontID);
+    fontName_->getOption(fontID,fontCombo);
+    if (!fontString.empty()) {
+        if (std::strcmp(fontCombo.c_str(),fontString.c_str())!=0) {
+            for(int x = 0; x < fontCount; x++) {
+                std::string fontFound;
+                fontName_->getOption(x,fontFound);
+                if (!fontFound.empty()) {
+                    if (std::strcmp(fontFound.c_str(),fontString.c_str())==0) {
+                        fontName_->setValue(x);
+                        break;
+                    }
+                }
+            }
+        }
+    }
+    else {
+        if (!fontCombo.empty())
+            font_->setValue(fontCombo);
+    }
 }
 
 PolaroidPlugin::~PolaroidPlugin()
@@ -182,15 +215,21 @@ void PolaroidPlugin::render(const OFX::RenderArguments &args)
     }
 
     // get params
-    std::string text,fontName;
+    std::string text, fontName, font;
     double angle;
     int fontSize,fontID;
     text_->getValueAtTime(args.time, text);
     angle_->getValueAtTime(args.time, angle);
     fontSize_->getValueAtTime(args.time, fontSize);
     fontName_->getValueAtTime(args.time, fontID);
+    font_->getValueAtTime(args.time, font);
     fontName_->getOption(fontID,fontName);
 
+    // always prefer font
+    if (!font.empty())
+        fontName=font;
+
+    // cascade menu
     if (gHostIsNatron)
         fontName.erase(0,2);
 
@@ -270,6 +309,24 @@ void PolaroidPlugin::render(const OFX::RenderArguments &args)
         }
         free(imageBlock);
     }
+}
+
+void PolaroidPlugin::changedParam(const OFX::InstanceChangedArgs &args, const std::string &paramName)
+{
+    if (!kSupportsRenderScale && (args.renderScale.x != 1. || args.renderScale.y != 1.)) {
+        OFX::throwSuiteStatusException(kOfxStatFailed);
+        return;
+    }
+
+    if (paramName == kParamFontName) {
+        std::string font;
+        int fontID;
+        fontName_->getValueAtTime(args.time, fontID);
+        fontName_->getOption(fontID,font);
+        font_->setValueAtTime(args.time, font);
+    }
+
+    clearPersistentMessage();
 }
 
 bool PolaroidPlugin::getRegionOfDefinition(const OFX::RegionOfDefinitionArguments &args, OfxRectD &rod)
@@ -390,6 +447,21 @@ void PolaroidPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, 
             param->setDefault(altFont);
 
         param->setAnimates(true);
+        page->addChild(*param);
+    }
+    {
+        StringParamDescriptor* param = desc.defineStringParam(kParamFont);
+        param->setLabel(kParamFontLabel);
+        param->setHint(kParamFontHint);
+        param->setStringType(eStringTypeSingleLine);
+        param->setAnimates(true);
+
+        #ifdef DEBUG
+        param->setIsSecret(false);
+        #else
+        param->setIsSecret(true);
+        #endif
+
         page->addChild(*param);
     }
     {
