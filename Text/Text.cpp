@@ -26,7 +26,7 @@
 #define kPluginGrouping "Draw"
 #define kPluginIdentifier "net.fxarena.openfx.Text"
 #define kPluginVersionMajor 5
-#define kPluginVersionMinor 3
+#define kPluginVersionMinor 4
 
 #define kSupportsTiles 0
 #define kSupportsMultiResolution 0
@@ -56,6 +56,10 @@
 #define kParamFontNameHint "The name of the font to be used"
 #define kParamFontNameDefault "Arial"
 #define kParamFontNameAltDefault "DejaVu-Sans" // failsafe on Linux/BSD
+
+#define kParamFont "font"
+#define kParamFontLabel "Font"
+#define kParamFontHint "Selected font"
 
 #define kParamTextColor "textColor"
 #define kParamTextColorLabel "Font color"
@@ -175,6 +179,7 @@ private:
     OFX::IntParam *width_;
     OFX::IntParam *height_;
     OFX::ChoiceParam *gravity_;
+    OFX::StringParam *font_;
     bool has_fontconfig;
     bool has_freetype;
 };
@@ -222,8 +227,35 @@ TextPlugin::TextPlugin(OfxImageEffectHandle handle)
     width_ = fetchIntParam(kParamWidth);
     height_ = fetchIntParam(kParamHeight);
     gravity_ = fetchChoiceParam(kParamGravity);
+    font_ = fetchStringParam(kParamFont);
 
-    assert(position_ && text_ && fontSize_ && fontName_ && textColor_ && strokeColor_ && strokeWidth_ && fontOverride_ && shadowOpacity_ && shadowSigma_ && interlineSpacing_ && interwordSpacing_ && textSpacing_ && shadowColor_ && shadowX_ && shadowY_ && shadowBlur_ && width_ && height_ && gravity_);
+    assert(position_ && text_ && fontSize_ && fontName_ && textColor_ && strokeColor_ && strokeWidth_ && fontOverride_ && shadowOpacity_ && shadowSigma_ && interlineSpacing_ && interwordSpacing_ && textSpacing_ && shadowColor_ && shadowX_ && shadowY_ && shadowBlur_ && width_ && height_ && gravity_ && font_);
+
+    // Setup selected font
+    std::string fontString, fontCombo;
+    font_->getValue(fontString);
+    int fontID;
+    int fontCount = fontName_->getNOptions();
+    fontName_->getValue(fontID);
+    fontName_->getOption(fontID,fontCombo);
+    if (!fontString.empty()) {
+        if (std::strcmp(fontCombo.c_str(),fontString.c_str())!=0) {
+            for(int x = 0; x < fontCount; x++) {
+                std::string fontFound;
+                fontName_->getOption(x,fontFound);
+                if (!fontFound.empty()) {
+                    if (std::strcmp(fontFound.c_str(),fontString.c_str())==0) {
+                        fontName_->setValue(x);
+                        break;
+                    }
+                }
+            }
+        }
+    }
+    else {
+        if (!fontCombo.empty())
+            font_->setValue(fontCombo);
+    }
 }
 
 TextPlugin::~TextPlugin()
@@ -295,7 +327,7 @@ void TextPlugin::render(const OFX::RenderArguments &args)
     // Get params
     double x, y, r, g, b, a, r_s, g_s, b_s, a_s, strokeWidth, shadowOpacity, shadowSigma, interlineSpacing, interwordSpacing, textSpacing, shadowR, shadowG, shadowB, shadowBlur;
     int fontSize, fontID, shadowX, shadowY, gravity,cwidth,cheight;
-    std::string text, fontOverride, fontName;
+    std::string text, fontOverride, fontName, font;
 
     position_->getValueAtTime(args.time, x, y);
     text_->getValueAtTime(args.time, text);
@@ -317,7 +349,12 @@ void TextPlugin::render(const OFX::RenderArguments &args)
     gravity_->getValueAtTime(args.time, gravity);
     width_->getValueAtTime(args.time, cwidth);
     height_->getValueAtTime(args.time, cheight);
+    font_->getValueAtTime(args.time, font);
     fontName_->getOption(fontID,fontName);
+
+    // always prefer font
+    if (!font.empty())
+        fontName=font;
 
     // cascade menu
     if (gHostIsNatron)
@@ -469,12 +506,21 @@ void TextPlugin::render(const OFX::RenderArguments &args)
     }
 }
 
-void TextPlugin::changedParam(const OFX::InstanceChangedArgs &args, const std::string &/*paramName*/)
+void TextPlugin::changedParam(const OFX::InstanceChangedArgs &args, const std::string &paramName)
 {
     if (!kSupportsRenderScale && (args.renderScale.x != 1. || args.renderScale.y != 1.)) {
         OFX::throwSuiteStatusException(kOfxStatFailed);
         return;
     }
+
+    if (paramName == kParamFontName) {
+        std::string font;
+        int fontID;
+        fontName_->getValueAtTime(args.time, fontID);
+        fontName_->getOption(fontID,font);
+        font_->setValue(font);
+    }
+
     clearPersistentMessage();
 }
 
@@ -655,6 +701,21 @@ void TextPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, Cont
         param->setHint(kParamFontOverrideHint);
         param->setStringType(eStringTypeSingleLine);
         param->setAnimates(true);
+        page->addChild(*param);
+    }
+    {
+        StringParamDescriptor* param = desc.defineStringParam(kParamFont);
+        param->setLabel(kParamFontLabel);
+        param->setHint(kParamFontHint);
+        param->setStringType(eStringTypeSingleLine);
+        param->setAnimates(true);
+
+        #ifdef DEBUG
+        param->setIsSecret(false);
+        #else
+        param->setIsSecret(true);
+        #endif
+
         page->addChild(*param);
     }
     {
