@@ -194,7 +194,7 @@ void WavePlugin::render(const OFX::RenderArguments &args)
 
     // return image
     if (dstClip_ && dstClip_->isConnected()) {
-        width = dstBounds.x2-dstBounds.x1;
+        /*width = dstBounds.x2-dstBounds.x1;
         height = dstBounds.y2-dstBounds.y1;
         int widthstep = width*4;
         int imageSize = width*height*4;
@@ -213,7 +213,8 @@ void WavePlugin::render(const OFX::RenderArguments &args)
                 srcPix+=4;
             }
         }
-        free(imageBlock);
+        free(imageBlock);*/
+        image.write(0,0,args.renderWindow.x2 - args.renderWindow.x1,args.renderWindow.y2 - args.renderWindow.y1,"RGBA",Magick::FloatPixel,(float*)dstImg->getPixelData());
     }
 }
 
