@@ -449,6 +449,11 @@ void TextPangoPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc,
 
     // make some pages
     PageParamDescriptor *page = desc.definePageParam(kPluginName);
+    GroupParamDescriptor *groupCanvas = desc.defineGroupParam("Canvas");
+    groupCanvas->setOpen(false);
+    {
+        page->addChild(*groupCanvas);
+    }
     {
         StringParamDescriptor* param = desc.defineStringParam(kParamText);
         param->setLabel(kParamTextLabel);
@@ -465,7 +470,7 @@ void TextPangoPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc,
         param->setRange(0, 10000);
         param->setDisplayRange(0, 4000);
         param->setDefault(kParamWidthDefault);
-        page->addChild(*param);
+        param->setParent(*groupCanvas);
     }
     {
         IntParamDescriptor* param = desc.defineIntParam(kParamHeight);
@@ -474,7 +479,7 @@ void TextPangoPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc,
         param->setRange(0, 10000);
         param->setDisplayRange(0, 4000);
         param->setDefault(kParamHeightDefault);
-        page->addChild(*param);
+        param->setParent(*groupCanvas);
     }
     {
         IntParamDescriptor* param = desc.defineIntParam(kParamIndent);
