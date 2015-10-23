@@ -518,7 +518,7 @@ void TextPlugin::changedParam(const OFX::InstanceChangedArgs &args, const std::s
         int fontID;
         fontName_->getValueAtTime(args.time, fontID);
         fontName_->getOption(fontID,font);
-        font_->setValue(font);
+        font_->setValueAtTime(args.time, font);
     }
 
     clearPersistentMessage();
