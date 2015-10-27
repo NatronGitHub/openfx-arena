@@ -20,7 +20,7 @@
 #define kPluginGrouping "Draw"
 #define kPluginIdentifier "net.fxarena.openfx.TextPango"
 #define kPluginVersionMajor 1
-#define kPluginVersionMinor 4
+#define kPluginVersionMinor 5
 
 #define kSupportsTiles 0
 #define kSupportsMultiResolution 0
@@ -77,6 +77,10 @@
 #define kParamHeightHint "Set canvas height, default (0) is project format"
 #define kParamHeightDefault 0
 
+#define kParamAlign "align"
+#define kParamAlignLabel "Align"
+#define kParamAlignHint "Text align"
+
 using namespace OFX;
 
 class TextPangoPlugin : public OFX::ImageEffect
@@ -111,6 +115,7 @@ private:
     bool has_pango;
     bool has_fontconfig;
     bool has_freetype;
+    OFX::ChoiceParam *align_;
 };
 
 TextPangoPlugin::TextPangoPlugin(OfxImageEffectHandle handle)
@@ -148,8 +153,9 @@ TextPangoPlugin::TextPangoPlugin(OfxImageEffectHandle handle)
     wrap_ = fetchChoiceParam(kParamWrap);
     //ellipsize_ = fetchChoiceParam(kParamEllipsize);
     single_ = fetchBooleanParam(kParamSingle);
+    align_ = fetchChoiceParam(kParamAlign);
 
-    assert(text_ && width_ && height_ /*&& gravity_*/ && hinting_ && indent_ && justify_ && wrap_ /*&& ellipsize_*/ && single_);
+    assert(text_ && width_ && height_ /*&& gravity_*/ && hinting_ && indent_ && justify_ && wrap_ /*&& ellipsize_*/ && single_ && align_);
 }
 
 TextPangoPlugin::~TextPangoPlugin()
@@ -220,7 +226,7 @@ void TextPangoPlugin::render(const OFX::RenderArguments &args)
 
     // Get params
     std::string text;
-    int /*gravity,*/ hinting, indent, wrap/*, ellipsize*/, cwidth, cheight;
+    int /*gravity,*/ hinting, indent, wrap/*, ellipsize*/, cwidth, cheight, align;
     bool justify = false;
     bool single = false;
     text_->getValueAtTime(args.time, text);
@@ -232,6 +238,7 @@ void TextPangoPlugin::render(const OFX::RenderArguments &args)
     //ellipsize_->getValueAtTime(args.time, ellipsize);
     width_->getValueAtTime(args.time, cwidth);
     height_->getValueAtTime(args.time, cheight);
+    align_->getValueAtTime(args.time, align);
 
     // Set max threads allowed by host
     unsigned int threads = 0;
@@ -287,6 +294,17 @@ void TextPangoPlugin::render(const OFX::RenderArguments &args)
         image.defineValue("pango","gravity-hint","line");
         break;
     }*/
+    switch(align) {
+    case 0: // left
+        image.defineValue("pango","align","left");
+        break;
+    case 1: // right
+        image.defineValue("pango","align","right");
+        break;
+    case 2: // center
+        image.defineValue("pango","align","center");
+        break;
+    }
     switch(hinting) {
     case 0:
         image.defineValue("pango","hinting","none");
@@ -545,6 +563,16 @@ void TextPangoPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc,
         param->setLabel(kParamSingleLabel);
         param->setHint(kParamSingleHint);
         param->setDefault(kParamSingleDefault);
+        param->setAnimates(true);
+        page->addChild(*param);
+    }
+    {
+        ChoiceParamDescriptor *param = desc.defineChoiceParam(kParamAlign);
+        param->setLabel(kParamAlignLabel);
+        param->setHint(kParamAlignHint);
+        param->appendOption("Left");
+        param->appendOption("Right");
+        param->appendOption("Center");
         param->setAnimates(true);
         page->addChild(*param);
     }
