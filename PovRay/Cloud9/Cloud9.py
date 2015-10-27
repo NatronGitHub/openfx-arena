@@ -287,7 +287,7 @@ def createInstance(app,group):
     del param
 
     try:
-        extModule = sys.modules["CloudNineExt"]
+        extModule = sys.modules["Cloud9Ext"]
     except KeyError:
         extModule = None
     if extModule is not None and hasattr(extModule ,"createInstanceExt") and hasattr(extModule.createInstanceExt,"__call__"):
