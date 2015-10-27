@@ -24,12 +24,12 @@
 #define kPluginGrouping "Extra/3D"
 #define kPluginIdentifier "net.fxarena.openfx.PovRay"
 #define kPluginVersionMajor 1
-#define kPluginVersionMinor 0
+#define kPluginVersionMinor 1
 
 #define kSupportsTiles 0
 #define kSupportsMultiResolution 0
 #define kSupportsRenderScale 1
-#define kRenderThreadSafety eRenderFullySafe
+#define kRenderThreadSafety eRenderUnsafe // seems to work best(?)
 #define kHostFrameThreading false
 
 #define kParamScene "scene"
@@ -63,15 +63,27 @@
 #define kParamHeightDefault 0
 
 #define kParamPovPath "povPath"
-#define kParamPovPathLabel "POV-Ray Path"
+#define kParamPovPathLabel "Executable"
 #define kParamPovPathHint "Path to POV-Ray executable"
-#define kParamPovPathDefault "povray"
+#define kParamPovPathDefault ""
 
 #define kParamPovInc "povInc"
-#define kParamPovIncLabel "POV-Ray Includes"
+#define kParamPovIncLabel "Includes"
 #define kParamPovIncHint "Path to POV-Ray includes"
 
-// TODO! add more options
+#define kParamPovCmd "povCmd"
+#define kParamPovCmdLabel "Commandline"
+#define kParamPovCmdHint "Add additional POV-Ray commands here, be careful!"
+
+#define kParamSF "startFrame"
+#define kParamSFLabel "Start Frame"
+#define kParamSFHint "Set start frame"
+#define kParamSFDefault 0
+
+#define kParamEF "endFrame"
+#define kParamEFLabel "End Frame"
+#define kParamEFHint "Set end frame"
+#define kParamEFDefault 0
 
 using namespace OFX;
 
@@ -109,6 +121,9 @@ private:
     OFX::BooleanParam *alpha_;
     OFX::StringParam *povpath_;
     OFX::StringParam *povinc_;
+    OFX::StringParam *povcmd_;
+    OFX::IntParam *startFrame_;
+    OFX::IntParam *endFrame_;
 };
 
 PovRayPlugin::PovRayPlugin(OfxImageEffectHandle handle)
@@ -130,8 +145,11 @@ PovRayPlugin::PovRayPlugin(OfxImageEffectHandle handle)
     alpha_ = fetchBooleanParam(kParamAlpha);
     povpath_ = fetchStringParam(kParamPovPath);
     povinc_ = fetchStringParam(kParamPovInc);
+    povcmd_ = fetchStringParam(kParamPovCmd);
+    startFrame_ = fetchIntParam(kParamSF);
+    endFrame_ = fetchIntParam(kParamEF);
 
-    assert(scene_ && width_ && height_ && quality_ && antialiasing_ && alpha_ && povpath_ && povinc_);
+    assert(scene_ && width_ && height_ && quality_ && antialiasing_ && alpha_ && povpath_ && povinc_ && povcmd_ && startFrame_ && endFrame_);
 }
 
 PovRayPlugin::~PovRayPlugin()
@@ -194,8 +212,8 @@ void PovRayPlugin::render(const OFX::RenderArguments &args)
     }
 
     // Get params
-    std::string scene, povpath, povinc;
-    int quality, antialiasing;
+    std::string scene, povpath, povinc, povcmd;
+    int quality, antialiasing, startFrame, endFrame;
     int width = dstRod.x2-dstRod.x1;
     int height = dstRod.y2-dstRod.y1;
     bool alpha = false;
@@ -205,6 +223,9 @@ void PovRayPlugin::render(const OFX::RenderArguments &args)
     alpha_->getValueAtTime(args.time, alpha);
     povpath_->getValueAtTime(args.time, povpath);
     povinc_->getValueAtTime(args.time, povinc);
+    povcmd_->getValueAtTime(args.time, povcmd);
+    startFrame_->getValueAtTime(args.time, startFrame);
+    endFrame_->getValueAtTime(args.time, endFrame);
 
     // Temp scene
     const char *folder = getenv("TMPDIR");
@@ -234,18 +255,37 @@ void PovRayPlugin::render(const OFX::RenderArguments &args)
         std::ostringstream povray_command;
         if (povpath.empty())
             povpath = "povray";
-        sceneimg << scenetemp << ".png";
-        povray_command << povpath << " +I\"" << scenetemp << "\" -D0 +H" << height << " +W" << width << " +Q" << quality;
+        sceneimg << scenetemp << ".png"; // .hdr // +fh // hdr dont support alpha
+        povray_command << povpath << " +I\"" << scenetemp << "\""  << " +O\"" << sceneimg.str() << "\"" << " -D0 +H" << height << " +W" << width << " +Q" << quality;
         if (antialiasing>0)
             povray_command << " +A0." << antialiasing;
         if (alpha)
             povray_command << " +UA";
         if (!povinc.empty())
             povray_command << " +L\""+povinc+"\"";
+        if (!povcmd.empty())
+            povray_command << " " << povcmd;
         const char *deployFolder = getenv("POV_OFX_INCLUDE"); // optional include path for deployment
         if (deployFolder!=0) {
             std::string deployInc = deployFolder;
             povray_command << " +L\""+deployInc+"\"";
+        }
+        if (startFrame>0&&endFrame>0&&args.time<=endFrame) {
+            povray_command << " +KC +KFI" << startFrame << " +KFF" << endFrame << " +SF" << args.time << " +EF" << args.time;
+            std::ostringstream lastFrame, currentFrame, prefix;
+            lastFrame << endFrame;
+            currentFrame << args.time;
+            int append = 0;
+            if (currentFrame.str().length()<lastFrame.str().length())
+                append = lastFrame.str().length()-currentFrame.str().length();
+            if (append>0) {
+                for(int x=0; x < append ;x++)
+                    prefix << 0;
+            }
+            prefix << args.time;
+            sceneimg.str("");
+            sceneimg.clear();
+            sceneimg << scenetemp << prefix.str() << ".png"; // .hdr // +fh // hdr dont support alpha
         }
         if (system(NULL)) {
             #ifdef DEBUG
@@ -288,7 +328,7 @@ void PovRayPlugin::render(const OFX::RenderArguments &args)
         #endif
         std::remove(sceneimg.str().c_str());
         image.flip();
-        image.colorSpace(Magick::RGBColorspace);
+        image.colorSpace(Magick::RGBColorspace); // if png file
     }
     else {
         setPersistentMessage(OFX::Message::eMessageError, "", "Temp image not found");
@@ -373,7 +413,7 @@ void PovRayPluginFactory::describe(OFX::ImageEffectDescriptor &desc)
     desc.setSupportsTiles(kSupportsTiles);
     desc.setSupportsMultiResolution(kSupportsMultiResolution);
     desc.setRenderThreadSafety(kRenderThreadSafety);
-    desc.setHostFrameThreading(kHostFrameThreading);
+    //desc.setHostFrameThreading(kHostFrameThreading);
 }
 
 /** @brief The describe in context function, passed a plugin descriptor and a context */
@@ -456,8 +496,7 @@ void PovRayPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, Co
         StringParamDescriptor* param = desc.defineStringParam(kParamPovPath);
         param->setLabel(kParamPovPathLabel);
         param->setHint(kParamPovPathHint);
-        param->setStringType(eStringTypeSingleLine);
-        param->setAnimates(true);
+        param->setStringType(OFX::eStringTypeFilePath);
         param->setDefault(kParamPovPathDefault);
         param->setParent(*groupAdvanced);
     }
@@ -465,8 +504,35 @@ void PovRayPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, Co
         StringParamDescriptor* param = desc.defineStringParam(kParamPovInc);
         param->setLabel(kParamPovIncLabel);
         param->setHint(kParamPovIncHint);
+        param->setStringType(OFX::eStringTypeDirectoryPath);
+        param->setParent(*groupAdvanced);
+    }
+    {
+        StringParamDescriptor* param = desc.defineStringParam(kParamPovCmd);
+        param->setLabel(kParamPovCmdLabel);
+        param->setHint(kParamPovCmdHint);
         param->setStringType(eStringTypeSingleLine);
         param->setAnimates(true);
+        param->setParent(*groupAdvanced);
+    }
+    {
+        IntParamDescriptor* param = desc.defineIntParam(kParamSF);
+        param->setLabel(kParamSFLabel);
+        param->setHint(kParamSFHint);
+        param->setRange(0, 100000);
+        param->setDisplayRange(0, 1000);
+        param->setDefault(kParamSFDefault);
+        page->addChild(*param);
+        param->setParent(*groupAdvanced);
+    }
+    {
+        IntParamDescriptor* param = desc.defineIntParam(kParamEF);
+        param->setLabel(kParamEFLabel);
+        param->setHint(kParamEFHint);
+        param->setRange(0, 100000);
+        param->setDisplayRange(0, 1000);
+        param->setDefault(kParamEFDefault);
+        page->addChild(*param);
         param->setParent(*groupAdvanced);
     }
 }
