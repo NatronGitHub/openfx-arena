@@ -15,12 +15,16 @@
 #include <sstream>
 #include <iostream>
 #include <stdint.h>
+#include <fontconfig/fontconfig.h>
+#include "ofxNatron.h"
+#include <cmath>
+#include <cstring>
 
 #define kPluginName "TextPangoOFX"
 #define kPluginGrouping "Draw"
 #define kPluginIdentifier "net.fxarena.openfx.TextPango"
-#define kPluginVersionMajor 1
-#define kPluginVersionMinor 5
+#define kPluginVersionMajor 2
+#define kPluginVersionMinor 0
 
 #define kSupportsTiles 0
 #define kSupportsMultiResolution 0
@@ -81,7 +85,27 @@
 #define kParamAlignLabel "Align"
 #define kParamAlignHint "Text align"
 
+#define kParamFontSize "size"
+#define kParamFontSizeLabel "Font size"
+#define kParamFontSizeHint "The height of the characters to render in pixels"
+#define kParamFontSizeDefault 64
+
+#define kParamFontName "font"
+#define kParamFontNameLabel "Font family"
+#define kParamFontNameHint "The name of the font to be used"
+#define kParamFontNameDefault "Arial"
+#define kParamFontNameAltDefault "DejaVu Sans" // failsafe on Linux/BSD
+
+#define kParamFont "selectedFont"
+#define kParamFontLabel "Font"
+#define kParamFontHint "Selected font"
+
 using namespace OFX;
+static bool gHostIsNatron = false;
+
+bool stringCompare(const std::string & l, const std::string & r) {
+    return (l==r);
+}
 
 class TextPangoPlugin : public OFX::ImageEffect
 {
@@ -116,6 +140,9 @@ private:
     bool has_fontconfig;
     bool has_freetype;
     OFX::ChoiceParam *align_;
+    OFX::IntParam *fontSize_;
+    OFX::ChoiceParam *fontName_;
+    OFX::StringParam *font_;
 };
 
 TextPangoPlugin::TextPangoPlugin(OfxImageEffectHandle handle)
@@ -154,8 +181,37 @@ TextPangoPlugin::TextPangoPlugin(OfxImageEffectHandle handle)
     //ellipsize_ = fetchChoiceParam(kParamEllipsize);
     single_ = fetchBooleanParam(kParamSingle);
     align_ = fetchChoiceParam(kParamAlign);
+    fontSize_ = fetchIntParam(kParamFontSize);
+    fontName_ = fetchChoiceParam(kParamFontName);
+    font_ = fetchStringParam(kParamFont);
 
-    assert(text_ && width_ && height_ /*&& gravity_*/ && hinting_ && indent_ && justify_ && wrap_ /*&& ellipsize_*/ && single_ && align_);
+    assert(text_ && width_ && height_ /*&& gravity_*/ && hinting_ && indent_ && justify_ && wrap_ /*&& ellipsize_*/ && single_ && align_ && fontSize_ && fontName_ && font_);
+
+    // Setup selected font
+    std::string fontString, fontCombo;
+    font_->getValue(fontString);
+    int fontID;
+    int fontCount = fontName_->getNOptions();
+    fontName_->getValue(fontID);
+    fontName_->getOption(fontID,fontCombo);
+    if (!fontString.empty()) {
+        if (std::strcmp(fontCombo.c_str(),fontString.c_str())!=0) {
+            for(int x = 0; x < fontCount; x++) {
+                std::string fontFound;
+                fontName_->getOption(x,fontFound);
+                if (!fontFound.empty()) {
+                    if (std::strcmp(fontFound.c_str(),fontString.c_str())==0) {
+                        fontName_->setValue(x);
+                        break;
+                    }
+                }
+            }
+        }
+    }
+    else {
+        if (!fontCombo.empty())
+            font_->setValue(fontCombo);
+    }
 }
 
 TextPangoPlugin::~TextPangoPlugin()
@@ -225,8 +281,8 @@ void TextPangoPlugin::render(const OFX::RenderArguments &args)
     }
 
     // Get params
-    std::string text;
-    int /*gravity,*/ hinting, indent, wrap/*, ellipsize*/, cwidth, cheight, align;
+    std::string text, fontName, font;
+    int /*gravity,*/ hinting, indent, wrap/*, ellipsize*/, cwidth, cheight, align, fontSize, fontID;
     bool justify = false;
     bool single = false;
     text_->getValueAtTime(args.time, text);
@@ -239,6 +295,24 @@ void TextPangoPlugin::render(const OFX::RenderArguments &args)
     width_->getValueAtTime(args.time, cwidth);
     height_->getValueAtTime(args.time, cheight);
     align_->getValueAtTime(args.time, align);
+    fontSize_->getValueAtTime(args.time, fontSize);
+    fontName_->getValueAtTime(args.time, fontID);
+    font_->getValueAtTime(args.time, font);
+    fontName_->getOption(fontID,fontName);
+
+    // always prefer font
+    if (!font.empty())
+        fontName=font;
+
+    // cascade menu
+    if (gHostIsNatron)
+        fontName.erase(0,2);
+
+    // no fonts?
+    if (fontName.empty()) {
+        setPersistentMessage(OFX::Message::eMessageError, "", "No fonts found, please check installation");
+        OFX::throwSuiteStatusException(kOfxStatFailed);
+    }
 
     // Set max threads allowed by host
     unsigned int threads = 0;
@@ -259,18 +333,11 @@ void TextPangoPlugin::render(const OFX::RenderArguments &args)
     image.debug(true);
     #endif
 
-    // check for fonts
-    std::string fontFile;
-    char **fonts;
-    std::size_t fontList;
-    fonts=MagickCore::MagickQueryFonts("*",&fontList);
-    fontFile = fonts[0];
-    for (size_t i = 0; i < fontList; i++)
-        free(fonts[i]);
-    if (fontFile.empty()) {
-        setPersistentMessage(OFX::Message::eMessageError, "", "No fonts found, please check installation");
-        OFX::throwSuiteStatusException(kOfxStatFailed);
-    }
+    // set default font and size
+    if (!font.empty())
+        image.font(fontName);
+    if (fontSize>0)
+        image.fontPointsize(std::floor(fontSize * args.renderScale.x + 0.5));
 
     try {
         image.backgroundColor("none"); // must be set to avoid bg
@@ -294,7 +361,7 @@ void TextPangoPlugin::render(const OFX::RenderArguments &args)
         image.defineValue("pango","gravity-hint","line");
         break;
     }*/
-    switch(align) {
+    switch(align) { // requires im patch
     case 0: // left
         image.defineValue("pango","align","left");
         break;
@@ -392,12 +459,21 @@ void TextPangoPlugin::render(const OFX::RenderArguments &args)
     }
 }
 
-void TextPangoPlugin::changedParam(const OFX::InstanceChangedArgs &args, const std::string &/*paramName*/)
+void TextPangoPlugin::changedParam(const OFX::InstanceChangedArgs &args, const std::string &paramName)
 {
     if (!kSupportsRenderScale && (args.renderScale.x != 1. || args.renderScale.y != 1.)) {
         OFX::throwSuiteStatusException(kOfxStatFailed);
         return;
     }
+
+    if (paramName == kParamFontName) {
+        std::string font;
+        int fontID;
+        fontName_->getValueAtTime(args.time, fontID);
+        fontName_->getOption(fontID,font);
+        font_->setValueAtTime(args.time, font);
+    }
+
     clearPersistentMessage();
 }
 
@@ -454,6 +530,8 @@ void TextPangoPluginFactory::describe(OFX::ImageEffectDescriptor &desc)
 /** @brief The describe in context function, passed a plugin descriptor and a context */
 void TextPangoPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, ContextEnum /*context*/)
 {   
+    gHostIsNatron = (OFX::getImageEffectHostDescription()->isNatron);
+
     // there has to be an input clip, even for generators
     ClipDescriptor* srcClip = desc.defineClip(kOfxImageEffectSimpleSourceClipName);
     srcClip->addSupportedComponent(ePixelComponentRGB);
@@ -478,7 +556,7 @@ void TextPangoPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc,
         param->setHint(kParamTextHint);
         param->setStringType(eStringTypeMultiLine);
         param->setAnimates(true);
-        param->setDefault("<span color=\"white\" font=\"Sans 100\">Enter <span color=\"red\">text</span></span>");
+        param->setDefault("<span color=\"white\">Enter <span color=\"red\">text</span></span>");
         page->addChild(*param);
     }
     {
@@ -499,15 +577,6 @@ void TextPangoPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc,
         param->setDefault(kParamHeightDefault);
         param->setParent(*groupCanvas);
     }
-    {
-        IntParamDescriptor* param = desc.defineIntParam(kParamIndent);
-        param->setLabel(kParamIndentLabel);
-        param->setHint(kParamIndentHint);
-        param->setRange(0, 10000);
-        param->setDisplayRange(0, 100);
-        param->setDefault(kParamIndentDefault);
-        page->addChild(*param);
-    }
     /*{
         ChoiceParamDescriptor *param = desc.defineChoiceParam(kParamGravity);
         param->setLabel(kParamGravityLabel);
@@ -519,6 +588,106 @@ void TextPangoPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc,
         param->setAnimates(true);
         page->addChild(*param);
     }*/
+    /*{
+        ChoiceParamDescriptor *param = desc.defineChoiceParam(kParamEllipsize);
+        param->setLabel(kParamEllipsizeLabel);
+        param->setHint(kParamEllipsizeHint);
+        param->appendOption("Default");
+        param->appendOption("Start");
+        param->appendOption("Middle");
+        param->appendOption("End");
+        param->setAnimates(true);
+        page->addChild(*param);
+    }*/
+    {
+        ChoiceParamDescriptor *param = desc.defineChoiceParam(kParamFontName);
+        param->setLabel(kParamFontNameLabel);
+        param->setHint(kParamFontNameHint);
+        if (gHostIsNatron)
+            param->setCascading(OFX::getImageEffectHostDescription()->supportsCascadingChoices);
+
+        // Get all fonts from fontconfig
+        int defaultFont = 0;
+        int altFont = 0;
+        int fontIndex = 0;
+        FcConfig* config = FcInitLoadConfigAndFonts();
+        FcPattern *p = FcPatternCreate();
+        FcObjectSet *os = FcObjectSetBuild (FC_FAMILY,NULL);
+        FcFontSet *fs = FcFontList(config, p, os);
+        std::list<std::string> fonts;
+        for (int i=0; fs && i < fs->nfont; i++) {
+            FcPattern *font = fs->fonts[i];
+            FcChar8 *s;
+            s = FcPatternFormat(font,(const FcChar8 *)"%{family[0]}");
+            std::string fontName(reinterpret_cast<char*>(s));
+            fonts.push_back(fontName);
+            if (s)
+                free(s);
+            if (font)
+                FcPatternDestroy(font);
+        }
+        //if (fs)
+            //FcFontSetDestroy(fs);
+
+        // sort fonts
+        fonts.sort();
+        fonts.erase(unique(fonts.begin(), fonts.end(), stringCompare), fonts.end());
+
+        // add to param
+        std::list<std::string>::const_iterator font;
+        for(font = fonts.begin(); font != fonts.end(); ++font)
+        {
+            std::string fontName = *font;
+            std::string fontItem;
+            if (gHostIsNatron) {
+                fontItem=fontName[0];
+                fontItem.append("/"+fontName);
+            }
+            else
+                fontItem=fontName;
+            param->appendOption(fontItem);
+            if (std::strcmp(fontName.c_str(),kParamFontNameDefault)==0)
+                defaultFont=fontIndex;
+            if (std::strcmp(fontName.c_str(),kParamFontNameAltDefault)==0)
+                altFont=fontIndex;
+            fontIndex++;
+        }
+
+        // set default font
+        if (defaultFont>0)
+            param->setDefault(defaultFont);
+        else if (defaultFont==0&&altFont>0)
+            param->setDefault(altFont);
+
+        //
+        param->setAnimates(true);
+        page->addChild(*param);
+    }
+    {
+        StringParamDescriptor* param = desc.defineStringParam(kParamFont);
+        param->setLabel(kParamFontLabel);
+        param->setHint(kParamFontHint);
+        param->setStringType(eStringTypeSingleLine);
+        param->setAnimates(true);
+
+        #ifdef DEBUG
+        param->setIsSecret(false);
+        #else
+        param->setIsSecret(true);
+        #endif
+
+        page->addChild(*param);
+    }
+    {
+        ChoiceParamDescriptor *param = desc.defineChoiceParam(kParamAlign);
+        param->setLabel(kParamAlignLabel);
+        param->setHint(kParamAlignHint);
+        param->appendOption("Left");
+        param->appendOption("Right");
+        param->appendOption("Center");
+        param->setAnimates(true);
+        page->addChild(*param);
+    }
     {
         ChoiceParamDescriptor *param = desc.defineChoiceParam(kParamHinting);
         param->setLabel(kParamHintingLabel);
@@ -539,17 +708,25 @@ void TextPangoPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc,
         param->setAnimates(true);
         page->addChild(*param);
     }
-    /*{
-        ChoiceParamDescriptor *param = desc.defineChoiceParam(kParamEllipsize);
-        param->setLabel(kParamEllipsizeLabel);
-        param->setHint(kParamEllipsizeHint);
-        param->appendOption("Default");
-        param->appendOption("Start");
-        param->appendOption("Middle");
-        param->appendOption("End");
+    {
+        IntParamDescriptor* param = desc.defineIntParam(kParamFontSize);
+        param->setLabel(kParamFontSizeLabel);
+        param->setHint(kParamFontSizeHint);
+        param->setRange(0, 10000);
+        param->setDisplayRange(0, 500);
+        param->setDefault(kParamFontSizeDefault);
         param->setAnimates(true);
         page->addChild(*param);
-    }*/
+    }
+    {
+        IntParamDescriptor* param = desc.defineIntParam(kParamIndent);
+        param->setLabel(kParamIndentLabel);
+        param->setHint(kParamIndentHint);
+        param->setRange(0, 10000);
+        param->setDisplayRange(0, 100);
+        param->setDefault(kParamIndentDefault);
+        page->addChild(*param);
+    }
     {
         BooleanParamDescriptor *param = desc.defineBooleanParam(kParamJustify);
         param->setLabel(kParamJustifyLabel);
@@ -563,16 +740,6 @@ void TextPangoPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc,
         param->setLabel(kParamSingleLabel);
         param->setHint(kParamSingleHint);
         param->setDefault(kParamSingleDefault);
-        param->setAnimates(true);
-        page->addChild(*param);
-    }
-    {
-        ChoiceParamDescriptor *param = desc.defineChoiceParam(kParamAlign);
-        param->setLabel(kParamAlignLabel);
-        param->setHint(kParamAlignHint);
-        param->appendOption("Left");
-        param->appendOption("Right");
-        param->appendOption("Center");
         param->setAnimates(true);
         page->addChild(*param);
     }
