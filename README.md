@@ -15,9 +15,10 @@ Requirements:
  * Little CMS v2 (Required by ReadPSD)
  * OpenColorIO (Required by ReadPSD/ReadSVG)
  * POV-Ray (runtime by PovRayOFX)
+ * fontconfig (Required by TextPango)
  * ImageMagick (6.9.2-5+ Q32HDRI recommended) with:
    * Freetype (Required by TextOFX)
-   * Fontconfig (Required by TextOFX)
+   * Fontconfig (Required by TextOFX/TextPango/Polaroid)
    * libpng
    * zlib
    * libxml2

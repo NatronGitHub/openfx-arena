@@ -18,9 +18,13 @@ VPATH += ../SupportExt
 MAGICK_CXXFLAGS = $(shell Magick++-config --cppflags --cxxflags)
 MAGICK_LINKFLAGS = $(shell Magick++-config --ldflags --libs)
 
-#lcms
+# lcms
 MAGICK_CXXFLAGS += $(shell pkg-config lcms2 --cflags)
 MAGICK_LINKFLAGS += $(shell pkg-config lcms2 --libs --static)
+
+# fontconfig
+MAGICK_CXXFLAGS += $(shell pkg-config fontconfig --cflags)
+MAGICK_LINKFLAGS += $(shell pkg-config fontconfig --libs --static)
 
 # Static
 ifeq ($(STATIC),1)
