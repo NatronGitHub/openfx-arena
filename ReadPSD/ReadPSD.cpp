@@ -435,6 +435,14 @@ void ReadPSDPlugin::decodePlane(const std::string& filename, OfxTime time, bool 
 
     // color management
     if (color && _hasLCMS) {
+        // cascade menu
+        if (gHostIsNatron) {
+            iccProfileIn.erase(0,2);
+            iccProfileOut.erase(0,2);
+            iccProfileRGB.erase(0,2);
+            iccProfileCMYK.erase(0,2);
+            iccProfileGRAY.erase(0,2);
+        }
         // blackpoint
         if (iccBlack)
             image.blackPointCompensation(true);
@@ -769,6 +777,8 @@ void ReadPSDPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, C
     }
     {
         ChoiceParamDescriptor* param = desc.defineChoiceParam(kParamICCRGB);
+        if (gHostIsNatron)
+            param->setCascading(OFX::getImageEffectHostDescription()->supportsCascadingChoices);
         param->setLabel(kParamICCRGBLabel);
         param->setHint(kParamICCRGBHint);
         param->appendOption("None");
@@ -776,7 +786,15 @@ void ReadPSDPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, C
         _getProFiles(profilesRGB, true, "",1); // get RGB profiles
         int defaultOpt = 0;
         for (unsigned int i = 0;i < profilesRGB.size();i++) {
-            param->appendOption(profilesRGB[i]);
+            std::string proItem;
+            std::string proName = profilesRGB[i];
+            if (gHostIsNatron) {
+                proItem=proName[0];
+                proItem.append("/"+proName);
+            }
+            else
+                proItem=proName;
+            param->appendOption(proItem);
             if (profilesRGB[i].find(kParamICCRGBDefault) != std::string::npos) // set default
                 defaultOpt=i;
         }
@@ -788,6 +806,8 @@ void ReadPSDPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, C
     }
     {
         ChoiceParamDescriptor* param = desc.defineChoiceParam(kParamICCCMYK);
+        if (gHostIsNatron)
+            param->setCascading(OFX::getImageEffectHostDescription()->supportsCascadingChoices);
         param->setLabel(kParamICCCMYKLabel);
         param->setHint(kParamICCCMYKHint);
         param->appendOption("None");
@@ -795,7 +815,15 @@ void ReadPSDPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, C
         _getProFiles(profilesCMYK, true, "",2); // get CMYK profiles
         int defaultOpt = 0;
         for (unsigned int i = 0;i < profilesCMYK.size();i++) {
-            param->appendOption(profilesCMYK[i]);
+            std::string proItem;
+            std::string proName = profilesCMYK[i];
+            if (gHostIsNatron) {
+                proItem=proName[0];
+                proItem.append("/"+proName);
+            }
+            else
+                proItem=proName;
+            param->appendOption(proItem);
             if (profilesCMYK[i].find(kParamICCCMYKDefault) != std::string::npos) // set default
                 defaultOpt=i;
         }
@@ -807,6 +835,8 @@ void ReadPSDPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, C
     }
     {
         ChoiceParamDescriptor* param = desc.defineChoiceParam(kParamICCGRAY);
+        if (gHostIsNatron)
+            param->setCascading(OFX::getImageEffectHostDescription()->supportsCascadingChoices);
         param->setLabel(kParamICCGRAYLabel);
         param->setHint(kParamICCGRAYHint);
         param->appendOption("None");
@@ -814,7 +844,15 @@ void ReadPSDPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, C
         _getProFiles(profilesGRAY, true, "",3); // get GRAY profiles
         int defaultOpt = 0;
         for (unsigned int i = 0;i < profilesGRAY.size();i++) {
-            param->appendOption(profilesGRAY[i]);
+            std::string proItem;
+            std::string proName = profilesGRAY[i];
+            if (gHostIsNatron) {
+                proItem=proName[0];
+                proItem.append("/"+proName);
+            }
+            else
+                proItem=proName;
+            param->appendOption(proItem);
             if (profilesGRAY[i].find(kParamICCGRAYDefault) != std::string::npos) // set default
                 defaultOpt=i;
         }
@@ -845,17 +883,30 @@ void ReadPSDPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, C
     }
     {
         ChoiceParamDescriptor* param = desc.defineChoiceParam(kParamICCIn);
+        if (gHostIsNatron)
+            param->setCascading(OFX::getImageEffectHostDescription()->supportsCascadingChoices);
         param->setLabel(kParamICCInLabel);
         param->setHint(kParamICCInHint);
         param->appendOption("None");
         std::vector<std::string> profilesIn;
         _getProFiles(profilesIn, true, "",4); // get RGB/CMYK/GRAY profiles
-        for (unsigned int i = 0;i < profilesIn.size();i++)
-            param->appendOption(profilesIn[i]);
+        for (unsigned int i = 0;i < profilesIn.size();i++) {
+            std::string proItem;
+            std::string proName = profilesIn[i];
+            if (gHostIsNatron) {
+                proItem=proName[0];
+                proItem.append("/"+proName);
+            }
+            else
+                proItem=proName;
+            param->appendOption(proItem);
+        }
         page->addChild(*param);
     }
     {
         ChoiceParamDescriptor* param = desc.defineChoiceParam(kParamICCOut);
+        if (gHostIsNatron)
+            param->setCascading(OFX::getImageEffectHostDescription()->supportsCascadingChoices);
         param->setLabel(kParamICCOutLabel);
         param->setHint(kParamICCOutHint);
         param->appendOption("None");
@@ -863,7 +914,15 @@ void ReadPSDPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, C
         _getProFiles(profilesOut, true, "",1); // get RGB profiles
         int defaultOpt = 0;
         for (unsigned int i = 0;i < profilesOut.size();i++) {
-            param->appendOption(profilesOut[i]);
+            std::string proItem;
+            std::string proName = profilesOut[i];
+            if (gHostIsNatron) {
+                proItem=proName[0];
+                proItem.append("/"+proName);
+            }
+            else
+                proItem=proName;
+            param->appendOption(proItem);
             if (profilesOut[i].find(kParamICCOutDefault) != std::string::npos) // set default
                 defaultOpt=i;
         }
