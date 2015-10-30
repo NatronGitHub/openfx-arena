@@ -20,6 +20,7 @@
 #include <lcms2.h>
 #include <dirent.h>
 #include <ofxNatron.h>
+#include <cstring>
 
 #ifdef OFX_IO_USING_OCIO
 #include <OpenColorIO/OpenColorIO.h>
@@ -29,7 +30,7 @@
 #define kPluginGrouping "Image/Readers"
 #define kPluginIdentifier "net.fxarena.openfx.ReadPSD"
 #define kPluginVersionMajor 2
-#define kPluginVersionMinor 2
+#define kPluginVersionMinor 3
 
 #define kSupportsRGBA true
 #define kSupportsRGB false
@@ -45,26 +46,31 @@
 #define kParamICCIn "iccIn"
 #define kParamICCInLabel "Input color profile"
 #define kParamICCInHint "ICC input profile\n\nIf profile colorspace differs from image colorspace then a colorspace convert will happen."
+#define kParamICCInSelected "iccInSelected"
 
 #define kParamICCOut "iccOut"
 #define kParamICCOutLabel "Output color profile"
 #define kParamICCOutHint "ICC RGB output profile\n\nIf image is CMYK/GRAY a colorspace convert will happen."
 #define kParamICCOutDefault "sRGB"
+#define kParamICCOutSelected "iccOutSelected"
 
 #define kParamICCRGB "iccRGB"
 #define kParamICCRGBLabel "Default RGB profile"
 #define kParamICCRGBHint "Default RGB profile\n\nUsed when a RGB image is missing an embedded color profile."
 #define kParamICCRGBDefault "sRGB"
+#define kParamICCRGBSelected "iccRGBSelected"
 
 #define kParamICCCMYK "iccCMYK"
 #define kParamICCCMYKLabel "Default CMYK profile"
 #define kParamICCCMYKHint "Default CMYK profile\n\nUsed when a CMYK image is missing an embedded color profile."
 #define kParamICCCMYKDefault "U.S. Web Coated"
+#define kParamICCCMYKSelected "iccCMYKSelected"
 
 #define kParamICCGRAY "iccGRAY"
 #define kParamICCGRAYLabel "Default GRAY profile"
 #define kParamICCGRAYHint "Default GRAY profile\n\nUsed when a GRAY image is missing an embedded color profile."
 #define kParamICCGRAYDefault "Gray linear"
+#define kParamICCGRAYSelected "iccGRAYSelected"
 
 #define kParamICCRender "renderingIntent"
 #define kParamICCRenderLabel "Rendering intent"
@@ -87,6 +93,33 @@
 #define kParamOffsetLayerDefault true
 
 static bool gHostIsNatron   = false;
+
+void _setupChoice(OFX::ChoiceParam *visible, OFX::StringParam *hidden) {
+    std::string cString, cCombo;
+    hidden->getValue(cString);
+    int cID;
+    int cCount = visible->getNOptions();
+    visible->getValue(cID);
+    visible->getOption(cID,cCombo);
+    if (!cString.empty()) {
+        if (std::strcmp(cCombo.c_str(),cString.c_str())!=0) {
+            for(int x = 0; x < cCount; x++) {
+                std::string cFound;
+                visible->getOption(x,cFound);
+                if (!cFound.empty()) {
+                    if (std::strcmp(cFound.c_str(),cString.c_str())==0) {
+                        visible->setValue(x);
+                        break;
+                    }
+                }
+            }
+        }
+    }
+    else {
+        if (!cCombo.empty())
+            hidden->setValue(cCombo);
+    }
+}
 
 void _getProFiles(std::vector<std::string> &files, bool desc, std::string filter, int colorspace) {
     std::vector<std::string> paths;
@@ -192,16 +225,22 @@ private:
     virtual bool getFrameBounds(const std::string& filename, OfxTime time, OfxRectI *bounds, double *par, std::string *error) OVERRIDE FINAL;
     virtual void restoreState(const std::string& filename) OVERRIDE FINAL;
     virtual void onInputFileChanged(const std::string& newFile, OFX::PreMultiplicationEnum *premult, OFX::PixelComponentEnum *components, int *componentCount) OVERRIDE FINAL;
+    virtual void changedParam(const OFX::InstanceChangedArgs &args, const std::string &paramName) OVERRIDE FINAL;
     void genLayerMenu();
     std::string _filename;
     bool _hasLCMS;
     std::vector<Magick::Image> _psd;
     OFX::ChoiceParam *_iccIn;
+    OFX::StringParam *_iccInSelected;
     OFX::ChoiceParam *_iccOut;
+    OFX::StringParam *_iccOutSelected;
     OFX::BooleanParam *_doICC;
     OFX::ChoiceParam *_iccRGB;
+    OFX::StringParam *_iccRGBSelected;
     OFX::ChoiceParam *_iccCMYK;
+    OFX::StringParam *_iccCMYKSelected;
     OFX::ChoiceParam *_iccGRAY;
+    OFX::StringParam *_iccGRAYSelected;
     OFX::ChoiceParam *_iccRender;
     OFX::BooleanParam *_iccBlack;
     OFX::ChoiceParam *_imageLayer;
@@ -239,7 +278,19 @@ false
     _imageLayer = fetchChoiceParam(kParamImageLayer);
     _offsetLayer = fetchBooleanParam(kParamOffsetLayer);
 
-    assert(_outputComponents && _iccIn && _iccOut && _doICC && _iccRGB && _iccCMYK && _iccGRAY && _iccRender && _iccBlack && _imageLayer && _offsetLayer);
+    _iccInSelected = fetchStringParam(kParamICCInSelected);
+    _iccOutSelected = fetchStringParam(kParamICCOutSelected);
+    _iccRGBSelected = fetchStringParam(kParamICCRGBSelected);
+    _iccCMYKSelected = fetchStringParam(kParamICCCMYKSelected);
+    _iccGRAYSelected = fetchStringParam(kParamICCGRAYSelected);
+
+    assert(_outputComponents && _iccIn && _iccOut && _doICC && _iccRGB && _iccCMYK && _iccGRAY && _iccRender && _iccBlack && _imageLayer && _offsetLayer && _iccInSelected && _iccOutSelected && _iccRGBSelected && _iccCMYKSelected && _iccGRAYSelected);
+
+    _setupChoice(_iccIn, _iccInSelected);
+    _setupChoice(_iccOut, _iccOutSelected);
+    _setupChoice(_iccRGB, _iccRGBSelected);
+    _setupChoice(_iccCMYK, _iccCMYKSelected);
+    _setupChoice(_iccGRAY, _iccGRAYSelected);
 }
 
 ReadPSDPlugin::~ReadPSDPlugin()
@@ -321,16 +372,6 @@ void ReadPSDPlugin::decodePlane(const std::string& filename, OfxTime time, bool 
     int width = bounds.x2;
     int height = bounds.y2;
     std::string layerName;
-    int iccProfileInID = 0;
-    std::string iccProfileIn;
-    int iccProfileOutID = 0;
-    std::string iccProfileOut;
-    int iccProfileRGBID = 0;
-    std::string iccProfileRGB;
-    int iccProfileCMYKID = 0;
-    std::string iccProfileCMYK;
-    int iccProfileGRAYID = 0;
-    std::string iccProfileGRAY;
     bool color = false;
     int iccRender = 0;
     bool iccBlack = false;
@@ -338,16 +379,12 @@ void ReadPSDPlugin::decodePlane(const std::string& filename, OfxTime time, bool 
     bool offsetLayer = false;
     std::vector<std::string> layerChannels = OFX::mapPixelComponentCustomToLayerChannels(rawComponents);
     int numChannels = layerChannels.size();
-    _iccIn->getValueAtTime(time, iccProfileInID);
-    _iccIn->getOption(iccProfileInID, iccProfileIn);
-    _iccOut->getValueAtTime(time, iccProfileOutID);
-    _iccOut->getOption(iccProfileOutID, iccProfileOut);
-    _iccRGB->getValueAtTime(time, iccProfileRGBID);
-    _iccRGB->getOption(iccProfileRGBID, iccProfileRGB);
-    _iccCMYK->getValueAtTime(time, iccProfileCMYKID);
-    _iccCMYK->getOption(iccProfileCMYKID, iccProfileCMYK);
-    _iccGRAY->getValueAtTime(time, iccProfileGRAYID);
-    _iccGRAY->getOption(iccProfileGRAYID, iccProfileGRAY);
+    std::string iccProfileIn, iccProfileOut, iccProfileRGB, iccProfileCMYK, iccProfileGRAY;
+    _iccInSelected->getValueAtTime(time, iccProfileIn);
+    _iccOutSelected->getValueAtTime(time, iccProfileOut);
+    _iccRGBSelected->getValueAtTime(time, iccProfileRGB);
+    _iccCMYKSelected->getValueAtTime(time, iccProfileCMYK);
+    _iccGRAYSelected->getValueAtTime(time, iccProfileGRAY);
     _doICC->getValueAtTime(time, color);
     _iccRender->getValueAtTime(time, iccRender);
     _iccBlack->getValueAtTime(time, iccBlack);
@@ -507,7 +544,7 @@ void ReadPSDPlugin::decodePlane(const std::string& filename, OfxTime time, bool 
         }
     }
     else if (color && !_hasLCMS) {
-        setPersistentMessage(OFX::Message::eMessageError, "", "LCMS support missing, unable to use color management");
+        setPersistentMessage(OFX::Message::eMessageError, "", "LCMS support missing in ImageMagick, unable to use color management");
     }
 
     // Return image
@@ -534,6 +571,48 @@ void ReadPSDPlugin::decodePlane(const std::string& filename, OfxTime time, bool 
         }
     }
     free(imageBlock);
+}
+
+void ReadPSDPlugin::changedParam(const OFX::InstanceChangedArgs &args, const std::string &paramName)
+{
+    if (paramName == kParamICCIn) {
+        std::string profile;
+        int proID;
+        _iccIn->getValueAtTime(args.time, proID);
+        _iccIn->getOption(proID,profile);
+        _iccInSelected->setValueAtTime(args.time, profile);
+    }
+    else if (paramName == kParamICCOut) {
+        std::string profile;
+        int proID;
+        _iccOut->getValueAtTime(args.time, proID);
+        _iccOut->getOption(proID,profile);
+        _iccOutSelected->setValueAtTime(args.time, profile);
+    }
+    else if (paramName == kParamICCRGB) {
+        std::string profile;
+        int proID;
+        _iccRGB->getValueAtTime(args.time, proID);
+        _iccRGB->getOption(proID,profile);
+        _iccRGBSelected->setValueAtTime(args.time, profile);
+    }
+    else if (paramName == kParamICCCMYK) {
+        std::string profile;
+        int proID;
+        _iccCMYK->getValueAtTime(args.time, proID);
+        _iccCMYK->getOption(proID,profile);
+        _iccCMYKSelected->setValueAtTime(args.time, profile);
+    }
+    else if (paramName == kParamICCGRAY) {
+        std::string profile;
+        int proID;
+        _iccGRAY->getValueAtTime(args.time, proID);
+        _iccGRAY->getOption(proID,profile);
+        _iccGRAYSelected->setValueAtTime(args.time, profile);
+    }
+    else {
+        GenericReaderPlugin::changedParam(args,paramName);
+    }
 }
 
 bool ReadPSDPlugin::getFrameBounds(const std::string& /*filename*/,
@@ -792,6 +871,71 @@ void ReadPSDPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, C
             defaultOpt++;
             param->setDefault(defaultOpt);
         }
+        page->addChild(*param);
+    }
+    {
+        StringParamDescriptor* param = desc.defineStringParam(kParamICCInSelected);
+        param->setStringType(eStringTypeSingleLine);
+        param->setAnimates(true);
+
+        #ifdef DEBUG
+        param->setIsSecret(false);
+        #else
+        param->setIsSecret(true);
+        #endif
+
+        page->addChild(*param);
+    }
+    {
+        StringParamDescriptor* param = desc.defineStringParam(kParamICCOutSelected);
+        param->setStringType(eStringTypeSingleLine);
+        param->setAnimates(true);
+
+        #ifdef DEBUG
+        param->setIsSecret(false);
+        #else
+        param->setIsSecret(true);
+        #endif
+
+        page->addChild(*param);
+    }
+    {
+        StringParamDescriptor* param = desc.defineStringParam(kParamICCRGBSelected);
+        param->setStringType(eStringTypeSingleLine);
+        param->setAnimates(true);
+
+        #ifdef DEBUG
+        param->setIsSecret(false);
+        #else
+        param->setIsSecret(true);
+        #endif
+
+        page->addChild(*param);
+    }
+    {
+        StringParamDescriptor* param = desc.defineStringParam(kParamICCCMYKSelected);
+        param->setStringType(eStringTypeSingleLine);
+        param->setAnimates(true);
+
+        #ifdef DEBUG
+        param->setIsSecret(false);
+        #else
+        param->setIsSecret(true);
+        #endif
+
+        page->addChild(*param);
+    }
+    {
+        StringParamDescriptor* param = desc.defineStringParam(kParamICCGRAYSelected);
+        param->setStringType(eStringTypeSingleLine);
+        param->setAnimates(true);
+
+        #ifdef DEBUG
+        param->setIsSecret(false);
+        #else
+        param->setIsSecret(true);
+        #endif
+
         page->addChild(*param);
     }
     GenericReaderDescribeInContextEnd(desc, context, page, "reference", "reference");
