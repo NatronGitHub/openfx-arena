@@ -47,7 +47,7 @@ private:
     virtual void decode(const std::string& filename, OfxTime time, bool isPlayback, const OfxRectI& renderWindow, float *pixelData, const OfxRectI& bounds, OFX::PixelComponentEnum pixelComponents, int pixelComponentCount, int rowBytes) OVERRIDE FINAL;
     virtual bool getFrameBounds(const std::string& filename, OfxTime time, OfxRectI *bounds, double *par, std::string *error) OVERRIDE FINAL;
     virtual void restoreState(const std::string& filename) OVERRIDE FINAL;
-    virtual void onInputFileChanged(const std::string& newFile, OFX::PreMultiplicationEnum *premult, OFX::PixelComponentEnum *components, int *componentCount) OVERRIDE FINAL;
+    virtual void onInputFileChanged(const std::string& newFile, bool setColorSpace, OFX::PreMultiplicationEnum *premult, OFX::PixelComponentEnum *components, int *componentCount) OVERRIDE FINAL;
     OFX::IntParam *dpi_;
     bool hasRSVG_;
     int width_;
@@ -251,6 +251,7 @@ void ReadSVGPlugin::changedParam(const OFX::InstanceChangedArgs &args, const std
 }
 
 void ReadSVGPlugin::onInputFileChanged(const std::string& newFile,
+                                  bool setColorSpace,
                                   OFX::PreMultiplicationEnum *premult,
                                   OFX::PixelComponentEnum *components,int */*componentCount*/)
 {
@@ -288,22 +289,24 @@ void ReadSVGPlugin::onInputFileChanged(const std::string& newFile,
     if (image.columns()>0 && image.rows()>0) {
         width_ = image.columns();
         height_ = image.rows();
+        if (setColorSpace) {
         # ifdef OFX_IO_USING_OCIO
-        switch(image.colorSpace()) {
-        case Magick::RGBColorspace:
-            _ocio->setInputColorspace("sRGB");
-            break;
-        case Magick::sRGBColorspace:
-            _ocio->setInputColorspace("sRGB");
-            break;
-        case Magick::scRGBColorspace:
-            _ocio->setInputColorspace("sRGB");
-            break;
-        default:
-            _ocio->setInputColorspace("Linear");
-            break;
-        }
+            switch(image.colorSpace()) {
+            case Magick::RGBColorspace:
+                _ocio->setInputColorspace("sRGB");
+                break;
+            case Magick::sRGBColorspace:
+                _ocio->setInputColorspace("sRGB");
+                break;
+            case Magick::scRGBColorspace:
+                _ocio->setInputColorspace("sRGB");
+                break;
+            default:
+                _ocio->setInputColorspace("Linear");
+                break;
+            }
         # endif // OFX_IO_USING_OCIO
+        }
     }
     else {
         setPersistentMessage(OFX::Message::eMessageError, "", "Unable to read image");

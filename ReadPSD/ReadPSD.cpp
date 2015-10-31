@@ -224,7 +224,7 @@ private:
     virtual void decodePlane(const std::string& filename, OfxTime time, bool isPlayback, const OfxRectI& renderWindow, float *pixelData, const OfxRectI& bounds, OFX::PixelComponentEnum pixelComponents, int pixelComponentCount, const std::string& rawComponents, int rowBytes) OVERRIDE FINAL;
     virtual bool getFrameBounds(const std::string& filename, OfxTime time, OfxRectI *bounds, double *par, std::string *error) OVERRIDE FINAL;
     virtual void restoreState(const std::string& filename) OVERRIDE FINAL;
-    virtual void onInputFileChanged(const std::string& newFile, OFX::PreMultiplicationEnum *premult, OFX::PixelComponentEnum *components, int *componentCount) OVERRIDE FINAL;
+    virtual void onInputFileChanged(const std::string& newFile, bool setColorSpace, OFX::PreMultiplicationEnum *premult, OFX::PixelComponentEnum *components, int *componentCount) OVERRIDE FINAL;
     virtual void changedParam(const OFX::InstanceChangedArgs &args, const std::string &paramName) OVERRIDE FINAL;
     void genLayerMenu();
     std::string _filename;
@@ -697,6 +697,7 @@ void ReadPSDPlugin::restoreState(const std::string& filename)
 }
 
 void ReadPSDPlugin::onInputFileChanged(const std::string& newFile,
+                                  bool setColorSpace,
                                   OFX::PreMultiplicationEnum *premult,
                                   OFX::PixelComponentEnum *components,int */*componentCount*/)
 {
@@ -707,9 +708,11 @@ void ReadPSDPlugin::onInputFileChanged(const std::string& newFile,
     assert(premult && components);
     if (newFile!=_filename)
         restoreState(newFile);
+    if (setColorSpace) {
     # ifdef OFX_IO_USING_OCIO
-    _ocio->setInputColorspace("sRGB");
+        _ocio->setInputColorspace("sRGB");
     # endif // OFX_IO_USING_OCIO
+    }
     *components = OFX::ePixelComponentRGBA;
     *premult = OFX::eImageOpaque;
 }
