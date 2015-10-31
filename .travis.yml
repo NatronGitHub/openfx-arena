@@ -24,4 +24,4 @@ install:
 
 script:
   - git submodule update -i --recursive
-  - MAGICK_GIT=1 DEBUG=1 bash deploy.sh
+  - DEBUG=1 bash deploy.sh

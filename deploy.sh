@@ -12,8 +12,8 @@
 
 CWD=$(pwd)
 
-MAGICK=6.9.2-5
-MAGICK_URL=ftp://ftp.sunet.se/pub/multimedia/graphics/ImageMagick/ImageMagick-$MAGICK.tar.gz
+MAGICK=6.9.1-10
+MAGICK_URL=https://github.com/olear/openfx-arena/releases/download/Natron-2.0.0-RC2/ImageMagick-6.9.1-10.tar.gz #ftp://ftp.sunet.se/pub/multimedia/graphics/ImageMagick/ImageMagick-$MAGICK.tar.gz
 if [ -z "$QUANTUM" ]; then
   Q=32
 else
@@ -159,6 +159,7 @@ if [ ! -f ${PREFIX}/lib/libMagick++-6.Q${Q}HDRI.a ]; then
     fi
     cd $CWD/3rdparty/ImageMagick-$MAGICK || exit 1
   fi
+  patch -p0 < $CWD/TextPango/magick-6.9.1-10-pango-align-hack.diff || exit 1
   $MAKE distclean
   CFLAGS="-m${BIT} ${BF}" CXXFLAGS="-m${BIT} ${BF} ${BSD} -I${PREFIX}/include" CPPFLAGS="-I${PREFIX}/include -L${PREFIX}/lib $CL_FLAGS" ./configure --libdir=${PREFIX}/lib --prefix=${PREFIX} $MAGICK_OPT || exit 1
   $MAKE -j$JOBS install || exit 1
