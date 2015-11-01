@@ -19,17 +19,10 @@ if [ -z "$QUANTUM" ]; then
 else
   Q=$QUANTUM
 fi
-if [ "$CL" = "1" ]; then
-  CL_CONF="--with-x --enable-opencl"
-  CL_FLAGS="-I${CWD}/OpenCL -L${CWD}/OpenCL"
-  USE_CL=1
-else
-  USE_CL=0
-fi
 if [ "$MAGICK_SIMPLE" = "1" ]; then
-  MAGICK_OPT="--disable-docs --disable-deprecated --with-magick-plus-plus=yes --with-quantum-depth=${Q} --without-dps --without-djvu --without-fftw --without-fpx --without-gslib --without-gvc --without-jbig --without-jpeg --without-lcms --without-openjp2 --without-lqr --without-lzma --without-openexr --without-pango --with-png --without-rsvg --without-tiff --without-webp --without-xml --without-zlib --without-bzlib --enable-static --disable-shared --enable-hdri --without-freetype --without-fontconfig --without-x --without-modules $CL_CONF"
+  MAGICK_OPT="--disable-docs --disable-deprecated --with-magick-plus-plus=yes --with-quantum-depth=${Q} --without-dps --without-djvu --without-fftw --without-fpx --without-gslib --without-gvc --without-jbig --without-jpeg --without-lcms --without-openjp2 --without-lqr --without-lzma --without-openexr --without-pango --with-png --without-rsvg --without-tiff --without-webp --without-xml --without-zlib --without-bzlib --enable-static --disable-shared --enable-hdri --without-freetype --without-fontconfig --without-x --without-modules"
 else
-  MAGICK_OPT="--disable-docs --disable-deprecated --with-magick-plus-plus=yes --with-quantum-depth=${Q} --without-dps --without-djvu --without-fftw --without-fpx --without-gslib --without-gvc --without-jbig --without-jpeg --with-lcms --without-openjp2 --without-lqr --without-lzma --without-openexr --with-pango --with-png --with-rsvg --without-tiff --without-webp --with-xml --with-zlib --without-bzlib --enable-static --disable-shared --enable-hdri --with-freetype --with-fontconfig --without-x --without-modules $CL_CONF"
+  MAGICK_OPT="--disable-docs --disable-deprecated --with-magick-plus-plus=yes --with-quantum-depth=${Q} --without-dps --without-djvu --without-fftw --without-fpx --without-gslib --without-gvc --without-jbig --without-jpeg --with-lcms --without-openjp2 --without-lqr --without-lzma --without-openexr --with-pango --with-png --with-rsvg --without-tiff --without-webp --with-xml --with-zlib --without-bzlib --enable-static --disable-shared --enable-hdri --with-freetype --with-fontconfig --without-x --without-modules"
 fi
 
 PNG=1.2.53
@@ -94,10 +87,6 @@ else
 fi
 
 PKG=$PKGNAME.ofx.bundle-$ARENA-$PKGOS-x86-$TAG-$BIT
-if [ "$CL" = "1" ]; then
-  PKG="${PKG}-OpenCL"
-fi
-
 export PKG_CONFIG_PATH=$PREFIX/lib/pkgconfig
 export LD_LIBRARY_PATH=$PREFIX/lib:$PREFIX/lib64:$LD_LIBRARY_PATH
 export PATH=$PREFIX/bin:$PATH
@@ -161,7 +150,7 @@ if [ ! -f ${PREFIX}/lib/libMagick++-6.Q${Q}HDRI.a ]; then
   fi
   patch -p0 < $CWD/TextPango/magick-6.9.1-10-pango-align-hack.diff || exit 1
   $MAKE distclean
-  CFLAGS="-m${BIT} ${BF}" CXXFLAGS="-m${BIT} ${BF} ${BSD} -I${PREFIX}/include" CPPFLAGS="-I${PREFIX}/include -L${PREFIX}/lib $CL_FLAGS" ./configure --libdir=${PREFIX}/lib --prefix=${PREFIX} $MAGICK_OPT || exit 1
+  CFLAGS="-m${BIT} ${BF}" CXXFLAGS="-m${BIT} ${BF} ${BSD} -I${PREFIX}/include" CPPFLAGS="-I${PREFIX}/include -L${PREFIX}/lib" ./configure --libdir=${PREFIX}/lib --prefix=${PREFIX} $MAGICK_OPT || exit 1
   $MAKE -j$JOBS install || exit 1
   mkdir -p $PREFIX/share/doc/ImageMagick/ || exit 1
   cp LICENSE $PREFIX/share/doc/ImageMagick/ || exit 1
@@ -178,11 +167,11 @@ if [ "$PKGNAME" != "Arena" ]; then
 fi
 
 if [ "$PKGOS" != "Windows" ]; then
-  $MAKE OPENCL=$USE_CL STATIC=1 FREEBSD=$USE_FREEBSD BITS=$BIT CONFIG=$TAG clean
-  $MAKE OPENCL=$USE_CL STATIC=1 FREEBSD=$USE_FREEBSD BITS=$BIT CONFIG=$TAG || exit 1
+  $MAKE FREEBSD=$USE_FREEBSD BITS=$BIT CONFIG=$TAG clean
+  $MAKE FREEBSD=$USE_FREEBSD BITS=$BIT CONFIG=$TAG || exit 1
 else
-  make STATIC=1 OPENCL=$USE_CL MINGW=1 BIT=$BIT CONFIG=$TAG clean
-  make STATIC=1 OPENCL=$USE_CL MINGW=1 BIT=$BIT CONFIG=$TAG || exit 1
+  make MINGW=1 BIT=$BIT CONFIG=$TAG clean
+  make MINGW=1 BIT=$BIT CONFIG=$TAG || exit 1
 fi
 
 cd $CWD || exit 1
@@ -196,9 +185,6 @@ cp OpenFX/Support/LICENSE $CWD/$PKG/LICENSE.OpenFX || exit 1
 cp OpenFX-IO/LICENSE $CWD/$PKG/LICENSE.OpenFX-IO || exit 1
 if [ "$NOPNG" != "1" ]; then 
   cp $PREFIX/share/doc/libpng/LICENSE $CWD/$PKG/LICENSE.libpng || exit 1
-fi
-if [ "$CL" = "1" ]; then
-  cp $CWD/OpenCL/LICENSE $CWD/$PKG/LICENSE.OpenCL || exit 1
 fi
 
 # Strip and copy

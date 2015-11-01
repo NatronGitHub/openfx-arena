@@ -19,5 +19,5 @@ RESOURCES = net.fxarena.openfx.ReadPSD.png net.fxarena.openfx.ReadPSD.svg
 include ../Makefile.master
 include ../Makefile.io
 
-CXXFLAGS += $(MAGICK_CXXFLAGS)
-LINKFLAGS += $(MAGICK_LINKFLAGS)
+CXXFLAGS += $(MAGICK_CXXFLAGS) $(LCMS_CXXFLAGS)
+LINKFLAGS += $(MAGICK_LINKFLAGS) $(LCMS_LINKFLAGS)

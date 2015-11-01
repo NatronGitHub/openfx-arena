@@ -15,29 +15,20 @@ CXXFLAGS += -DOFX_EXTENSIONS_VEGAS -DOFX_EXTENSIONS_NUKE -DOFX_EXTENSIONS_TUTTLE
 VPATH += ../SupportExt
 
 # ImageMagick
-MAGICK_CXXFLAGS = $(shell Magick++-config --cppflags --cxxflags)
-MAGICK_LINKFLAGS = $(shell Magick++-config --ldflags --libs)
+MAGICK_CXXFLAGS = $(shell pkg-config Magick++ --cflags)
+MAGICK_LINKFLAGS = $(shell pkg-config Magick++ --libs --static)
 
 # lcms
-MAGICK_CXXFLAGS += $(shell pkg-config lcms2 --cflags)
-MAGICK_LINKFLAGS += $(shell pkg-config lcms2 --libs --static)
+LCMS_CXXFLAGS = $(shell pkg-config lcms2 --cflags)
+LCMS_LINKFLAGS = $(shell pkg-config lcms2 --libs --static)
 
 # fontconfig
-MAGICK_CXXFLAGS += $(shell pkg-config fontconfig --cflags)
-MAGICK_LINKFLAGS += $(shell pkg-config fontconfig --libs --static)
+FCONFIG_CXXFLAGS = $(shell pkg-config fontconfig --cflags)
+FCONFIG_LINKFLAGS = $(shell pkg-config fontconfig --libs --static)
 
-# Static
-ifeq ($(STATIC),1)
-  MAGICK_LINKFLAGS += $(shell pkg-config librsvg-2.0 --libs --static)
-  MAGICK_LINKFLAGS += $(shell pkg-config libxml-2.0 --libs --static)
-  MAGICK_LINKFLAGS += $(shell pkg-config pangocairo --libs --static)
-  MAGICK_LINKFLAGS += -lgomp -lm -lpthread
-  ifeq ($(MINGW),1)
-    MAGICK_LINKFLAGS += -lgdi32 -lfontconfig -lfreetype -lexpat -lpng -lz
-  endif
-  ifeq ($(OPENCL),1)
-    MAGICK_LINKFLAGS += -lXext -lXt -lSM -lICE -lX11
-  endif
+# mingw (still needed?)
+ifeq ($(MINGW),1)
+  MAGICK_LINKFLAGS += -lgdi32 -lfontconfig -lfreetype -lexpat -lpng -lz -lm -lgomp -lpthread
 endif
 
 # FreeBSD
