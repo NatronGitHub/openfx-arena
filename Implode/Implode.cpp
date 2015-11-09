@@ -1,11 +1,10 @@
 /*
-# Copyright (c) 2015, FxArena DA <mail@fxarena.net>
+# Copyright (c) 2015, Ole-André Rodlie <olear@dracolinux.org>
 # All rights reserved.
 #
 # OpenFX-Arena is free software: you can redistribute it and/or modify it under the terms of the GNU General Public License version 2. You should have received a copy of the GNU General Public License version 2 along with OpenFX-Arena. If not, see http://www.gnu.org/licenses/.
 # OpenFX-Arena is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
 #
-# Need custom licensing terms or conditions? Commercial license for proprietary software? Contact us.
 */
 
 #include "Implode.h"
@@ -20,7 +19,7 @@
 #define kPluginGrouping "Extra/Distort"
 #define kPluginIdentifier "net.fxarena.openfx.Implode"
 #define kPluginVersionMajor 2
-#define kPluginVersionMinor 1
+#define kPluginVersionMinor 3
 
 #define kParamImplode "factor"
 #define kParamImplodeLabel "Factor"
@@ -31,6 +30,11 @@
 #define kParamMatteLabel "Matte"
 #define kParamMatteHint "Merge Alpha before applying effect"
 #define kParamMatteDefault false
+
+#define kParamSwirl "swirl"
+#define kParamSwirlLabel "Swirl"
+#define kParamSwirlHint "Swirl image by degree"
+#define kParamSwirlDefault 0
 
 #define kSupportsTiles 0
 #define kSupportsMultiResolution 1
@@ -52,6 +56,7 @@ private:
     OFX::Clip *srcClip_;
     OFX::DoubleParam *implode_;
     OFX::BooleanParam *matte_;
+    OFX::DoubleParam *swirl_;
 };
 
 ImplodePlugin::ImplodePlugin(OfxImageEffectHandle handle)
@@ -67,8 +72,9 @@ ImplodePlugin::ImplodePlugin(OfxImageEffectHandle handle)
 
     implode_ = fetchDoubleParam(kParamImplode);
     matte_ = fetchBooleanParam(kParamMatte);
+    swirl_ = fetchDoubleParam(kParamSwirl);
 
-    assert(implode_ && matte_);
+    assert(implode_ && matte_ && swirl_);
 }
 
 ImplodePlugin::~ImplodePlugin()
@@ -147,10 +153,11 @@ void ImplodePlugin::render(const OFX::RenderArguments &args)
     }
 
     // get params
-    double implode;
+    double implode,swirl;
     bool matte = false;
     implode_->getValueAtTime(args.time, implode);
     matte_->getValueAtTime(args.time, matte);
+    swirl_->getValueAtTime(args.time, swirl);
 
     // setup
     int width = srcRod.x2-srcRod.x1;
@@ -168,44 +175,28 @@ void ImplodePlugin::render(const OFX::RenderArguments &args)
 
     // read image
     Magick::Image image(Magick::Geometry(width,height),Magick::Color("rgba(0,0,0,0)"));
+    Magick::Image output(Magick::Geometry(width,height),Magick::Color("rgba(0,0,0,1)"));
     if (srcClip_ && srcClip_->isConnected())
         image.read(width,height,"RGBA",Magick::FloatPixel,(float*)srcImg->getPixelData());
 
-    #ifdef DEBUG_MAGICK
-    image.debug(true);
-    #endif
 
     if (matte) {
         image.matte(false);
         image.matte(true);
     }
 
-    // swirl
+    // implode
     image.implode(implode);
+
+    // swirl
+    if (swirl!=0)
+        image.swirl(swirl);
 
     // return image
     if (dstClip_ && dstClip_->isConnected()) {
-        /*width = dstBounds.x2-dstBounds.x1;
-        height = dstBounds.y2-dstBounds.y1;
-        int widthstep = width*4;
-        int imageSize = width*height*4;
-        float* imageBlock;
-        imageBlock = new float[imageSize];
-        image.write(0,0,width,height,"RGBA",Magick::FloatPixel,imageBlock);
-        for(int y = args.renderWindow.y1; y < (args.renderWindow.y1 + height); y++) {
-            OfxRGBAColourF *dstPix = (OfxRGBAColourF *)dstImg->getPixelAddress(args.renderWindow.x1, y);
-            float *srcPix = (float*)(imageBlock + y * widthstep + args.renderWindow.x1);
-            for(int x = args.renderWindow.x1; x < (args.renderWindow.x1 + width); x++) {
-                dstPix->r = srcPix[0]*srcPix[3];
-                dstPix->g = srcPix[1]*srcPix[3];
-                dstPix->b = srcPix[2]*srcPix[3];
-                dstPix->a = srcPix[3];
-                dstPix++;
-                srcPix+=4;
-            }
-        }
-        free(imageBlock);*/
-        image.write(0,0,args.renderWindow.x2 - args.renderWindow.x1,args.renderWindow.y2 - args.renderWindow.y1,"RGBA",Magick::FloatPixel,(float*)dstImg->getPixelData());
+        output.composite(image,0,0,Magick::OverCompositeOp);
+        output.composite(image,0,0,Magick::CopyOpacityCompositeOp);
+        output.write(0,0,args.renderWindow.x2 - args.renderWindow.x1,args.renderWindow.y2 - args.renderWindow.y1,"RGBA",Magick::FloatPixel,(float*)dstImg->getPixelData());
     }
 }
 
@@ -275,6 +266,15 @@ void ImplodePluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, C
         param->setRange(-100, 100);
         param->setDisplayRange(-5, 5);
         param->setDefault(kParamImplodeDefault);
+        page->addChild(*param);
+    }
+    {
+        DoubleParamDescriptor *param = desc.defineDoubleParam(kParamSwirl);
+        param->setLabel(kParamSwirlLabel);
+        param->setHint(kParamSwirlHint);
+        param->setRange(-360, 360);
+        param->setDisplayRange(-360, 360);
+        param->setDefault(kParamSwirlDefault);
         page->addChild(*param);
     }
     {
