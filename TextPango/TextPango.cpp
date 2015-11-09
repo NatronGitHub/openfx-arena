@@ -1,11 +1,10 @@
 /*
-# Copyright (c) 2015, FxArena DA <mail@fxarena.net>
+# Copyright (c) 2015, Ole-André Rodlie <olear@dracolinux.org>
 # All rights reserved.
 #
 # OpenFX-Arena is free software: you can redistribute it and/or modify it under the terms of the GNU General Public License version 2. You should have received a copy of the GNU General Public License version 2 along with OpenFX-Arena. If not, see http://www.gnu.org/licenses/.
 # OpenFX-Arena is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
 #
-# Need custom licensing terms or conditions? Commercial license for proprietary software? Contact us.
 */
 
 #include "TextPango.h"
@@ -24,7 +23,7 @@
 #define kPluginGrouping "Draw"
 #define kPluginIdentifier "net.fxarena.openfx.TextPango"
 #define kPluginVersionMajor 2
-#define kPluginVersionMinor 0
+#define kPluginVersionMinor 1
 
 #define kSupportsTiles 0
 #define kSupportsMultiResolution 0
@@ -100,6 +99,37 @@
 #define kParamFontLabel "Font"
 #define kParamFontHint "Selected font"
 
+#define kParamShadowOpacity "shadowOpacity"
+#define kParamShadowOpacityLabel "Opacity"
+#define kParamShadowOpacityHint "Adjust shadow opacity"
+#define kParamShadowOpacityDefault 0
+
+#define kParamShadowSigma "shadowSigma"
+#define kParamShadowSigmaLabel "Sigma"
+#define kParamShadowSigmaHint "Adjust shadow sigma"
+#define kParamShadowSigmaDefault 0.5
+
+#define kParamShadowColor "shadowColor"
+#define kParamShadowColorLabel "Color"
+#define kParamShadowColorHint "The shadow color to render"
+
+#define kParamShadowX "shadowX"
+#define kParamShadowXLabel "Offset X"
+#define kParamShadowXHint "Shadow offset X"
+#define kParamShadowXDefault 0
+
+#define kParamShadowY "shadowY"
+#define kParamShadowYLabel "Offset Y"
+#define kParamShadowYHint "Shadow offset Y"
+#define kParamShadowYDefault 0
+
+#define kParamShadowBlur "shadowSoften"
+#define kParamShadowBlurLabel "Soften"
+#define kParamShadowBlurHint "Soften shadow"
+#define kParamShadowBlurDefault 0
+
+#define CLAMP(value, min, max) (((value) >(max)) ? (max) : (((value) <(min)) ? (min) : (value)))
+
 using namespace OFX;
 static bool gHostIsNatron = false;
 
@@ -140,9 +170,15 @@ private:
     bool has_fontconfig;
     bool has_freetype;
     OFX::ChoiceParam *align_;
-    OFX::IntParam *fontSize_;
+    OFX::DoubleParam *fontSize_;
     OFX::ChoiceParam *fontName_;
     OFX::StringParam *font_;
+    OFX::DoubleParam *shadowOpacity_;
+    OFX::DoubleParam *shadowSigma_;
+    OFX::RGBParam *shadowColor_;
+    OFX::IntParam *shadowX_;
+    OFX::IntParam *shadowY_;
+    OFX::DoubleParam *shadowBlur_;
 };
 
 TextPangoPlugin::TextPangoPlugin(OfxImageEffectHandle handle)
@@ -181,11 +217,17 @@ TextPangoPlugin::TextPangoPlugin(OfxImageEffectHandle handle)
     //ellipsize_ = fetchChoiceParam(kParamEllipsize);
     single_ = fetchBooleanParam(kParamSingle);
     align_ = fetchChoiceParam(kParamAlign);
-    fontSize_ = fetchIntParam(kParamFontSize);
+    fontSize_ = fetchDoubleParam(kParamFontSize);
     fontName_ = fetchChoiceParam(kParamFontName);
     font_ = fetchStringParam(kParamFont);
+    shadowOpacity_ = fetchDoubleParam(kParamShadowOpacity);
+    shadowSigma_ = fetchDoubleParam(kParamShadowSigma);
+    shadowColor_ = fetchRGBParam(kParamShadowColor);
+    shadowX_ = fetchIntParam(kParamShadowX);
+    shadowY_ = fetchIntParam(kParamShadowY);
+    shadowBlur_ = fetchDoubleParam(kParamShadowBlur);
 
-    assert(text_ && width_ && height_ /*&& gravity_*/ && hinting_ && indent_ && justify_ && wrap_ /*&& ellipsize_*/ && single_ && align_ && fontSize_ && fontName_ && font_);
+    assert(text_ && width_ && height_ /*&& gravity_*/ && hinting_ && indent_ && justify_ && wrap_ /*&& ellipsize_*/ && single_ && align_ && fontSize_ && fontName_ && font_ && shadowBlur_ && shadowColor_ && shadowOpacity_ && shadowSigma_ && shadowX_ && shadowY_);
 
     // Setup selected font
     std::string fontString, fontCombo;
@@ -282,7 +324,8 @@ void TextPangoPlugin::render(const OFX::RenderArguments &args)
 
     // Get params
     std::string text, fontName, font;
-    int /*gravity,*/ hinting, indent, wrap/*, ellipsize*/, cwidth, cheight, align, fontSize, fontID;
+    int /*gravity,*/ hinting, indent, wrap/*, ellipsize*/, cwidth, cheight, align, fontID, shadowX, shadowY;
+    double fontSize, shadowOpacity, shadowSigma, shadowR, shadowG, shadowB, shadowBlur;
     bool justify = false;
     bool single = false;
     text_->getValueAtTime(args.time, text);
@@ -299,6 +342,18 @@ void TextPangoPlugin::render(const OFX::RenderArguments &args)
     fontName_->getValueAtTime(args.time, fontID);
     font_->getValueAtTime(args.time, font);
     fontName_->getOption(fontID,fontName);
+    shadowOpacity_->getValueAtTime(args.time, shadowOpacity);
+    shadowSigma_->getValueAtTime(args.time, shadowSigma);
+    shadowColor_->getValueAtTime(args.time, shadowR, shadowG, shadowB);
+    shadowX_->getValueAtTime(args.time, shadowX);
+    shadowY_->getValueAtTime(args.time, shadowY);
+    shadowBlur_->getValueAtTime(args.time, shadowBlur);
+
+    int shadowRI = ((uint8_t)(255.0f *CLAMP(shadowR, 0.0, 1.0)));
+    int shadowGI = ((uint8_t)(255.0f *CLAMP(shadowG, 0.0, 1.0)));
+    int shadowBI = ((uint8_t)(255.0f *CLAMP(shadowB, 0.0, 1.0)));
+    std::ostringstream shadowRGB;
+    shadowRGB << "rgb(" << shadowRI <<"," << shadowGI << "," << shadowBI << ")";
 
     // always prefer font
     if (!font.empty())
@@ -317,27 +372,19 @@ void TextPangoPlugin::render(const OFX::RenderArguments &args)
     // Set max threads allowed by host
     unsigned int threads = 0;
     threads = OFX::MultiThread::getNumCPUs();
-    if (threads>0) {
+    if (threads>0)
         Magick::ResourceLimits::thread(threads);
-        #ifdef DEBUG
-        std::cout << "Setting max threads to " << threads << std::endl;
-        #endif
-    }
 
     // Generate empty image
     int width = dstRod.x2-dstRod.x1;
     int height = dstRod.y2-dstRod.y1;
     Magick::Image image(Magick::Geometry(width,height),Magick::Color("rgba(0,0,0,0)"));
-
-    #ifdef DEBUG_MAGICK
-    image.debug(true);
-    #endif
+    Magick::Image output(Magick::Geometry(width,height),Magick::Color("rgba(0,0,0,1)"));
 
     // set default font and size
     if (!font.empty())
         image.font(fontName);
-    if (fontSize>0)
-        image.fontPointsize(std::floor(fontSize * args.renderScale.x + 0.5));
+    image.fontPointsize(std::floor(fontSize * args.renderScale.x + 0.5));
 
     try {
         image.backgroundColor("none"); // must be set to avoid bg
@@ -421,6 +468,21 @@ void TextPangoPlugin::render(const OFX::RenderArguments &args)
         setPersistentMessage(OFX::Message::eMessageError, "", error_.what());
     }
 
+    // Shadow
+    if (shadowOpacity>0 && shadowSigma>0) {
+        Magick::Image shadowContainer(Magick::Geometry(width,height),Magick::Color("rgba(0,0,0,0)"));
+        Magick::Image dropShadow;
+        dropShadow=image;
+        dropShadow.backgroundColor(shadowRGB.str());
+        dropShadow.virtualPixelMethod(Magick::TransparentVirtualPixelMethod);
+        dropShadow.shadow(shadowOpacity,std::floor(shadowSigma * args.renderScale.x + 0.5),0,0);
+        if (shadowBlur>0)
+            dropShadow.blur(0,std::floor(shadowBlur * args.renderScale.x + 0.5));
+        shadowContainer.composite(dropShadow,std::floor(shadowX * args.renderScale.x + 0.5),std::floor(shadowY * args.renderScale.x + 0.5),Magick::OverCompositeOp);
+        shadowContainer.composite(image,0,0,Magick::OverCompositeOp);
+        image=shadowContainer;
+    }
+
     // Flip image
     image.flip();
 
@@ -438,24 +500,9 @@ void TextPangoPlugin::render(const OFX::RenderArguments &args)
 
     // return image
     if (dstClip_ && dstClip_->isConnected()) {
-        int widthstep = width*4;
-        int imageSize = width*height*4;
-        float* imageBlock;
-        imageBlock = new float[imageSize];
-        image.write(0,0,width,height,"RGBA",Magick::FloatPixel,imageBlock);
-        for(int y = args.renderWindow.y1; y < (args.renderWindow.y1 + height); y++) {
-            OfxRGBAColourF *dstPix = (OfxRGBAColourF *)dstImg->getPixelAddress(args.renderWindow.x1, y);
-            float *srcPix = (float*)(imageBlock + y * widthstep + args.renderWindow.x1);
-            for(int x = args.renderWindow.x1; x < (args.renderWindow.x1 + width); x++) {
-                dstPix->r = srcPix[0]*srcPix[3];
-                dstPix->g = srcPix[1]*srcPix[3];
-                dstPix->b = srcPix[2]*srcPix[3];
-                dstPix->a = srcPix[3];
-                dstPix++;
-                srcPix+=4;
-            }
-        }
-        free(imageBlock);
+        output.composite(image, 0, 0, Magick::OverCompositeOp);
+        output.composite(image, 0, 0, Magick::CopyOpacityCompositeOp);
+        output.write(0,0,args.renderWindow.x2 - args.renderWindow.x1,args.renderWindow.y2 - args.renderWindow.y1,"RGBA",Magick::FloatPixel,(float*)dstImg->getPixelData());
     }
 }
 
@@ -546,6 +593,7 @@ void TextPangoPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc,
     // make some pages
     PageParamDescriptor *page = desc.definePageParam(kPluginName);
     GroupParamDescriptor *groupCanvas = desc.defineGroupParam("Canvas");
+    GroupParamDescriptor *groupShadow = desc.defineGroupParam("Shadow");
     groupCanvas->setOpen(false);
     {
         page->addChild(*groupCanvas);
@@ -709,7 +757,7 @@ void TextPangoPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc,
         page->addChild(*param);
     }
     {
-        IntParamDescriptor* param = desc.defineIntParam(kParamFontSize);
+        DoubleParamDescriptor* param = desc.defineDoubleParam(kParamFontSize);
         param->setLabel(kParamFontSizeLabel);
         param->setHint(kParamFontSizeHint);
         param->setRange(0, 10000);
@@ -742,6 +790,64 @@ void TextPangoPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc,
         param->setDefault(kParamSingleDefault);
         param->setAnimates(true);
         page->addChild(*param);
+    }
+    {
+        page->addChild(*groupShadow);
+    }
+    {
+        DoubleParamDescriptor *param = desc.defineDoubleParam(kParamShadowOpacity);
+        param->setLabel(kParamShadowOpacityLabel);
+        param->setHint(kParamShadowOpacityHint);
+        param->setRange(0, 100);
+        param->setDisplayRange(0, 100);
+        param->setDefault(kParamShadowOpacityDefault);
+        param->setParent(*groupShadow);
+    }
+    {
+        DoubleParamDescriptor *param = desc.defineDoubleParam(kParamShadowSigma);
+        param->setLabel(kParamShadowSigmaLabel);
+        param->setHint(kParamShadowSigmaHint);
+        param->setRange(0, 100);
+        param->setDisplayRange(0, 10);
+        param->setDefault(kParamShadowSigmaDefault);
+        param->setParent(*groupShadow);
+    }
+    {
+        DoubleParamDescriptor *param = desc.defineDoubleParam(kParamShadowBlur);
+        param->setLabel(kParamShadowBlurLabel);
+        param->setHint(kParamShadowBlurHint);
+        param->setRange(0, 100);
+        param->setDisplayRange(0, 10);
+        param->setDefault(kParamShadowBlurDefault);
+        param->setParent(*groupShadow);
+    }
+    {
+        IntParamDescriptor* param = desc.defineIntParam(kParamShadowX);
+        param->setLabel(kParamShadowXLabel);
+        param->setHint(kParamShadowXHint);
+        param->setRange(-10000, 10000);
+        param->setDisplayRange(-500, 500);
+        param->setDefault(kParamShadowXDefault);
+        param->setAnimates(true);
+        param->setParent(*groupShadow);
+    }
+    {
+        IntParamDescriptor* param = desc.defineIntParam(kParamShadowY);
+        param->setLabel(kParamShadowYLabel);
+        param->setHint(kParamShadowYHint);
+        param->setRange(-10000, 10000);
+        param->setDisplayRange(-500, 500);
+        param->setDefault(kParamShadowYDefault);
+        param->setAnimates(true);
+        param->setParent(*groupShadow);
+    }
+    {
+        RGBParamDescriptor* param = desc.defineRGBParam(kParamShadowColor);
+        param->setLabel(kParamShadowColorLabel);
+        param->setHint(kParamShadowColorHint);
+        param->setDefault(0., 0., 0.);
+        param->setAnimates(true);
+        param->setParent(*groupShadow);
     }
 }
 
