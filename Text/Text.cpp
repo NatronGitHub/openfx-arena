@@ -26,7 +26,7 @@
 #define kPluginGrouping "Draw"
 #define kPluginIdentifier "net.fxarena.openfx.Text"
 #define kPluginVersionMajor 5
-#define kPluginVersionMinor 4
+#define kPluginVersionMinor 5
 
 #define kSupportsTiles 0
 #define kSupportsMultiResolution 0
@@ -378,6 +378,7 @@ void TextPlugin::render(const OFX::RenderArguments &args)
     int width = dstRod.x2-dstRod.x1;
     int height = dstRod.y2-dstRod.y1;
     Magick::Image image(Magick::Geometry(width,height),Magick::Color("rgba(0,0,0,0)"));
+    Magick::Image output(Magick::Geometry(width,height),Magick::Color("rgba(0,0,0,1)"));
 
     #ifdef DEBUG_MAGICK
     image.debug(true);
@@ -485,24 +486,9 @@ void TextPlugin::render(const OFX::RenderArguments &args)
 
     // return image
     if (dstClip_ && dstClip_->isConnected()) {
-        int widthstep = width*4;
-        int imageSize = width*height*4;
-        float* imageBlock;
-        imageBlock = new float[imageSize];
-        image.write(0,0,width,height,"RGBA",Magick::FloatPixel,imageBlock);
-        for(int y = args.renderWindow.y1; y < (args.renderWindow.y1 + height); y++) {
-            OfxRGBAColourF *dstPix = (OfxRGBAColourF *)dstImg->getPixelAddress(args.renderWindow.x1, y);
-            float *srcPix = (float*)(imageBlock + y * widthstep + args.renderWindow.x1);
-            for(int x = args.renderWindow.x1; x < (args.renderWindow.x1 + width); x++) {
-                dstPix->r = srcPix[0]*srcPix[3];
-                dstPix->g = srcPix[1]*srcPix[3];
-                dstPix->b = srcPix[2]*srcPix[3];
-                dstPix->a = srcPix[3];
-                dstPix++;
-                srcPix+=4;
-            }
-        }
-        free(imageBlock);
+        output.composite(image, 0, 0, Magick::OverCompositeOp);
+        output.composite(image, 0, 0, Magick::CopyOpacityCompositeOp);
+        output.write(0,0,args.renderWindow.x2 - args.renderWindow.x1,args.renderWindow.y2 - args.renderWindow.y1,"RGBA",Magick::FloatPixel,(float*)dstImg->getPixelData());
     }
 }
 
