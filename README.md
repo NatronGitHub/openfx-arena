@@ -16,7 +16,7 @@ Requirements:
  * OpenColorIO (Required by ReadPSD/ReadSVG)
  * POV-Ray (runtime by PovRayOFX)
  * fontconfig (Required by TextPango)
- * ImageMagick (6.9.2-5+ Q32HDRI recommended) with:
+ * ImageMagick (6.9.1-10/6.9.2-5+ Q32HDRI recommended) with:
    * Freetype (Required by TextOFX)
    * Fontconfig (Required by TextOFX/TextPango/Polaroid)
    * libpng
@@ -25,11 +25,3 @@ Requirements:
    * librsvg (Required by ReadSVG)
    * lcms2 (Required by ReadPSD)
    * Pangocairo (Required by TextPango)
-
-```
-Copyright (c) 2015, FxArena DA <mail@fxarena.net>
-All rights reserved.
-
-OpenFX-Arena is free software: you can redistribute it and/or modify it under the terms of the GNU General Public License version 2. You should have received a copy of the GNU General Public License version 2 along with OpenFX-Arena. If not, see http://www.gnu.org/licenses/.
-OpenFX-Arena is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
-```
