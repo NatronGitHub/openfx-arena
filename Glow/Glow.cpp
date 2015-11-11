@@ -1,11 +1,10 @@
 /*
-# Copyright (c) 2015, FxArena DA <mail@fxarena.net>
+# Copyright (c) 2015, Ole-André Rodlie <olear@dracolinux.org>
 # All rights reserved.
 #
 # OpenFX-Arena is free software: you can redistribute it and/or modify it under the terms of the GNU General Public License version 2. You should have received a copy of the GNU General Public License version 2 along with OpenFX-Arena. If not, see http://www.gnu.org/licenses/.
 # OpenFX-Arena is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
 #
-# Need custom licensing terms or conditions? Commercial license for proprietary software? Contact us.
 */
 
 #include "Glow.h"
@@ -16,8 +15,7 @@
 #define kPluginGrouping "Filter"
 #define kPluginIdentifier "net.fxarena.openfx.Glow"
 #define kPluginVersionMajor 0
-#define kPluginVersionMinor 1
-#define kPluginMagickVersion 26640
+#define kPluginVersionMinor 2
 
 #define kParamAmount "amount"
 #define kParamAmountLabel "Amount"
@@ -29,8 +27,13 @@
 #define kParamSoftHint "Adjust softening"
 #define kParamSoftDefault 0
 
+#define kParamSaturation "saturation"
+#define kParamSaturationLabel "Saturation"
+#define kParamSaturationHint "Adjust saturation (%)"
+#define kParamSaturationDefault 100
+
 #define kSupportsTiles 0
-#define kSupportsMultiResolution 0
+#define kSupportsMultiResolution 1
 #define kSupportsRenderScale 1
 #define kRenderThreadSafety eRenderFullySafe
 #define kHostFrameThreading false
@@ -49,6 +52,7 @@ private:
     OFX::Clip *srcClip_;
     OFX::DoubleParam *amount_;
     OFX::DoubleParam *soft_;
+    OFX::DoubleParam *saturation_;
 };
 
 GlowPlugin::GlowPlugin(OfxImageEffectHandle handle)
@@ -58,14 +62,15 @@ GlowPlugin::GlowPlugin(OfxImageEffectHandle handle)
 {
     Magick::InitializeMagick(NULL);
     dstClip_ = fetchClip(kOfxImageEffectOutputClipName);
-    assert(dstClip_ && dstClip_->getPixelComponents() == OFX::ePixelComponentRGB);
+    assert(dstClip_ && dstClip_->getPixelComponents() == OFX::ePixelComponentRGBA);
     srcClip_ = fetchClip(kOfxImageEffectSimpleSourceClipName);
-    assert(srcClip_ && srcClip_->getPixelComponents() == OFX::ePixelComponentRGB);
+    assert(srcClip_ && srcClip_->getPixelComponents() == OFX::ePixelComponentRGBA);
 
     amount_ = fetchDoubleParam(kParamAmount);
     soft_ = fetchDoubleParam(kParamSoft);
+    saturation_ = fetchDoubleParam(kParamSaturation);
 
-    assert(amount_ && soft_);
+    assert(amount_ && soft_ && saturation_);
 }
 
 GlowPlugin::~GlowPlugin()
@@ -130,7 +135,7 @@ void GlowPlugin::render(const OFX::RenderArguments &args)
 
     // get pixel component
     OFX::PixelComponentEnum dstComponents  = dstImg->getPixelComponents();
-    if (dstComponents != OFX::ePixelComponentRGB || (srcImg.get() && (dstComponents != srcImg->getPixelComponents()))) {
+    if (dstComponents != OFX::ePixelComponentRGBA || (srcImg.get() && (dstComponents != srcImg->getPixelComponents()))) {
         OFX::throwSuiteStatusException(kOfxStatErrFormat);
         return;
     }
@@ -144,9 +149,11 @@ void GlowPlugin::render(const OFX::RenderArguments &args)
     }
 
     // get params
-    double amount,soft;
+    double amount,soft, saturation;
     amount_->getValueAtTime(args.time, amount);
     soft_->getValueAtTime(args.time, soft);
+    saturation_->getValueAtTime(args.time, saturation);
+
 
     // setup
     int width = srcRod.x2-srcRod.x1;
@@ -154,12 +161,9 @@ void GlowPlugin::render(const OFX::RenderArguments &args)
 
     // read image
     Magick::Image image(Magick::Geometry(width,height),Magick::Color("rgb(0,0,0)"));
+    Magick::Image output(Magick::Geometry(width,height),Magick::Color("rgba(0,0,0,1)"));
     if (srcClip_ && srcClip_->isConnected())
-        image.read(width,height,"RGB",Magick::FloatPixel,(float*)srcImg->getPixelData());
-
-    #ifdef DEBUG_MAGICK
-    image.debug(true);
-    #endif
+        image.read(width,height,"RGBA",Magick::FloatPixel,(float*)srcImg->getPixelData());
 
     // glow
     if (amount<1)
@@ -181,9 +185,15 @@ void GlowPlugin::render(const OFX::RenderArguments &args)
         image.composite(image2,0,0,Magick::PlusCompositeOp);
     }
 
+    if (saturation!=100)
+        image.modulate(100,saturation,100);
+
     // return image
-    if (dstClip_ && dstClip_->isConnected() && srcClip_ && srcClip_->isConnected())
-        image.write(0,0,width,height,"RGB",Magick::FloatPixel,(float*)dstImg->getPixelData());
+    if (dstClip_ && dstClip_->isConnected()) {
+        output.composite(image, 0, 0, Magick::OverCompositeOp);
+        output.composite(image, 0, 0, Magick::CopyOpacityCompositeOp);
+        output.write(0,0,args.renderWindow.x2 - args.renderWindow.x1,args.renderWindow.y2 - args.renderWindow.y1,"RGBA",Magick::FloatPixel,(float*)dstImg->getPixelData());
+    }
 }
 
 bool GlowPlugin::getRegionOfDefinition(const OFX::RegionOfDefinitionArguments &args, OfxRectD &rod)
@@ -211,8 +221,6 @@ void GlowPluginFactory::describe(OFX::ImageEffectDescriptor &desc)
     desc.setPluginGrouping(kPluginGrouping);
     size_t magickNumber;
     std::string magickString = MagickCore::GetMagickVersion(&magickNumber);
-    if (magickNumber != kPluginMagickVersion)
-        magickString.append("\n\nWarning! You are using an unsupported version of ImageMagick.");
     desc.setPluginDescription("Glow filter node.\n\nPowered by "+magickString);
 
     // add the supported contexts
@@ -235,14 +243,14 @@ void GlowPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, Cont
 {
     // create the mandated source clip
     ClipDescriptor *srcClip = desc.defineClip(kOfxImageEffectSimpleSourceClipName);
-    srcClip->addSupportedComponent(ePixelComponentRGB);
+    srcClip->addSupportedComponent(ePixelComponentRGBA);
     srcClip->setTemporalClipAccess(false);
     srcClip->setSupportsTiles(kSupportsTiles);
     srcClip->setIsMask(false);
 
     // create the mandated output clip
     ClipDescriptor *dstClip = desc.defineClip(kOfxImageEffectOutputClipName);
-    dstClip->addSupportedComponent(ePixelComponentRGB);
+    dstClip->addSupportedComponent(ePixelComponentRGBA);
     dstClip->setSupportsTiles(kSupportsTiles);
 
     // make some pages
@@ -261,8 +269,17 @@ void GlowPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, Cont
         param->setLabel(kParamSoftLabel);
         param->setHint(kParamSoftHint);
         param->setRange(0, 100);
-        param->setDisplayRange(0, 10);
+        param->setDisplayRange(0, 50);
         param->setDefault(kParamSoftDefault);
+        page->addChild(*param);
+    }
+    {
+        DoubleParamDescriptor *param = desc.defineDoubleParam(kParamSaturation);
+        param->setLabel(kParamSaturationLabel);
+        param->setHint(kParamSaturationHint);
+        param->setRange(0, 200);
+        param->setDisplayRange(0, 200);
+        param->setDefault(kParamSaturationDefault);
         page->addChild(*param);
     }
 }
