@@ -1,11 +1,10 @@
 /*
-# Copyright (c) 2015, FxArena DA <mail@fxarena.net>
+# Copyright (c) 2015, Ole-André Rodlie <olear@dracolinux.org>
 # All rights reserved.
 #
 # OpenFX-Arena is free software: you can redistribute it and/or modify it under the terms of the GNU General Public License version 2. You should have received a copy of the GNU General Public License version 2 along with OpenFX-Arena. If not, see http://www.gnu.org/licenses/.
 # OpenFX-Arena is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
 #
-# Need custom licensing terms or conditions? Commercial license for proprietary software? Contact us.
 */
 
 #include "ReadPSD.h"
@@ -30,7 +29,7 @@
 #define kPluginGrouping "Image/Readers"
 #define kPluginIdentifier "net.fxarena.openfx.ReadPSD"
 #define kPluginVersionMajor 2
-#define kPluginVersionMinor 3
+#define kPluginVersionMinor 4
 
 #define kSupportsRGBA true
 #define kSupportsRGB false
@@ -126,6 +125,7 @@ void _getProFiles(std::vector<std::string> &files, bool desc, std::string filter
     paths.push_back("/usr/share/color/icc/");
     paths.push_back("\\Windows\\system32\\spool\\drivers\\color\\");
     paths.push_back("/Library/ColorSync/Profiles/");
+    // TODO also add homedirs
 
     // get subfolders
     for (unsigned int i = 0; i < paths.size(); i++) {
@@ -556,29 +556,11 @@ void ReadPSDPlugin::decodePlane(const std::string& filename, OfxTime time, int /
     }
 
     // Return image
-    Magick::Image container(Magick::Geometry(width,height),Magick::Color("rgba(0,0,0,0)"));
+    Magick::Image container(Magick::Geometry(width,height),Magick::Color("rgba(0,0,0,1)"));
     container.composite(image,offsetX,offsetY,Magick::OverCompositeOp);
+    container.composite(image,offsetX,offsetY,Magick::CopyOpacityCompositeOp);
     container.flip();
-    //width = bounds.x2;
-    //height = bounds.y2;
-    int widthstep = width*4;
-    int imageSize = width*height*4;
-    float* imageBlock;
-    imageBlock = new float[imageSize];
-    container.write(0,0,width,height,"RGBA",Magick::FloatPixel,imageBlock);
-    for(int y = renderWindow.y1; y < (renderWindow.y1 + height); y++) {
-        float *dstPix = (float*)(pixelData + y * widthstep + renderWindow.x1);
-        float *srcPix = (float*)(imageBlock + (y * widthstep + renderWindow.x1));
-        for(int x = renderWindow.x1; x < (renderWindow.x1 + width); x++) {
-            dstPix[0] = srcPix[0]*srcPix[3];
-            dstPix[1] = srcPix[1]*srcPix[3];
-            dstPix[2] = srcPix[2]*srcPix[3];
-            dstPix[3] = srcPix[3];
-            dstPix+=4;
-            srcPix+=4;
-        }
-    }
-    free(imageBlock);
+    container.write(0,0,renderWindow.x2 - renderWindow.x1,renderWindow.y2 - renderWindow.y1,"RGBA",Magick::FloatPixel,pixelData);
 }
 
 void ReadPSDPlugin::changedParam(const OFX::InstanceChangedArgs &args, const std::string &paramName)
