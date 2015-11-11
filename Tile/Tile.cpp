@@ -1,11 +1,10 @@
 /*
-# Copyright (c) 2015, FxArena DA <mail@fxarena.net>
+# Copyright (c) 2015, Ole-André Rodlie <olear@dracolinux.org>
 # All rights reserved.
 #
 # OpenFX-Arena is free software: you can redistribute it and/or modify it under the terms of the GNU General Public License version 2. You should have received a copy of the GNU General Public License version 2 along with OpenFX-Arena. If not, see http://www.gnu.org/licenses/.
 # OpenFX-Arena is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
 #
-# Need custom licensing terms or conditions? Commercial license for proprietary software? Contact us.
 */
 
 #include "Tile.h"
@@ -18,7 +17,7 @@
 #define kPluginGrouping "Extra/Transform"
 #define kPluginIdentifier "net.fxarena.openfx.Tile"
 #define kPluginVersionMajor 3
-#define kPluginVersionMinor 1
+#define kPluginVersionMinor 2
 
 #define kParamRows "rows"
 #define kParamRowsLabel "Rows"
@@ -208,12 +207,9 @@ void TilePlugin::render(const OFX::RenderArguments &args)
 
     // read source image
     Magick::Image container(Magick::Geometry(srcWidth,srcHeight),Magick::Color("rgba(0,0,0,0)"));
+    Magick::Image output(Magick::Geometry(srcWidth,srcHeight),Magick::Color("rgba(0,0,0,1)"));
     if (srcClip_ && srcClip_->isConnected())
         image.read(srcWidth,srcHeight,"RGBA",Magick::FloatPixel,(float*)srcImg->getPixelData());
-
-    #ifdef DEBUG_MAGICK
-    image.debug(true);
-    #endif
 
     // setup montage
     std::string fontFile;
@@ -278,8 +274,11 @@ void TilePlugin::render(const OFX::RenderArguments &args)
     Magick::appendImages(&container,montagelist.begin(),montagelist.end());
 
     // return image
-    if (dstClip_ && dstClip_->isConnected() && srcClip_ && srcClip_->isConnected())
-        container.write(0,0,args.renderWindow.x2 - args.renderWindow.x1,args.renderWindow.y2 - args.renderWindow.y1,"RGBA",Magick::FloatPixel,(float*)dstImg->getPixelData());
+    if (dstClip_ && dstClip_->isConnected()) {
+        output.composite(container, 0, 0, Magick::OverCompositeOp);
+        output.composite(container, 0, 0, Magick::CopyOpacityCompositeOp);
+        output.write(0,0,args.renderWindow.x2 - args.renderWindow.x1,args.renderWindow.y2 - args.renderWindow.y1,"RGBA",Magick::FloatPixel,(float*)dstImg->getPixelData());
+    }
 }
 
 bool TilePlugin::getRegionOfDefinition(const OFX::RegionOfDefinitionArguments &args, OfxRectD &rod)

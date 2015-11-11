@@ -1,11 +1,10 @@
 /*
-# Copyright (c) 2015, FxArena DA <mail@fxarena.net>
+# Copyright (c) 2015, Ole-André Rodlie <olear@dracolinux.org>
 # All rights reserved.
 #
 # OpenFX-Arena is free software: you can redistribute it and/or modify it under the terms of the GNU General Public License version 2. You should have received a copy of the GNU General Public License version 2 along with OpenFX-Arena. If not, see http://www.gnu.org/licenses/.
 # OpenFX-Arena is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
 #
-# Need custom licensing terms or conditions? Commercial license for proprietary software? Contact us.
 */
 
 #include "Polaroid.h"
@@ -22,7 +21,7 @@
 #define kPluginGrouping "Extra/Misc"
 #define kPluginIdentifier "net.fxarena.openfx.Polaroid"
 #define kPluginVersionMajor 1
-#define kPluginVersionMinor 3
+#define kPluginVersionMinor 4
 
 #define kParamText "caption"
 #define kParamTextLabel "Caption"
@@ -95,7 +94,7 @@ PolaroidPlugin::PolaroidPlugin(OfxImageEffectHandle handle)
     dstClip_ = fetchClip(kOfxImageEffectOutputClipName);
     assert(dstClip_ && dstClip_->getPixelComponents() == OFX::ePixelComponentRGBA);
     srcClip_ = fetchClip(kOfxImageEffectSimpleSourceClipName);
-    assert(srcClip_ && srcClip_->getPixelComponents() == OFX::ePixelComponentRGB);
+    assert(srcClip_ && srcClip_->getPixelComponents() == OFX::ePixelComponentRGBA);
 
     text_ = fetchStringParam(kParamText);
     angle_ = fetchDoubleParam(kParamAngle);
@@ -249,14 +248,11 @@ void PolaroidPlugin::render(const OFX::RenderArguments &args)
 
     // read image
     Magick::Image image(Magick::Geometry(width,height),Magick::Color("rgba(0,0,0,0)"));
+    Magick::Image output(Magick::Geometry(width,height),Magick::Color("rgba(0,0,0,1)"));
     if (srcClip_ && srcClip_->isConnected())
-        image.read(width,height,"RGB",Magick::FloatPixel,(float*)srcImg->getPixelData());
-    if (!image.matte())
-        image.matte(true);
-
-    #ifdef DEBUG_MAGICK
-    image.debug(true);
-    #endif
+        image.read(width,height,"RGBA",Magick::FloatPixel,(float*)srcImg->getPixelData());
+    //if (!image.matte())
+        //image.matte(true);
 
     // no fonts?
     if (fontName.empty()) {
@@ -288,27 +284,9 @@ void PolaroidPlugin::render(const OFX::RenderArguments &args)
 
     // return image
     if (dstClip_ && dstClip_->isConnected()) {
-        /*width = dstBounds.x2-dstBounds.x1;
-        height = dstBounds.y2-dstBounds.y1;
-        int widthstep = width*4;
-        int imageSize = width*height*4;
-        float* imageBlock;
-        imageBlock = new float[imageSize];
-        image.write(0,0,width,height,"RGBA",Magick::FloatPixel,imageBlock);
-        for(int y = args.renderWindow.y1; y < (args.renderWindow.y1 + height); y++) {
-            OfxRGBAColourF *dstPix = (OfxRGBAColourF *)dstImg->getPixelAddress(args.renderWindow.x1, y);
-            float *srcPix = (float*)(imageBlock + y * widthstep + args.renderWindow.x1);
-            for(int x = args.renderWindow.x1; x < (args.renderWindow.x1 + width); x++) {
-                dstPix->r = srcPix[0]*srcPix[3];
-                dstPix->g = srcPix[1]*srcPix[3];
-                dstPix->b = srcPix[2]*srcPix[3];
-                dstPix->a = srcPix[3];
-                dstPix++;
-                srcPix+=4;
-            }
-        }
-        free(imageBlock);*/
-        image.write(0,0,args.renderWindow.x2 - args.renderWindow.x1,args.renderWindow.y2 - args.renderWindow.y1,"RGBA",Magick::FloatPixel,(float*)dstImg->getPixelData());
+        output.composite(image, 0, 0, Magick::OverCompositeOp);
+        output.composite(image, 0, 0, Magick::CopyOpacityCompositeOp);
+        output.write(0,0,args.renderWindow.x2 - args.renderWindow.x1,args.renderWindow.y2 - args.renderWindow.y1,"RGBA",Magick::FloatPixel,(float*)dstImg->getPixelData());
     }
 }
 
@@ -379,7 +357,7 @@ void PolaroidPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, 
 
     // create the mandated source clip
     ClipDescriptor *srcClip = desc.defineClip(kOfxImageEffectSimpleSourceClipName);
-    srcClip->addSupportedComponent(ePixelComponentRGB);
+    srcClip->addSupportedComponent(ePixelComponentRGBA);
     srcClip->setTemporalClipAccess(false);
     srcClip->setSupportsTiles(kSupportsTiles);
     srcClip->setIsMask(false);
