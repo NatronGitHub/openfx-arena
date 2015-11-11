@@ -22,7 +22,6 @@ A set of OpenFX visual effect plugins. Designed for Natron, but should work in o
 
 %prep
 %setup
-%setup -T -D -a 1
 
 %build
 make CONFIG=release
