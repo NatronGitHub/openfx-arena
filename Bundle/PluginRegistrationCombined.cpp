@@ -19,7 +19,7 @@
 #include "Edges.h"
 #include "Modulate.h"
 
-#if !defined(_WIN32) && !defined(__MINGW__) && !defined(__APPLE__) //&& defined(DEBUG)
+#if !defined(_WIN32) && !defined(__MINGW__)
 #define USE_POV_RAY
 #include "PovRay.h"
 #endif
