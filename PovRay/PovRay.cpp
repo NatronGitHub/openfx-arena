@@ -255,7 +255,7 @@ void PovRayPlugin::render(const OFX::RenderArguments &args)
         if (povpath.empty())
             povpath = "povray";
         sceneimg << scenetemp << ".png"; // .hdr // +fh // hdr dont support alpha
-        povray_command << povpath << " +I\"" << scenetemp << "\""  << " +O\"" << sceneimg.str() << "\"" << " -D0 +H" << height << " +W" << width << " +Q" << quality;
+        povray_command << povpath << " +I\"" << scenetemp << "\""  << " +O\"" << sceneimg.str() << "\"" << " +FN16 -D0 +H" << height << " +W" << width << " +Q" << quality;
         if (antialiasing>0)
             povray_command << " +A0." << antialiasing;
         if (alpha)
