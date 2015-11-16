@@ -25,7 +25,7 @@
 #define kPluginGrouping "Draw"
 #define kPluginIdentifier "net.fxarena.openfx.Text"
 #define kPluginVersionMajor 5
-#define kPluginVersionMinor 5
+#define kPluginVersionMinor 6
 
 #define kSupportsTiles 0
 #define kSupportsMultiResolution 0
@@ -75,7 +75,7 @@
 
 #define kParamFontOverride "custom"
 #define kParamFontOverrideLabel "Custom font"
-#define kParamFontOverrideHint "Override the font list. You can use font name, filename or direct path"
+#define kParamFontOverrideHint "Override font family"
 
 #define kParamShadowOpacity "shadowOpacity"
 #define kParamShadowOpacityLabel "Opacity"
@@ -201,10 +201,10 @@ TextPlugin::TextPlugin(OfxImageEffectHandle handle)
         has_freetype = true;
 
     srcClip_ = fetchClip(kOfxImageEffectSimpleSourceClipName);
-    assert(!srcClip_ || srcClip_->getPixelComponents() == OFX::ePixelComponentRGB);
+    assert(!srcClip_ || (srcClip_->getPixelComponents() == OFX::ePixelComponentRGBA || srcClip_->getPixelComponents() == OFX::ePixelComponentRGB));
 
     dstClip_ = fetchClip(kOfxImageEffectOutputClipName);
-    assert(dstClip_ && dstClip_->getPixelComponents() == OFX::ePixelComponentRGBA);
+    assert(dstClip_ && (dstClip_->getPixelComponents() == OFX::ePixelComponentRGBA || dstClip_->getPixelComponents() == OFX::ePixelComponentRGB));
 
     position_ = fetchDouble2DParam(kParamPosition);
     text_ = fetchStringParam(kParamText);
@@ -302,14 +302,16 @@ void TextPlugin::render(const OFX::RenderArguments &args)
 
     // get bitdepth
     OFX::BitDepthEnum dstBitDepth = dstImg->getPixelDepth();
-    if (dstBitDepth != OFX::eBitDepthFloat) {
+    if (dstBitDepth != OFX::eBitDepthFloat && dstBitDepth != OFX::eBitDepthUShort && dstBitDepth != OFX::eBitDepthUByte) {
+        setPersistentMessage(OFX::Message::eMessageError, "", "Unsupported bit depth");
         OFX::throwSuiteStatusException(kOfxStatErrFormat);
         return;
     }
 
     // get channels
     OFX::PixelComponentEnum dstComponents  = dstImg->getPixelComponents();
-    if (dstComponents != OFX::ePixelComponentRGBA) {
+    if ((dstComponents != OFX::ePixelComponentRGBA && dstComponents != OFX::ePixelComponentRGB && dstComponents != OFX::ePixelComponentAlpha)) {
+        setPersistentMessage(OFX::Message::eMessageError, "", "Unsupported pixel components");
         OFX::throwSuiteStatusException(kOfxStatErrFormat);
         return;
     }
@@ -366,22 +368,14 @@ void TextPlugin::render(const OFX::RenderArguments &args)
     // Set max threads allowed by host
     unsigned int threads = 0;
     threads = OFX::MultiThread::getNumCPUs();
-    if (threads>0) {
+    if (threads>0)
         Magick::ResourceLimits::thread(threads);
-        #ifdef DEBUG
-        std::cout << "Setting max threads to " << threads << std::endl;
-        #endif
-    }
 
     // Generate empty image
     int width = dstRod.x2-dstRod.x1;
     int height = dstRod.y2-dstRod.y1;
     Magick::Image image(Magick::Geometry(width,height),Magick::Color("rgba(0,0,0,0)"));
     Magick::Image output(Magick::Geometry(width,height),Magick::Color("rgba(0,0,0,1)"));
-
-    #ifdef DEBUG_MAGICK
-    image.debug(true);
-    #endif
 
     // no fonts?
     if (fontName.empty()) {
@@ -441,12 +435,12 @@ void TextPlugin::render(const OFX::RenderArguments &args)
     draw.push_back(Magick::DrawableFont(fontName));
     draw.push_back(Magick::DrawablePointSize(std::floor(fontSize * args.renderScale.x + 0.5)));
     draw.push_back(Magick::DrawableText(xtext, ytext, text));
-    draw.push_back(Magick::DrawableFillColor(textRGBA.str()));
+    draw.push_back(Magick::DrawableFillColor(Magick::Color(textRGBA.str())));
     draw.push_back(Magick::DrawableTextInterlineSpacing(std::floor(interlineSpacing * args.renderScale.x + 0.5)));
     draw.push_back(Magick::DrawableTextInterwordSpacing(std::floor(interwordSpacing * args.renderScale.x + 0.5)));
     draw.push_back(Magick::DrawableTextKerning(std::floor(textSpacing * args.renderScale.x + 0.5)));
     if (strokeWidth>0) {
-        draw.push_back(Magick::DrawableStrokeColor(strokeRGBA.str()));
+        draw.push_back(Magick::DrawableStrokeColor(Magick::Color(strokeRGBA.str())));
         draw.push_back(Magick::DrawableStrokeWidth(std::floor(strokeWidth * args.renderScale.x + 0.5)));
     }
 
@@ -458,9 +452,17 @@ void TextPlugin::render(const OFX::RenderArguments &args)
         Magick::Image shadowContainer(Magick::Geometry(width,height),Magick::Color("rgba(0,0,0,0)"));
         Magick::Image dropShadow;
         dropShadow=image;
-        dropShadow.backgroundColor(shadowRGB.str());
+        dropShadow.backgroundColor(Magick::Color(shadowRGB.str()));
         dropShadow.virtualPixelMethod(Magick::TransparentVirtualPixelMethod);
-        dropShadow.shadow(shadowOpacity,std::floor(shadowSigma * args.renderScale.x + 0.5),0,0);
+        try { // workaround for missing colors.xml
+            dropShadow.shadow(shadowOpacity,std::floor(shadowSigma * args.renderScale.x + 0.5),0,0);
+        }
+        catch(Magick::Warning &warning) {
+            dropShadow.shadow(shadowOpacity,std::floor(shadowSigma * args.renderScale.x + 0.5),0,0);
+            #ifdef DEBUG
+            std::cout << warning.what() << std::endl;
+            #endif
+        }
         if (shadowBlur>0)
             dropShadow.blur(0,std::floor(shadowBlur * args.renderScale.x + 0.5));
         shadowContainer.composite(dropShadow,std::floor(shadowX * args.renderScale.x + 0.5),std::floor(shadowY * args.renderScale.x + 0.5),Magick::OverCompositeOp);
@@ -474,9 +476,16 @@ void TextPlugin::render(const OFX::RenderArguments &args)
     // add src clip if any
     if (srcClip_ && srcClip_->isConnected() && cwidth==0 && cheight==0) {
         std::auto_ptr<const OFX::Image> srcImg(srcClip_->fetchImage(args.time));
+        OFX::PixelComponentEnum srcComponents  = srcImg->getPixelComponents();
+        if ((srcComponents != OFX::ePixelComponentRGBA && srcComponents != OFX::ePixelComponentRGB && srcComponents != OFX::ePixelComponentAlpha)) {
+            setPersistentMessage(OFX::Message::eMessageError, "", "Unsupported pixel components");
+            OFX::throwSuiteStatusException(kOfxStatErrFormat);
+            return;
+        }
         if (srcImg.get()) {
             Magick::Image input;
-            input.read(width,height,"RGB",Magick::FloatPixel,(float*)srcImg->getPixelData());
+            input.read(width,height,"RGBA",Magick::FloatPixel,(float*)srcImg->getPixelData());
+            input.matte(false); // workaround until unpremult
             input.matte(true);
             input.composite(image,0,0,Magick::OverCompositeOp);
             image=input;
@@ -485,9 +494,47 @@ void TextPlugin::render(const OFX::RenderArguments &args)
 
     // return image
     if (dstClip_ && dstClip_->isConnected()) {
-        output.composite(image, 0, 0, Magick::OverCompositeOp);
-        output.composite(image, 0, 0, Magick::CopyOpacityCompositeOp);
-        output.write(0,0,args.renderWindow.x2 - args.renderWindow.x1,args.renderWindow.y2 - args.renderWindow.y1,"RGBA",Magick::FloatPixel,(float*)dstImg->getPixelData());
+        std::string channels;
+        int outW = args.renderWindow.x2-args.renderWindow.x1;
+        int outH = args.renderWindow.y2-args.renderWindow.y1;
+        switch(dstComponents) {
+        case OFX::ePixelComponentRGBA:
+            output.composite(image,0,0,Magick::OverCompositeOp);
+            output.composite(image,0,0,Magick::CopyOpacityCompositeOp);
+            channels="RGBA";
+            break;
+        case OFX::ePixelComponentRGB:
+            channels="RGB";
+            output=image;
+            output.matte(false);
+            break;
+        case OFX::ePixelComponentAlpha:
+            channels="A";
+            output=image;
+            //output.channel(Magick::MatteChannel);
+            break;
+        default:
+            //
+            break;
+        }
+        switch (dstBitDepth) {
+        case OFX::eBitDepthUByte:
+            if (output.depth()>8)
+                output.depth(8);
+            output.write(0,0,outW,outH,channels,Magick::CharPixel,(float*)dstImg->getPixelData());
+            break;
+        case OFX::eBitDepthUShort:
+            if (output.depth()>16)
+                output.depth(16);
+            output.write(0,0,outW,outH,channels,Magick::ShortPixel,(float*)dstImg->getPixelData());
+            break;
+        case OFX::eBitDepthFloat:
+            output.write(0,0,outW,outH,channels,Magick::FloatPixel,(float*)dstImg->getPixelData());
+            break;
+        default:
+            //
+            break;
+        }
     }
 }
 
@@ -545,18 +592,26 @@ struct PositionInteractParam {
 /** @brief The basic describe function, passed a plugin descriptor */
 void TextPluginFactory::describe(OFX::ImageEffectDescriptor &desc)
 {
+    // natron?
+    gHostIsNatron = (OFX::getImageEffectHostDescription()->isNatron);
+
     // basic labels
     desc.setLabel(kPluginName);
     desc.setPluginGrouping(kPluginGrouping);
     size_t magickNumber;
     std::string magickString = MagickCore::GetMagickVersion(&magickNumber);
-    desc.setPluginDescription("Text generator node.\n\nPowered by "+magickString+"\n\nImageMagick (R) is Copyright 1999-2015 ImageMagick Studio LLC, a non-profit organization dedicated to making software imaging solutions freely available.\n\nImageMagick is distributed under the Apache 2.0 license.");
+    std::string ofxDesc = "Text generator node";
+    if (!gHostIsNatron)
+        ofxDesc = "OpenFX text generator\n\nWritten by Ole-André Rodlie (olear@dracolinux.org)\n\nPart of OpenFX-Arena (https://github.com/olear/openfx-arena)\n\n";
+    desc.setPluginDescription(ofxDesc+"\n\nPowered by "+magickString+"\n\nImageMagick (R) is Copyright 1999-2015 ImageMagick Studio LLC, a non-profit organization dedicated to making software imaging solutions freely available.\n\nImageMagick is distributed under the Apache 2.0 license.");
 
     // add the supported contexts
     desc.addSupportedContext(eContextGeneral);
     desc.addSupportedContext(eContextGenerator);
 
     // add supported pixel depths
+    desc.addSupportedBitDepth(eBitDepthUByte);
+    desc.addSupportedBitDepth(eBitDepthUShort);
     desc.addSupportedBitDepth(eBitDepthFloat);
 
     // add other
@@ -575,23 +630,25 @@ void TextPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, Cont
 
     // there has to be an input clip, even for generators
     ClipDescriptor* srcClip = desc.defineClip(kOfxImageEffectSimpleSourceClipName);
-    srcClip->addSupportedComponent(ePixelComponentRGB);
+    srcClip->addSupportedComponent(ePixelComponentRGBA);
+    //srcClip->addSupportedComponent(ePixelComponentRGB);
+    //srcClip->addSupportedComponent(ePixelComponentAlpha);
     srcClip->setSupportsTiles(kSupportsTiles);
     srcClip->setOptional(true);
 
     // create the mandated output clip
     ClipDescriptor *dstClip = desc.defineClip(kOfxImageEffectOutputClipName);
     dstClip->addSupportedComponent(ePixelComponentRGBA);
+    //dstClip->addSupportedComponent(ePixelComponentRGB);
+    //dstClip->addSupportedComponent(ePixelComponentAlpha);
     dstClip->setSupportsTiles(kSupportsTiles);
 
     // make some pages
     PageParamDescriptor *page = desc.definePageParam(kPluginName);
-    GroupParamDescriptor *groupStroke = desc.defineGroupParam("Stroke");
-    GroupParamDescriptor *groupShadow = desc.defineGroupParam("Shadow");
-    GroupParamDescriptor *groupSpace = desc.defineGroupParam("Spacing");
-    GroupParamDescriptor *groupCanvas = desc.defineGroupParam("Canvas");
 
+    GroupParamDescriptor *groupCanvas = desc.defineGroupParam("Canvas");
     groupCanvas->setOpen(false);
+
     bool hostHasNativeOverlayForPosition;
     {
         page->addChild(*groupCanvas);
@@ -684,7 +741,7 @@ void TextPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, Cont
         StringParamDescriptor* param = desc.defineStringParam(kParamFontOverride);
         param->setLabel(kParamFontOverrideLabel);
         param->setHint(kParamFontOverrideHint);
-        param->setStringType(eStringTypeSingleLine);
+        param->setStringType(eStringTypeFilePath);
         param->setAnimates(true);
         page->addChild(*param);
     }
@@ -721,10 +778,9 @@ void TextPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, Cont
         param->setAnimates(true);
         page->addChild(*param);
     }
+    GroupParamDescriptor *groupSpace = desc.defineGroupParam("Spacing");
     {
-         page->addChild(*groupStroke);
-         page->addChild(*groupShadow);
-         page->addChild(*groupSpace);
+        page->addChild(*groupSpace);
     }
     {
         DoubleParamDescriptor *param = desc.defineDoubleParam(kParamTextSpacing);
@@ -753,6 +809,10 @@ void TextPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, Cont
         param->setDefault(kParamInterlineSpacingDefault);
         param->setParent(*groupSpace);
     }
+    GroupParamDescriptor *groupStroke = desc.defineGroupParam("Stroke");
+    {
+        page->addChild(*groupStroke);
+    }
     {
         DoubleParamDescriptor *param = desc.defineDoubleParam(kParamStroke);
         param->setLabel(kParamStrokeLabel);
@@ -769,6 +829,10 @@ void TextPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, Cont
         param->setDefault(1., 1., 1., 1.);
         param->setAnimates(true);
         param->setParent(*groupStroke);
+    }
+    GroupParamDescriptor *groupShadow = desc.defineGroupParam("Shadow");
+    {
+        page->addChild(*groupShadow);
     }
     {
         DoubleParamDescriptor *param = desc.defineDoubleParam(kParamShadowOpacity);
