@@ -477,7 +477,7 @@ void TextPlugin::render(const OFX::RenderArguments &args)
     if (srcClip_ && srcClip_->isConnected() && cwidth==0 && cheight==0) {
         std::auto_ptr<const OFX::Image> srcImg(srcClip_->fetchImage(args.time));
         OFX::PixelComponentEnum srcComponents  = srcImg->getPixelComponents();
-        if ((srcComponents != OFX::ePixelComponentRGBA && dstComponents != OFX::ePixelComponentRGB && srcComponents != OFX::ePixelComponentAlpha)) {
+        if ((srcComponents != OFX::ePixelComponentRGBA && srcComponents != OFX::ePixelComponentRGB && srcComponents != OFX::ePixelComponentAlpha)) {
             setPersistentMessage(OFX::Message::eMessageError, "", "Unsupported pixel components");
             OFX::throwSuiteStatusException(kOfxStatErrFormat);
             return;
