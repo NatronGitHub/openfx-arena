@@ -23,7 +23,7 @@
 #define kPluginGrouping "Draw"
 #define kPluginIdentifier "net.fxarena.openfx.TextPango"
 #define kPluginVersionMajor 2
-#define kPluginVersionMinor 1
+#define kPluginVersionMinor 2
 
 #define kSupportsTiles 0
 #define kSupportsMultiResolution 0
@@ -201,10 +201,12 @@ TextPangoPlugin::TextPangoPlugin(OfxImageEffectHandle handle)
     if (delegates.find("pango") != std::string::npos)
         has_pango = true;
 
-    dstClip_ = fetchClip(kOfxImageEffectOutputClipName);
-    assert(dstClip_ && dstClip_->getPixelComponents() == OFX::ePixelComponentRGBA);
     srcClip_ = fetchClip(kOfxImageEffectSimpleSourceClipName);
-    assert(!srcClip_ && srcClip_->getPixelComponents() == OFX::ePixelComponentRGBA);
+    assert(!srcClip_ || (srcClip_->getPixelComponents() == OFX::ePixelComponentRGBA || srcClip_->getPixelComponents() == OFX::ePixelComponentRGB));
+
+    dstClip_ = fetchClip(kOfxImageEffectOutputClipName);
+    assert(dstClip_ && (dstClip_->getPixelComponents() == OFX::ePixelComponentRGBA || dstClip_->getPixelComponents() == OFX::ePixelComponentRGB));
+
 
     text_ = fetchStringParam(kParamText);
     width_ = fetchIntParam(kParamWidth);
@@ -301,14 +303,16 @@ void TextPangoPlugin::render(const OFX::RenderArguments &args)
 
     // get bitdepth
     OFX::BitDepthEnum dstBitDepth = dstImg->getPixelDepth();
-    if (dstBitDepth != OFX::eBitDepthFloat) {
+    if (dstBitDepth != OFX::eBitDepthFloat && dstBitDepth != OFX::eBitDepthUShort && dstBitDepth != OFX::eBitDepthUByte) {
+        setPersistentMessage(OFX::Message::eMessageError, "", "Unsupported bit depth");
         OFX::throwSuiteStatusException(kOfxStatErrFormat);
         return;
     }
 
     // get channels
     OFX::PixelComponentEnum dstComponents  = dstImg->getPixelComponents();
-    if (dstComponents != OFX::ePixelComponentRGBA) {
+    if ((dstComponents != OFX::ePixelComponentRGBA && dstComponents != OFX::ePixelComponentRGB && dstComponents != OFX::ePixelComponentAlpha)) {
+        setPersistentMessage(OFX::Message::eMessageError, "", "Unsupported pixel components");
         OFX::throwSuiteStatusException(kOfxStatErrFormat);
         return;
     }
@@ -473,9 +477,17 @@ void TextPangoPlugin::render(const OFX::RenderArguments &args)
         Magick::Image shadowContainer(Magick::Geometry(width,height),Magick::Color("rgba(0,0,0,0)"));
         Magick::Image dropShadow;
         dropShadow=image;
-        dropShadow.backgroundColor(shadowRGB.str());
+        dropShadow.backgroundColor(Magick::Color(shadowRGB.str()));
         dropShadow.virtualPixelMethod(Magick::TransparentVirtualPixelMethod);
-        dropShadow.shadow(shadowOpacity,std::floor(shadowSigma * args.renderScale.x + 0.5),0,0);
+        try { // workaround for missing colors.xml
+            dropShadow.shadow(shadowOpacity,std::floor(shadowSigma * args.renderScale.x + 0.5),0,0);
+        }
+        catch(Magick::Warning &warning) {
+            dropShadow.shadow(shadowOpacity,std::floor(shadowSigma * args.renderScale.x + 0.5),0,0);
+            #ifdef DEBUG
+            std::cout << warning.what() << std::endl;
+            #endif
+        }
         if (shadowBlur>0)
             dropShadow.blur(0,std::floor(shadowBlur * args.renderScale.x + 0.5));
         shadowContainer.composite(dropShadow,std::floor(shadowX * args.renderScale.x + 0.5),std::floor(shadowY * args.renderScale.x + 0.5),Magick::OverCompositeOp);
@@ -489,9 +501,16 @@ void TextPangoPlugin::render(const OFX::RenderArguments &args)
     // add src clip if any
     if (srcClip_ && srcClip_->isConnected() && cwidth==0 && cheight==0) {
         std::auto_ptr<const OFX::Image> srcImg(srcClip_->fetchImage(args.time));
+        OFX::PixelComponentEnum srcComponents  = srcImg->getPixelComponents();
+        if ((srcComponents != OFX::ePixelComponentRGBA && srcComponents != OFX::ePixelComponentRGB && srcComponents != OFX::ePixelComponentAlpha)) {
+            setPersistentMessage(OFX::Message::eMessageError, "", "Unsupported pixel components");
+            OFX::throwSuiteStatusException(kOfxStatErrFormat);
+            return;
+        }
         if (srcImg.get()) {
             Magick::Image input;
-            input.read(width,height,"RGB",Magick::FloatPixel,(float*)srcImg->getPixelData());
+            input.read(width,height,"RGBA",Magick::FloatPixel,(float*)srcImg->getPixelData());
+            input.matte(false); // workaround until unpremult
             input.matte(true);
             input.composite(image,0,0,Magick::OverCompositeOp);
             image=input;
@@ -500,9 +519,47 @@ void TextPangoPlugin::render(const OFX::RenderArguments &args)
 
     // return image
     if (dstClip_ && dstClip_->isConnected()) {
-        output.composite(image, 0, 0, Magick::OverCompositeOp);
-        output.composite(image, 0, 0, Magick::CopyOpacityCompositeOp);
-        output.write(0,0,args.renderWindow.x2 - args.renderWindow.x1,args.renderWindow.y2 - args.renderWindow.y1,"RGBA",Magick::FloatPixel,(float*)dstImg->getPixelData());
+        std::string channels;
+        int outW = args.renderWindow.x2-args.renderWindow.x1;
+        int outH = args.renderWindow.y2-args.renderWindow.y1;
+        switch(dstComponents) {
+        case OFX::ePixelComponentRGBA:
+            output.composite(image,0,0,Magick::OverCompositeOp);
+            output.composite(image,0,0,Magick::CopyOpacityCompositeOp);
+            channels="RGBA";
+            break;
+        case OFX::ePixelComponentRGB:
+            channels="RGB";
+            output=image;
+            output.matte(false);
+            break;
+        case OFX::ePixelComponentAlpha:
+            channels="A";
+            output=image;
+            //output.channel(Magick::MatteChannel);
+            break;
+        default:
+            //
+            break;
+        }
+        switch (dstBitDepth) {
+        case OFX::eBitDepthUByte:
+            if (output.depth()>8)
+                output.depth(8);
+            output.write(0,0,outW,outH,channels,Magick::CharPixel,(float*)dstImg->getPixelData());
+            break;
+        case OFX::eBitDepthUShort:
+            if (output.depth()>16)
+                output.depth(16);
+            output.write(0,0,outW,outH,channels,Magick::ShortPixel,(float*)dstImg->getPixelData());
+            break;
+        case OFX::eBitDepthFloat:
+            output.write(0,0,outW,outH,channels,Magick::FloatPixel,(float*)dstImg->getPixelData());
+            break;
+        default:
+            //
+            break;
+        }
     }
 }
 
@@ -553,18 +610,26 @@ mDeclarePluginFactory(TextPangoPluginFactory, {}, {});
 /** @brief The basic describe function, passed a plugin descriptor */
 void TextPangoPluginFactory::describe(OFX::ImageEffectDescriptor &desc)
 {
+    // natron?
+    gHostIsNatron = (OFX::getImageEffectHostDescription()->isNatron);
+
     // basic labels
     desc.setLabel(kPluginName);
     desc.setPluginGrouping(kPluginGrouping);
     size_t magickNumber;
     std::string magickString = MagickCore::GetMagickVersion(&magickNumber);
-    desc.setPluginDescription("Pango text generator node.\n\nPowered by "+magickString+"\n\nImageMagick (R) is Copyright 1999-2015 ImageMagick Studio LLC, a non-profit organization dedicated to making software imaging solutions freely available.\n\nImageMagick is distributed under the Apache 2.0 license.");
+    std::string ofxDesc = "Pango text generator node";
+    if (!gHostIsNatron)
+        ofxDesc = "OpenFX pango text generator\n\nWritten by Ole-André Rodlie (olear@dracolinux.org)\n\nPart of OpenFX-Arena (https://github.com/olear/openfx-arena)\n\n";
+    desc.setPluginDescription(ofxDesc+"\n\nPowered by "+magickString+"\n\nImageMagick (R) is Copyright 1999-2015 ImageMagick Studio LLC, a non-profit organization dedicated to making software imaging solutions freely available.\n\nImageMagick is distributed under the Apache 2.0 license.");
 
     // add the supported contexts
     desc.addSupportedContext(eContextGeneral);
     desc.addSupportedContext(eContextGenerator);
 
     // add supported pixel depths
+    desc.addSupportedBitDepth(eBitDepthUByte);
+    desc.addSupportedBitDepth(eBitDepthUShort);
     desc.addSupportedBitDepth(eBitDepthFloat);
 
     // add other
@@ -581,19 +646,22 @@ void TextPangoPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc,
 
     // there has to be an input clip, even for generators
     ClipDescriptor* srcClip = desc.defineClip(kOfxImageEffectSimpleSourceClipName);
-    srcClip->addSupportedComponent(ePixelComponentRGB);
+    srcClip->addSupportedComponent(ePixelComponentRGBA);
+    //srcClip->addSupportedComponent(ePixelComponentRGB);
+    //srcClip->addSupportedComponent(ePixelComponentAlpha);
     srcClip->setSupportsTiles(kSupportsTiles);
     srcClip->setOptional(true);
 
     // create the mandated output clip
     ClipDescriptor *dstClip = desc.defineClip(kOfxImageEffectOutputClipName);
     dstClip->addSupportedComponent(ePixelComponentRGBA);
+    //dstClip->addSupportedComponent(ePixelComponentRGB);
+    //dstClip->addSupportedComponent(ePixelComponentAlpha);
     dstClip->setSupportsTiles(kSupportsTiles);
 
     // make some pages
     PageParamDescriptor *page = desc.definePageParam(kPluginName);
     GroupParamDescriptor *groupCanvas = desc.defineGroupParam("Canvas");
-    GroupParamDescriptor *groupShadow = desc.defineGroupParam("Shadow");
     groupCanvas->setOpen(false);
     {
         page->addChild(*groupCanvas);
@@ -791,6 +859,7 @@ void TextPangoPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc,
         param->setAnimates(true);
         page->addChild(*param);
     }
+    GroupParamDescriptor *groupShadow = desc.defineGroupParam("Shadow");
     {
         page->addChild(*groupShadow);
     }

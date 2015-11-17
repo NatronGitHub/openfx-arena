@@ -13,7 +13,7 @@
 CWD=$(pwd)
 
 MAGICK=6.9.1-10
-#OCIO=1.0.9
+OCIO=1.0.9
 OCIO_URL=https://github.com/imageworks/OpenColorIO/archive/v${OCIO}.tar.gz
 MAGICK_URL=https://github.com/olear/openfx-arena/releases/download/Natron-2.0.0-RC2/ImageMagick-6.9.1-10.tar.gz #ftp://ftp.sunet.se/pub/multimedia/graphics/ImageMagick/ImageMagick-$MAGICK.tar.gz
 if [ -z "$QUANTUM" ]; then
@@ -163,21 +163,22 @@ if [ ! -f ${PREFIX}/lib/libMagick++-6.Q${Q}HDRI.a ]; then
 fi
 
 # ocio
-#if [ ! -f $PREFIX/lib/libOpenColorIO.a ]; then
-#    cd $TMP_PATH || exit 1
-#    if [ ! -f $CWD/3rdparty/OpenColorIO-$OCIO.tar.gz ]; then
-#        wget $OCIO_URL -O $CWD/3rdparty/OpenColorIO-$OCIO.tar.gz || exit 1
-#    fi
-#    tar xvf $CWD/3rdparty/OpenColorIO-$OCIO.tar.gz || exit 1
-#    cd OpenColorIO-* || exit 1
-#    mkdir build || exit 1
-#    cd build || exit 1
-#    env CFLAGS="$BF" CXXFLAGS="$BF" CPPFLAGS="-I${PREFIX}/include" LDFLAGS="-L${PREFIX}/lib" cmake .. -DCMAKE_INSTALL_PREFIX=$PREFIX -DCMAKE_BUILD_TYPE=Release -DOCIO_BUILD_SHARED=OFF -DOCIO_BUILD_STATIC=ON -DOCIO_BUILD_APPS=OFF -DOCIO_BUILD_PYGLUE=OFF || exit 1
-#    make -j${MKJOBS} || exit 1
-#    make install || exit 1
-#    cp ext/dist/lib/{liby*.a,libt*.a} $PREFIX/lib/ || exit 1
-#    sed -i "s/-lOpenColorIO/-lOpenColorIO -lyaml-cpp -ltinyxml -llcms2/" $PREFIX/lib/pkgconfig/OpenColorIO.pc || exit 1
-#fi
+if [ ! -f $PREFIX/lib/libOpenColorIO.a ] && [ "$BUILD_OCIO" = "1" ]; then
+    cd $TMP_PATH || exit 1
+    if [ ! -f $CWD/3rdparty/OpenColorIO-$OCIO.tar.gz ]; then
+        wget $OCIO_URL -O $CWD/3rdparty/OpenColorIO-$OCIO.tar.gz || exit 1
+    fi
+    tar xvf $CWD/3rdparty/OpenColorIO-$OCIO.tar.gz || exit 1
+    cd OpenColorIO-* || exit 1
+    rm -rf build
+    mkdir build || exit 1
+    cd build || exit 1
+    env CFLAGS="$BF" CXXFLAGS="$BF" CPPFLAGS="-I${PREFIX}/include" LDFLAGS="-L${PREFIX}/lib" cmake .. -DCMAKE_INSTALL_PREFIX=$PREFIX -DCMAKE_BUILD_TYPE=Release -DOCIO_BUILD_SHARED=OFF -DOCIO_BUILD_STATIC=ON -DOCIO_BUILD_APPS=OFF -DOCIO_BUILD_PYGLUE=OFF || exit 1
+    make -j${MKJOBS} || exit 1
+    make install || exit 1
+    cp ext/dist/lib/{liby*.a,libt*.a} $PREFIX/lib/ || exit 1
+    sed -i "s/-lOpenColorIO/-lOpenColorIO -lyaml-cpp -ltinyxml -llcms2/" $PREFIX/lib/pkgconfig/OpenColorIO.pc || exit 1
+fi
 
 cd $CWD || exit 1
 
@@ -189,11 +190,11 @@ if [ "$STATIC_GCC" = "1" ]; then
   GCC_LINK="-static-libgcc -static-libstdc++"
 fi
 if [ "$PKGOS" != "Windows" ]; then
-  $MAKE FREEBSD=$USE_FREEBSD BITS=$BIT LDFLAGS_ADD="$GCC_LINK" CONFIG=$TAG clean
-  $MAKE FREEBSD=$USE_FREEBSD BITS=$BIT LDFLAGS_ADD="$GCC_LINK" CONFIG=$TAG || exit 1
+  $MAKE STATIC=1 FREEBSD=$USE_FREEBSD BITS=$BIT LDFLAGS_ADD="$GCC_LINK" CONFIG=$TAG clean
+  $MAKE STATIC=1 FREEBSD=$USE_FREEBSD BITS=$BIT LDFLAGS_ADD="$GCC_LINK" CONFIG=$TAG || exit 1
 else
   make MINGW=1 BIT=$BIT CONFIG=$TAG clean
-  make MINGW=1 BIT=$BIT CONFIG=$TAG || exit 1
+  make STATIC=1 MINGW=1 BIT=$BIT CONFIG=$TAG || exit 1
 fi
 
 cd $CWD || exit 1
