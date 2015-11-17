@@ -28,3 +28,9 @@ ifeq ($(FREEBSD),1)
   LDFLAGS += -L/usr/local/lib
 endif
 
+# Static
+ifeq ($(STATIC),1)
+  MAGICK_LINKFLAGS += $(shell pkg-config pangocairo --libs --static)
+  MAGICK_LINKFLAGS += $(shell pkg-config librsvg-2.0 --libs --static)
+  MAGICK_LINKFLAGS += $(shell pkg-config libxml-2.0 --libs --static)
+endif
