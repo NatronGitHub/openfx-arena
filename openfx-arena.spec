@@ -11,14 +11,13 @@ Group: System Environment/Base
 Packager: Ole-André Rodlie, <olear@dracolinux.org>
 URL: https://github.com/olear/openfx-arena
 
-Source: https://github.com/olear/openfx-arena/releases/download/%{version}/%{name}-%{version}.tar.gz
-Source1: https://github.com/olear/openfx-arena/releases/download/Natron-2.0.0-RC2/ImageMagick-6.9.1-10.tar.gz
-Source2: https://downloads.natron.fr/Third_Party_Sources/OpenColorIO-1.0.9.tar.gz
+Source: %{version}/%{name}-%{version}.tar.gz
+Source1: ImageMagick-6.9.1-10.tar.gz
+Source2: OpenColorIO-1.0.9.tar.gz
 BuildRoot: %{_tmppath}/%{name}-%{version}-%{release}-root
 
-BuildRequires: freetype-devel fontconfig-devel libxml2-devel librsvg2-devel pango-devel zlib-devel libpng-devel cmake gcc-c++ mesa-libGL-devel expat-devel
+BuildRequires: freetype-devel fontconfig-devel libxml2-devel librsvg2-devel pango-devel zlib-devel libpng-devel cmake gcc-c++ mesa-libGL-devel expat-devel libstdc++-static
 Requires: freetype fontconfig libxml2 librsvg2 pango zlib libpng mesa-libGL expat
-Requires: libstdc++-static
 
 %description
 A set of OpenFX visual effect plugins for Natron and Nuke.
@@ -60,7 +59,7 @@ cp LICENSE LICENSE.ImageMagick
 cd ..
 
 # Build plugins (link static for nuke compat)
-make STATIC=1 CONFIG=release LDFLAGS_ADD="-static-libgcc -static-libstdc++"
+make STATIC_LIBS=1 CONFIG=release LDFLAGS_ADD="-static-libgcc -static-libstdc++"
 cp OpenFX/Support/LICENSE OpenFX/Support/LICENSE.OpenFX
 cp OpenFX-IO/LICENSE OpenFX-IO/LICENSE.OpenFX-IO
 cp SupportExt/LICENSE SupportExt/LICENSE.SupportExt
