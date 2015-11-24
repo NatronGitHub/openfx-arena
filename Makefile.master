@@ -17,8 +17,10 @@ LCMS_LINKFLAGS = $(shell pkg-config lcms2 --libs --static)
 FCONFIG_CXXFLAGS = $(shell pkg-config fontconfig --cflags)
 FCONFIG_LINKFLAGS = $(shell pkg-config fontconfig --libs --static)
 
-# mingw (still needed?)
+# mingw
 ifeq ($(MINGW),1)
+  MAGICK_CXXFLAGS = $(shell Magick++-config --cppflags --cxxflags)
+  MAGICK_LINKFLAGS = $(shell Magick++-config --ldflags --libs)
   MAGICK_LINKFLAGS += -lgdi32 -lfontconfig -lfreetype -lexpat -lpng -lz -lm -lgomp -lpthread
   MAGICK_LINKFLAGS += $(shell pkg-config pangocairo --libs --static)
   MAGICK_LINKFLAGS += $(shell pkg-config librsvg-2.0 --libs --static)
