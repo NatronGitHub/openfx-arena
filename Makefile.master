@@ -20,6 +20,9 @@ FCONFIG_LINKFLAGS = $(shell pkg-config fontconfig --libs --static)
 # mingw (still needed?)
 ifeq ($(MINGW),1)
   MAGICK_LINKFLAGS += -lgdi32 -lfontconfig -lfreetype -lexpat -lpng -lz -lm -lgomp -lpthread
+  MAGICK_LINKFLAGS += $(shell pkg-config pangocairo --libs --static)
+  MAGICK_LINKFLAGS += $(shell pkg-config librsvg-2.0 --libs --static)
+  MAGICK_LINKFLAGS += $(shell pkg-config libxml-2.0 --libs --static)
 endif
 
 # FreeBSD
