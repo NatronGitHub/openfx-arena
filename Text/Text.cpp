@@ -433,12 +433,14 @@ void TextPlugin::render(const OFX::RenderArguments &args)
     draw.push_back(Magick::DrawableFont(fontName));
     draw.push_back(Magick::DrawablePointSize(std::floor(fontSize * args.renderScale.x + 0.5)));
     draw.push_back(Magick::DrawableText(xtext, ytext, text));
-    draw.push_back(Magick::DrawableFillColor(textRGBA.str()));
-    draw.push_back(Magick::DrawableTextInterlineSpacing(std::floor(interlineSpacing * args.renderScale.x + 0.5)));
-    draw.push_back(Magick::DrawableTextInterwordSpacing(std::floor(interwordSpacing * args.renderScale.x + 0.5)));
-    draw.push_back(Magick::DrawableTextKerning(std::floor(textSpacing * args.renderScale.x + 0.5)));
+    draw.push_back(Magick::DrawableFillColor(Magick::Color(textRGBA.str())));
+
+    draw.push_back(Magick::DrawableTextInterlineSpacing(interlineSpacing * args.renderScale.x));
+    draw.push_back(Magick::DrawableTextInterwordSpacing(interwordSpacing * args.renderScale.x));
+    draw.push_back(Magick::DrawableTextKerning(textSpacing * args.renderScale.x));
+
     if (strokeWidth>0) {
-        draw.push_back(Magick::DrawableStrokeColor(strokeRGBA.str()));
+        draw.push_back(Magick::DrawableStrokeColor(Magick::Color(strokeRGBA.str())));
         draw.push_back(Magick::DrawableStrokeWidth(std::floor(strokeWidth * args.renderScale.x + 0.5)));
     }
 
