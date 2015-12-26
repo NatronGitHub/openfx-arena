@@ -18,6 +18,7 @@
 #include "Polaroid.h"
 #include "Edges.h"
 #include "Modulate.h"
+#include "ReadMVG.h"
 
 #if !defined(_WIN32) && !defined(__MINGW__)
 #define USE_POV_RAY
@@ -52,6 +53,7 @@ namespace OFX
             #ifdef USE_POV_RAY
             getPovRayPluginID(ids);
             #endif
+            getReadMVGPluginID(ids);
         }
     }
 }

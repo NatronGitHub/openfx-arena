@@ -18,6 +18,7 @@ PLUGINOBJECTS = \
         Polaroid.o \
         Edges.o \
         Modulate.o \
+        ReadMVG.o \
         ofxsOGLTextRenderer.o \
         ofxsOGLFontData.o \
         ofxsRectangleInteract.o \
@@ -70,7 +71,9 @@ RESOURCES = \
 ../Edges/net.fxarena.openfx.Edges.png \
 ../Edges/net.fxarena.openfx.Edges.svg \
 ../Modulate/net.fxarena.openfx.Modulate.png \
-../Modulate/net.fxarena.openfx.Modulate.svg
+../Modulate/net.fxarena.openfx.Modulate.svg \
+../ReadMVG/net.fxarena.openfx.ReadMVG.png \
+../ReadMVG/net.fxarena.openfx.ReadMVG.svg
 
 ifeq ($(OS),$(filter $(OS),Linux FreeBSD Darwin))
     RESOURCES +=../PovRay/net.fxarena.openfx.PovRay.png
@@ -96,7 +99,8 @@ VPATH += \
 ../Sketch \
 ../Polaroid \
 ../Edges \
-../Modulate
+../Modulate \
+../ReadMVG
 
 ifeq ($(OS),$(filter $(OS),Linux FreeBSD Darwin))
     VPATH += ../PovRay
@@ -124,7 +128,8 @@ CXXFLAGS += \
 -I../Sketch \
 -I../Polaroid \
 -I../Edges \
--I../Modulate
+-I../Modulate \
+-I../ReadMVG
 
 ifeq ($(OS),$(filter $(OS),Linux FreeBSD Darwin))
     CXXFLAGS += -I../PovRay
