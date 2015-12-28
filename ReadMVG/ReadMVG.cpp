@@ -38,7 +38,7 @@ public:
 private:
     virtual bool isVideoStream(const std::string& /*filename*/) OVERRIDE FINAL { return false; }
     virtual void decode(const std::string& filename, OfxTime time, int view, bool isPlayback, const OfxRectI& renderWindow, float *pixelData, const OfxRectI& bounds, OFX::PixelComponentEnum pixelComponents, int pixelComponentCount, int rowBytes) OVERRIDE FINAL;
-    virtual bool getFrameBounds(const std::string& filename, OfxTime time, OfxRectI *bounds, double *par, std::string *error) OVERRIDE FINAL;
+    virtual bool getFrameBounds(const std::string& filename, OfxTime time, OfxRectI *bounds, double *par, std::string *error, int *tile_width, int *tile_height) OVERRIDE FINAL;
     virtual void restoreState(const std::string& filename) OVERRIDE FINAL;
     virtual void onInputFileChanged(const std::string& newFile, bool setColorSpace, OFX::PreMultiplicationEnum *premult, OFX::PixelComponentEnum *components, int *componentCount) OVERRIDE FINAL;
     int width_;
@@ -112,7 +112,7 @@ bool ReadMVGPlugin::getFrameBounds(const std::string& /*filename*/,
                               OfxTime /*time*/,
                               OfxRectI *bounds,
                               double *par,
-                              std::string* /*error*/)
+                              std::string* /*error*/,int *tile_width, int *tile_height)
 {
     #ifdef DEBUG
     std::cout << "getFrameBounds ..." << std::endl;
@@ -124,6 +124,7 @@ bool ReadMVGPlugin::getFrameBounds(const std::string& /*filename*/,
         bounds->y2 = height_;
         *par = 1.0;
     }
+    *tile_width = *tile_height = 0;
     return true;
 }
 
@@ -241,6 +242,9 @@ void ReadMVGPluginFactory::describe(OFX::ImageEffectDescriptor &desc)
     plugCopyright.append("\n\nOpenColorIO is Copyright 2003-2010 Sony Pictures Imageworks Inc., et al. All Rights Reserved.\n\nOpenColorIO is distributed under a BSD license.");
     # endif // OFX_IO_USING_OCIO
     desc.setPluginDescription("Read MVG (Magick Vector Graphics) image format.\n\nPowered by "+magickString+plugCopyright);
+    
+#pragma message WARN("You need to get rid of the width_ and height_ member which are not thread safe at all and very dangerous!")
+    desc.setRenderThreadSafety(OFX::eRenderInstanceSafe);
 }
 
 /** @brief The describe in context function, passed a plugin descriptor and a context */

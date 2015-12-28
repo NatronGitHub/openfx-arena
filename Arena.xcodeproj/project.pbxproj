@@ -9,6 +9,9 @@
 /* Begin PBXBuildFile section */
 		1E2F4DAB189295F600F4CE25 /* CoreFoundation.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = D74E62491875A7A400D8FA13 /* CoreFoundation.framework */; };
 		1E9B5EFC198A3D040095C8AA /* OpenGL.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 1E9B5EFA198A3D040095C8AA /* OpenGL.framework */; };
+		AC74D63C1C3134120026BE93 /* Makefile in Sources */ = {isa = PBXBuildFile; fileRef = AC74D6361C3134120026BE93 /* Makefile */; };
+		AC74D63D1C3134120026BE93 /* PluginRegistration.cpp in Sources */ = {isa = PBXBuildFile; fileRef = AC74D6391C3134120026BE93 /* PluginRegistration.cpp */; };
+		AC74D63E1C3134120026BE93 /* ReadMVG.cpp in Sources */ = {isa = PBXBuildFile; fileRef = AC74D63A1C3134120026BE93 /* ReadMVG.cpp */; };
 		AC93A1811BB7ED9B000E4A0C /* SequenceParsing.cpp in Sources */ = {isa = PBXBuildFile; fileRef = ACE3CBFA1BB7E19B0042BAF9 /* SequenceParsing.cpp */; };
 		AC93A1821BB7EE17000E4A0C /* Arc.cpp in Sources */ = {isa = PBXBuildFile; fileRef = ACE3C9271BB7E19A0042BAF9 /* Arc.cpp */; };
 		AC93A1831BB7EE28000E4A0C /* ofxsShutter.cpp in Sources */ = {isa = PBXBuildFile; fileRef = ACE3CED41BB7E19D0042BAF9 /* ofxsShutter.cpp */; };
@@ -75,6 +78,8 @@
 		ACE3D00F1BB7ECC00042BAF9 /* Texture.cpp in Sources */ = {isa = PBXBuildFile; fileRef = ACE3CF111BB7E19D0042BAF9 /* Texture.cpp */; };
 		ACE3D0101BB7ECC30042BAF9 /* Tile.cpp in Sources */ = {isa = PBXBuildFile; fileRef = ACE3CF191BB7E19D0042BAF9 /* Tile.cpp */; };
 		ACE3D0111BB7ECC60042BAF9 /* Wave.cpp in Sources */ = {isa = PBXBuildFile; fileRef = ACE3CF211BB7E19D0042BAF9 /* Wave.cpp */; };
+		ACED46521C031EE600BBEEA0 /* Makefile in Sources */ = {isa = PBXBuildFile; fileRef = ACED46481C031EE600BBEEA0 /* Makefile */; };
+		ACED46541C031EE600BBEEA0 /* PovRay.cpp in Sources */ = {isa = PBXBuildFile; fileRef = ACED464C1C031EE600BBEEA0 /* PovRay.cpp */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -553,6 +558,13 @@
 /* Begin PBXFileReference section */
 		1E2F4DCA189295F600F4CE25 /* Arena.ofx.bundle */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = Arena.ofx.bundle; sourceTree = BUILT_PRODUCTS_DIR; };
 		1E9B5EFA198A3D040095C8AA /* OpenGL.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = OpenGL.framework; path = System/Library/Frameworks/OpenGL.framework; sourceTree = SDKROOT; };
+		AC74D6351C3134120026BE93 /* Info.plist */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
+		AC74D6361C3134120026BE93 /* Makefile */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.make; path = Makefile; sourceTree = "<group>"; };
+		AC74D6371C3134120026BE93 /* net.fxarena.openfx.ReadMVG.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = net.fxarena.openfx.ReadMVG.png; sourceTree = "<group>"; };
+		AC74D6381C3134120026BE93 /* net.fxarena.openfx.ReadMVG.svg */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.xml; path = net.fxarena.openfx.ReadMVG.svg; sourceTree = "<group>"; };
+		AC74D6391C3134120026BE93 /* PluginRegistration.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = PluginRegistration.cpp; sourceTree = "<group>"; };
+		AC74D63A1C3134120026BE93 /* ReadMVG.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = ReadMVG.cpp; sourceTree = "<group>"; };
+		AC74D63B1C3134120026BE93 /* ReadMVG.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = ReadMVG.h; sourceTree = "<group>"; };
 		ACE3C9241BB7E1600042BAF9 /* PluginRegistrationCombined.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = PluginRegistrationCombined.cpp; path = Bundle/PluginRegistrationCombined.cpp; sourceTree = "<group>"; };
 		ACE3C9271BB7E19A0042BAF9 /* Arc.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = Arc.cpp; sourceTree = "<group>"; };
 		ACE3C9281BB7E19A0042BAF9 /* Arc.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = Arc.h; sourceTree = "<group>"; };
@@ -1855,6 +1867,18 @@
 		ACE3CFE81BB7E1CE0042BAF9 /* Arena.svg */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.xml; name = Arena.svg; path = Bundle/Arena.svg; sourceTree = "<group>"; };
 		ACE3CFE91BB7E1CE0042BAF9 /* Info.plist */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.plist.xml; name = Info.plist; path = Bundle/Info.plist; sourceTree = "<group>"; };
 		ACE3CFEA1BB7E1CE0042BAF9 /* Makefile */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.make; name = Makefile; path = Bundle/Makefile; sourceTree = "<group>"; };
+		ACED46451C031EE600BBEEA0 /* Cloud9.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = Cloud9.png; sourceTree = "<group>"; };
+		ACED46461C031EE600BBEEA0 /* Cloud9.py */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.script.python; path = Cloud9.py; sourceTree = "<group>"; };
+		ACED46471C031EE600BBEEA0 /* Info.plist */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
+		ACED46481C031EE600BBEEA0 /* Makefile */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.make; path = Makefile; sourceTree = "<group>"; };
+		ACED46491C031EE600BBEEA0 /* net.fxarena.openfx.PovRay.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = net.fxarena.openfx.PovRay.png; sourceTree = "<group>"; };
+		ACED464A1C031EE600BBEEA0 /* net.fxarena.openfx.PovRay.svg */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.xml; path = net.fxarena.openfx.PovRay.svg; sourceTree = "<group>"; };
+		ACED464B1C031EE600BBEEA0 /* PluginRegistration.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = PluginRegistration.cpp; sourceTree = "<group>"; };
+		ACED464C1C031EE600BBEEA0 /* PovRay.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = PovRay.cpp; sourceTree = "<group>"; };
+		ACED464D1C031EE600BBEEA0 /* PovRay.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = PovRay.h; sourceTree = "<group>"; };
+		ACED464E1C031EE600BBEEA0 /* povray.spec */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text; path = povray.spec; sourceTree = "<group>"; };
+		ACED46501C031EE600BBEEA0 /* Text3D.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = Text3D.png; sourceTree = "<group>"; };
+		ACED46511C031EE600BBEEA0 /* Text3D.py */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.script.python; path = Text3D.py; sourceTree = "<group>"; };
 		D74E62491875A7A400D8FA13 /* CoreFoundation.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = CoreFoundation.framework; path = System/Library/Frameworks/CoreFoundation.framework; sourceTree = SDKROOT; };
 /* End PBXFileReference section */
 
@@ -1871,6 +1895,20 @@
 /* End PBXFrameworksBuildPhase section */
 
 /* Begin PBXGroup section */
+		AC74D6341C3134120026BE93 /* ReadMVG */ = {
+			isa = PBXGroup;
+			children = (
+				AC74D6351C3134120026BE93 /* Info.plist */,
+				AC74D6361C3134120026BE93 /* Makefile */,
+				AC74D6371C3134120026BE93 /* net.fxarena.openfx.ReadMVG.png */,
+				AC74D6381C3134120026BE93 /* net.fxarena.openfx.ReadMVG.svg */,
+				AC74D6391C3134120026BE93 /* PluginRegistration.cpp */,
+				AC74D63A1C3134120026BE93 /* ReadMVG.cpp */,
+				AC74D63B1C3134120026BE93 /* ReadMVG.h */,
+			);
+			path = ReadMVG;
+			sourceTree = "<group>";
+		};
 		ACE3C9251BB7E1660042BAF9 /* Bundle */ = {
 			isa = PBXGroup;
 			children = (
@@ -4718,9 +4756,45 @@
 			path = Wave;
 			sourceTree = "<group>";
 		};
+		ACED46431C031EE600BBEEA0 /* PovRay */ = {
+			isa = PBXGroup;
+			children = (
+				ACED46441C031EE600BBEEA0 /* Cloud9 */,
+				ACED46471C031EE600BBEEA0 /* Info.plist */,
+				ACED46481C031EE600BBEEA0 /* Makefile */,
+				ACED46491C031EE600BBEEA0 /* net.fxarena.openfx.PovRay.png */,
+				ACED464A1C031EE600BBEEA0 /* net.fxarena.openfx.PovRay.svg */,
+				ACED464B1C031EE600BBEEA0 /* PluginRegistration.cpp */,
+				ACED464C1C031EE600BBEEA0 /* PovRay.cpp */,
+				ACED464D1C031EE600BBEEA0 /* PovRay.h */,
+				ACED464E1C031EE600BBEEA0 /* povray.spec */,
+				ACED464F1C031EE600BBEEA0 /* Text3D */,
+			);
+			path = PovRay;
+			sourceTree = "<group>";
+		};
+		ACED46441C031EE600BBEEA0 /* Cloud9 */ = {
+			isa = PBXGroup;
+			children = (
+				ACED46451C031EE600BBEEA0 /* Cloud9.png */,
+				ACED46461C031EE600BBEEA0 /* Cloud9.py */,
+			);
+			path = Cloud9;
+			sourceTree = "<group>";
+		};
+		ACED464F1C031EE600BBEEA0 /* Text3D */ = {
+			isa = PBXGroup;
+			children = (
+				ACED46501C031EE600BBEEA0 /* Text3D.png */,
+				ACED46511C031EE600BBEEA0 /* Text3D.py */,
+			);
+			path = Text3D;
+			sourceTree = "<group>";
+		};
 		D74E623B1875A79700D8FA13 = {
 			isa = PBXGroup;
 			children = (
+				ACED46431C031EE600BBEEA0 /* PovRay */,
 				ACE3C9261BB7E19A0042BAF9 /* Arc */,
 				ACE3C9251BB7E1660042BAF9 /* Bundle */,
 				ACE3C92E1BB7E19A0042BAF9 /* Charcoal */,
@@ -4743,6 +4817,7 @@
 				ACE3CBC01BB7E19B0042BAF9 /* OpenFX-IO */,
 				ACE3CE801BB7E19C0042BAF9 /* Polar */,
 				ACE3CE881BB7E19C0042BAF9 /* Polaroid */,
+				AC74D6341C3134120026BE93 /* ReadMVG */,
 				ACE3CE901BB7E19D0042BAF9 /* ReadPSD */,
 				ACE3CE981BB7E19D0042BAF9 /* ReadSVG */,
 				ACE3CEA01BB7E19D0042BAF9 /* Reflection */,
@@ -5310,6 +5385,7 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				AC74D63C1C3134120026BE93 /* Makefile in Sources */,
 				ACE3CFF31BB7EC560042BAF9 /* Oilpaint.cpp in Sources */,
 				ACE3CFF01BB7EC4A0042BAF9 /* Emboss.cpp in Sources */,
 				ACE3CFEF1BB7EC450042BAF9 /* Edges.cpp in Sources */,
@@ -5317,6 +5393,7 @@
 				ACE3CFEC1BB7EC3A0042BAF9 /* Charcoal.cpp in Sources */,
 				ACE3CFED1BB7EC3E0042BAF9 /* DaveHill.cpp in Sources */,
 				ACE3CFF21BB7EC520042BAF9 /* Modulate.cpp in Sources */,
+				ACED46521C031EE600BBEEA0 /* Makefile in Sources */,
 				ACE3CFF11BB7EC4E0042BAF9 /* Glow.cpp in Sources */,
 				ACE3CFF71BB7EC6C0042BAF9 /* ofxsLog.cpp in Sources */,
 				AC93A1821BB7EE17000E4A0C /* Arc.cpp in Sources */,
@@ -5328,11 +5405,13 @@
 				ACE3D0051BB7ECA00042BAF9 /* ofxsLut.cpp in Sources */,
 				ACE3CFFE1BB7EC890042BAF9 /* Polar.cpp in Sources */,
 				ACE3CFF81BB7EC6D0042BAF9 /* ofxsMultiThread.cpp in Sources */,
+				ACED46541C031EE600BBEEA0 /* PovRay.cpp in Sources */,
 				ACE3D00B1BB7ECB20042BAF9 /* Swirl.cpp in Sources */,
 				ACE3D0061BB7ECA30042BAF9 /* ofxsOGLFontData.cpp in Sources */,
 				ACE3D0071BB7ECA40042BAF9 /* ofxsOGLTextRenderer.cpp in Sources */,
 				ACE3D0091BB7ECA90042BAF9 /* ofxsTransform3x3.cpp in Sources */,
 				AC93A1811BB7ED9B000E4A0C /* SequenceParsing.cpp in Sources */,
+				AC74D63E1C3134120026BE93 /* ReadMVG.cpp in Sources */,
 				ACE3D00E1BB7ECBC0042BAF9 /* TextPango.cpp in Sources */,
 				ACE3CFFF1BB7EC8B0042BAF9 /* Polaroid.cpp in Sources */,
 				AC93A1841BB7EE3B000E4A0C /* Implode.cpp in Sources */,
@@ -5350,6 +5429,7 @@
 				ACE3D0041BB7EC9A0042BAF9 /* Sketch.cpp in Sources */,
 				ACE3D0011BB7EC910042BAF9 /* ReadSVG.cpp in Sources */,
 				ACE3CFFD1BB7EC7E0042BAF9 /* GenericReader.cpp in Sources */,
+				AC74D63D1C3134120026BE93 /* PluginRegistration.cpp in Sources */,
 				ACE3CFF41BB7EC670042BAF9 /* ofxsCore.cpp in Sources */,
 				ACE3CFEE1BB7EC410042BAF9 /* Dragan.cpp in Sources */,
 			);
@@ -5373,6 +5453,7 @@
 					"$(inherited)",
 					"$(MAGICK_PATH)/include/ImageMagick-6/Magick++",
 					"$(MAGICK_PATH)/include/ImageMagick-6",
+					"$(POVRAY_PATH)/include/PovRay",
 				);
 				INFOPLIST_FILE = Bundle/Info.plist;
 				OTHER_LDFLAGS = (
@@ -5433,6 +5514,7 @@
 					"$(inherited)",
 					"$(MAGICK_PATH)/include/ImageMagick-6/Magick++",
 					"$(MAGICK_PATH)/include/ImageMagick-6",
+					"$(POVRAY_PATH)/include/PovRay",
 				);
 				INFOPLIST_FILE = Bundle/Info.plist;
 				OTHER_LDFLAGS = (
