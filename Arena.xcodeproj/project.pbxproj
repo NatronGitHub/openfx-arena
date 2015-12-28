@@ -10,7 +10,6 @@
 		1E2F4DAB189295F600F4CE25 /* CoreFoundation.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = D74E62491875A7A400D8FA13 /* CoreFoundation.framework */; };
 		1E9B5EFC198A3D040095C8AA /* OpenGL.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 1E9B5EFA198A3D040095C8AA /* OpenGL.framework */; };
 		AC74D63C1C3134120026BE93 /* Makefile in Sources */ = {isa = PBXBuildFile; fileRef = AC74D6361C3134120026BE93 /* Makefile */; };
-		AC74D63D1C3134120026BE93 /* PluginRegistration.cpp in Sources */ = {isa = PBXBuildFile; fileRef = AC74D6391C3134120026BE93 /* PluginRegistration.cpp */; };
 		AC74D63E1C3134120026BE93 /* ReadMVG.cpp in Sources */ = {isa = PBXBuildFile; fileRef = AC74D63A1C3134120026BE93 /* ReadMVG.cpp */; };
 		AC93A1811BB7ED9B000E4A0C /* SequenceParsing.cpp in Sources */ = {isa = PBXBuildFile; fileRef = ACE3CBFA1BB7E19B0042BAF9 /* SequenceParsing.cpp */; };
 		AC93A1821BB7EE17000E4A0C /* Arc.cpp in Sources */ = {isa = PBXBuildFile; fileRef = ACE3C9271BB7E19A0042BAF9 /* Arc.cpp */; };
@@ -5429,7 +5428,6 @@
 				ACE3D0041BB7EC9A0042BAF9 /* Sketch.cpp in Sources */,
 				ACE3D0011BB7EC910042BAF9 /* ReadSVG.cpp in Sources */,
 				ACE3CFFD1BB7EC7E0042BAF9 /* GenericReader.cpp in Sources */,
-				AC74D63D1C3134120026BE93 /* PluginRegistration.cpp in Sources */,
 				ACE3CFF41BB7EC670042BAF9 /* ofxsCore.cpp in Sources */,
 				ACE3CFEE1BB7EC410042BAF9 /* Dragan.cpp in Sources */,
 			);
