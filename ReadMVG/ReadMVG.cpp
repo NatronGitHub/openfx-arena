@@ -39,7 +39,6 @@ private:
     virtual bool isVideoStream(const std::string& /*filename*/) OVERRIDE FINAL { return false; }
     virtual void decode(const std::string& filename, OfxTime time, int view, bool isPlayback, const OfxRectI& renderWindow, float *pixelData, const OfxRectI& bounds, OFX::PixelComponentEnum pixelComponents, int pixelComponentCount, int rowBytes) OVERRIDE FINAL;
     virtual bool getFrameBounds(const std::string& filename, OfxTime time, OfxRectI *bounds, double *par, std::string *error, int *tile_width, int *tile_height) OVERRIDE FINAL;
-    virtual void restoreState(const std::string& filename) OVERRIDE FINAL;
     virtual void onInputFileChanged(const std::string& newFile, bool setColorSpace, OFX::PreMultiplicationEnum *premult, OFX::PixelComponentEnum *components, int *componentCount) OVERRIDE FINAL;
 };
 
@@ -118,24 +117,6 @@ bool ReadMVGPlugin::getFrameBounds(const std::string& filename,
     return true;
 }
 
-void ReadMVGPlugin::restoreState(const std::string& filename)
-{
-    #ifdef DEBUG
-    std::cout << "restoreState ..." << std::endl;
-    #endif
-
-    Magick::Image image;
-    try {
-        if (!filename.empty())
-            image.read(filename);
-    }
-    catch(Magick::Warning &warning) { // ignore since warns interupt render
-        #ifdef DEBUG
-        std::cout << warning.what() << std::endl;
-        #endif
-    }
-}
-
 void ReadMVGPlugin::onInputFileChanged(const std::string& newFile,
                                   bool setColorSpace,
                                   OFX::PreMultiplicationEnum *premult,
@@ -148,7 +129,7 @@ void ReadMVGPlugin::onInputFileChanged(const std::string& newFile,
     assert(premult && components);
     Magick::Image image;
     try {
-        image.read(newFile);
+        image.ping(newFile);
     }
     catch(Magick::Warning &warning) { // ignore since warns interupt render
         #ifdef DEBUG
