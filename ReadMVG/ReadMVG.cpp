@@ -23,7 +23,7 @@
 #define kPluginGrouping "Image/Readers"
 #define kPluginIdentifier "net.fxarena.openfx.ReadMVG"
 #define kPluginVersionMajor 1
-#define kPluginVersionMinor 0
+#define kPluginVersionMinor 1
 
 #define kSupportsRGBA true
 #define kSupportsRGB false
@@ -41,14 +41,10 @@ private:
     virtual bool getFrameBounds(const std::string& filename, OfxTime time, OfxRectI *bounds, double *par, std::string *error, int *tile_width, int *tile_height) OVERRIDE FINAL;
     virtual void restoreState(const std::string& filename) OVERRIDE FINAL;
     virtual void onInputFileChanged(const std::string& newFile, bool setColorSpace, OFX::PreMultiplicationEnum *premult, OFX::PixelComponentEnum *components, int *componentCount) OVERRIDE FINAL;
-    int width_;
-    int height_;
 };
 
 ReadMVGPlugin::ReadMVGPlugin(OfxImageEffectHandle handle)
 : GenericReaderPlugin(handle, kSupportsRGBA, kSupportsRGB, kSupportsAlpha, kSupportsTiles, false)
-,width_(0)
-,height_(0)
 {
     Magick::InitializeMagick(NULL);
 }
@@ -72,16 +68,6 @@ ReadMVGPlugin::decode(const std::string& filename,
     #ifdef DEBUG
     std::cout << "decode ..." << std::endl;
     #endif
-
-    // Set max threads allowed by host
-    unsigned int threads = 0;
-    threads = OFX::MultiThread::getNumCPUs();
-    if (threads>0) {
-        Magick::ResourceLimits::thread(threads);
-        #ifdef DEBUG
-        std::cout << "Setting max threads to " << threads << std::endl;
-        #endif
-    }
 
     Magick::Image image;
     try {
@@ -108,7 +94,7 @@ ReadMVGPlugin::decode(const std::string& filename,
     }
 }
 
-bool ReadMVGPlugin::getFrameBounds(const std::string& /*filename*/,
+bool ReadMVGPlugin::getFrameBounds(const std::string& filename,
                               OfxTime /*time*/,
                               OfxRectI *bounds,
                               double *par,
@@ -117,11 +103,15 @@ bool ReadMVGPlugin::getFrameBounds(const std::string& /*filename*/,
     #ifdef DEBUG
     std::cout << "getFrameBounds ..." << std::endl;
     #endif
-    if (width_>0 && height_>0) {
+
+    Magick::Image image;
+    if (!filename.empty())
+        image.ping(filename);
+    if (image.columns()>0 && image.rows()>0) {
         bounds->x1 = 0;
-        bounds->x2 = width_;
+        bounds->x2 = image.columns();
         bounds->y1 = 0;
-        bounds->y2 = height_;
+        bounds->y2 = image.rows();
         *par = 1.0;
     }
     *tile_width = *tile_height = 0;
@@ -134,16 +124,6 @@ void ReadMVGPlugin::restoreState(const std::string& filename)
     std::cout << "restoreState ..." << std::endl;
     #endif
 
-    // Set max threads allowed by host
-    unsigned int threads = 0;
-    threads = OFX::MultiThread::getNumCPUs();
-    if (threads>0) {
-        Magick::ResourceLimits::thread(threads);
-        #ifdef DEBUG
-        std::cout << "Setting max threads to " << threads << std::endl;
-        #endif
-    }
-
     Magick::Image image;
     try {
         if (!filename.empty())
@@ -153,10 +133,6 @@ void ReadMVGPlugin::restoreState(const std::string& filename)
         #ifdef DEBUG
         std::cout << warning.what() << std::endl;
         #endif
-    }
-    if (image.columns()>0 && image.rows()>0) {
-        width_ = image.columns();
-        height_ = image.rows();
     }
 }
 
@@ -169,16 +145,6 @@ void ReadMVGPlugin::onInputFileChanged(const std::string& newFile,
     std::cout << "onInputFileChanged ..." << std::endl;
     #endif
 
-    // Set max threads allowed by host
-    unsigned int threads = 0;
-    threads = OFX::MultiThread::getNumCPUs();
-    if (threads>0) {
-        Magick::ResourceLimits::thread(threads);
-        #ifdef DEBUG
-        std::cout << "Setting max threads to " << threads << std::endl;
-        #endif
-    }
-
     assert(premult && components);
     Magick::Image image;
     try {
@@ -190,8 +156,6 @@ void ReadMVGPlugin::onInputFileChanged(const std::string& newFile,
         #endif
     }
     if (image.columns()>0 && image.rows()>0) {
-        width_ = image.columns();
-        height_ = image.rows();
         if (setColorSpace) {
         # ifdef OFX_IO_USING_OCIO
             switch(image.colorSpace()) {
