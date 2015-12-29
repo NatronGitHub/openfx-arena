@@ -23,7 +23,7 @@
 #define kPluginGrouping "Image/Readers"
 #define kPluginIdentifier "net.fxarena.openfx.ReadSVG"
 #define kPluginVersionMajor 1
-#define kPluginVersionMinor 6
+#define kPluginVersionMinor 7
 
 #define kParamDpi "dpi"
 #define kParamDpiLabel "DPI"
@@ -42,23 +42,17 @@ public:
     virtual ~ReadSVGPlugin();
 private:
     virtual bool isVideoStream(const std::string& /*filename*/) OVERRIDE FINAL { return false; }
-    virtual void changedParam(const OFX::InstanceChangedArgs &args, const std::string &paramName) OVERRIDE FINAL;
     virtual void decode(const std::string& filename, OfxTime time, int view, bool isPlayback, const OfxRectI& renderWindow, float *pixelData, const OfxRectI& bounds, OFX::PixelComponentEnum pixelComponents, int pixelComponentCount, int rowBytes) OVERRIDE FINAL;
     virtual bool getFrameBounds(const std::string& filename, OfxTime time, OfxRectI *bounds, double *par, std::string *error,int *tile_width, int *tile_height) OVERRIDE FINAL;
-    virtual void restoreState(const std::string& filename) OVERRIDE FINAL;
     virtual void onInputFileChanged(const std::string& newFile, bool setColorSpace, OFX::PreMultiplicationEnum *premult, OFX::PixelComponentEnum *components, int *componentCount) OVERRIDE FINAL;
     OFX::IntParam *dpi_;
     bool hasRSVG_;
-    int width_;
-    int height_;
 };
 
 ReadSVGPlugin::ReadSVGPlugin(OfxImageEffectHandle handle)
 : GenericReaderPlugin(handle, kSupportsRGBA, kSupportsRGB, kSupportsAlpha, kSupportsTiles, false)
 ,dpi_(0)
 ,hasRSVG_(false)
-,width_(0)
-,height_(0)
 {
     Magick::InitializeMagick(NULL);
     std::string delegates = MagickCore::GetMagickDelegates();
@@ -89,16 +83,6 @@ ReadSVGPlugin::decode(const std::string& filename,
     std::cout << "decode ..." << std::endl;
     #endif
 
-    // Set max threads allowed by host
-    unsigned int threads = 0;
-    threads = OFX::MultiThread::getNumCPUs();
-    if (threads>0) {
-        Magick::ResourceLimits::thread(threads);
-        #ifdef DEBUG
-        std::cout << "Setting max threads to " << threads << std::endl;
-        #endif
-    }
-
     if (!hasRSVG_)
         setPersistentMessage(OFX::Message::eMessageError, "", "librsvg missing, some features may not work as expected");
     int dpi = 0;
@@ -113,8 +97,8 @@ ReadSVGPlugin::decode(const std::string& filename,
         #ifdef DEBUG
         std::cout << warning.what() << std::endl;
         #endif
+        image.backgroundColor("none"); // must be set to avoid bg
     }
-    image.backgroundColor("none"); // must be set to avoid bg
     if (!filename.empty())
         image.read(filename);
     if (image.columns()>0 && image.rows()>0) {
@@ -130,8 +114,8 @@ ReadSVGPlugin::decode(const std::string& filename,
     }
 }
 
-bool ReadSVGPlugin::getFrameBounds(const std::string& /*filename*/,
-                              OfxTime /*time*/,
+bool ReadSVGPlugin::getFrameBounds(const std::string& filename,
+                              OfxTime time,
                               OfxRectI *bounds,
                               double *par,
                               std::string* /*error*/,int *tile_width, int *tile_height)
@@ -139,98 +123,23 @@ bool ReadSVGPlugin::getFrameBounds(const std::string& /*filename*/,
     #ifdef DEBUG
     std::cout << "getFrameBounds ..." << std::endl;
     #endif
-    if (width_>0 && height_>0) {
+
+    int dpi;
+    dpi_->getValueAtTime(time, dpi);
+    Magick::Image image;
+    image.resolutionUnits(Magick::PixelsPerInchResolution);
+    image.density(Magick::Geometry(dpi,dpi));
+    if (!filename.empty())
+        image.ping(filename);
+    if (image.columns()>0 && image.rows()>0) {
         bounds->x1 = 0;
-        bounds->x2 = width_;
+        bounds->x2 = image.columns();
         bounds->y1 = 0;
-        bounds->y2 = height_;
+        bounds->y2 = image.rows();
         *par = 1.0;
     }
     *tile_width = *tile_height = 0;
     return true;
-}
-
-void ReadSVGPlugin::restoreState(const std::string& filename)
-{
-    #ifdef DEBUG
-    std::cout << "restoreState ..." << std::endl;
-    #endif
-
-    // Set max threads allowed by host
-    unsigned int threads = 0;
-    threads = OFX::MultiThread::getNumCPUs();
-    if (threads>0) {
-        Magick::ResourceLimits::thread(threads);
-        #ifdef DEBUG
-        std::cout << "Setting max threads to " << threads << std::endl;
-        #endif
-    }
-
-    Magick::Image image;
-    int dpi;
-    dpi_->getValue(dpi);
-    image.resolutionUnits(Magick::PixelsPerInchResolution);
-    image.density(Magick::Geometry(dpi,dpi));
-    try {
-        if (!filename.empty())
-            image.read(filename);
-    }
-    catch(Magick::Warning &warning) { // ignore since warns interupt render
-        #ifdef DEBUG
-        std::cout << warning.what() << std::endl;
-        #endif
-    }
-    if (image.columns()>0 && image.rows()>0) {
-        width_ = image.columns();
-        height_ = image.rows();
-    }
-    /*else {
-        setPersistentMessage(OFX::Message::eMessageError, "", "Unable to read image");
-        OFX::throwSuiteStatusException(kOfxStatErrFormat);
-    }*/
-}
-
-void ReadSVGPlugin::changedParam(const OFX::InstanceChangedArgs &args, const std::string &paramName)
-{
-    #ifdef DEBUG
-    std::cout << "changedParam ..." << std::endl;
-    #endif
-
-    // Set max threads allowed by host
-    unsigned int threads = 0;
-    threads = OFX::MultiThread::getNumCPUs();
-    if (threads>0) {
-        Magick::ResourceLimits::thread(threads);
-        #ifdef DEBUG
-        std::cout << "Setting max threads to " << threads << std::endl;
-        #endif
-    }
-
-    if (paramName == kParamDpi) {
-        int dpi;
-        std::string imageFile;
-        _fileParam->getValue(imageFile);
-        dpi_->getValue(dpi);
-        Magick::Image image;
-        image.resolutionUnits(Magick::PixelsPerInchResolution);
-        image.density(Magick::Geometry(dpi,dpi));
-        try {
-            if (!imageFile.empty())
-                image.read(imageFile);
-        }
-        catch(Magick::Warning &warning) { // ignore since warns interupt render
-            #ifdef DEBUG
-            std::cout << warning.what() << std::endl;
-            #endif
-        }
-        if (image.columns()>0 && image.rows()>0) {
-            width_ = image.columns();
-            height_ = image.rows();
-        }
-    }
-    else {
-        GenericReaderPlugin::changedParam(args,paramName);
-    }
 }
 
 void ReadSVGPlugin::onInputFileChanged(const std::string& newFile,
@@ -242,27 +151,14 @@ void ReadSVGPlugin::onInputFileChanged(const std::string& newFile,
     std::cout << "onInputFileChanged ..." << std::endl;
     #endif
 
-    // Set max threads allowed by host
-    unsigned int threads = 0;
-    threads = OFX::MultiThread::getNumCPUs();
-    if (threads>0) {
-        Magick::ResourceLimits::thread(threads);
-        #ifdef DEBUG
-        std::cout << "Setting max threads to " << threads << std::endl;
-        #endif
-    }
-
     assert(premult && components);
     int dpi;
     dpi_->getValue(dpi);
     Magick::Image image;
-    #ifdef DEBUG_MAGICK
-    image.debug(true);
-    #endif
     image.resolutionUnits(Magick::PixelsPerInchResolution);
     image.density(Magick::Geometry(dpi,dpi));
     try {
-        image.read(newFile);
+        image.ping(newFile);
     }
     catch(Magick::Warning &warning) { // ignore since warns interupt render
         #ifdef DEBUG
@@ -270,8 +166,6 @@ void ReadSVGPlugin::onInputFileChanged(const std::string& newFile,
         #endif
     }
     if (image.columns()>0 && image.rows()>0) {
-        width_ = image.columns();
-        height_ = image.rows();
         if (setColorSpace) {
         # ifdef OFX_IO_USING_OCIO
             switch(image.colorSpace()) {
