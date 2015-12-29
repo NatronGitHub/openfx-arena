@@ -216,9 +216,7 @@ void ReadSVGPluginFactory::describe(OFX::ImageEffectDescriptor &desc)
     plugCopyright.append("\n\nOpenColorIO is Copyright 2003-2010 Sony Pictures Imageworks Inc., et al. All Rights Reserved.\n\nOpenColorIO is distributed under a BSD license.");
     # endif // OFX_IO_USING_OCIO
     desc.setPluginDescription("Read SVG image format.\n\nPowered by "+magickString+plugCopyright);
-    
-#pragma message WARN("You need to get rid of the width_ and height_ member which are not thread safe at all and very dangerous!")
-    desc.setRenderThreadSafety(OFX::eRenderInstanceSafe);
+
 }
 
 /** @brief The describe in context function, passed a plugin descriptor and a context */

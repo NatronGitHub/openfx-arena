@@ -724,8 +724,6 @@ void ReadPSDPluginFactory::describe(OFX::ImageEffectDescriptor &desc)
     # endif // OFX_IO_USING_OCIO
     desc.setPluginDescription("Read Photoshop/GIMP/Cinepaint (RGB/CMYK/GRAY) image formats with ICC color management.\n\nPowered by Little CMS v2 http://www.littlecms.com/ and "+magickString+plugCopyright);
     
-#pragma message WARN("You need to get rid of the _maxwidth and _maxheight member which are not thread safe at all and very dangerous!")
-    desc.setRenderThreadSafety(OFX::eRenderInstanceSafe);
 }
 
 /** @brief The describe in context function, passed a plugin descriptor and a context */
