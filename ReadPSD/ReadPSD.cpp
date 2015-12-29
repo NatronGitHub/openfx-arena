@@ -29,7 +29,7 @@
 #define kPluginGrouping "Image/Readers"
 #define kPluginIdentifier "net.fxarena.openfx.ReadPSD"
 #define kPluginVersionMajor 2
-#define kPluginVersionMinor 4
+#define kPluginVersionMinor 5
 
 #define kSupportsRGBA true
 #define kSupportsRGB false
@@ -245,8 +245,6 @@ private:
     OFX::BooleanParam *_iccBlack;
     OFX::ChoiceParam *_imageLayer;
     OFX::BooleanParam *_offsetLayer;
-    int _maxWidth;
-    int _maxHeight;
 };
 
 ReadPSDPlugin::ReadPSDPlugin(OfxImageEffectHandle handle)
@@ -258,8 +256,6 @@ false
 #endif
 )
 ,_hasLCMS(false)
-,_maxWidth(0)
-,_maxHeight(0)
 {
     Magick::InitializeMagick(NULL);
 
@@ -355,16 +351,6 @@ void ReadPSDPlugin::decodePlane(const std::string& filename, OfxTime time, int /
     #ifdef DEBUG
     std::cout << "decodePlane ..." << std::endl;
     #endif
-
-    // Set max threads allowed by host
-    unsigned int threads = 0;
-    threads = OFX::MultiThread::getNumCPUs();
-    if (threads>0) {
-        Magick::ResourceLimits::thread(threads);
-        #ifdef DEBUG
-        std::cout << "Setting max threads to " << threads << std::endl;
-        #endif
-    }
 
     int offsetX = 0;
     int offsetY = 0;
@@ -615,11 +601,23 @@ bool ReadPSDPlugin::getFrameBounds(const std::string& /*filename*/,
     std::cout << "getFrameBounds ..." << std::endl;
     #endif
 
-    if (_maxWidth>0 && _maxHeight>0) {
+    int layer = 0;
+    int maxWidth = 0;
+    int maxHeight = 0;
+    _imageLayer->getValue(layer);
+    if (!_psd.empty() && _psd[layer].columns()>0 && _psd[layer].rows()>0) {
+        for (int i = 0; i < (int)_psd.size(); i++) {
+            if ((int)_psd[i].columns()>maxWidth)
+                maxWidth = (int)_psd[i].columns();
+            if ((int)_psd[i].rows()>maxHeight)
+                maxHeight = (int)_psd[i].rows();
+        }
+    }
+    if (maxWidth>0 && maxHeight>0) {
         bounds->x1 = 0;
-        bounds->x2 = _maxWidth;
+        bounds->x2 = maxWidth;
         bounds->y1 = 0;
-        bounds->y2 = _maxHeight;
+        bounds->y2 = maxHeight;
         *par = 1.0;
     }
     *tile_width = *tile_height = 0;
@@ -632,21 +630,7 @@ void ReadPSDPlugin::restoreState(const std::string& filename)
     std::cout << "restoreState ..." << std::endl;
     #endif
 
-    // Set max threads allowed by host
-    unsigned int threads = 0;
-    threads = OFX::MultiThread::getNumCPUs();
-    if (threads>0) {
-        Magick::ResourceLimits::thread(threads);
-        #ifdef DEBUG
-        std::cout << "Setting max threads to " << threads << std::endl;
-        #endif
-    }
-
     _psd.clear();
-    _maxWidth = 0;
-    _maxHeight = 0;
-    int layer = 0;
-    _imageLayer->getValue(layer);
     try {
         if (!filename.empty()) {
             Magick::readImages(&_psd, filename);
@@ -657,24 +641,13 @@ void ReadPSDPlugin::restoreState(const std::string& filename)
         OFX::throwSuiteStatusException(kOfxStatErrFormat);
     }
     genLayerMenu();
-
-    #ifdef DEBUG_MAGICK
-    _psd[layer].debug(true);
-    #endif
-
+    int layer = 0;
+    _imageLayer->getValue(layer);
     if (!_psd.empty() && _psd[layer].columns()>0 && _psd[layer].rows()>0) {
         _filename = filename;
-        for (int i = 0; i < (int)_psd.size(); i++) {
-            if ((int)_psd[i].columns()>_maxWidth)
-                _maxWidth = (int)_psd[i].columns();
-            if ((int)_psd[i].rows()>_maxHeight)
-                _maxHeight = (int)_psd[i].rows();
-        }
     }
     else {
         _psd.clear();
-        _maxWidth = 0;
-        _maxHeight = 0;
         setPersistentMessage(OFX::Message::eMessageError, "", "Unable to read image");
     }
 }
