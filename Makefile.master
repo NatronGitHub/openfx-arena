@@ -17,6 +17,14 @@ LCMS_LINKFLAGS = $(shell pkg-config lcms2 --libs --static)
 FCONFIG_CXXFLAGS = $(shell pkg-config fontconfig --cflags)
 FCONFIG_LINKFLAGS = $(shell pkg-config fontconfig --libs --static)
 
+# libxml2
+XML_CXXFLAGS= $(shell pkg-config libxml-2.0 --cflags)
+XML_LINKFLAGS= $(shell pkg-config libxml-2.0 --libs --static)
+
+# libzip
+ZIP_CXXFLAGS= $(shell pkg-config libzip --cflags)
+ZIP_LINKFLAGS= $(shell pkg-config libzip --libs --static)
+
 # mingw
 ifeq ($(MINGW),1)
   MAGICK_CXXFLAGS = $(shell Magick++-config --cppflags --cxxflags)
