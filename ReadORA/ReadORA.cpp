@@ -43,7 +43,6 @@
 #define kSupportsAlpha false
 #define kSupportsTiles false
 
-// TODO error checking
 std::string _extractXML(std::string oraFile)
 {
     std::string output;
@@ -54,23 +53,23 @@ std::string _extractXML(std::string oraFile)
     const char *xmlName = "stack.xml";
     struct zip_stat xmlSt;
     zip_stat_init(&xmlSt);
-    zip_stat(oraOpen, xmlName, 0, &xmlSt);
+    err=zip_stat(oraOpen, xmlName, 0, &xmlSt);
 
-    char *xml = new char[xmlSt.size];
-
-    zip_file *xmlFile = zip_fopen(oraOpen, "stack.xml", 0);
-    zip_fread(xmlFile, xml, xmlSt.size);
-    zip_fclose(xmlFile);
+    if (err!=-1) {
+        char *xml = new char[xmlSt.size];
+        zip_file *xmlFile = zip_fopen(oraOpen, "stack.xml", 0);
+        err=zip_fread(xmlFile, xml, xmlSt.size);
+        if (err!=-1) {
+            zip_fclose(xmlFile);
+            xml[xmlSt.size] = '\0';
+            output = xml;
+        }
+    }
     zip_close(oraOpen);
-
-    xml[xmlSt.size] = '\0';
-
-    output = xml;
 
     return output;
 }
 
-// TODO
 void _getImageSize(int *width, int *height, std::string filename)
 {
     std::string xml = _extractXML(filename);
@@ -114,6 +113,11 @@ private:
     virtual void decode(const std::string& filename, OfxTime time, int view, bool isPlayback, const OfxRectI& renderWindow, float *pixelData, const OfxRectI& bounds, OFX::PixelComponentEnum pixelComponents, int pixelComponentCount, int rowBytes) OVERRIDE FINAL;
     virtual bool getFrameBounds(const std::string& filename, OfxTime time, OfxRectI *bounds, double *par, std::string *error, int *tile_width, int *tile_height) OVERRIDE FINAL;
     virtual void onInputFileChanged(const std::string& newFile, bool setColorSpace, OFX::PreMultiplicationEnum *premult, OFX::PixelComponentEnum *components, int *componentCount) OVERRIDE FINAL;
+
+    void setupImage(std::string filename);
+    void getLayersInfo(xmlNode *node);
+    std::vector<Magick::Image> _image;
+    std::vector<std::vector<std::string> > _layersInfo;
 };
 
 ReadORAPlugin::ReadORAPlugin(OfxImageEffectHandle handle)
@@ -124,6 +128,110 @@ ReadORAPlugin::ReadORAPlugin(OfxImageEffectHandle handle)
 
 ReadORAPlugin::~ReadORAPlugin()
 {
+}
+
+void
+ReadORAPlugin::getLayersInfo(xmlNode *node)
+{
+    xmlNode *cur_node = NULL;
+    for (cur_node = node; cur_node; cur_node = cur_node->next) {
+        if (cur_node->type == XML_ELEMENT_NODE) {
+            if ((!xmlStrcmp(cur_node->name, (const xmlChar *)"layer"))) {
+                std::vector<std::string> layerInfo;
+
+                xmlChar *xmlLayerName;
+                xmlChar *xmlOpacity;
+                xmlChar *xmlVisibility;
+                xmlChar *xmlComposite;
+                xmlChar *xmlPng;
+                xmlChar *xmlOffsetX;
+                xmlChar *xmlOffsetY;
+
+                xmlLayerName = xmlGetProp(cur_node, (const xmlChar *)"name");
+                xmlOpacity = xmlGetProp(cur_node, (const xmlChar *)"opacity");
+                xmlVisibility = xmlGetProp(cur_node, (const xmlChar *)"visibility");
+                xmlComposite = xmlGetProp(cur_node, (const xmlChar *)"composite-op");
+                xmlPng = xmlGetProp(cur_node, (const xmlChar *)"src");
+                xmlOffsetX = xmlGetProp(cur_node, (const xmlChar *)"x");
+                xmlOffsetY = xmlGetProp(cur_node, (const xmlChar *)"y");
+
+                std::string layerName,layerOpacity,layerVisibility,layerComposite,layerFile,layerOffsetX,layerOffsetY;
+
+                if (xmlLayerName!=NULL)
+                    layerName=(reinterpret_cast<char*>(xmlLayerName));
+                if (xmlOpacity!=NULL)
+                    layerOpacity=(reinterpret_cast<char*>(xmlOpacity));
+                if (xmlVisibility!=NULL)
+                    layerVisibility=(reinterpret_cast<char*>(xmlVisibility));
+                if (xmlComposite!=NULL)
+                    layerComposite=(reinterpret_cast<char*>(xmlComposite));
+                if (xmlPng!=NULL)
+                    layerFile=(reinterpret_cast<char*>(xmlPng));
+                if (xmlOffsetX!=NULL)
+                    layerOffsetX=(reinterpret_cast<char*>(xmlOffsetX));
+                if (xmlOffsetY!=NULL)
+                    layerOffsetY=(reinterpret_cast<char*>(xmlOffsetY));
+
+                xmlFree(xmlLayerName);
+                xmlFree(xmlOpacity);
+                xmlFree(xmlVisibility);
+                xmlFree(xmlComposite);
+                xmlFree(xmlPng);
+                xmlFree(xmlOffsetX);
+                xmlFree(xmlOffsetY);
+
+                if (layerName.empty())
+                    layerName = "unnamed";
+                if (layerOpacity.empty())
+                    layerOpacity = "1";
+                if (layerVisibility.empty())
+                    layerVisibility = "visible";
+                if (layerComposite.empty())
+                    layerComposite = "svg:src-over";
+                if (layerOffsetX.empty())
+                    layerOffsetX = "0";
+                if (layerOffsetY.empty())
+                    layerOffsetY = "0";
+                if (!layerFile.empty()) {
+                    layerInfo.push_back(layerName);
+                    layerInfo.push_back(layerOpacity);
+                    layerInfo.push_back(layerVisibility);
+                    layerInfo.push_back(layerComposite);
+                    layerInfo.push_back(layerOffsetX);
+                    layerInfo.push_back(layerOffsetY);
+                    layerInfo.push_back(layerFile);
+                    _layersInfo.push_back(layerInfo);
+                }
+            }
+        }
+        getLayersInfo(cur_node->children);
+    }
+}
+
+void
+ReadORAPlugin::setupImage(std::string filename)
+{
+    if (!filename.empty()) {
+        std::string xml = _extractXML(filename);
+        if (!xml.empty()) {
+            _image.clear();
+            _layersInfo.clear();
+            xmlDocPtr doc;
+            doc = xmlParseDoc((const xmlChar *)xml.c_str());
+            xmlNode *root_element = NULL;
+            root_element = xmlDocGetRootElement(doc);
+            getLayersInfo(root_element);
+            xmlFreeDoc(doc);
+            if (!_layersInfo.empty()) {
+                std::reverse(_layersInfo.begin(),_layersInfo.end());
+                for (int i = 0; i < (int)_layersInfo.size(); i++) {
+                    #ifdef DEBUG
+                    std::cout << _layersInfo[i][0] << " " << _layersInfo[i][1] << " " << _layersInfo[i][2] << " " << _layersInfo[i][3] << " " << _layersInfo[i][4] << " " << _layersInfo[i][5] << " " << _layersInfo[i][6] << std::endl;
+                    #endif
+                }
+            }
+        }
+    }
 }
 
 void
@@ -144,12 +252,12 @@ ReadORAPlugin::decode(const std::string& filename,
 
     // TODO!!!
 
-    Magick::Image image;
     int width = 0;
     int height = 0;
     if (!filename.empty())
         _getImageSize(&width,&height,filename);
     if (width>0 && height>0) {
+        setupImage(filename);
         Magick::Image container(Magick::Geometry(bounds.x2,bounds.y2),Magick::Color("rgba(0,0,0,1)"));
         //container.composite(image,0,0,Magick::OverCompositeOp);
         //container.composite(image,0,0,Magick::CopyOpacityCompositeOp);
