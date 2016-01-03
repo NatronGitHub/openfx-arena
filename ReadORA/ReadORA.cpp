@@ -36,7 +36,7 @@
 #define kPluginGrouping "Image/Readers"
 #define kPluginIdentifier "fr.inria.openfx.ReadORA"
 #define kPluginVersionMajor 0
-#define kPluginVersionMinor 1
+#define kPluginVersionMinor 5
 
 #define kSupportsRGBA true
 #define kSupportsRGB false
@@ -116,6 +116,7 @@ private:
 
     void setupImage(std::string filename);
     void getLayersInfo(xmlNode *node);
+    Magick::Image getLayer(std::string filename, std::string layerfile);
     std::vector<Magick::Image> _image;
     std::vector<std::vector<std::string> > _layersInfo;
 };
@@ -208,6 +209,34 @@ ReadORAPlugin::getLayersInfo(xmlNode *node)
     }
 }
 
+Magick::Image
+ReadORAPlugin::getLayer(std::string filename, std::string layer)
+{
+    Magick::Image image;
+    int err = 0;
+    zip *layerOpen = zip_open(filename.c_str(), 0, &err);
+    const char *layerPath = layer.c_str();
+    struct zip_stat layerSt;
+    zip_stat_init(&layerSt);
+    err=zip_stat(layerOpen, layerPath, 0, &layerSt);
+    if (err!=-1) {
+        char *layerData = new char[layerSt.size];
+        zip_file *layerFile = zip_fopen(layerOpen, layer.c_str(), 0);
+        err=zip_fread(layerFile, layerData, layerSt.size);
+        if (err!=-1) {
+            zip_fclose(layerFile);
+            zip_close(layerOpen);
+            if ((layerData!=NULL)&&(layerSt.size>0)) {
+                Magick::Blob blob(layerData,layerSt.size);
+                Magick::Image tmp(blob);
+                if (tmp.format()=="Portable Network Graphics")
+                    image=tmp;
+            }
+        }
+    }
+    return image;
+}
+
 void
 ReadORAPlugin::setupImage(std::string filename)
 {
@@ -225,9 +254,16 @@ ReadORAPlugin::setupImage(std::string filename)
             if (!_layersInfo.empty()) {
                 std::reverse(_layersInfo.begin(),_layersInfo.end());
                 for (int i = 0; i < (int)_layersInfo.size(); i++) {
-                    #ifdef DEBUG
-                    std::cout << _layersInfo[i][0] << " " << _layersInfo[i][1] << " " << _layersInfo[i][2] << " " << _layersInfo[i][3] << " " << _layersInfo[i][4] << " " << _layersInfo[i][5] << " " << _layersInfo[i][6] << std::endl;
-                    #endif
+                    Magick::Image layer;
+                    layer=getLayer(filename,_layersInfo[i][6]);
+                    if (layer.format()=="Portable Network Graphics" && layer.columns()>0 && layer.rows()>0) {
+                        int xOffset = atoi(_layersInfo[i][4].c_str());
+                        int yOffset = atoi(_layersInfo[i][5].c_str());
+                        layer.label(_layersInfo[i][6]); // use filename so we can get layerinfo using that later, since layername may not be uniqe
+                        layer.page().xOff(xOffset);
+                        layer.page().yOff(yOffset);
+                        _image.push_back(layer);
+                    }
                 }
             }
         }
@@ -257,10 +293,18 @@ ReadORAPlugin::decode(const std::string& filename,
     if (!filename.empty())
         _getImageSize(&width,&height,filename);
     if (width>0 && height>0) {
-        setupImage(filename);
+        setupImage(filename); // move to restorestate etc
         Magick::Image container(Magick::Geometry(bounds.x2,bounds.y2),Magick::Color("rgba(0,0,0,1)"));
-        //container.composite(image,0,0,Magick::OverCompositeOp);
-        //container.composite(image,0,0,Magick::CopyOpacityCompositeOp);
+
+        //testing (need to check if layer should be visible, also need to use right composite-op, and of course multiplane support)
+        Magick::Image image(Magick::Geometry(bounds.x2,bounds.y2),Magick::Color("rgba(0,0,0,0)"));
+        if (!_image.empty()) {
+            for (int i = 0; i < _image.size(); i++)
+                image.composite(_image[i],_image[i].page().xOff(),_image[i].page().yOff(),Magick::OverCompositeOp);
+        }
+
+        container.composite(image,0,0,Magick::OverCompositeOp);
+        container.composite(image,0,0,Magick::CopyOpacityCompositeOp);
         container.flip();
         container.write(0,0,renderWindow.x2 - renderWindow.x1,renderWindow.y2 - renderWindow.y1,"RGBA",Magick::FloatPixel,pixelData);
     }
