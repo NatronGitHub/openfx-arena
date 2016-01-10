@@ -36,7 +36,7 @@
 #define kPluginGrouping "Image/Readers"
 #define kPluginIdentifier "fr.inria.openfx.ReadORA"
 #define kPluginVersionMajor 0
-#define kPluginVersionMinor 5
+#define kPluginVersionMinor 6
 
 #define kSupportsRGBA true
 #define kSupportsRGB false
@@ -45,6 +45,10 @@
 
 std::string _extractXML(std::string oraFile)
 {
+    #ifdef DEBUG
+    std::cout << "_extractXML ..." << std::endl;
+    #endif
+
     std::string output;
 
     int err = 0;
@@ -72,6 +76,10 @@ std::string _extractXML(std::string oraFile)
 
 void _getImageSize(int *width, int *height, std::string filename)
 {
+    #ifdef DEBUG
+    std::cout << "_getImageSize ..." << std::endl;
+    #endif
+
     std::string xml = _extractXML(filename);
     if (!xml.empty()) {
         int imgW = 0;
@@ -114,11 +122,9 @@ private:
     virtual bool getFrameBounds(const std::string& filename, OfxTime time, OfxRectI *bounds, double *par, std::string *error, int *tile_width, int *tile_height) OVERRIDE FINAL;
     virtual void onInputFileChanged(const std::string& newFile, bool setColorSpace, OFX::PreMultiplicationEnum *premult, OFX::PixelComponentEnum *components, int *componentCount) OVERRIDE FINAL;
 
-    void setupImage(std::string filename);
-    void getLayersInfo(xmlNode *node);
+    void setupImage(std::string filename,std::vector<Magick::Image> *images);
+    void getLayersInfo(xmlNode *node,std::vector<std::vector<std::string> > *layers);
     Magick::Image getLayer(std::string filename, std::string layerfile);
-    std::vector<Magick::Image> _image;
-    std::vector<std::vector<std::string> > _layersInfo;
 };
 
 ReadORAPlugin::ReadORAPlugin(OfxImageEffectHandle handle)
@@ -132,8 +138,12 @@ ReadORAPlugin::~ReadORAPlugin()
 }
 
 void
-ReadORAPlugin::getLayersInfo(xmlNode *node)
+ReadORAPlugin::getLayersInfo(xmlNode *node,std::vector<std::vector<std::string> > *layers)
 {
+    #ifdef DEBUG
+    std::cout << "getLayersInfo ..." << std::endl;
+    #endif
+
     xmlNode *cur_node = NULL;
     for (cur_node = node; cur_node; cur_node = cur_node->next) {
         if (cur_node->type == XML_ELEMENT_NODE) {
@@ -186,7 +196,13 @@ ReadORAPlugin::getLayersInfo(xmlNode *node)
                 if (layerOpacity.empty())
                     layerOpacity = "1";
                 if (layerVisibility.empty())
-                    layerVisibility = "visible";
+                    layerVisibility = "1";
+                else {
+                    if (layerVisibility=="hidden")
+                        layerVisibility = "0";
+                    else
+                        layerVisibility = "1";
+                }
                 if (layerComposite.empty())
                     layerComposite = "svg:src-over";
                 if (layerOffsetX.empty())
@@ -201,17 +217,21 @@ ReadORAPlugin::getLayersInfo(xmlNode *node)
                     layerInfo.push_back(layerOffsetX);
                     layerInfo.push_back(layerOffsetY);
                     layerInfo.push_back(layerFile);
-                    _layersInfo.push_back(layerInfo);
+                    layers->push_back(layerInfo);
                 }
             }
         }
-        getLayersInfo(cur_node->children);
+        getLayersInfo(cur_node->children,layers);
     }
 }
 
 Magick::Image
 ReadORAPlugin::getLayer(std::string filename, std::string layer)
 {
+    #ifdef DEBUG
+    std::cout << "getLayer ..." << std::endl;
+    #endif
+
     Magick::Image image;
     int err = 0;
     zip *layerOpen = zip_open(filename.c_str(), 0, &err);
@@ -238,31 +258,36 @@ ReadORAPlugin::getLayer(std::string filename, std::string layer)
 }
 
 void
-ReadORAPlugin::setupImage(std::string filename)
+ReadORAPlugin::setupImage(std::string filename,std::vector<Magick::Image> *images)
 {
+    #ifdef DEBUG
+    std::cout << "setupImage ..." << std::endl;
+    #endif
+
     if (!filename.empty()) {
         std::string xml = _extractXML(filename);
         if (!xml.empty()) {
-            _image.clear();
-            _layersInfo.clear();
+            std::vector<std::vector<std::string> > layersInfo;
             xmlDocPtr doc;
             doc = xmlParseDoc((const xmlChar *)xml.c_str());
             xmlNode *root_element = NULL;
             root_element = xmlDocGetRootElement(doc);
-            getLayersInfo(root_element);
+            getLayersInfo(root_element,&layersInfo);
             xmlFreeDoc(doc);
-            if (!_layersInfo.empty()) {
-                std::reverse(_layersInfo.begin(),_layersInfo.end());
-                for (int i = 0; i < (int)_layersInfo.size(); i++) {
+            if (!layersInfo.empty()) {
+                std::reverse(layersInfo.begin(),layersInfo.end());
+                for (int i = 0; i < (int)layersInfo.size(); i++) {
                     Magick::Image layer;
-                    layer=getLayer(filename,_layersInfo[i][6]);
+                    layer=getLayer(filename,layersInfo[i][6]);
                     if (layer.format()=="Portable Network Graphics" && layer.columns()>0 && layer.rows()>0) {
-                        int xOffset = atoi(_layersInfo[i][4].c_str());
-                        int yOffset = atoi(_layersInfo[i][5].c_str());
-                        layer.label(_layersInfo[i][6]); // use filename so we can get layerinfo using that later, since layername may not be uniqe
+                        int xOffset = atoi(layersInfo[i][4].c_str());
+                        int yOffset = atoi(layersInfo[i][5].c_str());
+                        layer.label(layersInfo[i][0]);
+                        std::string comment = layersInfo[i][3] + " " + layersInfo[i][1] + " " + layersInfo[i][2]; // comp+opacity+visible
+                        layer.comment(comment);
                         layer.page().xOff(xOffset);
                         layer.page().yOff(yOffset);
-                        _image.push_back(layer);
+                        images->push_back(layer);
                     }
                 }
             }
@@ -286,23 +311,154 @@ ReadORAPlugin::decode(const std::string& filename,
     std::cout << "decode ..." << std::endl;
     #endif
 
-    // TODO!!!
+    /* TODO:
+     * multiplane (no point before the rest is done)
+     * if first layer is hidden (and we dont include it) it breaks the comp (and get NaN in Natron)
+     * opacity don't work 100% yet
+     * missing two compositeop
+     * colors don't match 100% (in viewer at least)
+    */
 
     int width = 0;
     int height = 0;
     if (!filename.empty())
         _getImageSize(&width,&height,filename);
-    if (width>0 && height>0) {
-        setupImage(filename); // move to restorestate etc
+    if (width==bounds.x2 && height==bounds.y2) {
+        std::vector<Magick::Image> _image;
+        setupImage(filename,&_image);
         Magick::Image container(Magick::Geometry(bounds.x2,bounds.y2),Magick::Color("rgba(0,0,0,1)"));
-
-        //testing (need to check if layer should be visible, also need to use right composite-op, and of course multiplane support)
         Magick::Image image(Magick::Geometry(bounds.x2,bounds.y2),Magick::Color("rgba(0,0,0,0)"));
         if (!_image.empty()) {
-            for (int i = 0; i < _image.size(); i++)
-                image.composite(_image[i],_image[i].page().xOff(),_image[i].page().yOff(),Magick::OverCompositeOp);
+            for (int i = 0; i < (int)_image.size(); i++) {
+                #ifdef DEBUG
+                std::cout << _image[i].label() << " " << _image[i].comment() << std::endl;
+                #endif
+                std::string composite, opacity, visibility;
+                std::istringstream stream(_image[i].comment());
+                std::string result;
+                int count = 0;
+                while ( std::getline(stream,result,' ')) {
+                    if (count==0 && !result.empty())
+                        composite=result;
+                    if (count==1 && !result.empty())
+                        opacity=result;
+                    if (count==2 && !result.empty())
+                        visibility=result;
+                    count++;
+                }
+                int compositeOp = 0;
+                if (composite=="svg:add")
+                    compositeOp=1;
+                else if (composite=="svg:color-burn")
+                    compositeOp=2;
+                else if (composite=="svg:color")
+                    compositeOp=3;
+                else if (composite=="svg:color-dodge")
+                    compositeOp=4;
+                else if (composite=="svg:darken")
+                    compositeOp=5;
+                else if (composite=="krita:erase")
+                    compositeOp=6;
+                else if (composite=="svg:lighten")
+                    compositeOp=7;
+                else if (composite=="svg:luminosity")
+                    compositeOp=8;
+                else if (composite=="svg:multiply")
+                    compositeOp=9;
+                else if (composite=="svg:overlay")
+                    compositeOp=10;
+                else if (composite=="svg:saturation")
+                    compositeOp=11;
+                else if (composite=="svg:screen")
+                    compositeOp=12;
+                else if (composite=="svg:soft-light")
+                    compositeOp=13;
+
+                double opacityVal = atof(opacity.c_str());
+                double grayVal;
+                grayVal=opacityVal*100;
+                if (visibility=="1") {
+                    #ifdef DEBUG
+                    std::cout << "adding layer " << _image[i].label() << std::endl;
+                    #endif
+                    if (opacityVal<1) { //semi-broken
+                        std::ostringstream grayColor;
+                        grayColor<< "gray";
+                        grayColor<< (int)grayVal;
+                        Magick::Image mask(_image[i]);
+                        mask.channel(Magick::OpacityChannel);
+                        mask.colorFuzz(MaxRGB*opacityVal);
+                        try {
+                            mask.opaque(Magick::Color("black"),Magick::Color(grayColor.str()));
+                        }
+                        catch(Magick::Warning &warning) {
+                            #ifdef DEBUG
+                            std::cout << warning.what() << std::endl;
+                            #endif
+                            mask.opaque(Magick::Color("black"),Magick::Color(grayColor.str()));
+                        }
+                        mask.negate();
+                        _image[i].composite(mask,0,0,Magick::CopyOpacityCompositeOp);
+                    }
+                    switch (compositeOp) { // http://www.imagemagick.org/Usage/compose/
+                    case 1:
+                        image.composite(_image[i],_image[i].page().xOff(),_image[i].page().yOff(),Magick::AddCompositeOp);
+                        break;
+                    case 2:
+                        image.composite(_image[i],_image[i].page().xOff(),_image[i].page().yOff(),Magick::ColorBurnCompositeOp);
+                        break;
+                    case 3: // can't find
+                        setPersistentMessage(OFX::Message::eMessageError, "", "svg:color compositeop no supported yet");
+                        OFX::throwSuiteStatusException(kOfxStatErrFormat);
+                        //image.composite(_image[i],_image[i].page().xOff(),_image[i].page().yOff(),Magick::OverCompositeOp);
+                        break;
+                    case 4:
+                        image.composite(_image[i],_image[i].page().xOff(),_image[i].page().yOff(),Magick::ColorDodgeCompositeOp);
+                        break;
+                    case 5:
+                        image.composite(_image[i],_image[i].page().xOff(),_image[i].page().yOff(),Magick::DarkenCompositeOp);
+                        break;
+                    case 6: // don't know yet
+                        setPersistentMessage(OFX::Message::eMessageError, "", "krita:erase compositeop not supported yet");
+                        OFX::throwSuiteStatusException(kOfxStatErrFormat);
+                        //image.composite(_image[i],_image[i].page().xOff(),_image[i].page().yOff(),Magick::OverCompositeOp);
+                        break;
+                    case 7:
+                        image.composite(_image[i],_image[i].page().xOff(),_image[i].page().yOff(),Magick::LightenCompositeOp);
+                        break;
+                    case 8:
+                        image.composite(_image[i],_image[i].page().xOff(),_image[i].page().yOff(),Magick::LuminizeCompositeOp);
+                        break;
+                    case 9:
+                        image.composite(_image[i],_image[i].page().xOff(),_image[i].page().yOff(),Magick::MultiplyCompositeOp);
+                        break;
+                    case 10:
+                        image.composite(_image[i],_image[i].page().xOff(),_image[i].page().yOff(),Magick::OverlayCompositeOp);
+                        break;
+                    case 11:
+                        image.composite(_image[i],_image[i].page().xOff(),_image[i].page().yOff(),Magick::SaturateCompositeOp);
+                        break;
+                    case 12:
+                        image.composite(_image[i],_image[i].page().xOff(),_image[i].page().yOff(),Magick::ScreenCompositeOp);
+                        break;
+                    case 13:
+                        image.composite(_image[i],_image[i].page().xOff(),_image[i].page().yOff(),Magick::SoftLightCompositeOp);
+                        break;
+                    default:
+                        image.composite(_image[i],_image[i].page().xOff(),_image[i].page().yOff(),Magick::OverCompositeOp);
+                        break;
+                    }
+                }
+                else {
+                    #ifdef DEBUG
+                    std::cout << "skipping layer (hidden) " << _image[i].label() << std::endl;
+                    #endif
+                }
+            }
         }
 
+        // return image
+        // image.colorSpace(Magick::RGBColorspace);
         container.composite(image,0,0,Magick::OverCompositeOp);
         container.composite(image,0,0,Magick::CopyOpacityCompositeOp);
         container.flip();
@@ -383,7 +539,7 @@ void ReadORAPluginFactory::describe(OFX::ImageEffectDescriptor &desc)
     desc.setPluginEvaluation(50);
     #endif
 
-    desc.setPluginDescription("Read ORA (OpenRaster) image format.");
+    desc.setPluginDescription("Read Open Raster image format.");
 }
 
 /** @brief The describe in context function, passed a plugin descriptor and a context */
