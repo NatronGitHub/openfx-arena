@@ -7,7 +7,6 @@
 #
 */
 
-#include "ReadSVG.h"
 #include <iostream>
 #include <stdint.h>
 #include <Magick++.h>
@@ -15,6 +14,7 @@
 #include "GenericOCIO.h"
 #include "ofxsMacros.h"
 #include "ofxsMultiThread.h"
+#include "ofxsImageEffect.h"
 #ifdef OFX_IO_USING_OCIO
 #include <OpenColorIO/OpenColorIO.h>
 #endif
@@ -245,8 +245,5 @@ ImageEffect* ReadSVGPluginFactory::createInstance(OfxImageEffectHandle handle,
     return ret;
 }
 
-void getReadSVGPluginID(OFX::PluginFactoryArray &ids)
-{
-    static ReadSVGPluginFactory p(kPluginIdentifier, kPluginVersionMajor, kPluginVersionMinor);
-    ids.push_back(&p);
-}
+static ReadSVGPluginFactory p(kPluginIdentifier, kPluginVersionMajor, kPluginVersionMinor);
+mRegisterPluginFactoryInstance(p)

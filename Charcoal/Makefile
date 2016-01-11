@@ -1,6 +1,5 @@
 PLUGINOBJECTS = \
-        Charcoal.o \
-        PluginRegistration.o \
+        Charcoal.o
 
 PLUGINNAME = Charcoal
 

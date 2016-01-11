@@ -7,9 +7,9 @@
 #
 */
 
-#include "Polar.h"
 #include "ofxsMacros.h"
 #include "ofxsMultiThread.h"
+#include "ofxsImageEffect.h"
 #include <Magick++.h>
 #include <iostream>
 #include <stdint.h>
@@ -473,8 +473,5 @@ ImageEffect* PolarPluginFactory::createInstance(OfxImageEffectHandle handle, Con
     return new PolarPlugin(handle);
 }
 
-void getPolarPluginID(OFX::PluginFactoryArray &ids)
-{
-    static PolarPluginFactory p(kPluginIdentifier, kPluginVersionMajor, kPluginVersionMinor);
-    ids.push_back(&p);
-}
+static PolarPluginFactory p(kPluginIdentifier, kPluginVersionMajor, kPluginVersionMinor);
+mRegisterPluginFactoryInstance(p)

@@ -7,8 +7,8 @@
 #
 */
 
-#include "Glow.h"
 #include "ofxsMacros.h"
+#include "ofxsImageEffect.h"
 #include <Magick++.h>
 
 #define kPluginName "GlowOFX"
@@ -290,8 +290,5 @@ ImageEffect* GlowPluginFactory::createInstance(OfxImageEffectHandle handle, Cont
     return new GlowPlugin(handle);
 }
 
-void getGlowPluginID(OFX::PluginFactoryArray &ids)
-{
-    static GlowPluginFactory p(kPluginIdentifier, kPluginVersionMajor, kPluginVersionMinor);
-    ids.push_back(&p);
-}
+static GlowPluginFactory p(kPluginIdentifier, kPluginVersionMajor, kPluginVersionMinor);
+mRegisterPluginFactoryInstance(p)

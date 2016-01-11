@@ -7,10 +7,10 @@
 #
 */
 
-#include "Text.h"
 #include "ofxsPositionInteract.h"
 #include "ofxsMacros.h"
 #include "ofxsMultiThread.h"
+#include "ofxsImageEffect.h"
 #include "ofxNatron.h"
 #include <Magick++.h>
 #include <sstream>
@@ -853,8 +853,5 @@ ImageEffect* TextPluginFactory::createInstance(OfxImageEffectHandle handle, Cont
     return new TextPlugin(handle);
 }
 
-void getTextPluginID(OFX::PluginFactoryArray &ids)
-{
-    static TextPluginFactory p(kPluginIdentifier, kPluginVersionMajor, kPluginVersionMinor);
-    ids.push_back(&p);
-}
+static TextPluginFactory p(kPluginIdentifier, kPluginVersionMajor, kPluginVersionMinor);
+mRegisterPluginFactoryInstance(p)

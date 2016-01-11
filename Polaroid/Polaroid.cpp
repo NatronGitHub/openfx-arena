@@ -7,9 +7,9 @@
 #
 */
 
-#include "Polaroid.h"
 #include "ofxsMacros.h"
 #include "ofxsMultiThread.h"
+#include "ofxsImageEffect.h"
 #include <Magick++.h>
 #include <iostream>
 #include <stdint.h>
@@ -461,8 +461,5 @@ ImageEffect* PolaroidPluginFactory::createInstance(OfxImageEffectHandle handle, 
     return new PolaroidPlugin(handle);
 }
 
-void getPolaroidPluginID(OFX::PluginFactoryArray &ids)
-{
-    static PolaroidPluginFactory p(kPluginIdentifier, kPluginVersionMajor, kPluginVersionMinor);
-    ids.push_back(&p);
-}
+static PolaroidPluginFactory p(kPluginIdentifier, kPluginVersionMajor, kPluginVersionMinor);
+mRegisterPluginFactoryInstance(p)

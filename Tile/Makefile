@@ -1,6 +1,5 @@
 PLUGINOBJECTS = \
-        Tile.o \
-	PluginRegistration.o \
+        Tile.o 
 
 PLUGINNAME = Tile
 

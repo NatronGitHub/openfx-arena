@@ -1,6 +1,5 @@
 PLUGINOBJECTS = \
     ReadMVG.o \
-    PluginRegistration.o \
     GenericReader.o GenericOCIO.o SequenceParsing.o
 
 PLUGINNAME = ReadMVG

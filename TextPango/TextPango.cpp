@@ -7,9 +7,9 @@
 #
 */
 
-#include "TextPango.h"
 #include "ofxsMacros.h"
 #include "ofxsMultiThread.h"
+#include "ofxsImageEffect.h"
 #include <Magick++.h>
 #include <sstream>
 #include <iostream>
@@ -865,8 +865,5 @@ ImageEffect* TextPangoPluginFactory::createInstance(OfxImageEffectHandle handle,
     return new TextPangoPlugin(handle);
 }
 
-void getTextPangoPluginID(OFX::PluginFactoryArray &ids)
-{
-    static TextPangoPluginFactory p(kPluginIdentifier, kPluginVersionMajor, kPluginVersionMinor);
-    ids.push_back(&p);
-}
+static TextPangoPluginFactory p(kPluginIdentifier, kPluginVersionMajor, kPluginVersionMinor);
+mRegisterPluginFactoryInstance(p)

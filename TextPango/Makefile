@@ -1,6 +1,5 @@
 PLUGINOBJECTS = \
-        TextPango.o \
-	PluginRegistration.o \
+        TextPango.o
 
 PLUGINNAME = TextPango
 

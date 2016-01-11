@@ -2,8 +2,7 @@ PLUGINOBJECTS = \
 	Text.o \
 	ofxsOGLTextRenderer.o \
 	ofxsOGLFontData.o \
-	ofxsRectangleInteract.o \
-	PluginRegistration.o \
+	ofxsRectangleInteract.o
 
 PLUGINNAME = Text
 

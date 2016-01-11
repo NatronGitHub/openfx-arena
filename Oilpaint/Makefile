@@ -1,6 +1,5 @@
 PLUGINOBJECTS = \
-        Oilpaint.o \
-        PluginRegistration.o \
+        Oilpaint.o
 
 PLUGINNAME = Oilpaint
 

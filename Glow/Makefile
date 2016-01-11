@@ -1,6 +1,5 @@
 PLUGINOBJECTS = \
-        Glow.o \
-        PluginRegistration.o \
+        Glow.o
 
 PLUGINNAME = Glow
 

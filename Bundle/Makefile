@@ -22,7 +22,6 @@ PLUGINOBJECTS = \
         ofxsOGLTextRenderer.o \
         ofxsOGLFontData.o \
         ofxsRectangleInteract.o \
-        PluginRegistrationCombined.o \
         GenericReader.o GenericOCIO.o SequenceParsing.o
 
 ifeq ($(OS),$(filter $(OS),Linux FreeBSD Darwin))

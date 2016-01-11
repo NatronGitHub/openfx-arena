@@ -7,9 +7,9 @@
 #
 */
 
-#include "Tile.h"
 #include "ofxsMacros.h"
 #include "ofxsMultiThread.h"
+#include "ofxsImageEffect.h"
 #include <Magick++.h>
 #include <iostream>
 
@@ -392,8 +392,5 @@ ImageEffect* TilePluginFactory::createInstance(OfxImageEffectHandle handle, Cont
     return new TilePlugin(handle);
 }
 
-void getTilePluginID(OFX::PluginFactoryArray &ids)
-{
-    static TilePluginFactory p(kPluginIdentifier, kPluginVersionMajor, kPluginVersionMinor);
-    ids.push_back(&p);
-}
+static TilePluginFactory p(kPluginIdentifier, kPluginVersionMajor, kPluginVersionMinor);
+mRegisterPluginFactoryInstance(p)

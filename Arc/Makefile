@@ -1,6 +1,4 @@
-PLUGINOBJECTS = \
-        Arc.o \
-        PluginRegistration.o \
+PLUGINOBJECTS = Arc.o
 
 PLUGINNAME = Arc
 

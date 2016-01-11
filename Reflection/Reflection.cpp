@@ -7,9 +7,9 @@
 #
 */
 
-#include "Reflection.h"
 #include "ofxsMacros.h"
 #include "ofxsMultiThread.h"
+#include "ofxsImageEffect.h"
 #include <Magick++.h>
 #include <stdint.h>
 #include <cmath>
@@ -479,8 +479,5 @@ ImageEffect* ReflectionPluginFactory::createInstance(OfxImageEffectHandle handle
     return new ReflectionPlugin(handle);
 }
 
-void getReflectionPluginID(OFX::PluginFactoryArray &ids)
-{
-    static ReflectionPluginFactory p(kPluginIdentifier, kPluginVersionMajor, kPluginVersionMinor);
-    ids.push_back(&p);
-}
+static ReflectionPluginFactory p(kPluginIdentifier, kPluginVersionMajor, kPluginVersionMinor);
+mRegisterPluginFactoryInstance(p)

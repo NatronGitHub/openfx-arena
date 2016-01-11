@@ -8,8 +8,7 @@
 #
 
 PLUGINOBJECTS = \
-        Texture.o \
-	PluginRegistration.o \
+        Texture.o
 
 PLUGINNAME = Texture
 

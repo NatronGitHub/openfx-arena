@@ -1,6 +1,5 @@
 PLUGINOBJECTS = \
-        Modulate.o \
-        PluginRegistration.o \
+        Modulate.o
 
 PLUGINNAME = Modulate
 

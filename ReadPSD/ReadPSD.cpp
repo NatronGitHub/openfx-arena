@@ -7,7 +7,6 @@
 #
 */
 
-#include "ReadPSD.h"
 #include <iostream>
 #include <string>
 #include <sys/stat.h>
@@ -16,6 +15,7 @@
 #include "GenericOCIO.h"
 #include "ofxsMacros.h"
 #include "ofxsMultiThread.h"
+#include "ofxsImageEffect.h"
 #include <lcms2.h>
 #include <dirent.h>
 #include <ofxNatron.h>
@@ -969,8 +969,5 @@ ImageEffect* ReadPSDPluginFactory::createInstance(OfxImageEffectHandle handle,
     return ret;
 }
 
-void getReadPSDPluginID(OFX::PluginFactoryArray &ids)
-{
-    static ReadPSDPluginFactory p(kPluginIdentifier, kPluginVersionMajor, kPluginVersionMinor);
-    ids.push_back(&p);
-}
+static ReadPSDPluginFactory p(kPluginIdentifier, kPluginVersionMajor, kPluginVersionMinor);
+mRegisterPluginFactoryInstance(p)

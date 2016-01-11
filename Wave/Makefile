@@ -1,6 +1,4 @@
-PLUGINOBJECTS = \
-        Wave.o \
-        PluginRegistration.o \
+PLUGINOBJECTS = Wave.o
 
 PLUGINNAME = Wave
 

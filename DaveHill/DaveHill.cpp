@@ -8,7 +8,6 @@
 # Need custom licensing terms or conditions? Commercial license for proprietary software? Contact us.
 */
 
-#include "DaveHill.h"
 #include "ofxsMacros.h"
 #include "ofxsMultiThread.h"
 #include <Magick++.h>
@@ -327,8 +326,5 @@ ImageEffect* DaveHillPluginFactory::createInstance(OfxImageEffectHandle handle, 
     return new DaveHillPlugin(handle);
 }
 
-void getDaveHillPluginID(OFX::PluginFactoryArray &ids)
-{
-    static DaveHillPluginFactory p(kPluginIdentifier, kPluginVersionMajor, kPluginVersionMinor);
-    ids.push_back(&p);
-}
+static DaveHillPluginFactory p(kPluginIdentifier, kPluginVersionMajor, kPluginVersionMinor);
+mRegisterPluginFactoryInstance(p)

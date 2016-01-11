@@ -7,9 +7,9 @@
 #
 */
 
-#include "Swirl.h"
 #include "ofxsMacros.h"
 #include "ofxsMultiThread.h"
+#include "ofxsImageEffect.h"
 #include <Magick++.h>
 #include <iostream>
 #include <stdint.h>
@@ -271,8 +271,5 @@ ImageEffect* SwirlPluginFactory::createInstance(OfxImageEffectHandle handle, Con
     return new SwirlPlugin(handle);
 }
 
-void getSwirlPluginID(OFX::PluginFactoryArray &ids)
-{
-    static SwirlPluginFactory p(kPluginIdentifier, kPluginVersionMajor, kPluginVersionMinor);
-    ids.push_back(&p);
-}
+static SwirlPluginFactory p(kPluginIdentifier, kPluginVersionMajor, kPluginVersionMinor);
+mRegisterPluginFactoryInstance(p)

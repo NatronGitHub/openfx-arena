@@ -9,8 +9,8 @@
 
 #ifndef _WINDOWS // "povray on windows" is not the same as "povray on unix". We need a "povray for unix" build on mingw for this plugin to work on windows.
 
-#include "PovRay.h"
 #include "ofxsMacros.h"
+#include "ofxsImageEffect.h"
 #include <Magick++.h>
 #include <iostream>
 #include <sys/types.h>
@@ -528,10 +528,7 @@ ImageEffect* PovRayPluginFactory::createInstance(OfxImageEffectHandle handle, Co
     return new PovRayPlugin(handle);
 }
 
-void getPovRayPluginID(OFX::PluginFactoryArray &ids)
-{
-    static PovRayPluginFactory p(kPluginIdentifier, kPluginVersionMajor, kPluginVersionMinor);
-    ids.push_back(&p);
-}
+static PovRayPluginFactory p(kPluginIdentifier, kPluginVersionMajor, kPluginVersionMinor);
+mRegisterPluginFactoryInstance(p)
 
 #endif // _WINDOWS

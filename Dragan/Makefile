@@ -8,8 +8,7 @@
 #
 
 PLUGINOBJECTS = \
-        Dragan.o \
-        PluginRegistration.o \
+        Dragan.o
 
 PLUGINNAME = Dragan
 

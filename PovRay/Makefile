@@ -1,6 +1,5 @@
 PLUGINOBJECTS = \
-        PovRay.o \
-	PluginRegistration.o \
+        PovRay.o
 
 PLUGINNAME = PovRay
 

@@ -1,6 +1,5 @@
 PLUGINOBJECTS = \
-        Polar.o \
-        PluginRegistration.o \
+        Polar.o
 
 PLUGINNAME = Polar
 

@@ -8,8 +8,7 @@
 #
 
 PLUGINOBJECTS = \
-        Emboss.o \
-        PluginRegistration.o \
+        Emboss.o
 
 PLUGINNAME = Emboss
 

@@ -7,9 +7,9 @@
 #
 */
 
-#include "Roll.h"
 #include "ofxsMacros.h"
 #include "ofxsMultiThread.h"
+#include "ofxsImageEffect.h"
 #include <Magick++.h>
 #include <iostream>
 #include <stdint.h>
@@ -266,8 +266,5 @@ ImageEffect* RollPluginFactory::createInstance(OfxImageEffectHandle handle, Cont
     return new RollPlugin(handle);
 }
 
-void getRollPluginID(OFX::PluginFactoryArray &ids)
-{
-    static RollPluginFactory p(kPluginIdentifier, kPluginVersionMajor, kPluginVersionMinor);
-    ids.push_back(&p);
-}
+static RollPluginFactory p(kPluginIdentifier, kPluginVersionMajor, kPluginVersionMinor);
+mRegisterPluginFactoryInstance(p)

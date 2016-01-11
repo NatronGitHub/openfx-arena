@@ -7,9 +7,9 @@
 #
 */
 
-#include "Arc.h"
 #include "ofxsMacros.h"
 #include "ofxsMultiThread.h"
+#include "ofxsImageEffect.h"
 #include <Magick++.h>
 #include <iostream>
 #include <stdint.h>
@@ -531,8 +531,5 @@ ImageEffect* ArcPluginFactory::createInstance(OfxImageEffectHandle handle, Conte
     return new ArcPlugin(handle);
 }
 
-void getArcPluginID(OFX::PluginFactoryArray &ids)
-{
-    static ArcPluginFactory p(kPluginIdentifier, kPluginVersionMajor, kPluginVersionMinor);
-    ids.push_back(&p);
-}
+static ArcPluginFactory p(kPluginIdentifier, kPluginVersionMajor, kPluginVersionMinor);
+mRegisterPluginFactoryInstance(p)

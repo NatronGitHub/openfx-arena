@@ -8,9 +8,9 @@
 # Need custom licensing terms or conditions? Commercial license for proprietary software? Contact us.
 */
 
-#include "Emboss.h"
 #include "ofxsMacros.h"
 #include "ofxsMultiThread.h"
+#include "ofxsImageEffect.h"
 #include <Magick++.h>
 #include <iostream>
 #include <stdint.h>
@@ -293,8 +293,5 @@ ImageEffect* EmbossPluginFactory::createInstance(OfxImageEffectHandle handle, Co
     return new EmbossPlugin(handle);
 }
 
-void getEmbossPluginID(OFX::PluginFactoryArray &ids)
-{
-    static EmbossPluginFactory p(kPluginIdentifier, kPluginVersionMajor, kPluginVersionMinor);
-    ids.push_back(&p);
-}
+static EmbossPluginFactory p(kPluginIdentifier, kPluginVersionMajor, kPluginVersionMinor);
+mRegisterPluginFactoryInstance(p)

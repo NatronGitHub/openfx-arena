@@ -7,9 +7,9 @@
 #
 */
 
-#include "Sketch.h"
 #include "ofxsMacros.h"
 #include "ofxsMultiThread.h"
+#include "ofxsImageEffect.h"
 #include <Magick++.h>
 #include <iostream>
 #include <stdint.h>
@@ -283,8 +283,5 @@ ImageEffect* SketchPluginFactory::createInstance(OfxImageEffectHandle handle, Co
     return new SketchPlugin(handle);
 }
 
-void getSketchPluginID(OFX::PluginFactoryArray &ids)
-{
-    static SketchPluginFactory p(kPluginIdentifier, kPluginVersionMajor, kPluginVersionMinor);
-    ids.push_back(&p);
-}
+static SketchPluginFactory p(kPluginIdentifier, kPluginVersionMajor, kPluginVersionMinor);
+mRegisterPluginFactoryInstance(p)

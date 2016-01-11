@@ -7,9 +7,9 @@
 #
 */
 
-#include "Modulate.h"
 #include "ofxsMacros.h"
 #include "ofxsMultiThread.h"
+#include "ofxsImageEffect.h"
 #include <iostream>
 #include <Magick++.h>
 
@@ -280,8 +280,5 @@ ImageEffect* ModulatePluginFactory::createInstance(OfxImageEffectHandle handle, 
     return new ModulatePlugin(handle);
 }
 
-void getModulatePluginID(OFX::PluginFactoryArray &ids)
-{
-    static ModulatePluginFactory p(kPluginIdentifier, kPluginVersionMajor, kPluginVersionMinor);
-    ids.push_back(&p);
-}
+static ModulatePluginFactory p(kPluginIdentifier, kPluginVersionMajor, kPluginVersionMinor);
+mRegisterPluginFactoryInstance(p)

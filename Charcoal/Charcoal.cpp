@@ -7,9 +7,9 @@
 #
 */
 
-#include "Charcoal.h"
 #include "ofxsMacros.h"
 #include "ofxsMultiThread.h"
+#include "ofxsImageEffect.h"
 #include <Magick++.h>
 #include <iostream>
 #include <stdint.h>
@@ -266,8 +266,5 @@ ImageEffect* CharcoalPluginFactory::createInstance(OfxImageEffectHandle handle, 
     return new CharcoalPlugin(handle);
 }
 
-void getCharcoalPluginID(OFX::PluginFactoryArray &ids)
-{
-    static CharcoalPluginFactory p(kPluginIdentifier, kPluginVersionMajor, kPluginVersionMinor);
-    ids.push_back(&p);
-}
+static CharcoalPluginFactory p(kPluginIdentifier, kPluginVersionMajor, kPluginVersionMinor);
+mRegisterPluginFactoryInstance(p)

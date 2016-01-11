@@ -1,6 +1,5 @@
 PLUGINOBJECTS = \
-        Edges.o \
-        PluginRegistration.o \
+        Edges.o
 
 PLUGINNAME = Edges
 

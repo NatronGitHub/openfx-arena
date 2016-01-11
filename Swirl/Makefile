@@ -1,6 +1,5 @@
 PLUGINOBJECTS = \
-        Swirl.o \
-        PluginRegistration.o \
+        Swirl.o
 
 PLUGINNAME = Swirl
 

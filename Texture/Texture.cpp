@@ -8,9 +8,9 @@
 # Need custom licensing terms or conditions? Commercial license for proprietary software? Contact us.
 */
 
-#include "Texture.h"
 #include "ofxsMacros.h"
 #include "ofxsMultiThread.h"
+#include "ofxsImageEffect.h"
 #include "ofxNatron.h"
 #include <Magick++.h>
 #include <iostream>
@@ -429,8 +429,5 @@ ImageEffect* TexturePluginFactory::createInstance(OfxImageEffectHandle handle, C
     return new TexturePlugin(handle);
 }
 
-void getTexturePluginID(OFX::PluginFactoryArray &ids)
-{
-    static TexturePluginFactory p(kPluginIdentifier, kPluginVersionMajor, kPluginVersionMinor);
-    ids.push_back(&p);
-}
+static TexturePluginFactory p(kPluginIdentifier, kPluginVersionMajor, kPluginVersionMinor);
+mRegisterPluginFactoryInstance(p)

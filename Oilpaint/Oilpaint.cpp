@@ -7,9 +7,9 @@
 #
 */
 
-#include "Oilpaint.h"
 #include "ofxsMacros.h"
 #include "ofxsMultiThread.h"
+#include "ofxsImageEffect.h"
 #include <Magick++.h>
 #include <iostream>
 #include <stdint.h>
@@ -250,8 +250,5 @@ ImageEffect* OilpaintPluginFactory::createInstance(OfxImageEffectHandle handle, 
     return new OilpaintPlugin(handle);
 }
 
-void getOilpaintPluginID(OFX::PluginFactoryArray &ids)
-{
-    static OilpaintPluginFactory p(kPluginIdentifier, kPluginVersionMajor, kPluginVersionMinor);
-    ids.push_back(&p);
-}
+static OilpaintPluginFactory p(kPluginIdentifier, kPluginVersionMajor, kPluginVersionMinor);
+mRegisterPluginFactoryInstance(p)

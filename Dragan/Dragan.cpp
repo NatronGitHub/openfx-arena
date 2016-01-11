@@ -8,9 +8,9 @@
 # Need custom licensing terms or conditions? Commercial license for proprietary software? Contact us.
 */
 
-#include "Dragan.h"
 #include "ofxsMacros.h"
 #include "ofxsMultiThread.h"
+#include "ofxsImageEffect.h"
 #include <Magick++.h>
 #include <iostream>
 #include <stdint.h>
@@ -357,8 +357,5 @@ ImageEffect* DraganPluginFactory::createInstance(OfxImageEffectHandle handle, Co
     return new DraganPlugin(handle);
 }
 
-void getDraganPluginID(OFX::PluginFactoryArray &ids)
-{
-    static DraganPluginFactory p(kPluginIdentifier, kPluginVersionMajor, kPluginVersionMinor);
-    ids.push_back(&p);
-}
+static DraganPluginFactory p(kPluginIdentifier, kPluginVersionMajor, kPluginVersionMinor);
+mRegisterPluginFactoryInstance(p)

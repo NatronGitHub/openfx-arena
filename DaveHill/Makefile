@@ -8,8 +8,7 @@
 #
 
 PLUGINOBJECTS = \
-        DaveHill.o \
-        PluginRegistration.o \
+        DaveHill.o
 
 PLUGINNAME = DaveHill
 

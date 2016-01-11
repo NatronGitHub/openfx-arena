@@ -1,6 +1,5 @@
 PLUGINOBJECTS = \
-        Implode.o \
-        PluginRegistration.o \
+        Implode.o
 
 PLUGINNAME = Implode
 

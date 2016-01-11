@@ -1,6 +1,5 @@
 PLUGINOBJECTS = \
-        Roll.o \
-        PluginRegistration.o \
+        Roll.o
 
 PLUGINNAME = Roll
 

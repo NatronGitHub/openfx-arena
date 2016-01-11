@@ -1,6 +1,5 @@
 PLUGINOBJECTS = \
-        Sketch.o \
-        PluginRegistration.o \
+        Sketch.o
 
 PLUGINNAME = Sketch
 

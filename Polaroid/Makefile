@@ -1,6 +1,5 @@
 PLUGINOBJECTS = \
-        Polaroid.o \
-        PluginRegistration.o \
+        Polaroid.o
 
 PLUGINNAME = Polaroid
 

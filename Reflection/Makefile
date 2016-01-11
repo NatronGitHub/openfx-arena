@@ -1,6 +1,5 @@
 PLUGINOBJECTS = \
-        Reflection.o \
-	PluginRegistration.o \
+        Reflection.o
 
 PLUGINNAME = Reflection
 
