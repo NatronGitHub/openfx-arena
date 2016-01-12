@@ -167,6 +167,7 @@ ReadKRAPlugin::getImage(std::string filename)
                     image=tmp;
             }
         }
+        free(imageData);
     }
     return image;
 }
