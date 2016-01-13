@@ -88,7 +88,6 @@ ReadKRAPlugin::extractXML(std::string kritaFile)
             xml[xmlSt.size-1] = '\0';
             output=xml;
         }
-        free(xml);
     }
     zip_close(kritaOpen);
     return output;
@@ -159,7 +158,6 @@ ReadKRAPlugin::getImage(std::string filename)
         err=zip_fread(imageFile,imageData,imageSt.size);
         if (err!=-1) {
             zip_fclose(imageFile);
-            zip_close(imageOpen);
             if ((imageData!=NULL)&&(imageSt.size>0)) {
                 Magick::Blob blob(imageData,imageSt.size);
                 Magick::Image tmp(blob);
@@ -167,8 +165,8 @@ ReadKRAPlugin::getImage(std::string filename)
                     image=tmp;
             }
         }
-        free(imageData);
     }
+    zip_close(imageOpen);
     return image;
 }
 
