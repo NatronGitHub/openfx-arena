@@ -12,10 +12,10 @@
 
 CWD=$(pwd)
 
-MAGICK=6.9.1-10
+MAGICK=6.9.2-10
 OCIO=1.0.9
 OCIO_URL=https://github.com/imageworks/OpenColorIO/archive/v${OCIO}.tar.gz
-MAGICK_URL=https://github.com/olear/openfx-arena/releases/download/Natron-2.0.0-RC2/ImageMagick-6.9.1-10.tar.gz #ftp://ftp.sunet.se/pub/multimedia/graphics/ImageMagick/ImageMagick-$MAGICK.tar.gz
+MAGICK_URL=https://github.com/olear/openfx-arena/releases/download/Natron-2.0.0-RC5/ImageMagick-6.9.2-10.tar.xz
 if [ -z "$QUANTUM" ]; then
   Q=32
 else
@@ -27,8 +27,8 @@ else
   MAGICK_OPT="--disable-docs --disable-deprecated --with-magick-plus-plus=yes --with-quantum-depth=${Q} --without-dps --without-djvu --without-fftw --without-fpx --without-gslib --without-gvc --without-jbig --without-jpeg --with-lcms --without-openjp2 --without-lqr --without-lzma --without-openexr --with-pango --with-png --with-rsvg --without-tiff --without-webp --with-xml --with-zlib --without-bzlib --enable-static --disable-shared --enable-hdri --with-freetype --with-fontconfig --without-x --without-modules"
 fi
 
-PNG=1.2.53
-PNG_URL=https://github.com/olear/openfx-arena/releases/download/1.9.0/libpng-1.2.53.tar.gz
+PNG=1.2.56
+PNG_URL=https://github.com/olear/openfx-arena/releases/download/Natron-2.0.0-RC5/libpng-1.2.56.tar.xz
 
 if [ -z "$VERSION" ]; then
   ARENA=2.0.0
