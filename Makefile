@@ -24,7 +24,9 @@ TextPango \
 Texture \
 Tile \
 Wave \
-PovRay
+PovRay \
+ReadMVG \
+ReadKRA
 
 all: subdirs
 
