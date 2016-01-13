@@ -12,18 +12,19 @@ make
 
 Requirements:
 
- * lcms2 (ReadPSD)
- * OpenColorIO (All Read plugins)
- * POV-Ray (PovRayOFX)
- * fontconfig (TextPango)
- * libxml2 (ReadKRA/ReadORA)
- * libzip (ReadKRA/ReadORA)
- * ImageMagick (6.9.1-10/6.9.2-5+ Q32HDRI) with:
-   * Freetype
-   * Fontconfig
+ * lcms2
+ * OpenColorIO
+ * POV-Ray (runtime)
+ * fontconfig
+ * libxml2
+ * libzip
+ * ImageMagick (6.9.2-10 Q32HDRI) with:
+   * freetype
+   * fontconfig
    * libpng
    * zlib
    * libxml2
    * librsvg
    * lcms2
-   * Pangocairo
+   * pango
+   * cairo
