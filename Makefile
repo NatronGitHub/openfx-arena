@@ -3,11 +3,8 @@ SUBDIRS = Bundle
 SUBDIRS_NOMULTI = \
 Arc \
 Charcoal \
-DaveHill \
-Dragan \
 Edges \
 Emboss \
-Glow \
 Implode \
 Modulate \
 Oilpaint \
@@ -24,7 +21,9 @@ TextPango \
 Texture \
 Tile \
 Wave \
-PovRay
+PovRay \
+ReadMVG \
+ReadKRA
 
 all: subdirs
 
