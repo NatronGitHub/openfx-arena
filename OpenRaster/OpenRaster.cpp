@@ -32,75 +32,76 @@
 #include <OpenColorIO/OpenColorIO.h>
 #endif
 
-#define kPluginName "ReadKRA"
+#define kPluginName "OpenRaster"
 #define kPluginGrouping "Image/Readers"
-#define kPluginIdentifier "fr.inria.openfx.ReadKRA"
-#define kPluginVersionMajor 1
-#define kPluginVersionMinor 0
+#define kPluginIdentifier "fr.inria.openfx.OpenRaster"
+#define kPluginVersionMajor 0
+#define kPluginVersionMinor 1
 
 #define kSupportsRGBA true
 #define kSupportsRGB false
 #define kSupportsAlpha false
 #define kSupportsTiles false
 
-class ReadKRAPlugin : public GenericReaderPlugin
+class OpenRasterPlugin : public GenericReaderPlugin
 {
 public:
-    ReadKRAPlugin(OfxImageEffectHandle handle);
-    virtual ~ReadKRAPlugin();
+    OpenRasterPlugin(OfxImageEffectHandle handle);
+    virtual ~OpenRasterPlugin();
 private:
     virtual bool isVideoStream(const std::string& /*filename*/) OVERRIDE FINAL { return false; }
     virtual void decode(const std::string& filename, OfxTime time, int view, bool isPlayback, const OfxRectI& renderWindow, float *pixelData, const OfxRectI& bounds, OFX::PixelComponentEnum pixelComponents, int pixelComponentCount, int rowBytes) OVERRIDE FINAL;
     virtual bool getFrameBounds(const std::string& filename, OfxTime time, OfxRectI *bounds, double *par, std::string *error, int *tile_width, int *tile_height) OVERRIDE FINAL;
     virtual void onInputFileChanged(const std::string& newFile, bool setColorSpace, OFX::PreMultiplicationEnum *premult, OFX::PixelComponentEnum *components, int *componentCount) OVERRIDE FINAL;
     std::string extractXML(std::string kritaFile);
-    void parseXML(xmlNode *node,int *width, int *height);
+    void getImageSizeFromXML(xmlNode *node,int *width, int *height);
     void getImageSize(int *width, int *height, std::string filename);
     Magick::Image getImage(std::string filename);
+    std::vector<Magick::Image> imageLayers;
 };
 
-ReadKRAPlugin::ReadKRAPlugin(OfxImageEffectHandle handle)
+OpenRasterPlugin::OpenRasterPlugin(OfxImageEffectHandle handle)
 : GenericReaderPlugin(handle, kSupportsRGBA, kSupportsRGB, kSupportsAlpha, kSupportsTiles, false)
 {
     Magick::InitializeMagick(NULL);
 }
 
-ReadKRAPlugin::~ReadKRAPlugin()
+OpenRasterPlugin::~OpenRasterPlugin()
 {
 }
 
 std::string
-ReadKRAPlugin::extractXML(std::string kritaFile)
+OpenRasterPlugin::extractXML(std::string kritaFile)
 {
     std::string output;
     int err = 0;
     zip *kritaOpen = zip_open(kritaFile.c_str(), 0, &err);
-    const char *xmlName = "maindoc.xml";
     struct zip_stat xmlSt;
     zip_stat_init(&xmlSt);
-    err=zip_stat(kritaOpen,xmlName,0,&xmlSt);
+    err=zip_stat(kritaOpen,"maindoc.xml",0,&xmlSt);
     if (err!=-1) {
         char *xml = new char[xmlSt.size];
-        zip_file *xmlFile = zip_fopen(kritaOpen,xmlName,0);
+        zip_file *xmlFile = zip_fopen(kritaOpen,"maindoc.xml",0);
         err=zip_fread(xmlFile,xml,xmlSt.size);
         if (err!=-1) {
             zip_fclose(xmlFile);
             xml[xmlSt.size-1] = '\0';
             output=xml;
         }
+        delete[] xml;
     }
     zip_close(kritaOpen);
     return output;
 }
 
 void
-ReadKRAPlugin::parseXML(xmlNode *node,int *width, int *height)
+OpenRasterPlugin::getImageSizeFromXML(xmlNode *node, int *width, int *height)
 {
     bool endLoop = false;
     xmlNode *cur_node = NULL;
     for (cur_node = node; cur_node; cur_node = cur_node->next) {
         if (cur_node->type == XML_ELEMENT_NODE) {
-            if ((!xmlStrcmp(cur_node->name, (const xmlChar *)"IMAGE"))) {
+            if ((!xmlStrcmp(cur_node->name,(const xmlChar *)"IMAGE"))) {
                 int imgW = 0;
                 int imgH = 0;
                 xmlChar *imgWchar;
@@ -111,7 +112,7 @@ ReadKRAPlugin::parseXML(xmlNode *node,int *width, int *height)
                 imgH = atoi((const char*)imgHchar);
                 xmlFree(imgWchar);
                 xmlFree(imgHchar);
-                if (imgW>0&&imgH>0) {
+                if (imgW>0 && imgH>0) {
                     (*width)=imgW;
                     (*height)=imgH;
                     endLoop=true;
@@ -119,12 +120,12 @@ ReadKRAPlugin::parseXML(xmlNode *node,int *width, int *height)
             }
         }
         if (!endLoop)
-            parseXML(cur_node->children,width,height);
+            getImageSizeFromXML(cur_node->children,width,height);
     }
 }
 
 void
-ReadKRAPlugin::getImageSize(int *width, int *height, std::string filename)
+OpenRasterPlugin::getImageSize(int *width, int *height, std::string filename)
 {
     std::string xml = extractXML(filename);
     if (!xml.empty()) {
@@ -134,7 +135,7 @@ ReadKRAPlugin::getImageSize(int *width, int *height, std::string filename)
         doc = xmlParseDoc((const xmlChar*)xml.c_str());
         xmlNode *root_element = NULL;
         root_element = xmlDocGetRootElement(doc);
-        parseXML(root_element,&imgW,&imgH);
+        getImageSizeFromXML(root_element,&imgW,&imgH);
         xmlFreeDoc(doc);
         if (imgW>0 && imgH>0) {
             (*width)=imgW;
@@ -144,7 +145,7 @@ ReadKRAPlugin::getImageSize(int *width, int *height, std::string filename)
 }
 
 Magick::Image
-ReadKRAPlugin::getImage(std::string filename)
+OpenRasterPlugin::getImage(std::string filename)
 {
     Magick::Image image;
     int err = 0;
@@ -158,20 +159,21 @@ ReadKRAPlugin::getImage(std::string filename)
         err=zip_fread(imageFile,imageData,imageSt.size);
         if (err!=-1) {
             zip_fclose(imageFile);
-            if ((imageData!=NULL)&&(imageSt.size>0)) {
+            if ((imageData!=NULL) && (imageSt.size>0)) {
                 Magick::Blob blob(imageData,imageSt.size);
                 Magick::Image tmp(blob);
                 if (tmp.format()=="Portable Network Graphics")
                     image=tmp;
             }
         }
+        delete[] imageData;
     }
     zip_close(imageOpen);
     return image;
 }
 
 void
-ReadKRAPlugin::decode(const std::string& filename,
+OpenRasterPlugin::decode(const std::string& filename,
                       OfxTime /*time*/,
                       int /*view*/,
                       bool /*isPlayback*/,
@@ -195,7 +197,7 @@ ReadKRAPlugin::decode(const std::string& filename,
     }
 }
 
-bool ReadKRAPlugin::getFrameBounds(const std::string& filename,
+bool OpenRasterPlugin::getFrameBounds(const std::string& filename,
                               OfxTime /*time*/,
                               OfxRectI *bounds,
                               double *par,
@@ -215,7 +217,7 @@ bool ReadKRAPlugin::getFrameBounds(const std::string& filename,
     return true;
 }
 
-void ReadKRAPlugin::onInputFileChanged(const std::string& newFile,
+void OpenRasterPlugin::onInputFileChanged(const std::string& newFile,
                                   bool setColorSpace,
                                   OFX::PreMultiplicationEnum *premult,
                                   OFX::PixelComponentEnum *components,int */*componentCount*/)
@@ -236,43 +238,43 @@ void ReadKRAPlugin::onInputFileChanged(const std::string& newFile,
         OFX::throwSuiteStatusException(kOfxStatErrFormat);
     }
     *components = OFX::ePixelComponentRGBA;
-    *premult = OFX::eImageOpaque;
+    *premult = OFX::eImageUnPreMultiplied;
 }
 
 using namespace OFX;
 
-mDeclareReaderPluginFactory(ReadKRAPluginFactory, {}, {}, false);
+mDeclareReaderPluginFactory(OpenRasterPluginFactory, {}, {}, false);
 
 /** @brief The basic describe function, passed a plugin descriptor */
-void ReadKRAPluginFactory::describe(OFX::ImageEffectDescriptor &desc)
+void OpenRasterPluginFactory::describe(OFX::ImageEffectDescriptor &desc)
 {
     GenericReaderDescribe(desc, kSupportsTiles, false);
     desc.setLabel(kPluginName);
 
     #ifdef OFX_EXTENSIONS_TUTTLE
-    const char* extensions[] = {"kra", NULL};
+    const char* extensions[] = {"ora", NULL};
     desc.addSupportedExtensions(extensions);
     desc.setPluginEvaluation(50);
     #endif
 
-    desc.setPluginDescription("Read Krita image format.");
+    desc.setPluginDescription("Read OpenRaster image format.");
 }
 
 /** @brief The describe in context function, passed a plugin descriptor and a context */
-void ReadKRAPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, ContextEnum context)
+void OpenRasterPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, ContextEnum context)
 {
     PageParamDescriptor *page = GenericReaderDescribeInContextBegin(desc, context, isVideoStreamPlugin(), kSupportsRGBA, kSupportsRGB, kSupportsAlpha, kSupportsTiles);
     GenericReaderDescribeInContextEnd(desc, context, page, "reference", "reference");
 }
 
 /** @brief The create instance function, the plugin must return an object derived from the \ref OFX::ImageEffect class */
-ImageEffect* ReadKRAPluginFactory::createInstance(OfxImageEffectHandle handle,
+ImageEffect* OpenRasterPluginFactory::createInstance(OfxImageEffectHandle handle,
                                      ContextEnum /*context*/)
 {
-    ReadKRAPlugin* ret =  new ReadKRAPlugin(handle);
+    OpenRasterPlugin* ret =  new OpenRasterPlugin(handle);
     ret->restoreStateFromParameters();
     return ret;
 }
 
-static ReadKRAPluginFactory p(kPluginIdentifier, kPluginVersionMajor, kPluginVersionMinor);
+static OpenRasterPluginFactory p(kPluginIdentifier, kPluginVersionMajor, kPluginVersionMinor);
 mRegisterPluginFactoryInstance(p)

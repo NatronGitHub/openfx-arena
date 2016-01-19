@@ -3,7 +3,6 @@
 #
 # 1) Build Steps: remove qmake and set make to 'deploy.sh'
 # 2) Build Enviroment: add 'DEBUG=1'
-#
 
 OTHER_FILES += \
             Makefile \
@@ -14,7 +13,31 @@ OTHER_FILES += \
             COPYRIGHT \
             README.md \
             deploy.sh \
-            openfx-arena.spec
+            openfx-arena.spec \
+            Arc/Makefile \
+            Charcoal/Makefile \
+            Edges/Makefile \
+            Emboss/Makefile \
+            Implode/Makefile \
+            Modulate/Makefile \
+            Oilpaint/Makefile \
+            Polar/Makefile \
+            Polaroid/Makefile \
+            PovRay/Makefile \
+            OpenRaster/Makefile \
+            ReadMVG/Makefile \
+            ReadORA/Makefile \
+            ReadPSD/Makefile \
+            ReadSVG/Makefile \
+            Reflection/Makefile \
+            Roll/Makefile \
+            Sketch/Makefile \
+            Swirl/Makefile \
+            Text/Makefile \
+            TextPango/Makefile \
+            Texture/Makefile \
+            Tile/Makefile \
+            Wave/Makefile
 INCLUDEPATH += . \
             SupportExt \
             OpenFX/Support/include \
@@ -114,7 +137,7 @@ SOURCES += \
             Polar/Polar.cpp \
             Polaroid/Polaroid.cpp \
             PovRay/PovRay.cpp \
-            ReadKRA/ReadKRA.cpp \
+            OpenRaster/OpenRaster.cpp \
             ReadMVG/ReadMVG.cpp \
             ReadORA/ReadORA.cpp \
             ReadPSD/ReadPSD.cpp \

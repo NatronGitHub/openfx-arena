@@ -1,10 +1,10 @@
 PLUGINOBJECTS = \
-    ReadKRA.o \
+    OpenRaster.o \
     GenericReader.o GenericOCIO.o SequenceParsing.o
 
-PLUGINNAME = ReadKRA
+PLUGINNAME = OpenRaster
 
-RESOURCES = fr.inria.openfx.ReadKRA.png fr.inria.openfx.ReadKRA.svg
+RESOURCES = fr.inria.openfx.OpenRaster.png fr.inria.openfx.OpenRaster.svg
 
 include ../Makefile.master
 include ../Makefile.io
