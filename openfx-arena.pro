@@ -47,7 +47,8 @@ INCLUDEPATH += . \
             OpenFX-IO/IOSupport/SequenceParsing \
             OpenFX/Support/Library \
             tmp/include/ImageMagick-6 \
-            /usr/include
+            /usr/include \
+            /usr/include/libxml2
 HEADERS += \
             SupportExt/ofxsCoords.h \
             SupportExt/ofxsCopier.h \

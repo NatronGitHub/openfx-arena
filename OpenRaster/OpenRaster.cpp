@@ -17,12 +17,10 @@
 
 #include <iostream>
 #include <stdint.h>
-
 #include <zip.h>
 #include <libxml/xmlmemory.h>
 #include <libxml/parser.h>
 #include <Magick++.h>
-
 #include "GenericReader.h"
 #include "GenericOCIO.h"
 #include "ofxsMacros.h"
@@ -32,11 +30,11 @@
 #include <OpenColorIO/OpenColorIO.h>
 #endif
 
-#define kPluginName "OpenRaster"
+#define kPluginName "OpenRasterOFX"
 #define kPluginGrouping "Image/Readers"
 #define kPluginIdentifier "fr.inria.openfx.OpenRaster"
-#define kPluginVersionMajor 0
-#define kPluginVersionMinor 1
+#define kPluginVersionMajor 1
+#define kPluginVersionMinor 0
 
 #define kSupportsRGBA true
 #define kSupportsRGB false
@@ -53,11 +51,11 @@ private:
     virtual void decode(const std::string& filename, OfxTime time, int view, bool isPlayback, const OfxRectI& renderWindow, float *pixelData, const OfxRectI& bounds, OFX::PixelComponentEnum pixelComponents, int pixelComponentCount, int rowBytes) OVERRIDE FINAL;
     virtual bool getFrameBounds(const std::string& filename, OfxTime time, OfxRectI *bounds, double *par, std::string *error, int *tile_width, int *tile_height) OVERRIDE FINAL;
     virtual void onInputFileChanged(const std::string& newFile, bool setColorSpace, OFX::PreMultiplicationEnum *premult, OFX::PixelComponentEnum *components, int *componentCount) OVERRIDE FINAL;
-    std::string extractXML(std::string kritaFile);
-    void getImageSizeFromXML(xmlNode *node,int *width, int *height);
+    std::string extractXML(std::string filename);
+    //void getImageSizeFromXML(xmlNode *node,int *width, int *height);
     void getImageSize(int *width, int *height, std::string filename);
-    Magick::Image getImage(std::string filename);
-    std::vector<Magick::Image> imageLayers;
+    //Magick::Image getImage(std::string filename);
+    std::vector<Magick::Image> image;
 };
 
 OpenRasterPlugin::OpenRasterPlugin(OfxImageEffectHandle handle)
@@ -71,30 +69,33 @@ OpenRasterPlugin::~OpenRasterPlugin()
 }
 
 std::string
-OpenRasterPlugin::extractXML(std::string kritaFile)
+OpenRasterPlugin::extractXML(std::string filename)
 {
     std::string output;
     int err = 0;
-    zip *kritaOpen = zip_open(kritaFile.c_str(), 0, &err);
+    zip *fileOpen = zip_open(filename.c_str(), 0, &err);
     struct zip_stat xmlSt;
     zip_stat_init(&xmlSt);
-    err=zip_stat(kritaOpen,"maindoc.xml",0,&xmlSt);
+    err=zip_stat(fileOpen,"stack.xml",0,&xmlSt);
     if (err!=-1) {
         char *xml = new char[xmlSt.size];
-        zip_file *xmlFile = zip_fopen(kritaOpen,"maindoc.xml",0);
+        zip_file *xmlFile = zip_fopen(fileOpen,"stack.xml",0);
         err=zip_fread(xmlFile,xml,xmlSt.size);
         if (err!=-1) {
             zip_fclose(xmlFile);
-            xml[xmlSt.size-1] = '\0';
+            xml[xmlSt.size] = '\0';
             output=xml;
         }
         delete[] xml;
     }
-    zip_close(kritaOpen);
+#ifdef DEBUG
+    std::cout << output << std::endl;
+#endif
+    zip_close(fileOpen);
     return output;
 }
 
-void
+/*void
 OpenRasterPlugin::getImageSizeFromXML(xmlNode *node, int *width, int *height)
 {
     bool endLoop = false;
@@ -122,7 +123,7 @@ OpenRasterPlugin::getImageSizeFromXML(xmlNode *node, int *width, int *height)
         if (!endLoop)
             getImageSizeFromXML(cur_node->children,width,height);
     }
-}
+}*/
 
 void
 OpenRasterPlugin::getImageSize(int *width, int *height, std::string filename)
@@ -134,17 +135,31 @@ OpenRasterPlugin::getImageSize(int *width, int *height, std::string filename)
         xmlDocPtr doc;
         doc = xmlParseDoc((const xmlChar*)xml.c_str());
         xmlNode *root_element = NULL;
+        xmlNode *cur_node = NULL;
         root_element = xmlDocGetRootElement(doc);
-        getImageSizeFromXML(root_element,&imgW,&imgH);
-        xmlFreeDoc(doc);
-        if (imgW>0 && imgH>0) {
-            (*width)=imgW;
-            (*height)=imgH;
+        for (cur_node = root_element; cur_node; cur_node = cur_node->next) {
+            if (cur_node->type == XML_ELEMENT_NODE) {
+                if ((!xmlStrcmp(cur_node->name,(const xmlChar*)"image"))) {
+                    xmlChar *imgWchar;
+                    xmlChar *imgHchar;
+                    imgWchar = xmlGetProp(cur_node,(const xmlChar*)"w");
+                    imgHchar = xmlGetProp(cur_node,(const xmlChar*)"h");
+                    imgW = atoi((const char*)imgWchar);
+                    imgH = atoi((const char*)imgHchar);
+                    xmlFree(imgWchar);
+                    xmlFree(imgHchar);
+                    if (imgW>0 && imgH>0) {
+                        (*width)=imgW;
+                        (*height)=imgH;
+                    }
+                }
+            }
         }
+        xmlFreeDoc(doc);
     }
 }
 
-Magick::Image
+/*Magick::Image
 OpenRasterPlugin::getImage(std::string filename)
 {
     Magick::Image image;
@@ -170,7 +185,7 @@ OpenRasterPlugin::getImage(std::string filename)
     }
     zip_close(imageOpen);
     return image;
-}
+}*/
 
 void
 OpenRasterPlugin::decode(const std::string& filename,
@@ -185,16 +200,16 @@ OpenRasterPlugin::decode(const std::string& filename,
                       int /*rowBytes*/)
 {
     Magick::Image container(Magick::Geometry(bounds.x2,bounds.y2),Magick::Color("rgba(0,0,0,0)"));
-    Magick::Image image(getImage(filename));
-    if ((int)image.columns()==bounds.x2 && (int)image.rows()==bounds.y2) {
-        container.composite(image,0,0,Magick::OverCompositeOp);
+    //Magick::Image image(getImage(filename));
+    //if ((int)image.columns()==bounds.x2 && (int)image.rows()==bounds.y2) {
+        //container.composite(image,0,0,Magick::OverCompositeOp);
         container.flip();
         container.write(0,0,renderWindow.x2 - renderWindow.x1,renderWindow.y2 - renderWindow.y1,"RGBA",Magick::FloatPixel,pixelData);
-    }
+    /*}
     else {
         setPersistentMessage(OFX::Message::eMessageError, "", "Unable to read image");
         OFX::throwSuiteStatusException(kOfxStatErrFormat);
-    }
+    }*/
 }
 
 bool OpenRasterPlugin::getFrameBounds(const std::string& filename,
