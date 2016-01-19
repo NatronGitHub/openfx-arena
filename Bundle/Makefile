@@ -19,7 +19,6 @@ PLUGINOBJECTS = \
         Edges.o \
         Modulate.o \
         ReadMVG.o \
-        ReadKRA.o \
         ofxsOGLTextRenderer.o \
         ofxsOGLFontData.o \
         ofxsRectangleInteract.o \
@@ -73,9 +72,7 @@ RESOURCES = \
 ../Modulate/net.fxarena.openfx.Modulate.png \
 ../Modulate/net.fxarena.openfx.Modulate.svg \
 ../ReadMVG/net.fxarena.openfx.ReadMVG.png \
-../ReadMVG/net.fxarena.openfx.ReadMVG.svg \
-../ReadKRA/fr.inria.openfx.ReadKRA.png \
-../ReadKRA/fr.inria.openfx.ReadKRA.svg
+../ReadMVG/net.fxarena.openfx.ReadMVG.svg
 
 ifeq ($(OS),$(filter $(OS),Linux FreeBSD Darwin))
     RESOURCES +=../PovRay/net.fxarena.openfx.PovRay.png
@@ -102,8 +99,7 @@ VPATH += \
 ../Polaroid \
 ../Edges \
 ../Modulate \
-../ReadMVG \
-../ReadKRA
+../ReadMVG
 
 ifeq ($(OS),$(filter $(OS),Linux FreeBSD Darwin))
     VPATH += ../PovRay
@@ -132,13 +128,12 @@ CXXFLAGS += \
 -I../Polaroid \
 -I../Edges \
 -I../Modulate \
--I../ReadMVG \
--I../ReadKRA
+-I../ReadMVG
 
 ifeq ($(OS),$(filter $(OS),Linux FreeBSD Darwin))
     CXXFLAGS += -I../PovRay
 endif
 
-CXXFLAGS  += $(MAGICK_CXXFLAGS) $(LCMS_CXXFLAGS) $(FCONFIG_CXXFLAGS) $(XML_CXXFLAGS) $(ZIP_CXXFLAGS)
-LINKFLAGS += $(MAGICK_LINKFLAGS) $(LCMS_LINKFLAGS) $(FCONFIG_LINKFLAGS) $(XML_LINKFLAGS) $(ZIP_LINKFLAGS)
+CXXFLAGS  += $(MAGICK_CXXFLAGS) $(LCMS_CXXFLAGS) $(FCONFIG_CXXFLAGS)
+LINKFLAGS += $(MAGICK_LINKFLAGS) $(LCMS_LINKFLAGS) $(FCONFIG_LINKFLAGS)
 

@@ -22,8 +22,7 @@ Texture \
 Tile \
 Wave \
 PovRay \
-ReadMVG \
-ReadKRA
+ReadMVG
 
 all: subdirs
 
