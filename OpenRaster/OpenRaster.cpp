@@ -21,6 +21,7 @@
 #include <libxml/xmlmemory.h>
 #include <libxml/parser.h>
 #include <Magick++.h>
+#include <ofxNatron.h>
 #include "GenericReader.h"
 #include "GenericOCIO.h"
 #include "ofxsMacros.h"
@@ -42,6 +43,9 @@
 #define kSupportsRGB false
 #define kSupportsAlpha false
 #define kSupportsTiles false
+#define kIsMultiPlanar true
+
+static bool gHostIsNatron   = false;
 
 class OpenRasterPlugin : public GenericReaderPlugin
 {
@@ -50,8 +54,30 @@ public:
     virtual ~OpenRasterPlugin();
 private:
     virtual bool isVideoStream(const std::string& /*filename*/) OVERRIDE FINAL { return false; }
-    virtual void decode(const std::string& filename, OfxTime time, int view, bool isPlayback, const OfxRectI& renderWindow, float *pixelData, const OfxRectI& bounds, OFX::PixelComponentEnum pixelComponents, int pixelComponentCount, int rowBytes) OVERRIDE FINAL;
+    virtual void decode(const std::string& filename, OfxTime time, int view, bool isPlayback, const OfxRectI& renderWindow, float *pixelData, const OfxRectI& bounds,
+                             OFX::PixelComponentEnum pixelComponents, int pixelComponentCount, int rowBytes) OVERRIDE FINAL
+    {
+        std::string rawComps;
+        switch (pixelComponents) {
+            case OFX::ePixelComponentAlpha:
+                rawComps = kOfxImageComponentAlpha;
+                break;
+            case OFX::ePixelComponentRGB:
+                rawComps = kOfxImageComponentRGB;
+                break;
+            case OFX::ePixelComponentRGBA:
+                rawComps = kOfxImageComponentRGBA;
+                break;
+            default:
+                OFX::throwSuiteStatusException(kOfxStatFailed);
+                return;
+        }
+        decodePlane(filename, time, view, isPlayback, renderWindow, pixelData, bounds, pixelComponents, pixelComponentCount, rawComps, rowBytes);
+    }
+    virtual void decodePlane(const std::string& filename, OfxTime time, int view, bool isPlayback, const OfxRectI& renderWindow, float *pixelData, const OfxRectI& bounds, OFX::PixelComponentEnum pixelComponents, int pixelComponentCount, const std::string& rawComponents, int rowBytes) OVERRIDE FINAL;
+    virtual void getClipComponents(const OFX::ClipComponentsArguments& args, OFX::ClipComponentsSetter& clipComponents) OVERRIDE FINAL;
     virtual bool getFrameBounds(const std::string& filename, OfxTime time, OfxRectI *bounds, double *par, std::string *error, int *tile_width, int *tile_height) OVERRIDE FINAL;
+    virtual void restoreState(const std::string& filename) OVERRIDE FINAL;
     virtual void onInputFileChanged(const std::string& newFile, bool setColorSpace, OFX::PreMultiplicationEnum *premult, OFX::PixelComponentEnum *components, int *componentCount) OVERRIDE FINAL;
     std::string extractXML(std::string filename);
     void getImageSize(int *width, int *height, std::string filename);
@@ -60,11 +86,18 @@ private:
     Magick::Image getLayer(std::string filename, std::string layerfile);
     void getLayersSpecs(xmlNode *node, std::vector<std::vector<std::string> > *layers);
     void setupImage(std::string filename, std::vector<Magick::Image> *images);
-    //std::vector<Magick::Image> image;
+    std::vector<Magick::Image> _layers;
+    std::string _filename;
 };
 
 OpenRasterPlugin::OpenRasterPlugin(OfxImageEffectHandle handle)
-: GenericReaderPlugin(handle, kSupportsRGBA, kSupportsRGB, kSupportsAlpha, kSupportsTiles, false)
+: GenericReaderPlugin(handle, kSupportsRGBA, kSupportsRGB, kSupportsAlpha, kSupportsTiles,
+#ifdef OFX_EXTENSIONS_NUKE
+(OFX::getImageEffectHostDescription() && OFX::getImageEffectHostDescription()->isMultiPlanar) ? kIsMultiPlanar : false
+#else
+false
+#endif
+)
 {
     Magick::InitializeMagick(NULL);
 }
@@ -94,9 +127,6 @@ OpenRasterPlugin::extractXML(std::string filename)
         delete[] xml;
     }
     zip_close(fileOpen);
-#ifdef DEBUG
-    std::cout << output << std::endl;
-#endif
     return output;
 }
 
@@ -258,6 +288,13 @@ OpenRasterPlugin::setupImage(std::string filename, std::vector<Magick::Image> *i
             root_element = xmlDocGetRootElement(doc);
             getLayersSpecs(root_element,&layersInfo);
             xmlFreeDoc(doc);
+
+            // Add merged image first
+            Magick::Image image(getImage(filename));
+            if (image.format()=="Portable Network Graphics" && image.columns()>0 && image.rows()>0)
+                images->push_back(image);
+
+            // Add layers
             if (!layersInfo.empty()) {
                 std::reverse(layersInfo.begin(),layersInfo.end());
                 for (int i = 0; i < (int)layersInfo.size(); i++) {
@@ -339,27 +376,75 @@ OpenRasterPlugin::getLayer(std::string filename, std::string layer)
 }
 
 void
-OpenRasterPlugin::decode(const std::string& filename,
-                      OfxTime /*time*/,
-                      int /*view*/,
-                      bool /*isPlayback*/,
-                      const OfxRectI& renderWindow,
-                      float *pixelData,
-                      const OfxRectI& bounds,
-                      OFX::PixelComponentEnum /*pixelComponents*/,
-                      int /*pixelComponentCount*/,
-                      int /*rowBytes*/)
+OpenRasterPlugin::getClipComponents(const OFX::ClipComponentsArguments& args, OFX::ClipComponentsSetter& clipComponents)
 {
+    assert(isMultiPlanar());
+    clipComponents.addClipComponents(*_outputClip, getOutputComponents());
+    clipComponents.setPassThroughClip(NULL, args.time, args.view);
+    if (_layers.size()>0 && gHostIsNatron) {
+        for (int i = 1; i < (int)_layers.size(); i++) {
+            std::ostringstream layerName;
+            layerName << _layers[i].label();
+            if (layerName.str().empty())
+                layerName << "Image Layer #" << i;
+            std::string component(kNatronOfxImageComponentsPlane);
+            component.append(layerName.str());
+            component.append(kNatronOfxImageComponentsPlaneChannel);
+            component.append("R");
+            component.append(kNatronOfxImageComponentsPlaneChannel);
+            component.append("G");
+            component.append(kNatronOfxImageComponentsPlaneChannel);
+            component.append("B");
+            component.append(kNatronOfxImageComponentsPlaneChannel);
+            component.append("A");
 #ifdef DEBUG
-    getImageVersion(filename);
-    std::vector<Magick::Image> _image;
-    setupImage(filename,&_image);
+            std::cout << component << std::endl;
 #endif
+            clipComponents.addClipComponents(*_outputClip, component);
+        }
+    }
+}
+
+void
+OpenRasterPlugin::decodePlane(const std::string& filename, OfxTime time, int /*view*/, bool /*isPlayback*/, const OfxRectI& renderWindow, float *pixelData, const OfxRectI& bounds,
+                                 OFX::PixelComponentEnum /*pixelComponents*/, int /*pixelComponentCount*/, const std::string& rawComponents, int /*rowBytes*/)
+{
+    int layer = 0;
+    int offsetX = 0;
+    int offsetY = 0;
+
+    // Get multiplane layer
+    std::string layerName;
+    std::vector<std::string> layerChannels = OFX::mapPixelComponentCustomToLayerChannels(rawComponents);
+    int numChannels = layerChannels.size();
+    if (numChannels==5) // layer+R+G+B+A
+        layerName=layerChannels[0];
+    if (!layerName.empty()) {
+        for (int i = 1; i < (int)_layers.size(); i++) {
+            bool foundLayer = false;
+            std::ostringstream nonameLayer;
+            nonameLayer << "Image Layer #" << i; // if layer name is empty
+            if (_layers[i].label()==layerName)
+                foundLayer = true;
+            if (nonameLayer.str()==layerName && !foundLayer)
+                foundLayer = true;
+            if (foundLayer) {
+                offsetX = _layers[i].page().xOff();
+                offsetY = _layers[i].page().yOff();
+                layer = i;
+                break;
+            }
+        }
+    }
+    else { // no multiplane
+        offsetX = _layers[0].page().xOff();
+        offsetY = _layers[0].page().yOff();
+        layer = 0;
+    }
 
     Magick::Image container(Magick::Geometry(bounds.x2,bounds.y2),Magick::Color("rgba(0,0,0,0)"));
-    Magick::Image image(getImage(filename));
-    if ((int)image.columns()==bounds.x2 && (int)image.rows()==bounds.y2) {
-        container.composite(image,0,0,Magick::OverCompositeOp);
+    if ((int)_layers[layer].columns()==bounds.x2 && (int)_layers[layer].rows()==bounds.y2) {
+        container.composite(_layers[layer],offsetX,offsetY,Magick::OverCompositeOp);
         container.flip();
         container.write(0,0,renderWindow.x2 - renderWindow.x1,renderWindow.y2 - renderWindow.y1,"RGBA",Magick::FloatPixel,pixelData);
     }
@@ -389,25 +474,35 @@ bool OpenRasterPlugin::getFrameBounds(const std::string& filename,
     return true;
 }
 
+void
+OpenRasterPlugin::restoreState(const std::string& filename)
+{
+    _layers.clear();
+    if (!filename.empty()) {
+            setupImage(filename,&_layers);
+    }
+    if (!_layers.empty()) {
+        if (_layers[0].columns()>0 && _layers[0].rows()>0)
+            _filename = filename;
+    }
+    else {
+        _layers.clear();
+        setPersistentMessage(OFX::Message::eMessageError, "", "Unable to read image");
+    }
+}
+
 void OpenRasterPlugin::onInputFileChanged(const std::string& newFile,
                                   bool setColorSpace,
                                   OFX::PreMultiplicationEnum *premult,
                                   OFX::PixelComponentEnum *components,int */*componentCount*/)
 {
     assert(premult && components);
-    int width = 0;
-    int height = 0;
-    getImageSize(&width,&height,newFile);
-    if (width>0 && height>0) {
-        if (setColorSpace) {
-            # ifdef OFX_IO_USING_OCIO
-            _ocio->setInputColorspace("sRGB");
-            # endif // OFX_IO_USING_OCIO
-        }
-    }
-    else {
-        setPersistentMessage(OFX::Message::eMessageError, "", "Unable to read image");
-        OFX::throwSuiteStatusException(kOfxStatErrFormat);
+    if (newFile!=_filename)
+        restoreState(newFile);
+    if (setColorSpace) {
+        # ifdef OFX_IO_USING_OCIO
+        _ocio->setInputColorspace("sRGB");
+        # endif // OFX_IO_USING_OCIO
     }
     *components = OFX::ePixelComponentRGBA;
     *premult = OFX::eImageUnPreMultiplied;
@@ -420,7 +515,7 @@ mDeclareReaderPluginFactory(OpenRasterPluginFactory, {}, {}, false);
 /** @brief The basic describe function, passed a plugin descriptor */
 void OpenRasterPluginFactory::describe(OFX::ImageEffectDescriptor &desc)
 {
-    GenericReaderDescribe(desc, kSupportsTiles, false);
+    GenericReaderDescribe(desc, kSupportsTiles, kIsMultiPlanar);
     desc.setLabel(kPluginName);
 
     #ifdef OFX_EXTENSIONS_TUTTLE
@@ -435,6 +530,7 @@ void OpenRasterPluginFactory::describe(OFX::ImageEffectDescriptor &desc)
 /** @brief The describe in context function, passed a plugin descriptor and a context */
 void OpenRasterPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, ContextEnum context)
 {
+    gHostIsNatron = (OFX::getImageEffectHostDescription()->isNatron);
     PageParamDescriptor *page = GenericReaderDescribeInContextBegin(desc, context, isVideoStreamPlugin(), kSupportsRGBA, kSupportsRGB, kSupportsAlpha, kSupportsTiles);
     GenericReaderDescribeInContextEnd(desc, context, page, "reference", "reference");
 }
