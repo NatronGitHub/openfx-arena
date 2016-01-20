@@ -26,7 +26,6 @@ OTHER_FILES += \
             PovRay/Makefile \
             OpenRaster/Makefile \
             ReadMVG/Makefile \
-            ReadORA/Makefile \
             ReadPSD/Makefile \
             ReadSVG/Makefile \
             Reflection/Makefile \
@@ -140,7 +139,6 @@ SOURCES += \
             PovRay/PovRay.cpp \
             OpenRaster/OpenRaster.cpp \
             ReadMVG/ReadMVG.cpp \
-            ReadORA/ReadORA.cpp \
             ReadPSD/ReadPSD.cpp \
             ReadSVG/ReadSVG.cpp \
             Reflection/Reflection.cpp \

@@ -22,7 +22,8 @@ Texture \
 Tile \
 Wave \
 PovRay \
-ReadMVG
+ReadMVG \
+OpenRaster
 
 all: subdirs
 
