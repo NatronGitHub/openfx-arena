@@ -19,6 +19,8 @@ PLUGINOBJECTS = \
         Edges.o \
         Modulate.o \
         ReadMVG.o \
+        OpenRaster.o \
+        ReadKrita.o \
         ofxsOGLTextRenderer.o \
         ofxsOGLFontData.o \
         ofxsRectangleInteract.o \
@@ -72,7 +74,11 @@ RESOURCES = \
 ../Modulate/net.fxarena.openfx.Modulate.png \
 ../Modulate/net.fxarena.openfx.Modulate.svg \
 ../ReadMVG/net.fxarena.openfx.ReadMVG.png \
-../ReadMVG/net.fxarena.openfx.ReadMVG.svg
+../ReadMVG/net.fxarena.openfx.ReadMVG.svg \
+../OpenRaster/fr.inria.openfx.OpenRaster.png \
+../OpenRaster/fr.inria.openfx.OpenRaster.svg \
+../ReadKrita/fr.inria.openfx.ReadKrita.png \
+../ReadKrita/fr.inria.openfx.ReadKrita.svg
 
 ifeq ($(OS),$(filter $(OS),Linux FreeBSD Darwin))
     RESOURCES +=../PovRay/net.fxarena.openfx.PovRay.png
@@ -99,7 +105,9 @@ VPATH += \
 ../Polaroid \
 ../Edges \
 ../Modulate \
-../ReadMVG
+../ReadMVG \
+../OpenRaster \
+../ReadKrita
 
 ifeq ($(OS),$(filter $(OS),Linux FreeBSD Darwin))
     VPATH += ../PovRay
@@ -128,12 +136,14 @@ CXXFLAGS += \
 -I../Polaroid \
 -I../Edges \
 -I../Modulate \
--I../ReadMVG
+-I../ReadMVG \
+-I../OpenRaster \
+-I../ReadKrita \
 
 ifeq ($(OS),$(filter $(OS),Linux FreeBSD Darwin))
     CXXFLAGS += -I../PovRay
 endif
 
-CXXFLAGS  += $(MAGICK_CXXFLAGS) $(LCMS_CXXFLAGS) $(FCONFIG_CXXFLAGS)
-LINKFLAGS += $(MAGICK_LINKFLAGS) $(LCMS_LINKFLAGS) $(FCONFIG_LINKFLAGS)
+CXXFLAGS  += $(MAGICK_CXXFLAGS) $(LCMS_CXXFLAGS) $(FCONFIG_CXXFLAGS) $(XML_CXXFLAGS) $(ZIP_CXXFLAGS)
+LINKFLAGS += $(MAGICK_LINKFLAGS) $(LCMS_LINKFLAGS) $(FCONFIG_LINKFLAGS) $(XML_LINKFLAGS) $(ZIP_LINKFLAGS)
 

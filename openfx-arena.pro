@@ -61,7 +61,8 @@ OTHER_FILES += \
             Texture/Info.plist \
             Tile/Info.plist \
             Wave/Info.plist \
-            ReadKrita/Info.plist
+            ReadKrita/Info.plist \
+            Bundle/Info.plist
 INCLUDEPATH += . \
             SupportExt \
             OpenFX/Support/include \
