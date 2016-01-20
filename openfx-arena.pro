@@ -36,7 +36,32 @@ OTHER_FILES += \
             TextPango/Makefile \
             Texture/Makefile \
             Tile/Makefile \
-            Wave/Makefile
+            Wave/Makefile \
+            ReadKrita/Makefile \
+            Arc/Info.plist \
+            Charcoal/Info.plist \
+            Edges/Info.plist \
+            Emboss/Info.plist \
+            Implode/Info.plist \
+            Modulate/Info.plist \
+            Oilpaint/Info.plist \
+            Polar/Info.plist \
+            Polaroid/Info.plist \
+            PovRay/Info.plist \
+            OpenRaster/Info.plist \
+            ReadMVG/Info.plist \
+            ReadPSD/Info.plist \
+            ReadSVG/Info.plist \
+            Reflection/Info.plist \
+            Roll/Info.plist \
+            Sketch/Info.plist \
+            Swirl/Info.plist \
+            Text/Info.plist \
+            TextPango/Info.plist \
+            Texture/Info.plist \
+            Tile/Info.plist \
+            Wave/Info.plist \
+            ReadKrita/Info.plist
 INCLUDEPATH += . \
             SupportExt \
             OpenFX/Support/include \
@@ -149,4 +174,5 @@ SOURCES += \
             TextPango/TextPango.cpp \
             Texture/Texture.cpp \
             Tile/Tile.cpp \
-            Wave/Wave.cpp
+            Wave/Wave.cpp \
+            ReadKrita/ReadKrita.cpp

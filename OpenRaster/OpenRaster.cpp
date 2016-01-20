@@ -37,6 +37,7 @@
 #define kPluginVersionMajor 1
 #define kPluginVersionMinor 0
 
+// http://www.freedesktop.org/wiki/Specifications/OpenRaster/Draft/
 #define OpenRasterVersion 0.0.5
 
 #define kSupportsRGBA true
@@ -45,7 +46,7 @@
 #define kSupportsTiles false
 #define kIsMultiPlanar true
 
-static bool gHostIsNatron   = false;
+static bool gHostIsNatron = false;
 
 class OpenRasterPlugin : public GenericReaderPlugin
 {
@@ -82,12 +83,12 @@ private:
     std::string extractXML(std::string filename);
     void getImageSize(int *width, int *height, std::string filename);
     std::string getImageVersion(std::string filename);
-    Magick::Image getImage(std::string filename);
     Magick::Image getLayer(std::string filename, std::string layerfile);
     void getLayersSpecs(xmlNode *node, std::vector<std::vector<std::string> > *layers);
     void setupImage(std::string filename, std::vector<Magick::Image> *images);
     std::vector<Magick::Image> _layers;
     std::string _filename;
+    bool _hasPNG;
 };
 
 OpenRasterPlugin::OpenRasterPlugin(OfxImageEffectHandle handle)
@@ -98,8 +99,13 @@ OpenRasterPlugin::OpenRasterPlugin(OfxImageEffectHandle handle)
 false
 #endif
 )
+,_hasPNG(false)
 {
     Magick::InitializeMagick(NULL);
+
+    std::string delegates = MagickCore::GetMagickDelegates();
+    if (delegates.find("png") != std::string::npos)
+        _hasPNG = true;
 }
 
 OpenRasterPlugin::~OpenRasterPlugin()
@@ -130,6 +136,7 @@ OpenRasterPlugin::extractXML(std::string filename)
     return output;
 }
 
+// Not currently used, but in the future we may need to check image for compatibility
 std::string
 OpenRasterPlugin::getImageVersion(std::string filename)
 {
@@ -153,9 +160,6 @@ OpenRasterPlugin::getImageVersion(std::string filename)
         }
         xmlFreeDoc(doc);
     }
-#ifdef DEBUG
-    std::cout << "Image version: " << output << std::endl;
-#endif
     return output;
 }
 
@@ -185,9 +189,6 @@ OpenRasterPlugin::getImageSize(int *width, int *height, std::string filename)
                     if (imgW>0 && imgH>0) {
                         (*width)=imgW;
                         (*height)=imgH;
-#ifdef DEBUG
-                        std::cout << "Image size: " << imgW << "x" << imgH << std::endl;
-#endif
                     }
                 }
             }
@@ -289,67 +290,44 @@ OpenRasterPlugin::setupImage(std::string filename, std::vector<Magick::Image> *i
             getLayersSpecs(root_element,&layersInfo);
             xmlFreeDoc(doc);
 
-            // Add merged image first
-            Magick::Image image(getImage(filename));
-            if (image.format()=="Portable Network Graphics" && image.columns()>0 && image.rows()>0)
-                images->push_back(image);
+            if (_hasPNG) {
+                // Add merged image first
+                Magick::Image image(getLayer(filename,""));
+                if (image.format()=="Portable Network Graphics" && image.columns()>0 && image.rows()>0)
+                    images->push_back(image);
+                else
+                    setPersistentMessage(OFX::Message::eMessageError, "", "Unable to read merged image, this image does not follow the specs!");
 
-            // Add layers
-            if (!layersInfo.empty()) {
-                std::reverse(layersInfo.begin(),layersInfo.end());
-                for (int i = 0; i < (int)layersInfo.size(); i++) {
-                    Magick::Image layer;
-                    layer=getLayer(filename,layersInfo[i][6]);
-                    if (layer.format()=="Portable Network Graphics" && layer.columns()>0 && layer.rows()>0) {
-                        int xOffset = atoi(layersInfo[i][4].c_str());
-                        int yOffset = atoi(layersInfo[i][5].c_str());
-                        layer.label(layersInfo[i][0]);
-                        std::string comment = layersInfo[i][3] + " " + layersInfo[i][1] + " " + layersInfo[i][2];
-                        layer.comment(comment);
-                        layer.page().xOff(xOffset);
-                        layer.page().yOff(yOffset);
-                        images->push_back(layer);
+                // Add layers
+                if (!layersInfo.empty()) {
+                    std::reverse(layersInfo.begin(),layersInfo.end());
+                    for (int i = 0; i < (int)layersInfo.size(); i++) {
+                        Magick::Image layer;
+                        layer=getLayer(filename,layersInfo[i][6]);
+                        if (layer.format()=="Portable Network Graphics" && layer.columns()>0 && layer.rows()>0) {
+                            int xOffset = atoi(layersInfo[i][4].c_str());
+                            int yOffset = atoi(layersInfo[i][5].c_str());
+                            layer.label(layersInfo[i][0]);
+                            std::string comment = layersInfo[i][3] + " " + layersInfo[i][1] + " " + layersInfo[i][2]; // Not currently used, but may be needed in the future
+                            layer.comment(comment);
+                            layer.page().xOff(xOffset);
+                            layer.page().yOff(yOffset);
+                            images->push_back(layer);
+                        }
                     }
-#ifdef DEBUG
-                    std::cout << "Layer: " << layersInfo[i][0] << " " << layersInfo[i][1] << " " << layersInfo[i][2] << " " << layersInfo[i][3] << " " << layersInfo[i][4] << " " << layersInfo[i][5] << " " << layersInfo[i][6] << std::endl;
-#endif
                 }
             }
+            else
+                setPersistentMessage(OFX::Message::eMessageError, "", "PNG support missing!");
         }
     }
-}
-
-Magick::Image
-OpenRasterPlugin::getImage(std::string filename)
-{
-    Magick::Image image;
-    int err = 0;
-    zip *imageOpen = zip_open(filename.c_str(),0,&err);
-    struct zip_stat imageSt;
-    zip_stat_init(&imageSt);
-    err=zip_stat(imageOpen,"mergedimage.png",0,&imageSt);
-    if (err!=-1) {
-        char *imageData = new char[imageSt.size];
-        zip_file *imageFile = zip_fopen(imageOpen,"mergedimage.png",0);
-        err=zip_fread(imageFile,imageData,imageSt.size);
-        if (err!=-1) {
-            zip_fclose(imageFile);
-            if ((imageData!=NULL) && (imageSt.size>0)) {
-                Magick::Blob blob(imageData,imageSt.size);
-                Magick::Image tmp(blob);
-                if (tmp.format()=="Portable Network Graphics")
-                    image=tmp;
-            }
-        }
-        delete[] imageData;
-    }
-    zip_close(imageOpen);
-    return image;
 }
 
 Magick::Image
 OpenRasterPlugin::getLayer(std::string filename, std::string layer)
 {
+    if (layer.empty())
+        layer = "mergedimage.png";
     Magick::Image image;
     int err = 0;
     zip *layerOpen = zip_open(filename.c_str(),0,&err);
@@ -363,10 +341,14 @@ OpenRasterPlugin::getLayer(std::string filename, std::string layer)
         if (err!=-1) {
             zip_fclose(layerFile);
             if ((layerData!=NULL)&&(layerSt.size>0)) {
-                Magick::Blob blob(layerData,layerSt.size);
-                Magick::Image tmp(blob);
-                if (tmp.format()=="Portable Network Graphics")
-                    image=tmp;
+                if (_hasPNG) {
+                    Magick::Blob blob(layerData,layerSt.size);
+                    Magick::Image tmp(blob);
+                    if (tmp.format()=="Portable Network Graphics")
+                        image=tmp;
+                }
+                else
+                    setPersistentMessage(OFX::Message::eMessageError, "", "PNG support missing!");
             }
         }
         delete[] layerData;
@@ -386,7 +368,7 @@ OpenRasterPlugin::getClipComponents(const OFX::ClipComponentsArguments& args, OF
             std::ostringstream layerName;
             layerName << _layers[i].label();
             if (layerName.str().empty())
-                layerName << "Image Layer #" << i;
+                layerName << "Image Layer #" << i; // if layer name is empty
             std::string component(kNatronOfxImageComponentsPlane);
             component.append(layerName.str());
             component.append(kNatronOfxImageComponentsPlaneChannel);
@@ -397,21 +379,28 @@ OpenRasterPlugin::getClipComponents(const OFX::ClipComponentsArguments& args, OF
             component.append("B");
             component.append(kNatronOfxImageComponentsPlaneChannel);
             component.append("A");
-#ifdef DEBUG
-            std::cout << component << std::endl;
-#endif
             clipComponents.addClipComponents(*_outputClip, component);
         }
     }
 }
 
 void
-OpenRasterPlugin::decodePlane(const std::string& filename, OfxTime time, int /*view*/, bool /*isPlayback*/, const OfxRectI& renderWindow, float *pixelData, const OfxRectI& bounds,
+OpenRasterPlugin::decodePlane(const std::string& /*filename*/, OfxTime /*time*/, int /*view*/, bool /*isPlayback*/, const OfxRectI& renderWindow, float *pixelData, const OfxRectI& bounds,
                                  OFX::PixelComponentEnum /*pixelComponents*/, int /*pixelComponentCount*/, const std::string& rawComponents, int /*rowBytes*/)
 {
     int layer = 0;
     int offsetX = 0;
     int offsetY = 0;
+
+    if (_layers.empty()) {
+        setPersistentMessage(OFX::Message::eMessageError, "", "Unable to read image, probably because the image does not follow the specs!");
+        OFX::throwSuiteStatusException(kOfxStatErrFormat);
+    }
+
+    if (!_hasPNG) {
+        setPersistentMessage(OFX::Message::eMessageError, "", "PNG support missing!");
+        OFX::throwSuiteStatusException(kOfxStatErrFormat);
+    }
 
     // Get multiplane layer
     std::string layerName;
@@ -436,20 +425,20 @@ OpenRasterPlugin::decodePlane(const std::string& filename, OfxTime time, int /*v
             }
         }
     }
-    else { // no multiplane
-        offsetX = _layers[0].page().xOff();
-        offsetY = _layers[0].page().yOff();
+    else {
+        offsetX = 0;
+        offsetY = 0;
         layer = 0;
     }
 
     Magick::Image container(Magick::Geometry(bounds.x2,bounds.y2),Magick::Color("rgba(0,0,0,0)"));
-    if ((int)_layers[layer].columns()==bounds.x2 && (int)_layers[layer].rows()==bounds.y2) {
+    if (_layers[layer].format()=="Portable Network Graphics" && (int)_layers[layer].columns()==bounds.x2 && (int)_layers[layer].rows()==bounds.y2) {
         container.composite(_layers[layer],offsetX,offsetY,Magick::OverCompositeOp);
         container.flip();
         container.write(0,0,renderWindow.x2 - renderWindow.x1,renderWindow.y2 - renderWindow.y1,"RGBA",Magick::FloatPixel,pixelData);
     }
     else {
-        setPersistentMessage(OFX::Message::eMessageError, "", "Unable to read image");
+        setPersistentMessage(OFX::Message::eMessageError, "", "Unable to read image, probably because the image does not follow the specs!");
         OFX::throwSuiteStatusException(kOfxStatErrFormat);
     }
 }
