@@ -36,6 +36,8 @@
 #define kPluginVersionMajor 1
 #define kPluginVersionMinor 0
 
+#define OpenRasterVersion 0.0.5
+
 #define kSupportsRGBA true
 #define kSupportsRGB false
 #define kSupportsAlpha false
@@ -52,10 +54,13 @@ private:
     virtual bool getFrameBounds(const std::string& filename, OfxTime time, OfxRectI *bounds, double *par, std::string *error, int *tile_width, int *tile_height) OVERRIDE FINAL;
     virtual void onInputFileChanged(const std::string& newFile, bool setColorSpace, OFX::PreMultiplicationEnum *premult, OFX::PixelComponentEnum *components, int *componentCount) OVERRIDE FINAL;
     std::string extractXML(std::string filename);
-    //void getImageSizeFromXML(xmlNode *node,int *width, int *height);
     void getImageSize(int *width, int *height, std::string filename);
-    //Magick::Image getImage(std::string filename);
-    std::vector<Magick::Image> image;
+    std::string getImageVersion(std::string filename);
+    Magick::Image getImage(std::string filename);
+    Magick::Image getLayer(std::string filename, std::string layerfile);
+    void getLayersSpecs(xmlNode *node, std::vector<std::vector<std::string> > *layers);
+    void setupImage(std::string filename, std::vector<Magick::Image> *images);
+    //std::vector<Magick::Image> image;
 };
 
 OpenRasterPlugin::OpenRasterPlugin(OfxImageEffectHandle handle)
@@ -88,42 +93,41 @@ OpenRasterPlugin::extractXML(std::string filename)
         }
         delete[] xml;
     }
+    zip_close(fileOpen);
 #ifdef DEBUG
     std::cout << output << std::endl;
 #endif
-    zip_close(fileOpen);
     return output;
 }
 
-/*void
-OpenRasterPlugin::getImageSizeFromXML(xmlNode *node, int *width, int *height)
+std::string
+OpenRasterPlugin::getImageVersion(std::string filename)
 {
-    bool endLoop = false;
-    xmlNode *cur_node = NULL;
-    for (cur_node = node; cur_node; cur_node = cur_node->next) {
-        if (cur_node->type == XML_ELEMENT_NODE) {
-            if ((!xmlStrcmp(cur_node->name,(const xmlChar *)"IMAGE"))) {
-                int imgW = 0;
-                int imgH = 0;
-                xmlChar *imgWchar;
-                xmlChar *imgHchar;
-                imgWchar = xmlGetProp(cur_node,(const xmlChar*)"width");
-                imgHchar = xmlGetProp(cur_node,(const xmlChar*)"height");
-                imgW = atoi((const char*)imgWchar);
-                imgH = atoi((const char*)imgHchar);
-                xmlFree(imgWchar);
-                xmlFree(imgHchar);
-                if (imgW>0 && imgH>0) {
-                    (*width)=imgW;
-                    (*height)=imgH;
-                    endLoop=true;
+    std::string output;
+    std::string xml = extractXML(filename);
+    if (!xml.empty()) {
+        xmlDocPtr doc;
+        doc = xmlParseDoc((const xmlChar*)xml.c_str());
+        xmlNode *root_element = NULL;
+        xmlNode *cur_node = NULL;
+        root_element = xmlDocGetRootElement(doc);
+        for (cur_node = root_element; cur_node; cur_node = cur_node->next) {
+            if (cur_node->type == XML_ELEMENT_NODE) {
+                if ((!xmlStrcmp(cur_node->name,(const xmlChar*)"image"))) {
+                    xmlChar *imgVersion;
+                    imgVersion = xmlGetProp(cur_node,(const xmlChar*)"version");
+                    output = (const char*)imgVersion;
+                    xmlFree(imgVersion);
                 }
             }
         }
-        if (!endLoop)
-            getImageSizeFromXML(cur_node->children,width,height);
+        xmlFreeDoc(doc);
     }
-}*/
+#ifdef DEBUG
+    std::cout << "Image version: " << output << std::endl;
+#endif
+    return output;
+}
 
 void
 OpenRasterPlugin::getImageSize(int *width, int *height, std::string filename)
@@ -151,6 +155,9 @@ OpenRasterPlugin::getImageSize(int *width, int *height, std::string filename)
                     if (imgW>0 && imgH>0) {
                         (*width)=imgW;
                         (*height)=imgH;
+#ifdef DEBUG
+                        std::cout << "Image size: " << imgW << "x" << imgH << std::endl;
+#endif
                     }
                 }
             }
@@ -159,7 +166,123 @@ OpenRasterPlugin::getImageSize(int *width, int *height, std::string filename)
     }
 }
 
-/*Magick::Image
+void
+OpenRasterPlugin::getLayersSpecs(xmlNode *node, std::vector<std::vector<std::string> > *layers)
+{
+    xmlNode *cur_node = NULL;
+    for (cur_node = node; cur_node; cur_node = cur_node->next) {
+        if (cur_node->type == XML_ELEMENT_NODE) {
+            if ((!xmlStrcmp(cur_node->name, (const xmlChar *)"layer"))) {
+                std::vector<std::string> layerInfo;
+                xmlChar *xmlLayerName;
+                xmlChar *xmlOpacity;
+                xmlChar *xmlVisibility;
+                xmlChar *xmlComposite;
+                xmlChar *xmlPng;
+                xmlChar *xmlOffsetX;
+                xmlChar *xmlOffsetY;
+                xmlLayerName = xmlGetProp(cur_node, (const xmlChar *)"name");
+                xmlOpacity = xmlGetProp(cur_node, (const xmlChar *)"opacity");
+                xmlVisibility = xmlGetProp(cur_node, (const xmlChar *)"visibility");
+                xmlComposite = xmlGetProp(cur_node, (const xmlChar *)"composite-op");
+                xmlPng = xmlGetProp(cur_node, (const xmlChar *)"src");
+                xmlOffsetX = xmlGetProp(cur_node, (const xmlChar *)"x");
+                xmlOffsetY = xmlGetProp(cur_node, (const xmlChar *)"y");
+                std::string layerName,layerOpacity,layerVisibility,layerComposite,layerFile,layerOffsetX,layerOffsetY;
+
+                if (xmlLayerName!=NULL)
+                    layerName=(reinterpret_cast<char*>(xmlLayerName));
+                if (xmlOpacity!=NULL)
+                    layerOpacity=(reinterpret_cast<char*>(xmlOpacity));
+                if (xmlVisibility!=NULL)
+                    layerVisibility=(reinterpret_cast<char*>(xmlVisibility));
+                if (xmlComposite!=NULL)
+                    layerComposite=(reinterpret_cast<char*>(xmlComposite));
+                if (xmlPng!=NULL)
+                    layerFile=(reinterpret_cast<char*>(xmlPng));
+                if (xmlOffsetX!=NULL)
+                    layerOffsetX=(reinterpret_cast<char*>(xmlOffsetX));
+                if (xmlOffsetY!=NULL)
+                    layerOffsetY=(reinterpret_cast<char*>(xmlOffsetY));
+
+                xmlFree(xmlLayerName);
+                xmlFree(xmlOpacity);
+                xmlFree(xmlVisibility);
+                xmlFree(xmlComposite);
+                xmlFree(xmlPng);
+                xmlFree(xmlOffsetX);
+                xmlFree(xmlOffsetY);
+
+                if (layerOpacity.empty())
+                    layerOpacity = "1";
+                if (layerVisibility.empty())
+                    layerVisibility = "1";
+                else {
+                    if (layerVisibility=="hidden")
+                        layerVisibility = "0";
+                    else
+                        layerVisibility = "1";
+                }
+                if (layerComposite.empty())
+                    layerComposite = "svg:src-over";
+                if (layerOffsetX.empty())
+                    layerOffsetX = "0";
+                if (layerOffsetY.empty())
+                    layerOffsetY = "0";
+                if (!layerFile.empty() && !layerName.empty()) {
+                    layerInfo.push_back(layerName);
+                    layerInfo.push_back(layerOpacity);
+                    layerInfo.push_back(layerVisibility);
+                    layerInfo.push_back(layerComposite);
+                    layerInfo.push_back(layerOffsetX);
+                    layerInfo.push_back(layerOffsetY);
+                    layerInfo.push_back(layerFile);
+                    layers->push_back(layerInfo);
+                }
+            }
+        }
+        getLayersSpecs(cur_node->children,layers);
+    }
+}
+
+void
+OpenRasterPlugin::setupImage(std::string filename, std::vector<Magick::Image> *images)
+{
+    if (!filename.empty()) {
+        std::string xml = extractXML(filename);
+        if (!xml.empty()) {
+            std::vector<std::vector<std::string> > layersInfo;
+            xmlDocPtr doc;
+            doc = xmlParseDoc((const xmlChar *)xml.c_str());
+            xmlNode *root_element = NULL;
+            root_element = xmlDocGetRootElement(doc);
+            getLayersSpecs(root_element,&layersInfo);
+            xmlFreeDoc(doc);
+            if (!layersInfo.empty()) {
+                std::reverse(layersInfo.begin(),layersInfo.end());
+                for (int i = 0; i < (int)layersInfo.size(); i++) {
+                    Magick::Image layer;
+                    layer=getLayer(filename,layersInfo[i][6]);
+                    if (layer.format()=="Portable Network Graphics" && layer.columns()>0 && layer.rows()>0) {
+                        int xOffset = atoi(layersInfo[i][4].c_str());
+                        int yOffset = atoi(layersInfo[i][5].c_str());
+                        layer.label(layersInfo[i][0]);
+                        std::string comment = layersInfo[i][3] + " " + layersInfo[i][1] + " " + layersInfo[i][2];
+                        layer.comment(comment);
+                        layer.page().xOff(xOffset);
+                        layer.page().yOff(yOffset);
+                        images->push_back(layer);
+                    }
+#ifdef DEBUG
+                    std::cout << "Layer: " << layersInfo[i][0] << " " << layersInfo[i][1] << " " << layersInfo[i][2] << " " << layersInfo[i][3] << " " << layersInfo[i][4] << " " << layersInfo[i][5] << " " << layersInfo[i][6] << std::endl;
+#endif
+                }
+            }
+        }
+    }
+}
+
+Magick::Image
 OpenRasterPlugin::getImage(std::string filename)
 {
     Magick::Image image;
@@ -185,7 +308,35 @@ OpenRasterPlugin::getImage(std::string filename)
     }
     zip_close(imageOpen);
     return image;
-}*/
+}
+
+Magick::Image
+OpenRasterPlugin::getLayer(std::string filename, std::string layer)
+{
+    Magick::Image image;
+    int err = 0;
+    zip *layerOpen = zip_open(filename.c_str(),0,&err);
+    struct zip_stat layerSt;
+    zip_stat_init(&layerSt);
+    err=zip_stat(layerOpen,layer.c_str(),0,&layerSt);
+    if (err!=-1) {
+        char *layerData = new char[layerSt.size];
+        zip_file *layerFile = zip_fopen(layerOpen,layer.c_str(),0);
+        err=zip_fread(layerFile,layerData,layerSt.size);
+        if (err!=-1) {
+            zip_fclose(layerFile);
+            if ((layerData!=NULL)&&(layerSt.size>0)) {
+                Magick::Blob blob(layerData,layerSt.size);
+                Magick::Image tmp(blob);
+                if (tmp.format()=="Portable Network Graphics")
+                    image=tmp;
+            }
+        }
+        delete[] layerData;
+    }
+    zip_close(layerOpen);
+    return image;
+}
 
 void
 OpenRasterPlugin::decode(const std::string& filename,
@@ -199,17 +350,23 @@ OpenRasterPlugin::decode(const std::string& filename,
                       int /*pixelComponentCount*/,
                       int /*rowBytes*/)
 {
+#ifdef DEBUG
+    getImageVersion(filename);
+    std::vector<Magick::Image> _image;
+    setupImage(filename,&_image);
+#endif
+
     Magick::Image container(Magick::Geometry(bounds.x2,bounds.y2),Magick::Color("rgba(0,0,0,0)"));
-    //Magick::Image image(getImage(filename));
-    //if ((int)image.columns()==bounds.x2 && (int)image.rows()==bounds.y2) {
-        //container.composite(image,0,0,Magick::OverCompositeOp);
+    Magick::Image image(getImage(filename));
+    if ((int)image.columns()==bounds.x2 && (int)image.rows()==bounds.y2) {
+        container.composite(image,0,0,Magick::OverCompositeOp);
         container.flip();
         container.write(0,0,renderWindow.x2 - renderWindow.x1,renderWindow.y2 - renderWindow.y1,"RGBA",Magick::FloatPixel,pixelData);
-    /*}
+    }
     else {
         setPersistentMessage(OFX::Message::eMessageError, "", "Unable to read image");
         OFX::throwSuiteStatusException(kOfxStatErrFormat);
-    }*/
+    }
 }
 
 bool OpenRasterPlugin::getFrameBounds(const std::string& filename,
