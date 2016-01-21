@@ -10,7 +10,7 @@ OTHER_FILES += \
             Makefile.io \
             Bundle/Makefile \
             LICENSE \
-            COPYRIGHT \
+            COPYING \
             README.md \
             deploy.sh \
             openfx-arena.spec \

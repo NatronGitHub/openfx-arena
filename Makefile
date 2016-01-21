@@ -23,7 +23,8 @@ Tile \
 Wave \
 PovRay \
 ReadMVG \
-OpenRaster
+OpenRaster \
+ReadKrita
 
 all: subdirs
 
