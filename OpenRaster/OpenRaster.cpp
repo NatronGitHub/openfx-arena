@@ -39,6 +39,10 @@
 
 // http://www.freedesktop.org/wiki/Specifications/OpenRaster/Draft/
 #define OpenRasterVersion 0.0.5
+// We don't support versions under 0.0.2 since merged image is mandatory,
+// but Krita uses/expose version 0.0.1, but has merged image (0.0.1 has that as optional)
+// GIMP don't even specify version, and don't have a merged image, so we asume they follow 0.0.1 without (some) optional features.
+// So... don't check for version at this moment, just check for merged image, if not present, add first layer twice and move on...
 
 #define kSupportsRGBA true
 #define kSupportsRGB false
@@ -82,7 +86,6 @@ private:
     virtual void onInputFileChanged(const std::string& newFile, bool setColorSpace, OFX::PreMultiplicationEnum *premult, OFX::PixelComponentEnum *components, int *componentCount) OVERRIDE FINAL;
     std::string extractXML(std::string filename);
     void getImageSize(int *width, int *height, std::string filename);
-    std::string getImageVersion(std::string filename);
     Magick::Image getLayer(std::string filename, std::string layerfile);
     void getLayersSpecs(xmlNode *node, std::vector<std::vector<std::string> > *layers);
     void setupImage(std::string filename, std::vector<Magick::Image> *images);
@@ -136,33 +139,6 @@ OpenRasterPlugin::extractXML(std::string filename)
     return output;
 }
 
-// Not currently used, but in the future we may need to check image for compatibility
-std::string
-OpenRasterPlugin::getImageVersion(std::string filename)
-{
-    std::string output;
-    std::string xml = extractXML(filename);
-    if (!xml.empty()) {
-        xmlDocPtr doc;
-        doc = xmlParseDoc((const xmlChar*)xml.c_str());
-        xmlNode *root_element = NULL;
-        xmlNode *cur_node = NULL;
-        root_element = xmlDocGetRootElement(doc);
-        for (cur_node = root_element; cur_node; cur_node = cur_node->next) {
-            if (cur_node->type == XML_ELEMENT_NODE) {
-                if ((!xmlStrcmp(cur_node->name,(const xmlChar*)"image"))) {
-                    xmlChar *imgVersion;
-                    imgVersion = xmlGetProp(cur_node,(const xmlChar*)"version");
-                    output = (const char*)imgVersion;
-                    xmlFree(imgVersion);
-                }
-            }
-        }
-        xmlFreeDoc(doc);
-    }
-    return output;
-}
-
 void
 OpenRasterPlugin::getImageSize(int *width, int *height, std::string filename)
 {
@@ -213,12 +189,12 @@ OpenRasterPlugin::getLayersSpecs(xmlNode *node, std::vector<std::vector<std::str
                 xmlChar *xmlOffsetX;
                 xmlChar *xmlOffsetY;
                 xmlLayerName = xmlGetProp(cur_node, (const xmlChar *)"name");
-                xmlOpacity = xmlGetProp(cur_node, (const xmlChar *)"opacity");
-                xmlVisibility = xmlGetProp(cur_node, (const xmlChar *)"visibility");
-                xmlComposite = xmlGetProp(cur_node, (const xmlChar *)"composite-op");
+                xmlOpacity = xmlGetProp(cur_node, (const xmlChar *)"opacity"); // not used
+                xmlVisibility = xmlGetProp(cur_node, (const xmlChar *)"visibility"); // not used
+                xmlComposite = xmlGetProp(cur_node, (const xmlChar *)"composite-op"); // not used
                 xmlPng = xmlGetProp(cur_node, (const xmlChar *)"src");
-                xmlOffsetX = xmlGetProp(cur_node, (const xmlChar *)"x");
-                xmlOffsetY = xmlGetProp(cur_node, (const xmlChar *)"y");
+                xmlOffsetX = xmlGetProp(cur_node, (const xmlChar *)"x"); // a bit pointless since all layers are cropped in gfx app on save
+                xmlOffsetY = xmlGetProp(cur_node, (const xmlChar *)"y"); // a bit pointless since all layers are cropped in gfx app on save
                 std::string layerName,layerOpacity,layerVisibility,layerComposite,layerFile,layerOffsetX,layerOffsetY;
 
                 if (xmlLayerName!=NULL)
@@ -289,21 +265,20 @@ OpenRasterPlugin::setupImage(std::string filename, std::vector<Magick::Image> *i
             root_element = xmlDocGetRootElement(doc);
             getLayersSpecs(root_element,&layersInfo);
             xmlFreeDoc(doc);
-
             if (_hasPNG) {
-                // Add merged image first
+                int width = 0;
+                int height = 0;
+                getImageSize(&width,&height,filename);
                 Magick::Image image(getLayer(filename,""));
-                if (image.format()=="Portable Network Graphics" && image.columns()>0 && image.rows()>0)
-                    images->push_back(image);
-                else
-                    setPersistentMessage(OFX::Message::eMessageError, "", "Unable to read merged image, this image does not follow the specs!");
-
-                // Add layers
+                bool hasMerged = false;
+                if ((int)image.columns()==width && (int)image.rows()==height) {
+                    hasMerged=true;
+                    images->push_back(image); // add merged image
+                }
                 if (!layersInfo.empty()) {
                     std::reverse(layersInfo.begin(),layersInfo.end());
                     for (int i = 0; i < (int)layersInfo.size(); i++) {
-                        Magick::Image layer;
-                        layer=getLayer(filename,layersInfo[i][6]);
+                        Magick::Image layer(getLayer(filename,layersInfo[i][6]));
                         if (layer.format()=="Portable Network Graphics" && layer.columns()>0 && layer.rows()>0) {
                             int xOffset = atoi(layersInfo[i][4].c_str());
                             int yOffset = atoi(layersInfo[i][5].c_str());
@@ -313,12 +288,12 @@ OpenRasterPlugin::setupImage(std::string filename, std::vector<Magick::Image> *i
                             layer.page().xOff(xOffset);
                             layer.page().yOff(yOffset);
                             images->push_back(layer);
+                            if (!hasMerged && i==0) // GIMP workaround (or any other app that don't follow v0.0.2+)
+                                images->push_back(layer);
                         }
                     }
                 }
             }
-            else
-                setPersistentMessage(OFX::Message::eMessageError, "", "PNG support missing!");
         }
     }
 }
@@ -327,7 +302,7 @@ Magick::Image
 OpenRasterPlugin::getLayer(std::string filename, std::string layer)
 {
     if (layer.empty())
-        layer = "mergedimage.png";
+        layer = "mergedimage.png"; // asume we want the merged image if no layer has been specified
     Magick::Image image;
     int err = 0;
     zip *layerOpen = zip_open(filename.c_str(),0,&err);
@@ -347,8 +322,6 @@ OpenRasterPlugin::getLayer(std::string filename, std::string layer)
                     if (tmp.format()=="Portable Network Graphics")
                         image=tmp;
                 }
-                else
-                    setPersistentMessage(OFX::Message::eMessageError, "", "PNG support missing!");
             }
         }
         delete[] layerData;
@@ -393,7 +366,7 @@ OpenRasterPlugin::decodePlane(const std::string& /*filename*/, OfxTime /*time*/,
     int offsetY = 0;
 
     if (_layers.empty()) {
-        setPersistentMessage(OFX::Message::eMessageError, "", "Unable to read image, probably because the image does not follow the specs!");
+        setPersistentMessage(OFX::Message::eMessageError, "", "Empty and/or corrupt image");
         OFX::throwSuiteStatusException(kOfxStatErrFormat);
     }
 
@@ -432,13 +405,13 @@ OpenRasterPlugin::decodePlane(const std::string& /*filename*/, OfxTime /*time*/,
     }
 
     Magick::Image container(Magick::Geometry(bounds.x2,bounds.y2),Magick::Color("rgba(0,0,0,0)"));
-    if (_layers[layer].format()=="Portable Network Graphics" && (int)_layers[layer].columns()==bounds.x2 && (int)_layers[layer].rows()==bounds.y2) {
+    if ((int)_layers[layer].columns()==bounds.x2 && (int)_layers[layer].rows()==bounds.y2) {
         container.composite(_layers[layer],offsetX,offsetY,Magick::OverCompositeOp);
         container.flip();
         container.write(0,0,renderWindow.x2 - renderWindow.x1,renderWindow.y2 - renderWindow.y1,"RGBA",Magick::FloatPixel,pixelData);
     }
     else {
-        setPersistentMessage(OFX::Message::eMessageError, "", "Unable to read image, probably because the image does not follow the specs!");
+        setPersistentMessage(OFX::Message::eMessageError, "", "Unable to load image");
         OFX::throwSuiteStatusException(kOfxStatErrFormat);
     }
 }
@@ -476,7 +449,7 @@ OpenRasterPlugin::restoreState(const std::string& filename)
     }
     else {
         _layers.clear();
-        setPersistentMessage(OFX::Message::eMessageError, "", "Unable to read image");
+        setPersistentMessage(OFX::Message::eMessageError, "", "Empty and/or corrupt image");
     }
 }
 
