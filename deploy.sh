@@ -142,15 +142,16 @@ if [ ! -f ${PREFIX}/lib/libMagick++-6.Q${Q}HDRI.a ]; then
     git checkout ImageMagick-6 || exit 1
     MAGICK=6
   else
-    if [ ! -f $CWD/3rdparty/ImageMagick-$MAGICK.tar.gz ]; then
-      wget $MAGICK_URL -O $CWD/3rdparty/ImageMagick-$MAGICK.tar.gz || exit 1
+    if [ ! -f $CWD/3rdparty/ImageMagick-$MAGICK.tar.xz ]; then
+      wget $MAGICK_URL -O $CWD/3rdparty/ImageMagick-$MAGICK.tar.xz || exit 1
     fi
     if [ ! -d $CWD/3rdparty/ImageMagick-$MAGICK ]; then
-      tar xvf $CWD/3rdparty/ImageMagick-$MAGICK.tar.gz -C $CWD/3rdparty/ || exit 1
+      tar xvf $CWD/3rdparty/ImageMagick-$MAGICK.tar.xz -C $CWD/3rdparty/ || exit 1
     fi
     cd $CWD/3rdparty/ImageMagick-$MAGICK || exit 1
   fi
   patch -p0 < $CWD/TextPango/magick-6.9.1-10-pango-align-hack.diff || exit 1
+  patch -p1 < $CWD/ReadPSD/c2106991da30800f074cfa17ea48d0ec75579976.patch || exit 1
   $MAKE distclean
   CFLAGS="-m${BIT} ${BF}" CXXFLAGS="-m${BIT} ${BF} ${BSD} -I${PREFIX}/include" CPPFLAGS="-I${PREFIX}/include -L${PREFIX}/lib" ./configure --libdir=${PREFIX}/lib --prefix=${PREFIX} $MAGICK_OPT || exit 1
   $MAKE -j$JOBS install || exit 1
