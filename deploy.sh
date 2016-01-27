@@ -151,7 +151,7 @@ if [ ! -f ${PREFIX}/lib/libMagick++-6.Q${Q}HDRI.a ]; then
     cd $CWD/3rdparty/ImageMagick-$MAGICK || exit 1
   fi
   patch -p0 < $CWD/TextPango/magick-6.9.1-10-pango-align-hack.diff || exit 1
-  patch -p1 < $CWD/ReadPSD/c2106991da30800f074cfa17ea48d0ec75579976.patch || exit 1
+  patch -p0 < $CWD/ReadPSD/xcf-layername.diff || exit 1
   $MAKE distclean
   CFLAGS="-m${BIT} ${BF}" CXXFLAGS="-m${BIT} ${BF} ${BSD} -I${PREFIX}/include" CPPFLAGS="-I${PREFIX}/include -L${PREFIX}/lib" ./configure --libdir=${PREFIX}/lib --prefix=${PREFIX} $MAGICK_OPT || exit 1
   $MAKE -j$JOBS install || exit 1
