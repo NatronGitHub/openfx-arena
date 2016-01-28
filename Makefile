@@ -24,7 +24,8 @@ Wave \
 PovRay \
 ReadMVG \
 OpenRaster \
-ReadKrita
+ReadKrita \
+ReadMisc
 
 all: subdirs
 

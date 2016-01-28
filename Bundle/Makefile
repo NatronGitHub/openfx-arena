@@ -21,6 +21,7 @@ PLUGINOBJECTS = \
         ReadMVG.o \
         OpenRaster.o \
         ReadKrita.o \
+        ReadMisc.o \
         ofxsOGLTextRenderer.o \
         ofxsOGLFontData.o \
         ofxsRectangleInteract.o \
@@ -78,7 +79,9 @@ RESOURCES = \
 ../OpenRaster/fr.inria.openfx.OpenRaster.png \
 ../OpenRaster/fr.inria.openfx.OpenRaster.svg \
 ../ReadKrita/fr.inria.openfx.ReadKrita.png \
-../ReadKrita/fr.inria.openfx.ReadKrita.svg
+../ReadKrita/fr.inria.openfx.ReadKrita.svg \
+../ReadMisc/fr.inria.openfx.ReadMisc.png \
+../ReadMisc/fr.inria.openfx.ReadMisc.svg
 
 ifeq ($(OS),$(filter $(OS),Linux FreeBSD Darwin))
     RESOURCES +=../PovRay/net.fxarena.openfx.PovRay.png
@@ -107,7 +110,8 @@ VPATH += \
 ../Modulate \
 ../ReadMVG \
 ../OpenRaster \
-../ReadKrita
+../ReadKrita \
+../ReadMisc
 
 ifeq ($(OS),$(filter $(OS),Linux FreeBSD Darwin))
     VPATH += ../PovRay
@@ -139,6 +143,7 @@ CXXFLAGS += \
 -I../ReadMVG \
 -I../OpenRaster \
 -I../ReadKrita \
+-I../ReadMisc
 
 ifeq ($(OS),$(filter $(OS),Linux FreeBSD Darwin))
     CXXFLAGS += -I../PovRay

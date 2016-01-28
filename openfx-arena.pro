@@ -38,6 +38,7 @@ OTHER_FILES += \
             Tile/Makefile \
             Wave/Makefile \
             ReadKrita/Makefile \
+            ReadMisc/Makefile \
             Arc/Info.plist \
             Charcoal/Info.plist \
             Edges/Info.plist \
@@ -62,7 +63,8 @@ OTHER_FILES += \
             Tile/Info.plist \
             Wave/Info.plist \
             ReadKrita/Info.plist \
-            Bundle/Info.plist
+            Bundle/Info.plist \
+            ReadMisc/Info.plist
 INCLUDEPATH += . \
             SupportExt \
             OpenFX/Support/include \
@@ -176,4 +178,5 @@ SOURCES += \
             Texture/Texture.cpp \
             Tile/Tile.cpp \
             Wave/Wave.cpp \
-            ReadKrita/ReadKrita.cpp
+            ReadKrita/ReadKrita.cpp \
+            ReadMisc/ReadMisc.cpp
