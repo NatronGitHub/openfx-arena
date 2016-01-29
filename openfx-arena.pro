@@ -25,7 +25,6 @@ OTHER_FILES += \
             Polaroid/Makefile \
             PovRay/Makefile \
             OpenRaster/Makefile \
-            ReadMVG/Makefile \
             ReadPSD/Makefile \
             ReadSVG/Makefile \
             Reflection/Makefile \
@@ -50,7 +49,6 @@ OTHER_FILES += \
             Polaroid/Info.plist \
             PovRay/Info.plist \
             OpenRaster/Info.plist \
-            ReadMVG/Info.plist \
             ReadPSD/Info.plist \
             ReadSVG/Info.plist \
             Reflection/Info.plist \
@@ -166,7 +164,6 @@ SOURCES += \
             Polaroid/Polaroid.cpp \
             PovRay/PovRay.cpp \
             OpenRaster/OpenRaster.cpp \
-            ReadMVG/ReadMVG.cpp \
             ReadPSD/ReadPSD.cpp \
             ReadSVG/ReadSVG.cpp \
             Reflection/Reflection.cpp \

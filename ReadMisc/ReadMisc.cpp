@@ -170,7 +170,7 @@ void ReadMiscPluginFactory::describe(OFX::ImageEffectDescriptor &desc)
     desc.setLabel(kPluginName);
 
     #ifdef OFX_EXTENSIONS_TUTTLE
-    const char* extensions[] = {"bmp", "pcx", "xpm", "gif", NULL};
+    const char* extensions[] = {"bmp", "pcx", "xpm", "gif", "mvg", NULL};
     desc.addSupportedExtensions(extensions);
     desc.setPluginEvaluation(99);
     #endif

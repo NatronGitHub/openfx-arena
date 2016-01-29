@@ -22,7 +22,6 @@ Texture \
 Tile \
 Wave \
 PovRay \
-ReadMVG \
 OpenRaster \
 ReadKrita \
 ReadMisc

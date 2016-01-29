@@ -18,7 +18,6 @@ PLUGINOBJECTS = \
         Polaroid.o \
         Edges.o \
         Modulate.o \
-        ReadMVG.o \
         OpenRaster.o \
         ReadKrita.o \
         ReadMisc.o \
@@ -74,8 +73,6 @@ RESOURCES = \
 ../Edges/net.fxarena.openfx.Edges.svg \
 ../Modulate/net.fxarena.openfx.Modulate.png \
 ../Modulate/net.fxarena.openfx.Modulate.svg \
-../ReadMVG/net.fxarena.openfx.ReadMVG.png \
-../ReadMVG/net.fxarena.openfx.ReadMVG.svg \
 ../OpenRaster/fr.inria.openfx.OpenRaster.png \
 ../OpenRaster/fr.inria.openfx.OpenRaster.svg \
 ../ReadKrita/fr.inria.openfx.ReadKrita.png \
@@ -108,7 +105,6 @@ VPATH += \
 ../Polaroid \
 ../Edges \
 ../Modulate \
-../ReadMVG \
 ../OpenRaster \
 ../ReadKrita \
 ../ReadMisc
@@ -140,7 +136,6 @@ CXXFLAGS += \
 -I../Polaroid \
 -I../Edges \
 -I../Modulate \
--I../ReadMVG \
 -I../OpenRaster \
 -I../ReadKrita \
 -I../ReadMisc
