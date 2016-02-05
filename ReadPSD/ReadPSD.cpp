@@ -25,11 +25,12 @@
 #include <OpenColorIO/OpenColorIO.h>
 #endif
 
-#define kPluginName "ReadPSDOFX"
+#define kPluginName "ReadPSD"
 #define kPluginGrouping "Image/Readers"
 #define kPluginIdentifier "net.fxarena.openfx.ReadPSD"
 #define kPluginVersionMajor 2
 #define kPluginVersionMinor 5
+#define kPluginEvaluation 92
 
 #define kSupportsRGBA true
 #define kSupportsRGB false
@@ -196,7 +197,7 @@ void _getProFiles(std::vector<std::string> &files, bool desc, std::string filter
 class ReadPSDPlugin : public GenericReaderPlugin
 {
 public:
-    ReadPSDPlugin(OfxImageEffectHandle handle);
+    ReadPSDPlugin(OfxImageEffectHandle handle, const std::vector<std::string>& extensions);
     virtual ~ReadPSDPlugin();
 private:
     virtual bool isVideoStream(const std::string& /*filename*/) OVERRIDE FINAL { return false; }
@@ -247,8 +248,8 @@ private:
     OFX::BooleanParam *_offsetLayer;
 };
 
-ReadPSDPlugin::ReadPSDPlugin(OfxImageEffectHandle handle)
-: GenericReaderPlugin(handle, kSupportsRGBA, kSupportsRGB, kSupportsAlpha, kSupportsTiles,
+ReadPSDPlugin::ReadPSDPlugin(OfxImageEffectHandle handle, const std::vector<std::string>& extensions)
+: GenericReaderPlugin(handle, extensions, kSupportsRGBA, kSupportsRGB, kSupportsAlpha, kSupportsTiles,
 #ifdef OFX_EXTENSIONS_NUKE
 (OFX::getImageEffectHostDescription() && OFX::getImageEffectHostDescription()->isMultiPlanar) ? kIsMultiPlanar : false
 #else
@@ -675,19 +676,22 @@ void ReadPSDPlugin::onInputFileChanged(const std::string& newFile,
 
 using namespace OFX;
 
-mDeclareReaderPluginFactory(ReadPSDPluginFactory, {}, {}, false);
+mDeclareReaderPluginFactory(ReadPSDPluginFactory, {}, false);
+
+void
+ReadPSDPluginFactory::load()
+{
+    _extensions.clear();
+    _extensions.push_back("psd");
+    _extensions.push_back("xcf");
+}
+
 
 /** @brief The basic describe function, passed a plugin descriptor */
 void ReadPSDPluginFactory::describe(OFX::ImageEffectDescriptor &desc)
 {
-    GenericReaderDescribe(desc, kSupportsTiles, kIsMultiPlanar);
+    GenericReaderDescribe(desc, _extensions, kPluginEvaluation, kSupportsTiles, kIsMultiPlanar);
     desc.setLabel(kPluginName);
-
-    #ifdef OFX_EXTENSIONS_TUTTLE
-    const char* extensions[] = {"psd", "xcf", NULL};
-    desc.addSupportedExtensions(extensions);
-    desc.setPluginEvaluation(92);
-    #endif
 
     size_t magickNumber;
     std::string magickString = MagickCore::GetMagickVersion(&magickNumber);
@@ -696,7 +700,6 @@ void ReadPSDPluginFactory::describe(OFX::ImageEffectDescriptor &desc)
     plugCopyright.append("\n\nOpenColorIO is Copyright 2003-2010 Sony Pictures Imageworks Inc., et al. All Rights Reserved.\n\nOpenColorIO is distributed under a BSD license.");
     # endif // OFX_IO_USING_OCIO
     desc.setPluginDescription("Read Photoshop/GIMP/Cinepaint (RGB/CMYK/GRAY) image formats with ICC color management.\n\nPowered by Little CMS v2 http://www.littlecms.com/ and "+magickString+plugCopyright);
-    
 }
 
 /** @brief The describe in context function, passed a plugin descriptor and a context */
@@ -964,7 +967,7 @@ void ReadPSDPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, C
 ImageEffect* ReadPSDPluginFactory::createInstance(OfxImageEffectHandle handle,
                                      ContextEnum /*context*/)
 {
-    ReadPSDPlugin* ret =  new ReadPSDPlugin(handle);
+    ReadPSDPlugin* ret =  new ReadPSDPlugin(handle, _extensions);
     ret->restoreStateFromParameters();
     return ret;
 }

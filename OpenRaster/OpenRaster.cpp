@@ -36,6 +36,7 @@
 #define kPluginIdentifier "fr.inria.openfx.OpenRaster"
 #define kPluginVersionMajor 1
 #define kPluginVersionMinor 0
+#define kPluginEvaluation 50
 
 // http://www.freedesktop.org/wiki/Specifications/OpenRaster/Draft/
 #define OpenRasterVersion 0.0.5
@@ -55,7 +56,7 @@ static bool gHostIsNatron = false;
 class OpenRasterPlugin : public GenericReaderPlugin
 {
 public:
-    OpenRasterPlugin(OfxImageEffectHandle handle);
+    OpenRasterPlugin(OfxImageEffectHandle handle, const std::vector<std::string>& extensions);
     virtual ~OpenRasterPlugin();
 private:
     virtual bool isVideoStream(const std::string& /*filename*/) OVERRIDE FINAL { return false; }
@@ -94,8 +95,8 @@ private:
     bool _hasPNG;
 };
 
-OpenRasterPlugin::OpenRasterPlugin(OfxImageEffectHandle handle)
-: GenericReaderPlugin(handle, kSupportsRGBA, kSupportsRGB, kSupportsAlpha, kSupportsTiles,
+OpenRasterPlugin::OpenRasterPlugin(OfxImageEffectHandle handle, const std::vector<std::string>& extensions)
+: GenericReaderPlugin(handle, extensions, kSupportsRGBA, kSupportsRGB, kSupportsAlpha, kSupportsTiles,
 #ifdef OFX_EXTENSIONS_NUKE
 (OFX::getImageEffectHostDescription() && OFX::getImageEffectHostDescription()->isMultiPlanar) ? kIsMultiPlanar : false
 #else
@@ -472,20 +473,20 @@ void OpenRasterPlugin::onInputFileChanged(const std::string& newFile,
 
 using namespace OFX;
 
-mDeclareReaderPluginFactory(OpenRasterPluginFactory, {}, {}, false);
+mDeclareReaderPluginFactory(OpenRasterPluginFactory, {}, false);
+
+void
+OpenRasterPluginFactory::load()
+{
+    _extensions.clear();
+    _extensions.push_back("ora");
+}
 
 /** @brief The basic describe function, passed a plugin descriptor */
 void OpenRasterPluginFactory::describe(OFX::ImageEffectDescriptor &desc)
 {
-    GenericReaderDescribe(desc, kSupportsTiles, kIsMultiPlanar);
+    GenericReaderDescribe(desc, _extensions, kPluginEvaluation, kSupportsTiles, kIsMultiPlanar);
     desc.setLabel(kPluginName);
-
-    #ifdef OFX_EXTENSIONS_TUTTLE
-    const char* extensions[] = {"ora", NULL};
-    desc.addSupportedExtensions(extensions);
-    desc.setPluginEvaluation(50);
-    #endif
-
     desc.setPluginDescription("Read OpenRaster image format.");
 }
 
@@ -501,7 +502,7 @@ void OpenRasterPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc
 ImageEffect* OpenRasterPluginFactory::createInstance(OfxImageEffectHandle handle,
                                      ContextEnum /*context*/)
 {
-    OpenRasterPlugin* ret =  new OpenRasterPlugin(handle);
+    OpenRasterPlugin* ret =  new OpenRasterPlugin(handle, _extensions);
     ret->restoreStateFromParameters();
     return ret;
 }

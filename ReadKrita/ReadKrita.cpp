@@ -30,11 +30,12 @@
 #include <OpenColorIO/OpenColorIO.h>
 #endif
 
-#define kPluginName "ReadKritaOFX"
+#define kPluginName "ReadKrita"
 #define kPluginGrouping "Image/Readers"
 #define kPluginIdentifier "fr.inria.openfx.ReadKrita"
 #define kPluginVersionMajor 1
 #define kPluginVersionMinor 0
+#define kPluginEvaluation 50
 
 #define kSupportsRGBA true
 #define kSupportsRGB false
@@ -44,7 +45,7 @@
 class ReadKritaPlugin : public GenericReaderPlugin
 {
 public:
-    ReadKritaPlugin(OfxImageEffectHandle handle);
+    ReadKritaPlugin(OfxImageEffectHandle handle, const std::vector<std::string>& extensions);
     virtual ~ReadKritaPlugin();
 private:
     virtual bool isVideoStream(const std::string& /*filename*/) OVERRIDE FINAL { return false; }
@@ -58,8 +59,8 @@ private:
     bool _hasPNG;
 };
 
-ReadKritaPlugin::ReadKritaPlugin(OfxImageEffectHandle handle)
-: GenericReaderPlugin(handle, kSupportsRGBA, kSupportsRGB, kSupportsAlpha, kSupportsTiles, false)
+ReadKritaPlugin::ReadKritaPlugin(OfxImageEffectHandle handle, const std::vector<std::string>& extensions)
+: GenericReaderPlugin(handle, extensions, kSupportsRGBA, kSupportsRGB, kSupportsAlpha, kSupportsTiles, false)
 ,_hasPNG(false)
 {
     Magick::InitializeMagick(NULL);
@@ -256,20 +257,20 @@ void ReadKritaPlugin::onInputFileChanged(const std::string& newFile,
 
 using namespace OFX;
 
-mDeclareReaderPluginFactory(ReadKritaPluginFactory, {}, {}, false);
+mDeclareReaderPluginFactory(ReadKritaPluginFactory, {}, false);
+
+void
+ReadKritaPluginFactory::load()
+{
+    _extensions.clear();
+    _extensions.push_back("kra");
+}
 
 /** @brief The basic describe function, passed a plugin descriptor */
 void ReadKritaPluginFactory::describe(OFX::ImageEffectDescriptor &desc)
 {
-    GenericReaderDescribe(desc, kSupportsTiles, false);
+    GenericReaderDescribe(desc, _extensions, kPluginEvaluation, kSupportsTiles, false);
     desc.setLabel(kPluginName);
-
-    #ifdef OFX_EXTENSIONS_TUTTLE
-    const char* extensions[] = {"kra", NULL};
-    desc.addSupportedExtensions(extensions);
-    desc.setPluginEvaluation(50);
-    #endif
-
     desc.setPluginDescription("Read Krita image format.");
 }
 
@@ -284,7 +285,7 @@ void ReadKritaPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc,
 ImageEffect* ReadKritaPluginFactory::createInstance(OfxImageEffectHandle handle,
                                      ContextEnum /*context*/)
 {
-    ReadKritaPlugin* ret =  new ReadKritaPlugin(handle);
+    ReadKritaPlugin* ret =  new ReadKritaPlugin(handle, _extensions);
     ret->restoreStateFromParameters();
     return ret;
 }

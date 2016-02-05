@@ -27,11 +27,12 @@
 #include <OpenColorIO/OpenColorIO.h>
 #endif
 
-#define kPluginName "ReadMiscOFX"
+#define kPluginName "ReadMisc"
 #define kPluginGrouping "Image/Readers"
 #define kPluginIdentifier "fr.inria.openfx.ReadMisc"
 #define kPluginVersionMajor 1
 #define kPluginVersionMinor 0
+#define kPluginEvaluation 93
 
 #define kSupportsRGBA true
 #define kSupportsRGB false
@@ -41,7 +42,7 @@
 class ReadMiscPlugin : public GenericReaderPlugin
 {
 public:
-    ReadMiscPlugin(OfxImageEffectHandle handle);
+    ReadMiscPlugin(OfxImageEffectHandle handle, const std::vector<std::string>& extensions);
     virtual ~ReadMiscPlugin();
 private:
     virtual bool isVideoStream(const std::string& /*filename*/) OVERRIDE FINAL { return false; }
@@ -50,8 +51,8 @@ private:
     virtual void onInputFileChanged(const std::string& newFile, bool setColorSpace, OFX::PreMultiplicationEnum *premult, OFX::PixelComponentEnum *components, int *componentCount) OVERRIDE FINAL;
 };
 
-ReadMiscPlugin::ReadMiscPlugin(OfxImageEffectHandle handle)
-: GenericReaderPlugin(handle, kSupportsRGBA, kSupportsRGB, kSupportsAlpha, kSupportsTiles, false)
+ReadMiscPlugin::ReadMiscPlugin(OfxImageEffectHandle handle, const std::vector<std::string>& extensions)
+: GenericReaderPlugin(handle, extensions, kSupportsRGBA, kSupportsRGB, kSupportsAlpha, kSupportsTiles, false)
 {
     Magick::InitializeMagick(NULL);
 }
@@ -161,19 +162,24 @@ void ReadMiscPlugin::onInputFileChanged(const std::string& newFile,
 
 using namespace OFX;
 
-mDeclareReaderPluginFactory(ReadMiscPluginFactory, {}, {}, false);
+mDeclareReaderPluginFactory(ReadMiscPluginFactory, {}, false);
+
+void
+ReadMiscPluginFactory::load()
+{
+    _extensions.clear();
+    _extensions.push_back("bmp");
+    _extensions.push_back("pcx");
+    _extensions.push_back("xpm");
+    _extensions.push_back("gif");
+    _extensions.push_back("mvg");
+}
 
 /** @brief The basic describe function, passed a plugin descriptor */
 void ReadMiscPluginFactory::describe(OFX::ImageEffectDescriptor &desc)
 {
-    GenericReaderDescribe(desc, kSupportsTiles, false);
+    GenericReaderDescribe(desc, _extensions, kPluginEvaluation, kSupportsTiles, false);
     desc.setLabel(kPluginName);
-
-    #ifdef OFX_EXTENSIONS_TUTTLE
-    const char* extensions[] = {"bmp", "pcx", "xpm", "gif", "mvg", NULL};
-    desc.addSupportedExtensions(extensions);
-    desc.setPluginEvaluation(99);
-    #endif
 
     size_t magickNumber;
     std::string magickString = MagickCore::GetMagickVersion(&magickNumber);
@@ -182,7 +188,6 @@ void ReadMiscPluginFactory::describe(OFX::ImageEffectDescriptor &desc)
     plugCopyright.append("\n\nOpenColorIO is Copyright 2003-2010 Sony Pictures Imageworks Inc., et al. All Rights Reserved.\n\nOpenColorIO is distributed under a BSD license.");
     # endif // OFX_IO_USING_OCIO
     desc.setPluginDescription("Read Misc image format.\n\nPowered by "+magickString+plugCopyright);
-    
 }
 
 /** @brief The describe in context function, passed a plugin descriptor and a context */
@@ -196,7 +201,7 @@ void ReadMiscPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, 
 ImageEffect* ReadMiscPluginFactory::createInstance(OfxImageEffectHandle handle,
                                      ContextEnum /*context*/)
 {
-    ReadMiscPlugin* ret =  new ReadMiscPlugin(handle);
+    ReadMiscPlugin* ret =  new ReadMiscPlugin(handle, _extensions);
     ret->restoreStateFromParameters();
     return ret;
 }

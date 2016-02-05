@@ -19,11 +19,12 @@
 #include <OpenColorIO/OpenColorIO.h>
 #endif
 
-#define kPluginName "ReadSVGOFX"
+#define kPluginName "ReadSVG"
 #define kPluginGrouping "Image/Readers"
 #define kPluginIdentifier "net.fxarena.openfx.ReadSVG"
 #define kPluginVersionMajor 1
 #define kPluginVersionMinor 7
+#define kPluginEvaluation 50
 
 #define kParamDpi "dpi"
 #define kParamDpiLabel "DPI"
@@ -38,7 +39,7 @@
 class ReadSVGPlugin : public GenericReaderPlugin
 {
 public:
-    ReadSVGPlugin(OfxImageEffectHandle handle);
+    ReadSVGPlugin(OfxImageEffectHandle handle, const std::vector<std::string>& extensions);
     virtual ~ReadSVGPlugin();
 private:
     virtual bool isVideoStream(const std::string& /*filename*/) OVERRIDE FINAL { return false; }
@@ -49,8 +50,8 @@ private:
     bool hasRSVG_;
 };
 
-ReadSVGPlugin::ReadSVGPlugin(OfxImageEffectHandle handle)
-: GenericReaderPlugin(handle, kSupportsRGBA, kSupportsRGB, kSupportsAlpha, kSupportsTiles, false)
+ReadSVGPlugin::ReadSVGPlugin(OfxImageEffectHandle handle, const std::vector<std::string>& extensions)
+: GenericReaderPlugin(handle, extensions, kSupportsRGBA, kSupportsRGB, kSupportsAlpha, kSupportsTiles, false)
 ,dpi_(0)
 ,hasRSVG_(false)
 {
@@ -195,19 +196,21 @@ void ReadSVGPlugin::onInputFileChanged(const std::string& newFile,
 
 using namespace OFX;
 
-mDeclareReaderPluginFactory(ReadSVGPluginFactory, {}, {}, false);
+mDeclareReaderPluginFactory(ReadSVGPluginFactory, {}, false);
+
+void
+ReadSVGPluginFactory::load()
+{
+    _extensions.clear();
+    _extensions.push_back("svg");
+}
+
 
 /** @brief The basic describe function, passed a plugin descriptor */
 void ReadSVGPluginFactory::describe(OFX::ImageEffectDescriptor &desc)
 {
-    GenericReaderDescribe(desc, kSupportsTiles, false);
+    GenericReaderDescribe(desc, _extensions, kPluginEvaluation, kSupportsTiles, false);
     desc.setLabel(kPluginName);
-
-    #ifdef OFX_EXTENSIONS_TUTTLE
-    const char* extensions[] = {"svg","svgz", NULL};
-    desc.addSupportedExtensions(extensions);
-    desc.setPluginEvaluation(50);
-    #endif
 
     size_t magickNumber;
     std::string magickString = MagickCore::GetMagickVersion(&magickNumber);
@@ -216,7 +219,6 @@ void ReadSVGPluginFactory::describe(OFX::ImageEffectDescriptor &desc)
     plugCopyright.append("\n\nOpenColorIO is Copyright 2003-2010 Sony Pictures Imageworks Inc., et al. All Rights Reserved.\n\nOpenColorIO is distributed under a BSD license.");
     # endif // OFX_IO_USING_OCIO
     desc.setPluginDescription("Read SVG image format.\n\nPowered by "+magickString+plugCopyright);
-
 }
 
 /** @brief The describe in context function, passed a plugin descriptor and a context */
@@ -240,7 +242,7 @@ void ReadSVGPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, C
 ImageEffect* ReadSVGPluginFactory::createInstance(OfxImageEffectHandle handle,
                                      ContextEnum /*context*/)
 {
-    ReadSVGPlugin* ret =  new ReadSVGPlugin(handle);
+    ReadSVGPlugin* ret =  new ReadSVGPlugin(handle, _extensions);
     ret->restoreStateFromParameters();
     return ret;
 }
