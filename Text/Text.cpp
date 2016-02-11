@@ -588,9 +588,6 @@ void TextPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, Cont
 
     // make some pages
     PageParamDescriptor *page = desc.definePageParam(kPluginName);
-    GroupParamDescriptor *groupStroke = desc.defineGroupParam("Stroke");
-    GroupParamDescriptor *groupShadow = desc.defineGroupParam("Shadow");
-    GroupParamDescriptor *groupSpace = desc.defineGroupParam("Spacing");
     GroupParamDescriptor *groupCanvas = desc.defineGroupParam("Canvas");
 
     groupCanvas->setOpen(false);
@@ -723,10 +720,30 @@ void TextPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, Cont
         param->setAnimates(true);
         page->addChild(*param);
     }
+    GroupParamDescriptor *groupStroke = desc.defineGroupParam("Stroke");
     {
          page->addChild(*groupStroke);
-         page->addChild(*groupShadow);
-         page->addChild(*groupSpace);
+    }
+    {
+        DoubleParamDescriptor *param = desc.defineDoubleParam(kParamStroke);
+        param->setLabel(kParamStrokeLabel);
+        param->setHint(kParamStrokeHint);
+        param->setRange(0, 1000);
+        param->setDisplayRange(0, 100);
+        param->setDefault(kParamStrokeDefault);
+        param->setParent(*groupStroke);
+    }
+    {
+        RGBAParamDescriptor* param = desc.defineRGBAParam(kParamStrokeColor);
+        param->setLabel(kParamStrokeColorLabel);
+        param->setHint(kParamStrokeColorHint);
+        param->setDefault(1., 1., 1., 1.);
+        param->setAnimates(true);
+        param->setParent(*groupStroke);
+    }
+    GroupParamDescriptor *groupSpace = desc.defineGroupParam("Spacing");
+    {
+        page->addChild(*groupSpace);
     }
     {
         DoubleParamDescriptor *param = desc.defineDoubleParam(kParamTextSpacing);
@@ -755,22 +772,9 @@ void TextPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, Cont
         param->setDefault(kParamInterlineSpacingDefault);
         param->setParent(*groupSpace);
     }
+    GroupParamDescriptor *groupShadow = desc.defineGroupParam("Shadow");
     {
-        DoubleParamDescriptor *param = desc.defineDoubleParam(kParamStroke);
-        param->setLabel(kParamStrokeLabel);
-        param->setHint(kParamStrokeHint);
-        param->setRange(0, 1000);
-        param->setDisplayRange(0, 100);
-        param->setDefault(kParamStrokeDefault);
-        param->setParent(*groupStroke);
-    }
-    {
-        RGBAParamDescriptor* param = desc.defineRGBAParam(kParamStrokeColor);
-        param->setLabel(kParamStrokeColorLabel);
-        param->setHint(kParamStrokeColorHint);
-        param->setDefault(1., 1., 1., 1.);
-        param->setAnimates(true);
-        param->setParent(*groupStroke);
+        page->addChild(*groupShadow);
     }
     {
         DoubleParamDescriptor *param = desc.defineDoubleParam(kParamShadowOpacity);

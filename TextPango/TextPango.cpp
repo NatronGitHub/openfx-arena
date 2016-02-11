@@ -601,7 +601,6 @@ void TextPangoPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc,
     // make some pages
     PageParamDescriptor *page = desc.definePageParam(kPluginName);
     GroupParamDescriptor *groupCanvas = desc.defineGroupParam("Canvas");
-    GroupParamDescriptor *groupShadow = desc.defineGroupParam("Shadow");
     groupCanvas->setOpen(false);
     {
         page->addChild(*groupCanvas);
@@ -799,6 +798,7 @@ void TextPangoPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc,
         param->setAnimates(true);
         page->addChild(*param);
     }
+    GroupParamDescriptor *groupShadow = desc.defineGroupParam("Shadow");
     {
         page->addChild(*groupShadow);
     }
