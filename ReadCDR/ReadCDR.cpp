@@ -92,10 +92,6 @@ ReadCDRPlugin::decode(const std::string& filename,
                       int /*pixelComponentCount*/,
                       int /*rowBytes*/)
 {
-    #ifdef DEBUG
-    std::cout << "decode ..." << std::endl;
-    #endif
-
     if (!hasRSVG_) {
         setPersistentMessage(OFX::Message::eMessageError, "", "librsvg missing");
         OFX::throwSuiteStatusException(kOfxStatErrFormat);
@@ -123,11 +119,9 @@ ReadCDRPlugin::decode(const std::string& filename,
 
     std::ostringstream stream;
     stream << "<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"no\"?>";
-    for (unsigned k = 0; k<output.size(); ++k) {
+    for (unsigned k = 0; k<output.size(); ++k)
         stream << output[k].cstr();
-    }
-    const char* buffer = stream.str().c_str();
-    Magick::Blob blob(buffer,stream.str().size());
+    Magick::Blob blob(static_cast<const void *>(stream.str().c_str()),stream.str().size());
 
     int dpi = 0;
     dpi_->getValueAtTime(time, dpi);
@@ -164,10 +158,6 @@ bool ReadCDRPlugin::getFrameBounds(const std::string& filename,
                               double *par,
                               std::string* /*error*/,int *tile_width, int *tile_height)
 {
-    #ifdef DEBUG
-    std::cout << "getFrameBounds ..." << std::endl;
-    #endif
-
     librevenge::RVNGFileStream input(filename.c_str());
     if (!libcdr::CDRDocument::isSupported(&input))
     {
@@ -190,11 +180,9 @@ bool ReadCDRPlugin::getFrameBounds(const std::string& filename,
 
     std::ostringstream stream;
     stream << "<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"no\"?>";
-    for (unsigned k = 0; k<output.size(); ++k) {
+    for (unsigned k = 0; k<output.size(); ++k)
         stream << output[k].cstr();
-    }
-    const char* buffer = stream.str().c_str();
-    Magick::Blob blob(buffer,stream.str().size());
+    Magick::Blob blob(static_cast<const void *>(stream.str().c_str()),stream.str().size());
 
     int dpi;
     dpi_->getValueAtTime(time, dpi);
@@ -219,10 +207,6 @@ void ReadCDRPlugin::onInputFileChanged(const std::string& newFile,
                                   OFX::PreMultiplicationEnum *premult,
                                   OFX::PixelComponentEnum *components,int */*componentCount*/)
 {
-    #ifdef DEBUG
-    std::cout << "onInputFileChanged ..." << std::endl;
-    #endif
-
     assert(premult && components);
 
     librevenge::RVNGFileStream input(newFile.c_str());
@@ -247,11 +231,9 @@ void ReadCDRPlugin::onInputFileChanged(const std::string& newFile,
 
     std::ostringstream stream;
     stream << "<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"no\"?>";
-    for (unsigned k = 0; k<output.size(); ++k) {
+    for (unsigned k = 0; k<output.size(); ++k)
         stream << output[k].cstr();
-    }
-    const char* buffer = stream.str().c_str();
-    Magick::Blob blob(buffer,stream.str().size());
+    Magick::Blob blob(static_cast<const void *>(stream.str().c_str()),stream.str().size());
 
     int dpi;
     dpi_->getValue(dpi);
@@ -278,7 +260,7 @@ void ReadCDRPlugin::onInputFileChanged(const std::string& newFile,
         OFX::throwSuiteStatusException(kOfxStatErrFormat);
     }
     *components = OFX::ePixelComponentRGBA;
-    *premult = OFX::eImageOpaque;
+    *premult = OFX::eImageUnPreMultiplied;
 }
 
 using namespace OFX;
@@ -304,7 +286,7 @@ void ReadCDRPluginFactory::describe(OFX::ImageEffectDescriptor &desc)
     # ifdef OFX_IO_USING_OCIO
     plugCopyright.append("\n\nOpenColorIO is Copyright 2003-2010 Sony Pictures Imageworks Inc., et al. All Rights Reserved.\n\nOpenColorIO is distributed under a BSD license.");
     # endif // OFX_IO_USING_OCIO
-    desc.setPluginDescription("Read CorelDRAW(R) document format.\n\nPowered by lcms2, libcdr and "+magickString+plugCopyright+"\n\nThis plugin is not manufactured, approved, or supported by Corel Corporation or Corel Corporation Limited.");
+    desc.setPluginDescription("Read CorelDRAW(R) document format.\n\nPowered by lcms2, librevenge, libcdr and "+magickString+plugCopyright+"\n\nThis plugin is not manufactured, approved, or supported by Corel Corporation or Corel Corporation Limited.");
 }
 
 /** @brief The describe in context function, passed a plugin descriptor and a context */
