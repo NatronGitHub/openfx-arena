@@ -38,6 +38,7 @@ OTHER_FILES += \
             Wave/Makefile \
             ReadKrita/Makefile \
             ReadMisc/Makefile \
+            ReadCDR/Makefile \
             Arc/Info.plist \
             Charcoal/Info.plist \
             Edges/Info.plist \
@@ -62,7 +63,8 @@ OTHER_FILES += \
             Wave/Info.plist \
             ReadKrita/Info.plist \
             Bundle/Info.plist \
-            ReadMisc/Info.plist
+            ReadMisc/Info.plist \
+            ReadCDR/Info.plist
 INCLUDEPATH += . \
             SupportExt \
             OpenFX/Support/include \
@@ -73,7 +75,9 @@ INCLUDEPATH += . \
             OpenFX/Support/Library \
             tmp/include/ImageMagick-6 \
             /usr/include \
-            /usr/include/libxml2
+            /usr/include/libxml2 \
+            /usr/include/librevenge-0.0 \
+            /usr/include/libcdr-0.1
 HEADERS += \
             SupportExt/ofxsCoords.h \
             SupportExt/ofxsCopier.h \
@@ -176,4 +180,5 @@ SOURCES += \
             Tile/Tile.cpp \
             Wave/Wave.cpp \
             ReadKrita/ReadKrita.cpp \
-            ReadMisc/ReadMisc.cpp
+            ReadMisc/ReadMisc.cpp \
+            ReadCDR/ReadCDR.cpp
