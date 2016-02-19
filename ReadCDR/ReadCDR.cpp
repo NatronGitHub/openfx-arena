@@ -97,22 +97,24 @@ ReadCDRPlugin::decode(const std::string& filename,
         OFX::throwSuiteStatusException(kOfxStatErrFormat);
     }
 
+    if (filename.empty()) {
+        setPersistentMessage(OFX::Message::eMessageError, "", "No file");
+        OFX::throwSuiteStatusException(kOfxStatErrFormat);
+    }
+
     librevenge::RVNGFileStream input(filename.c_str());
-    if (!libcdr::CDRDocument::isSupported(&input))
-    {
+    if (!libcdr::CDRDocument::isSupported(&input)) {
         setPersistentMessage(OFX::Message::eMessageError, "", "Unsupported file format");
         OFX::throwSuiteStatusException(kOfxStatErrFormat);
     }
 
     librevenge::RVNGStringVector output;
     librevenge::RVNGSVGDrawingGenerator generator(output, "svg");
-    if (!libcdr::CDRDocument::parse(&input, &generator))
-    {
+    if (!libcdr::CDRDocument::parse(&input, &generator)) {
         setPersistentMessage(OFX::Message::eMessageError, "", "SVG generation failed");
         OFX::throwSuiteStatusException(kOfxStatErrFormat);
     }
-    if (output.empty())
-    {
+    if (output.empty()) {
         setPersistentMessage(OFX::Message::eMessageError, "", "No SVG document generated");
         OFX::throwSuiteStatusException(kOfxStatErrFormat);
     }
@@ -137,8 +139,8 @@ ReadCDRPlugin::decode(const std::string& filename,
         #endif
         image.backgroundColor("none"); // must be set to avoid bg
     }
-    if (!filename.empty())
-        image.read(blob);
+
+    image.read(blob);
     if (image.columns()>0 && image.rows()>0) {
         Magick::Image container(Magick::Geometry(bounds.x2,bounds.y2),Magick::Color("rgba(0,0,0,1)"));
         container.composite(image,0,0,Magick::OverCompositeOp);
@@ -158,22 +160,24 @@ bool ReadCDRPlugin::getFrameBounds(const std::string& filename,
                               double *par,
                               std::string* /*error*/,int *tile_width, int *tile_height)
 {
+    if (filename.empty()) {
+        setPersistentMessage(OFX::Message::eMessageError, "", "No file");
+        OFX::throwSuiteStatusException(kOfxStatErrFormat);
+    }
+
     librevenge::RVNGFileStream input(filename.c_str());
-    if (!libcdr::CDRDocument::isSupported(&input))
-    {
+    if (!libcdr::CDRDocument::isSupported(&input)) {
         setPersistentMessage(OFX::Message::eMessageError, "", "Unsupported file format");
         OFX::throwSuiteStatusException(kOfxStatErrFormat);
     }
 
     librevenge::RVNGStringVector output;
     librevenge::RVNGSVGDrawingGenerator generator(output, "svg");
-    if (!libcdr::CDRDocument::parse(&input, &generator))
-    {
+    if (!libcdr::CDRDocument::parse(&input, &generator)) {
         setPersistentMessage(OFX::Message::eMessageError, "", "SVG generation failed");
         OFX::throwSuiteStatusException(kOfxStatErrFormat);
     }
-    if (output.empty())
-    {
+    if (output.empty()) {
         setPersistentMessage(OFX::Message::eMessageError, "", "No SVG document generated");
         OFX::throwSuiteStatusException(kOfxStatErrFormat);
     }
@@ -184,80 +188,38 @@ bool ReadCDRPlugin::getFrameBounds(const std::string& filename,
         stream << output[k].cstr();
     Magick::Blob blob(static_cast<const void *>(stream.str().c_str()),stream.str().size());
 
-    int dpi;
+    int dpi = 0;
+    int width = 0;
+    int height = 0;
     dpi_->getValueAtTime(time, dpi);
     Magick::Image image;
     image.resolutionUnits(Magick::PixelsPerInchResolution);
     image.density(Magick::Geometry(dpi,dpi));
-    if (!filename.empty())
-        image.ping(blob);
-    if (image.columns()>0 && image.rows()>0) {
+    image.ping(blob);
+    width = (int)image.columns();
+    height = (int)image.rows();
+
+    if (width>0 && height>0) {
         bounds->x1 = 0;
-        bounds->x2 = image.columns();
+        bounds->x2 = width;
         bounds->y1 = 0;
-        bounds->y2 = image.rows();
+        bounds->y2 = height;
         *par = 1.0;
     }
     *tile_width = *tile_height = 0;
     return true;
 }
 
-void ReadCDRPlugin::onInputFileChanged(const std::string& newFile,
+void ReadCDRPlugin::onInputFileChanged(const std::string& /*newFile*/,
                                   bool setColorSpace,
                                   OFX::PreMultiplicationEnum *premult,
                                   OFX::PixelComponentEnum *components,int */*componentCount*/)
 {
     assert(premult && components);
-
-    librevenge::RVNGFileStream input(newFile.c_str());
-    if (!libcdr::CDRDocument::isSupported(&input))
-    {
-        setPersistentMessage(OFX::Message::eMessageError, "", "Unsupported file format");
-        OFX::throwSuiteStatusException(kOfxStatErrFormat);
-    }
-
-    librevenge::RVNGStringVector output;
-    librevenge::RVNGSVGDrawingGenerator generator(output, "svg");
-    if (!libcdr::CDRDocument::parse(&input, &generator))
-    {
-        setPersistentMessage(OFX::Message::eMessageError, "", "SVG generation failed");
-        OFX::throwSuiteStatusException(kOfxStatErrFormat);
-    }
-    if (output.empty())
-    {
-        setPersistentMessage(OFX::Message::eMessageError, "", "No SVG document generated");
-        OFX::throwSuiteStatusException(kOfxStatErrFormat);
-    }
-
-    std::ostringstream stream;
-    stream << "<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"no\"?>";
-    for (unsigned k = 0; k<output.size(); ++k)
-        stream << output[k].cstr();
-    Magick::Blob blob(static_cast<const void *>(stream.str().c_str()),stream.str().size());
-
-    int dpi;
-    dpi_->getValue(dpi);
-    Magick::Image image;
-    image.resolutionUnits(Magick::PixelsPerInchResolution);
-    image.density(Magick::Geometry(dpi,dpi));
-    try {
-        image.ping(blob);
-    }
-    catch(Magick::Warning &warning) { // ignore since warns interupt render
-        #ifdef DEBUG
-        std::cout << warning.what() << std::endl;
-        #endif
-    }
-    if (image.columns()>0 && image.rows()>0) {
-        if (setColorSpace) {
+    if (setColorSpace) {
         # ifdef OFX_IO_USING_OCIO
         _ocio->setInputColorspace("sRGB");
         # endif // OFX_IO_USING_OCIO
-        }
-    }
-    else {
-        setPersistentMessage(OFX::Message::eMessageError, "", "Unable to read image");
-        OFX::throwSuiteStatusException(kOfxStatErrFormat);
     }
     *components = OFX::ePixelComponentRGBA;
     *premult = OFX::eImageUnPreMultiplied;
@@ -286,7 +248,7 @@ void ReadCDRPluginFactory::describe(OFX::ImageEffectDescriptor &desc)
     # ifdef OFX_IO_USING_OCIO
     plugCopyright.append("\n\nOpenColorIO is Copyright 2003-2010 Sony Pictures Imageworks Inc., et al. All Rights Reserved.\n\nOpenColorIO is distributed under a BSD license.");
     # endif // OFX_IO_USING_OCIO
-    desc.setPluginDescription("Read CorelDRAW(R) document format.\n\nPowered by lcms2, librevenge, libcdr and "+magickString+plugCopyright+"\n\nThis plugin is not manufactured, approved, or supported by Corel Corporation or Corel Corporation Limited.");
+    desc.setPluginDescription("Read CorelDRAW(R) document format.\n\nPowered by librevenge, libcdr and "+magickString+plugCopyright+"\n\nThis plugin is not manufactured, approved, or supported by Corel Corporation or Corel Corporation Limited.");
 }
 
 /** @brief The describe in context function, passed a plugin descriptor and a context */
