@@ -25,7 +25,7 @@ def getIconPath():
     return "Cloud9.png"
 
 def getGrouping():
-    return "Extra/Draw"
+    return "Draw"
 
 def getDescription():
     return "Cloud/Sky generator"

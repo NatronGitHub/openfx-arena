@@ -27,7 +27,7 @@ def getIconPath():
     return "Text3D.png"
 
 def getGrouping():
-    return "Extra/3D"
+    return "Draw"
 
 def getDescription():
     return "Generate 3D text using POV-Ray"
