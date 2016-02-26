@@ -234,8 +234,9 @@ void PovRayPlugin::render(const OFX::RenderArguments &args)
     temp_path += "/povray_XXXXXX";
     char *scenetemp = &temp_path[0u];
     int scene_fd = mkstemp(scenetemp);
+    int scene_chmod = fchmod(scene_fd, 0600);
     std::ostringstream sceneimg;
-    if (scene_fd<0) {
+    if (scene_fd<0||scene_chmod<0) {
         setPersistentMessage(OFX::Message::eMessageError, "", "Failed to create temp file, please check permissions");
         OFX::throwSuiteStatusException(kOfxStatFailed);
         return;
@@ -320,6 +321,11 @@ void PovRayPlugin::render(const OFX::RenderArguments &args)
         catch(Magick::Error &error) {
             setPersistentMessage(OFX::Message::eMessageError, "", error.what());
             std::remove(sceneimg.str().c_str());
+            int remove_fd = std::remove(sceneimg.str().c_str());
+            if (remove_fd!=0) {
+                //
+            }
+
             OFX::throwSuiteStatusException(kOfxStatFailed);
             return;
         }
@@ -327,6 +333,11 @@ void PovRayPlugin::render(const OFX::RenderArguments &args)
         image.debug(false);
         #endif
         std::remove(sceneimg.str().c_str());
+        int remove_fd = std::remove(sceneimg.str().c_str());
+        if (remove_fd!=0) {
+            //
+        }
+
         image.flip();
         image.colorSpace(Magick::RGBColorspace); // if png file
     }
