@@ -1,7 +1,8 @@
 OpenFX-Arena [![Build Status](https://travis-ci.org/olear/openfx-arena.svg)](https://travis-ci.org/olear/openfx-arena)
 ============
+![logo](https://raw.githubusercontent.com/olear/openfx-arena/trunk/Bundle/Extra.png)
 
-A set of [OpenFX](http://openfx.sf.net) plugins designed for [Natron](http://natron.fr).
+A set of extra [OpenFX](http://openfx.sf.net) plugins for [Natron](http://natron.fr) VFX.
 
 ```
 git clone https://github.com/olear/openfx-arena
@@ -66,3 +67,5 @@ Requirements:
    * pango
    * cairo
    * ps/ghostscript (wip)
+   
+ Note that custom patches to ImageMagick is needed to build the plugins, see 'deploy.sh' for more information.
