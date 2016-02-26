@@ -12,10 +12,10 @@
 
 CWD=$(pwd)
 
-MAGICK=6.9.2-10
+MAGICK=6.9.3-5
 OCIO=1.0.9
 OCIO_URL=https://github.com/imageworks/OpenColorIO/archive/v${OCIO}.tar.gz
-MAGICK_URL=https://github.com/olear/openfx-arena/releases/download/Natron-2.0.0-RC5/ImageMagick-6.9.2-10.tar.xz
+MAGICK_URL=https://github.com/olear/openfx-arena/releases/download/Natron-2.0.0-RC6/ImageMagick-6.9.3-5.tar.xz
 if [ -z "$QUANTUM" ]; then
   Q=32
 else
@@ -151,7 +151,6 @@ if [ ! -f ${PREFIX}/lib/libMagick++-6.Q${Q}HDRI.a ]; then
     cd $CWD/3rdparty/ImageMagick-$MAGICK || exit 1
   fi
   patch -p0 < $CWD/TextPango/magick-6.9.1-10-pango-align-hack.diff || exit 1
-  patch -p0 < $CWD/ReadPSD/xcf-layername.diff || exit 1
   if [ "$PKGOS" = "Windows" ]; then
     patch -p1 < $CWD/Bundle/mingw.patch || exit 1
     patch -p0 < $CWD/Bundle/mingw-utf8.diff || exit 1

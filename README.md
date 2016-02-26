@@ -10,6 +10,39 @@ git submodule update -i --recursive
 make
 ```
 
+Plugins:
+
+ * Arc
+ * Charcoal
+ * Edges
+ * Emboss (wip)
+ * Filmstrip (wip)
+ * Implode
+ * Modulate
+ * Oilpaint
+ * OpenRaster
+ * Polar
+ * Polaroid
+ * PovRay
+ * ReadCDR (wip)
+ * ReadPDF (wip)
+ * ReadKrita
+ * ReadMisc
+ * ReadPSD
+ * ReadSVG
+ * ReadVisio (wip)
+ * Reflection
+ * Roll
+ * Sketch
+ * Swirl
+ * Text
+ * TextPango
+ * TextFX (wip)
+ * Texture
+ * Tile
+ * Wave
+ * WaveletDenoise (wip)
+
 Requirements:
 
  * lcms2
@@ -18,7 +51,11 @@ Requirements:
  * fontconfig
  * libxml2
  * libzip
- * ImageMagick (6.9.2-10 Q32HDRI) with:
+ * librevenge (wip)
+ * libcdr (wip)
+ * libvisio (wip)
+ * pangocairo (wip)
+ * ImageMagick (6.9.3-6+ Q32HDRI) with:
    * freetype
    * fontconfig
    * libpng
@@ -28,3 +65,4 @@ Requirements:
    * lcms2
    * pango
    * cairo
+   * ps/ghostscript (wip)

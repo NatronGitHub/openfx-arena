@@ -39,6 +39,7 @@ OTHER_FILES += \
             ReadKrita/Makefile \
             ReadMisc/Makefile \
             ReadCDR/Makefile \
+            WaveletDenoise/Makefile \
             Arc/Info.plist \
             Charcoal/Info.plist \
             Edges/Info.plist \
@@ -64,7 +65,8 @@ OTHER_FILES += \
             ReadKrita/Info.plist \
             Bundle/Info.plist \
             ReadMisc/Info.plist \
-            ReadCDR/Info.plist
+            ReadCDR/Info.plist \
+            WaveletDenoise.plist
 INCLUDEPATH += . \
             SupportExt \
             OpenFX/Support/include \
@@ -181,4 +183,5 @@ SOURCES += \
             Wave/Wave.cpp \
             ReadKrita/ReadKrita.cpp \
             ReadMisc/ReadMisc.cpp \
-            ReadCDR/ReadCDR.cpp
+            ReadCDR/ReadCDR.cpp \
+            WaveletDenoise/WaveletDenoise.cpp
