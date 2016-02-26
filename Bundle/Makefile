@@ -33,8 +33,8 @@ endif
 PLUGINNAME = Arena
 
 RESOURCES = \
-../Bundle/Arena.png \
-../Bundle/Arena.svg \
+../Bundle/Extra.png \
+../Bundle/Extra.svg \
 ../Texture/net.fxarena.openfx.Texture.png \
 ../Texture/net.fxarena.openfx.Texture.svg \
 ../Tile/net.fxarena.openfx.Tile.png \
