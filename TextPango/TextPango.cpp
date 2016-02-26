@@ -676,8 +676,8 @@ void TextPangoPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc,
             s = FcPatternFormat(font,(const FcChar8 *)"%{family[0]}");
             std::string fontName(reinterpret_cast<char*>(s));
             fonts.push_back(fontName);
-            if (s)
-                free(s);
+            //if (s)
+                //free(s);
             if (font)
                 FcPatternDestroy(font);
         }
