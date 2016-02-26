@@ -74,7 +74,7 @@ WavePlugin::WavePlugin(OfxImageEffectHandle handle)
     waveLength_ = fetchDoubleParam(kParamWaveLength);
     matte_ = fetchBooleanParam(kParamMatte);
 
-    assert(waveAmp_ && waveLength_);
+    assert(waveAmp_ && waveLength_ && matte_);
 }
 
 WavePlugin::~WavePlugin()
