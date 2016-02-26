@@ -1,5 +1,8 @@
 PLUGINOBJECTS = \
-        Implode.o
+        Implode.o \
+        ofxsOGLTextRenderer.o \
+        ofxsOGLFontData.o \
+        ofxsRectangleInteract.o
 
 PLUGINNAME = Implode
 

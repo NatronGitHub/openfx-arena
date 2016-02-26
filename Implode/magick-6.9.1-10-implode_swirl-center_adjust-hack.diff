@@ -1,0 +1,293 @@
+--- magick/fx.h.orig	2015-11-14 07:47:12.041498056 +0100
++++ magick/fx.h	2015-11-14 12:31:42.997291272 +0100
+@@ -46,7 +46,7 @@
+   *ColorMatrixImage(const Image *,const KernelInfo *kernel,ExceptionInfo *),
+   *FxImage(const Image *,const char *,ExceptionInfo *),
+   *FxImageChannel(const Image *,const ChannelType,const char *,ExceptionInfo *),
+-  *ImplodeImage(const Image *,const double,ExceptionInfo *),
++  *ImplodeImage(const Image *,const double,const double,const double,ExceptionInfo *),
+   *MorphImages(const Image *,const size_t,ExceptionInfo *),
+   *PolaroidImage(const Image *,const DrawInfo *,const double,ExceptionInfo *),
+   *SepiaToneImage(const Image *,const double,ExceptionInfo *),
+@@ -58,7 +58,7 @@
+   *StereoImage(const Image *,const Image *,ExceptionInfo *),
+   *StereoAnaglyphImage(const Image *,const Image *,const ssize_t,const ssize_t,
+      ExceptionInfo *),
+-  *SwirlImage(const Image *,double,ExceptionInfo *),
++  *SwirlImage(const Image *,double,double,double,ExceptionInfo *),
+   *TintImage(const Image *,const char *,const PixelPacket,ExceptionInfo *),
+   *VignetteImage(const Image *,const double,const double,const ssize_t,
+     const ssize_t,ExceptionInfo *),
+--- magick/fx.c.orig	2015-11-14 07:47:18.743528701 +0100
++++ magick/fx.c	2015-11-14 12:31:05.012108540 +0100
+@@ -3215,7 +3215,7 @@
+ %
+ %  The format of the ImplodeImage method is:
+ %
+-%      Image *ImplodeImage(const Image *image,const double amount,
++%      Image *ImplodeImage(const Image *image,const double amount,double implodeX, double implodeY
+ %        ExceptionInfo *exception)
+ %
+ %  A description of each parameter follows:
+@@ -3231,7 +3231,7 @@
+ %    o exception: return any errors or warnings in this structure.
+ %
+ */
+-MagickExport Image *ImplodeImage(const Image *image,const double amount,
++MagickExport Image *ImplodeImage(const Image *image,const double amount,const double implodeX, double implodeY,
+   ExceptionInfo *exception)
+ {
+ #define ImplodeImageTag  "Implode/Image"
+@@ -3287,8 +3287,8 @@
+   */
+   scale.x=1.0;
+   scale.y=1.0;
+-  center.x=0.5*image->columns;
+-  center.y=0.5*image->rows;
++  center.x=implodeX;
++  center.y=implodeY;
+   radius=center.x;
+   if (image->columns > image->rows)
+     scale.y=(double) image->columns/(double) image->rows;
+@@ -5037,7 +5037,7 @@
+ %
+ %  The format of the SwirlImage method is:
+ %
+-%      Image *SwirlImage(const Image *image,double degrees,
++%      Image *SwirlImage(const Image *image,double degrees, double swirlX, double swirlY,
+ %        ExceptionInfo *exception)
+ %
+ %  A description of each parameter follows:
+@@ -5049,7 +5049,7 @@
+ %    o exception: return any errors or warnings in this structure.
+ %
+ */
+-MagickExport Image *SwirlImage(const Image *image,double degrees,
++MagickExport Image *SwirlImage(const Image *image,double degrees,double swirlX,double swirlY,
+   ExceptionInfo *exception)
+ {
+ #define SwirlImageTag  "Swirl/Image"
+@@ -5103,8 +5103,8 @@
+   /*
+     Compute scaling factor.
+   */
+-  center.x=(double) image->columns/2.0;
+-  center.y=(double) image->rows/2.0;
++  center.x=swirlX;
++  center.y=swirlY;
+   radius=MagickMax(center.x,center.y);
+   scale.x=1.0;
+   scale.y=1.0;
+--- wand/magick-image.c.orig	2015-11-14 08:16:41.215586776 +0100
++++ wand/magick-image.c	2015-11-14 12:34:34.492116497 +0100
+@@ -6644,7 +6644,7 @@
+     (void) LogMagickEvent(WandEvent,GetMagickModule(),"%s",wand->name);
+   if (wand->images == (Image *) NULL)
+     ThrowWandException(WandError,"ContainsNoImages",wand->name);
+-  implode_image=ImplodeImage(wand->images,amount,wand->exception);
++  implode_image=ImplodeImage(wand->images,amount,0,0,wand->exception);
+   if (implode_image == (Image *) NULL)
+     return(MagickFalse);
+   ReplaceImageInList(&wand->images,implode_image);
+@@ -12268,7 +12268,7 @@
+     (void) LogMagickEvent(WandEvent,GetMagickModule(),"%s",wand->name);
+   if (wand->images == (Image *) NULL)
+     ThrowWandException(WandError,"ContainsNoImages",wand->name);
+-  swirl_image=SwirlImage(wand->images,degrees,wand->exception);
++  swirl_image=SwirlImage(wand->images,degrees,0,0,wand->exception);
+   if (swirl_image == (Image *) NULL)
+     return(MagickFalse);
+   ReplaceImageInList(&wand->images,swirl_image);
+--- wand/mogrify.c.orig	2015-11-14 08:20:00.620498366 +0100
++++ wand/mogrify.c	2015-11-14 12:34:51.744199534 +0100
+@@ -1868,7 +1868,7 @@
+             */
+             (void) SyncImageSettings(mogrify_info,*image);
+             (void) ParseGeometry(argv[i+1],&geometry_info);
+-            mogrify_image=ImplodeImage(*image,geometry_info.rho,exception);
++            mogrify_image=ImplodeImage(*image,geometry_info.rho,0,0,exception);
+             break;
+           }
+         if (LocaleCompare("interline-spacing",option+1) == 0)
+@@ -3032,7 +3032,7 @@
+             */
+             (void) SyncImageSettings(mogrify_info,*image);
+             (void) ParseGeometry(argv[i+1],&geometry_info);
+-            mogrify_image=SwirlImage(*image,geometry_info.rho,exception);
++            mogrify_image=SwirlImage(*image,geometry_info.rho,0,0,exception);
+             break;
+           }
+         break;
+--- Magick++/lib/Magick++/Image.h.orig	2015-11-14 07:52:50.032043493 +0100
++++ Magick++/lib/Magick++/Image.h	2015-11-14 12:36:44.895744240 +0100
+@@ -1032,7 +1032,7 @@
+       const size_t threshold_=40);
+ 
+     // Implode image (special effect)
+-    void implode(const double factor_);
++    void implode(const double factor_,const double implodeX_,const double implodeY_);
+ 
+     // Implements the inverse discrete Fourier transform (DFT) of the image
+     // either as a magnitude / phase or real / imaginary image pair.
+@@ -1409,7 +1409,7 @@
+       const double similarityThreshold=(-1.0));
+ 
+     // Swirl image (image pixels are rotated by degrees)
+-    void swirl(const double degrees_);
++    void swirl(const double degrees_,const double swirlX_,const double swirlY_);
+ 
+     // Transfers the image cache pixels to the image.
+     void syncPixels(void);
+--- Magick++/lib/Image.cpp.orig	2015-11-14 07:53:37.702261456 +0100
++++ Magick++/lib/Image.cpp	2015-11-14 12:37:52.087067769 +0100
+@@ -3249,13 +3249,13 @@
+   ThrowImageException;
+ }
+ 
+-void Magick::Image::implode(const double factor_)
++void Magick::Image::implode(const double factor_,const double implodeX_,const double implodeY_)
+ {
+   MagickCore::Image
+     *newImage;
+ 
+   GetPPException;
+-  newImage=ImplodeImage(constImage(),factor_,exceptionInfo);
++  newImage=ImplodeImage(constImage(),factor_,implodeX_,implodeY_,exceptionInfo);
+   replaceImage(newImage);
+   ThrowImageException;
+ }
+@@ -4534,13 +4534,13 @@
+     return(Magick::Image(newImage));
+ }
+ 
+-void Magick::Image::swirl(const double degrees_)
++void Magick::Image::swirl(const double degrees_,const double swirlX_,const double swirlY_)
+ {
+   MagickCore::Image
+     *newImage;
+ 
+   GetPPException;
+-  newImage=SwirlImage(constImage(),degrees_,exceptionInfo);
++  newImage=SwirlImage(constImage(),degrees_,swirlX_,swirlY_,exceptionInfo);
+   replaceImage(newImage);
+   ThrowImageException;
+ }
+--- Magick++/lib/STL.cpp.orig	2015-11-14 08:28:37.816862685 +0100
++++ Magick++/lib/STL.cpp	2015-11-14 12:38:57.200381344 +0100
+@@ -586,13 +586,13 @@
+ }
+ 
+ // Implode image (special effect)
+-Magick::implodeImage::implodeImage( const double factor_  )
++Magick::implodeImage::implodeImage( const double factor_,const double implodeX_,const double implodeY_  )
+   : _factor( factor_ )
+ {
+ }
+ void Magick::implodeImage::operator()( Magick::Image &image_ ) const
+ {
+-  image_.implode( _factor );
++  image_.implode( _factor,0,0 );
+ }
+ 
+ // Implements the inverse discrete Fourier transform (IFT) of the image
+@@ -1089,13 +1089,13 @@
+ }
+ 
+ // Swirl image (image pixels are rotated by degrees)
+-Magick::swirlImage::swirlImage( const double degrees_ )
++Magick::swirlImage::swirlImage( const double degrees_,const double swirlX_,const double swirlY_ )
+   : _degrees( degrees_ )
+ {
+ }
+ void Magick::swirlImage::operator()( Magick::Image &image_ ) const
+ {
+-  image_.swirl( _degrees );
++  image_.swirl( _degrees,0,0 );
+ }
+ 
+ // Channel a texture on image background
+--- magick/effect.c.orig	2015-11-14 08:01:14.403349568 +0100
++++ magick/effect.c	2015-11-14 12:48:14.529029891 +0100
+@@ -2488,6 +2488,10 @@
+ 
+   double
+     degrees,
++    swirlX,
++    swirlY,
++    implodeX,
++    implodeY,
+     gamma,
+     percentage,
+     radius,
+@@ -2831,7 +2835,7 @@
+       }
+       case SwirlPreview:
+       {
+-        preview_image=SwirlImage(thumbnail,degrees,exception);
++        preview_image=SwirlImage(thumbnail,degrees,swirlX,swirlY,exception);
+         (void) FormatLocaleString(label,MaxTextExtent,"swirl %g",degrees);
+         degrees+=45.0;
+         break;
+@@ -2839,7 +2843,7 @@
+       case ImplodePreview:
+       {
+         degrees+=0.1f;
+-        preview_image=ImplodeImage(thumbnail,degrees,exception);
++        preview_image=ImplodeImage(thumbnail,degrees,implodeX,implodeY,exception);
+         (void) FormatLocaleString(label,MaxTextExtent,"implode %g",degrees);
+         break;
+       }
+--- coders/msl.c.orig	2015-11-14 08:10:37.979926180 +0100
++++ coders/msl.c	2015-11-14 12:55:30.978098016 +0100
+@@ -3447,7 +3447,7 @@
+                 }
+               }
+             }
+-          implode_image=ImplodeImage(msl_info->image[n],geometry_info.rho,
++          implode_image=ImplodeImage(msl_info->image[n],geometry_info.rho,0,0,
+             &msl_info->image[n]->exception);
+           if (implode_image == (Image *) NULL)
+             break;
+@@ -6991,7 +6991,7 @@
+                 }
+               }
+             }
+-          swirl_image=SwirlImage(msl_info->image[n],geometry_info.rho,
++          swirl_image=SwirlImage(msl_info->image[n],geometry_info.rho,0,0,
+             &msl_info->image[n]->exception);
+           if (swirl_image == (Image *) NULL)
+             break;
+--- Magick++/lib/Magick++/STL.h.orig	2015-11-14 07:50:45.270473038 +0100
++++ Magick++/lib/Magick++/STL.h	2015-11-14 13:00:17.582461797 +0100
+@@ -606,12 +606,14 @@
+   class MagickPPExport implodeImage : public std::unary_function<Image&,void>
+   {
+   public:
+-    implodeImage( const double factor_ = 50 );
++    implodeImage( const double factor_ = 50,const double implodeX_ = 0,const double implodeY_ = 0 );
+ 
+     void operator()( Image &image_ ) const;
+ 
+   private:
+     double _factor;
++    double _implodeX;
++    double _implodeY;
+   };
+ 
+   // implements the inverse discrete Fourier transform (IFT) of the image
+@@ -1169,12 +1171,14 @@
+   class MagickPPExport swirlImage : public std::unary_function<Image&,void>
+   {
+   public:
+-    swirlImage( const double degrees_ );
++    swirlImage( const double degrees_,const double swirlX_,const double swirlY_ );
+ 
+     void operator()( Image &image_ ) const;
+ 
+   private:
+     double _degrees;
++    double _swirlX;
++    double _swirlY;
+   };
+ 
+   // Channel a texture on image background

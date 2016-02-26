@@ -8,6 +8,8 @@
 */
 
 #include "ofxsMacros.h"
+#include "ofxsPositionInteract.h"
+#include "ofxNatron.h"
 #include "ofxsMultiThread.h"
 #include "ofxsImageEffect.h"
 #include <Magick++.h>
@@ -18,8 +20,8 @@
 #define kPluginName "ImplodeOFX"
 #define kPluginGrouping "Extra/Distort"
 #define kPluginIdentifier "net.fxarena.openfx.Implode"
-#define kPluginVersionMajor 2
-#define kPluginVersionMinor 3
+#define kPluginVersionMajor 3
+#define kPluginVersionMinor 0
 
 #define kParamImplode "factor"
 #define kParamImplodeLabel "Factor"
@@ -36,6 +38,14 @@
 #define kParamSwirlHint "Swirl image by degree"
 #define kParamSwirlDefault 0
 
+#define kParamPosition "center"
+#define kParamPositionLabel "Center"
+#define kParamPositionHint "The center of effect"
+
+#define kParamInteractive "interactive"
+#define kParamInteractiveLabel "Interactive"
+#define kParamInteractiveHint "When checked the image will be rendered whenever moving the overlay interact instead of when releasing the mouse button."
+
 #define kSupportsTiles 0
 #define kSupportsMultiResolution 1
 #define kSupportsRenderScale 1
@@ -43,6 +53,7 @@
 #define kHostFrameThreading false
 
 using namespace OFX;
+static bool gHostIsNatron = false;
 
 class ImplodePlugin : public OFX::ImageEffect
 {
@@ -57,6 +68,7 @@ private:
     OFX::DoubleParam *implode_;
     OFX::BooleanParam *matte_;
     OFX::DoubleParam *swirl_;
+    OFX::Double2DParam *position_;
 };
 
 ImplodePlugin::ImplodePlugin(OfxImageEffectHandle handle)
@@ -73,8 +85,9 @@ ImplodePlugin::ImplodePlugin(OfxImageEffectHandle handle)
     implode_ = fetchDoubleParam(kParamImplode);
     matte_ = fetchBooleanParam(kParamMatte);
     swirl_ = fetchDoubleParam(kParamSwirl);
+    position_ = fetchDouble2DParam(kParamPosition);
 
-    assert(implode_ && matte_ && swirl_);
+    assert(implode_ && matte_ && swirl_ && position_);
 }
 
 ImplodePlugin::~ImplodePlugin()
@@ -146,6 +159,7 @@ void ImplodePlugin::render(const OFX::RenderArguments &args)
 
     // are we in the image bounds?
     OfxRectI dstBounds = dstImg->getBounds();
+    OfxRectI dstRod = dstImg->getRegionOfDefinition();
     if(args.renderWindow.x1 < dstBounds.x1 || args.renderWindow.x1 >= dstBounds.x2 || args.renderWindow.y1 < dstBounds.y1 || args.renderWindow.y1 >= dstBounds.y2 ||
        args.renderWindow.x2 <= dstBounds.x1 || args.renderWindow.x2 > dstBounds.x2 || args.renderWindow.y2 <= dstBounds.y1 || args.renderWindow.y2 > dstBounds.y2) {
         OFX::throwSuiteStatusException(kOfxStatErrValue);
@@ -153,11 +167,12 @@ void ImplodePlugin::render(const OFX::RenderArguments &args)
     }
 
     // get params
-    double implode,swirl;
+    double implode,swirl, x, y;
     bool matte = false;
     implode_->getValueAtTime(args.time, implode);
     matte_->getValueAtTime(args.time, matte);
     swirl_->getValueAtTime(args.time, swirl);
+    position_->getValueAtTime(args.time, x, y);
 
     // setup
     int width = srcRod.x2-srcRod.x1;
@@ -186,11 +201,19 @@ void ImplodePlugin::render(const OFX::RenderArguments &args)
     }
 
     // implode
-    image.implode(implode);
+    image.flip();
+    double yp = y*args.renderScale.y;
+    double xp = x*args.renderScale.x;
+    int tmp_y = dstRod.y2 - dstBounds.y2;
+    int tmp_height = dstBounds.y2 - dstBounds.y1;
+    yp = tmp_y + ((tmp_y+tmp_height-1) - yp);
+    image.implode(implode,xp,yp);
 
     // swirl
     if (swirl!=0)
-        image.swirl(swirl);
+        image.swirl(swirl,xp,yp);
+
+    image.flip();
 
     // return image
     if (dstClip_ && dstClip_->isConnected()) {
@@ -217,6 +240,13 @@ bool ImplodePlugin::getRegionOfDefinition(const OFX::RegionOfDefinitionArguments
 
 mDeclarePluginFactory(ImplodePluginFactory, {}, {});
 
+namespace {
+struct PositionInteractParam {
+    static const char *name() { return kParamPosition; }
+    static const char *interactiveName() { return kParamInteractive; }
+};
+}
+
 /** @brief The basic describe function, passed a plugin descriptor */
 void ImplodePluginFactory::describe(OFX::ImageEffectDescriptor &desc)
 {
@@ -240,11 +270,14 @@ void ImplodePluginFactory::describe(OFX::ImageEffectDescriptor &desc)
     desc.setHostFrameThreading(kHostFrameThreading);
     desc.setHostMaskingEnabled(true);
     desc.setHostMixingEnabled(true);
+    desc.setOverlayInteractDescriptor(new PositionOverlayDescriptor<PositionInteractParam>);
 }
 
 /** @brief The describe in context function, passed a plugin descriptor and a context */
 void ImplodePluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, ContextEnum /*context*/)
 {
+    gHostIsNatron = (OFX::getImageEffectHostDescription()->isNatron);
+
     // create the mandated source clip
     ClipDescriptor *srcClip = desc.defineClip(kOfxImageEffectSimpleSourceClipName);
     srcClip->addSupportedComponent(ePixelComponentRGBA);
@@ -259,6 +292,32 @@ void ImplodePluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, C
 
     // make some pages
     PageParamDescriptor *page = desc.definePageParam(kPluginName);
+    bool hostHasNativeOverlayForPosition;
+    {
+        Double2DParamDescriptor* param = desc.defineDouble2DParam(kParamPosition);
+        param->setLabel(kParamPositionLabel);
+        param->setHint(kParamPositionHint);
+        param->setDoubleType(eDoubleTypeXYAbsolute);
+        param->setDefaultCoordinateSystem(eCoordinatesNormalised);
+        param->setDefault(0.5, 0.5);
+        param->setAnimates(true);
+        hostHasNativeOverlayForPosition = param->getHostHasNativeOverlayHandle();
+        if (hostHasNativeOverlayForPosition)
+            param->setUseHostNativeOverlayHandle(true);
+
+        page->addChild(*param);
+    }
+    {
+        BooleanParamDescriptor* param = desc.defineBooleanParam(kParamInteractive);
+        param->setLabel(kParamInteractiveLabel);
+        param->setHint(kParamInteractiveHint);
+        param->setAnimates(false);
+        page->addChild(*param);
+
+        //Do not show this parameter if the host handles the interact
+        if (hostHasNativeOverlayForPosition)
+            param->setIsSecret(true);
+    }
     {
         DoubleParamDescriptor *param = desc.defineDoubleParam(kParamImplode);
         param->setLabel(kParamImplodeLabel);

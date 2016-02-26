@@ -8,6 +8,8 @@
 */
 
 #include "ofxsMacros.h"
+#include "ofxsPositionInteract.h"
+#include "ofxNatron.h"
 #include "ofxsMultiThread.h"
 #include "ofxsImageEffect.h"
 #include <Magick++.h>
@@ -18,8 +20,8 @@
 #define kPluginName "SwirlOFX"
 #define kPluginGrouping "Extra/Distort"
 #define kPluginIdentifier "net.fxarena.openfx.Swirl"
-#define kPluginVersionMajor 2
-#define kPluginVersionMinor 2
+#define kPluginVersionMajor 3
+#define kPluginVersionMinor 0
 
 #define kParamSwirl "degree"
 #define kParamSwirlLabel "Degree"
@@ -31,6 +33,14 @@
 #define kParamMatteHint "Merge Alpha before applying effect"
 #define kParamMatteDefault false
 
+#define kParamPosition "center"
+#define kParamPositionLabel "Center"
+#define kParamPositionHint "The center of effect"
+
+#define kParamInteractive "interactive"
+#define kParamInteractiveLabel "Interactive"
+#define kParamInteractiveHint "When checked the image will be rendered whenever moving the overlay interact instead of when releasing the mouse button."
+
 #define kSupportsTiles 0
 #define kSupportsMultiResolution 1
 #define kSupportsRenderScale 1
@@ -38,6 +48,7 @@
 #define kHostFrameThreading false
 
 using namespace OFX;
+static bool gHostIsNatron = false;
 
 class SwirlPlugin : public OFX::ImageEffect
 {
@@ -51,6 +62,7 @@ private:
     OFX::Clip *srcClip_;
     OFX::DoubleParam *swirl_;
     OFX::BooleanParam *matte_;
+    OFX::Double2DParam *position_;
 };
 
 SwirlPlugin::SwirlPlugin(OfxImageEffectHandle handle)
@@ -66,8 +78,9 @@ SwirlPlugin::SwirlPlugin(OfxImageEffectHandle handle)
 
     swirl_ = fetchDoubleParam(kParamSwirl);
     matte_ = fetchBooleanParam(kParamMatte);
+    position_ = fetchDouble2DParam(kParamPosition);
 
-    assert(swirl_ && matte_);
+    assert(swirl_ && matte_ && position_);
 }
 
 SwirlPlugin::~SwirlPlugin()
@@ -139,6 +152,7 @@ void SwirlPlugin::render(const OFX::RenderArguments &args)
 
     // are we in the image bounds?
     OfxRectI dstBounds = dstImg->getBounds();
+    OfxRectI dstRod = dstImg->getRegionOfDefinition();
     if(args.renderWindow.x1 < dstBounds.x1 || args.renderWindow.x1 >= dstBounds.x2 || args.renderWindow.y1 < dstBounds.y1 || args.renderWindow.y1 >= dstBounds.y2 ||
        args.renderWindow.x2 <= dstBounds.x1 || args.renderWindow.x2 > dstBounds.x2 || args.renderWindow.y2 <= dstBounds.y1 || args.renderWindow.y2 > dstBounds.y2) {
         OFX::throwSuiteStatusException(kOfxStatErrValue);
@@ -146,10 +160,11 @@ void SwirlPlugin::render(const OFX::RenderArguments &args)
     }
 
     // get params
-    double swirl;
+    double swirl, x, y;
     bool matte = false;
     swirl_->getValueAtTime(args.time, swirl);
     matte_->getValueAtTime(args.time, matte);
+    position_->getValueAtTime(args.time, x, y);
 
     // setup
     int width = srcRod.x2-srcRod.x1;
@@ -177,7 +192,14 @@ void SwirlPlugin::render(const OFX::RenderArguments &args)
     }
 
     // swirl
-    image.swirl(swirl);
+    image.flip();
+    double yp = y*args.renderScale.y;
+    double xp = x*args.renderScale.x;
+    int tmp_y = dstRod.y2 - dstBounds.y2;
+    int tmp_height = dstBounds.y2 - dstBounds.y1;
+    yp = tmp_y + ((tmp_y+tmp_height-1) - yp);
+    image.swirl(swirl,xp,yp);
+    image.flip();
 
     // return image
     if (dstClip_ && dstClip_->isConnected()) {
@@ -204,6 +226,13 @@ bool SwirlPlugin::getRegionOfDefinition(const OFX::RegionOfDefinitionArguments &
 
 mDeclarePluginFactory(SwirlPluginFactory, {}, {});
 
+namespace {
+struct PositionInteractParam {
+    static const char *name() { return kParamPosition; }
+    static const char *interactiveName() { return kParamInteractive; }
+};
+}
+
 /** @brief The basic describe function, passed a plugin descriptor */
 void SwirlPluginFactory::describe(OFX::ImageEffectDescriptor &desc)
 {
@@ -227,11 +256,14 @@ void SwirlPluginFactory::describe(OFX::ImageEffectDescriptor &desc)
     desc.setHostFrameThreading(kHostFrameThreading);
     desc.setHostMaskingEnabled(true);
     desc.setHostMixingEnabled(true);
+    desc.setOverlayInteractDescriptor(new PositionOverlayDescriptor<PositionInteractParam>);
 }
 
 /** @brief The describe in context function, passed a plugin descriptor and a context */
 void SwirlPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, ContextEnum /*context*/)
 {
+    gHostIsNatron = (OFX::getImageEffectHostDescription()->isNatron);
+
     // create the mandated source clip
     ClipDescriptor *srcClip = desc.defineClip(kOfxImageEffectSimpleSourceClipName);
     srcClip->addSupportedComponent(ePixelComponentRGBA);
@@ -246,6 +278,32 @@ void SwirlPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, Con
 
     // make some pages
     PageParamDescriptor *page = desc.definePageParam(kPluginName);
+    bool hostHasNativeOverlayForPosition;
+    {
+        Double2DParamDescriptor* param = desc.defineDouble2DParam(kParamPosition);
+        param->setLabel(kParamPositionLabel);
+        param->setHint(kParamPositionHint);
+        param->setDoubleType(eDoubleTypeXYAbsolute);
+        param->setDefaultCoordinateSystem(eCoordinatesNormalised);
+        param->setDefault(0.5, 0.5);
+        param->setAnimates(true);
+        hostHasNativeOverlayForPosition = param->getHostHasNativeOverlayHandle();
+        if (hostHasNativeOverlayForPosition)
+            param->setUseHostNativeOverlayHandle(true);
+
+        page->addChild(*param);
+    }
+    {
+        BooleanParamDescriptor* param = desc.defineBooleanParam(kParamInteractive);
+        param->setLabel(kParamInteractiveLabel);
+        param->setHint(kParamInteractiveHint);
+        param->setAnimates(false);
+        page->addChild(*param);
+
+        //Do not show this parameter if the host handles the interact
+        if (hostHasNativeOverlayForPosition)
+            param->setIsSecret(true);
+    }
     {
         DoubleParamDescriptor *param = desc.defineDoubleParam(kParamSwirl);
         param->setLabel(kParamSwirlLabel);

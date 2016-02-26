@@ -151,6 +151,7 @@ if [ ! -f ${PREFIX}/lib/libMagick++-6.Q${Q}HDRI.a ]; then
     cd $CWD/3rdparty/ImageMagick-$MAGICK || exit 1
   fi
   patch -p0 < $CWD/TextPango/magick-6.9.1-10-pango-align-hack.diff || exit 1
+  patch -p0 < $CWD/Implode/magick-6.9.1-10-implode_swirl-center_adjust-hack.diff || exit 1
   if [ "$PKGOS" = "Windows" ]; then
     patch -p1 < $CWD/Bundle/mingw.patch || exit 1
     patch -p0 < $CWD/Bundle/mingw-utf8.diff || exit 1

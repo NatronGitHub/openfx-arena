@@ -1,5 +1,8 @@
 PLUGINOBJECTS = \
-        Swirl.o
+        Swirl.o \
+        ofxsOGLTextRenderer.o \
+        ofxsOGLFontData.o \
+        ofxsRectangleInteract.o
 
 PLUGINNAME = Swirl
 
