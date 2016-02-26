@@ -126,7 +126,7 @@ OpenRasterPlugin::extractXML(std::string filename)
     zip_stat_init(&xmlSt);
     err=zip_stat(fileOpen,"stack.xml",0,&xmlSt);
     if (err!=-1) {
-        char *xml = new char[xmlSt.size];
+        char *xml = new char[xmlSt.size+1];
         zip_file *xmlFile = zip_fopen(fileOpen,"stack.xml",0);
         err=zip_fread(xmlFile,xml,xmlSt.size);
         if (err!=-1) {
