@@ -4,14 +4,8 @@ OpenFX-Arena [![Build Status](https://travis-ci.org/olear/openfx-arena.svg)](htt
 
 A set of extra [OpenFX](http://openfx.sf.net) plugins for [Natron](http://natron.fr) VFX.
 
-```
-git clone https://github.com/olear/openfx-arena
-cd openfx-arena
-git submodule update -i --recursive
-make
-```
-
-Plugins:
+Plugins
+=======
 
  * Arc
  * Charcoal
@@ -44,8 +38,10 @@ Plugins:
  * Wave
  * WaveletDenoise (wip)
 
-Requirements:
+Requirements
+============
 
+ * MSYS2 (for building on Windows)
  * lcms2
  * OpenColorIO
  * POV-Ray (runtime)
@@ -69,3 +65,39 @@ Requirements:
    * ps/ghostscript (wip)
    
  Note that custom patches to ImageMagick is needed to build the plugins, see 'deploy.sh' for more information.
+
+Build
+=====
+
+```
+git clone https://github.com/olear/openfx-arena
+cd openfx-arena
+git submodule update -i --recursive
+make
+```
+
+Also see  'deploy.sh' and 'openfx-arena.spec'.
+
+Compatibility
+=============
+
+ * All plugin work in Natron
+ * Most of the plugins work in Nuke
+ * Some of the plugins work in Shake
+
+Contribute
+==========
+
+You are welcome to contribute, please fork and do a pull request. Note that major contributions may require a CLA.
+
+Credits
+=======
+
+ * Ole-André Rodlie (FxArena/INRIA)
+ * Alexandre Gauthier-Foichat (INRIA)
+ * John-Åge Width Olsen (FxArena)
+
+License
+=======
+
+All plugins are licensed under the GPL version 2.
