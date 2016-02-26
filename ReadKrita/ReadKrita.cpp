@@ -85,12 +85,12 @@ ReadKritaPlugin::extractXML(std::string kritaFile)
     zip_stat_init(&xmlSt);
     err=zip_stat(kritaOpen,xmlName,0,&xmlSt);
     if (err!=-1) {
-        char *xml = new char[xmlSt.size];
+        char *xml = new char[xmlSt.size+1];
         zip_file *xmlFile = zip_fopen(kritaOpen,xmlName,0);
         err=zip_fread(xmlFile,xml,xmlSt.size);
         if (err!=-1) {
             zip_fclose(xmlFile);
-            xml[xmlSt.size-1] = '\0';
+            xml[xmlSt.size] = '\0';
             output=xml;
         }
         delete[] xml;
