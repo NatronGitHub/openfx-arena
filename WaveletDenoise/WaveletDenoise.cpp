@@ -32,7 +32,12 @@
 #define kParamThreshold "threshold"
 #define kParamThresholdLabel "Threshold"
 #define kParamThresholdHint "Threshold"
-#define kParamThresholdDefault 0
+#define kParamThresholdDefault 1.2
+
+#define kParamSoftness "softness"
+#define kParamSoftnessLabel "Softness"
+#define kParamSoftnessHint "Softness"
+#define kParamSoftnessDefault 0.0
 
 #define kParamMatte "matte"
 #define kParamMatteLabel "Matte"
@@ -58,6 +63,7 @@ private:
     OFX::Clip *dstClip_;
     OFX::Clip *srcClip_;
     OFX::DoubleParam *threshold_;
+    OFX::DoubleParam *softness_;
     OFX::BooleanParam *matte_;
 };
 
@@ -73,9 +79,10 @@ WaveletDenoisePlugin::WaveletDenoisePlugin(OfxImageEffectHandle handle)
     assert(srcClip_ && srcClip_->getPixelComponents() == OFX::ePixelComponentRGBA);
 
     threshold_ = fetchDoubleParam(kParamThreshold);
+    softness_ = fetchDoubleParam(kParamSoftness);
     matte_ = fetchBooleanParam(kParamMatte);
 
-    assert(threshold_ && matte_);
+    assert(threshold_ && softness_ && matte_);
 }
 
 WaveletDenoisePlugin::~WaveletDenoisePlugin()
@@ -154,9 +161,10 @@ void WaveletDenoisePlugin::render(const OFX::RenderArguments &args)
     }
 
     // get params
-    double threshold;
+    double threshold,softness;
     bool matte = false;
     threshold_->getValueAtTime(args.time, threshold);
+    softness_->getValueAtTime(args.time, softness);
     matte_->getValueAtTime(args.time, matte);
 
     // setup
@@ -184,8 +192,8 @@ void WaveletDenoisePlugin::render(const OFX::RenderArguments &args)
         image.matte(true);
     }
 
-    // swirl
-    image.waveletDenoise(threshold);
+    // denoise
+    image.waveletDenoise(threshold/*,softness*/);
 
     // return image
     if (dstClip_ && dstClip_->isConnected()) {
@@ -220,7 +228,7 @@ void WaveletDenoisePluginFactory::describe(OFX::ImageEffectDescriptor &desc)
     desc.setPluginGrouping(kPluginGrouping);
     size_t magickNumber;
     std::string magickString = MagickCore::GetMagickVersion(&magickNumber);
-    desc.setPluginDescription("Wavlet Denoise node.\n\nPowered by "+magickString+"\n\nImageMagick (R) is Copyright 1999-2016 ImageMagick Studio LLC, a non-profit organization dedicated to making software imaging solutions freely available.\n\nImageMagick is distributed under the Apache 2.0 license.");
+    desc.setPluginDescription("Wavelet Denoise node.\n\nPowered by "+magickString+"\n\nImageMagick (R) is Copyright 1999-2016 ImageMagick Studio LLC, a non-profit organization dedicated to making software imaging solutions freely available.\n\nImageMagick is distributed under the Apache 2.0 license.");
 
     // add the supported contexts
     desc.addSupportedContext(eContextGeneral);
@@ -261,6 +269,15 @@ void WaveletDenoisePluginFactory::describeInContext(OFX::ImageEffectDescriptor &
         param->setRange(0, 100);
         param->setDisplayRange(0, 100);
         param->setDefault(kParamThresholdDefault);
+        page->addChild(*param);
+    }
+    {
+        DoubleParamDescriptor *param = desc.defineDoubleParam(kParamSoftness);
+        param->setLabel(kParamSoftnessLabel);
+        param->setHint(kParamSoftnessHint);
+        param->setRange(0, 100);
+        param->setDisplayRange(0, 100);
+        param->setDefault(kParamSoftnessDefault);
         page->addChild(*param);
     }
     {
