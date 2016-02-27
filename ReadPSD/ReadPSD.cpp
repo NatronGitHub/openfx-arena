@@ -707,7 +707,7 @@ void ReadPSDPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, C
 {
     gHostIsNatron = (OFX::getImageEffectHostDescription()->isNatron);
 
-    PageParamDescriptor *page = GenericReaderDescribeInContextBegin(desc, context, isVideoStreamPlugin(), kSupportsRGBA, kSupportsRGB, kSupportsAlpha, kSupportsTiles);
+    PageParamDescriptor *page = GenericReaderDescribeInContextBegin(desc, context, isVideoStreamPlugin(), kSupportsRGBA, kSupportsRGB, kSupportsAlpha, kSupportsTiles, false);
     {
         ChoiceParamDescriptor* param = desc.defineChoiceParam(kParamImageLayer);
         param->setLabel(kParamImageLayerLabel);
@@ -957,7 +957,7 @@ void ReadPSDPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, C
         #else
         param->setIsSecret(true);
         #endif
-
+        param->setLayoutHint(OFX::eLayoutHintDivider);
         page->addChild(*param);
     }
     GenericReaderDescribeInContextEnd(desc, context, page, "reference", "reference");
