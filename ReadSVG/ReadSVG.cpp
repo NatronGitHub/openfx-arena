@@ -224,7 +224,7 @@ void ReadSVGPluginFactory::describe(OFX::ImageEffectDescriptor &desc)
 /** @brief The describe in context function, passed a plugin descriptor and a context */
 void ReadSVGPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, ContextEnum context)
 {
-    PageParamDescriptor *page = GenericReaderDescribeInContextBegin(desc, context, isVideoStreamPlugin(), kSupportsRGBA, kSupportsRGB, kSupportsAlpha, kSupportsTiles);
+    PageParamDescriptor *page = GenericReaderDescribeInContextBegin(desc, context, isVideoStreamPlugin(), kSupportsRGBA, kSupportsRGB, kSupportsAlpha, kSupportsTiles, false);
     {
         IntParamDescriptor* param = desc.defineIntParam(kParamDpi);
         param->setLabel(kParamDpiLabel);
@@ -233,6 +233,7 @@ void ReadSVGPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, C
         param->setDisplayRange(0, 500);
         param->setDefault(kParamDpiDefault);
         param->setAnimates(false);
+        param->setLayoutHint(OFX::eLayoutHintDivider);
         page->addChild(*param);
     }
     GenericReaderDescribeInContextEnd(desc, context, page, "reference", "reference");

@@ -9,25 +9,18 @@
 /* Begin PBXBuildFile section */
 		1E2F4DAB189295F600F4CE25 /* CoreFoundation.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = D74E62491875A7A400D8FA13 /* CoreFoundation.framework */; };
 		1E9B5EFC198A3D040095C8AA /* OpenGL.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 1E9B5EFA198A3D040095C8AA /* OpenGL.framework */; };
-		AC74D63C1C3134120026BE93 /* Makefile in Sources */ = {isa = PBXBuildFile; fileRef = AC74D6361C3134120026BE93 /* Makefile */; };
-		AC74D63E1C3134120026BE93 /* ReadMVG.cpp in Sources */ = {isa = PBXBuildFile; fileRef = AC74D63A1C3134120026BE93 /* ReadMVG.cpp */; };
 		AC93A1811BB7ED9B000E4A0C /* SequenceParsing.cpp in Sources */ = {isa = PBXBuildFile; fileRef = ACE3CBFA1BB7E19B0042BAF9 /* SequenceParsing.cpp */; };
 		AC93A1821BB7EE17000E4A0C /* Arc.cpp in Sources */ = {isa = PBXBuildFile; fileRef = ACE3C9271BB7E19A0042BAF9 /* Arc.cpp */; };
 		AC93A1831BB7EE28000E4A0C /* ofxsShutter.cpp in Sources */ = {isa = PBXBuildFile; fileRef = ACE3CED41BB7E19D0042BAF9 /* ofxsShutter.cpp */; };
 		AC93A1841BB7EE3B000E4A0C /* Implode.cpp in Sources */ = {isa = PBXBuildFile; fileRef = ACE3C9831BB7E19A0042BAF9 /* Implode.cpp */; };
 		AC93A1BE1BB7F1BF000E4A0C /* net.fxarena.openfx.Arc.png in CopyFiles */ = {isa = PBXBuildFile; fileRef = ACE3C92B1BB7E19A0042BAF9 /* net.fxarena.openfx.Arc.png */; };
 		AC93A2071BB7F1C5000E4A0C /* net.fxarena.openfx.Charcoal.png in CopyFiles */ = {isa = PBXBuildFile; fileRef = ACE3C9331BB7E19A0042BAF9 /* net.fxarena.openfx.Charcoal.png */; };
-		AC93A2081BB7F1C8000E4A0C /* Arena.png in CopyFiles */ = {isa = PBXBuildFile; fileRef = ACE3CFE71BB7E1CE0042BAF9 /* Arena.png */; };
-		AC93A2091BB7F1CB000E4A0C /* net.fxarena.openfx.DaveHill.png in CopyFiles */ = {isa = PBXBuildFile; fileRef = ACE3C93B1BB7E19A0042BAF9 /* net.fxarena.openfx.DaveHill.png */; };
-		AC93A20A1BB7F1CD000E4A0C /* net.fxarena.openfx.Dragan.png in CopyFiles */ = {isa = PBXBuildFile; fileRef = ACE3C9431BB7E19A0042BAF9 /* net.fxarena.openfx.Dragan.png */; };
 		AC93A20B1BB7F1CF000E4A0C /* net.fxarena.openfx.Edges.png in CopyFiles */ = {isa = PBXBuildFile; fileRef = ACE3C94B1BB7E19A0042BAF9 /* net.fxarena.openfx.Edges.png */; };
 		AC93A20C1BB7F1D1000E4A0C /* net.fxarena.openfx.Emboss.png in CopyFiles */ = {isa = PBXBuildFile; fileRef = ACE3C9531BB7E19A0042BAF9 /* net.fxarena.openfx.Emboss.png */; };
-		AC93A20D1BB7F1D4000E4A0C /* net.fxarena.openfx.Glow.png in CopyFiles */ = {isa = PBXBuildFile; fileRef = ACE3C97F1BB7E19A0042BAF9 /* net.fxarena.openfx.Glow.png */; };
 		AC93A20E1BB7F1D6000E4A0C /* net.fxarena.openfx.Implode.png in CopyFiles */ = {isa = PBXBuildFile; fileRef = ACE3C9871BB7E19A0042BAF9 /* net.fxarena.openfx.Implode.png */; };
 		AC93A20F1BB7F1D7000E4A0C /* net.fxarena.openfx.Modulate.png in CopyFiles */ = {isa = PBXBuildFile; fileRef = ACE3C9931BB7E19A0042BAF9 /* net.fxarena.openfx.Modulate.png */; };
 		AC93A2101BB7F1D9000E4A0C /* net.fxarena.openfx.Oilpaint.png in CopyFiles */ = {isa = PBXBuildFile; fileRef = ACE3C9991BB7E19A0042BAF9 /* net.fxarena.openfx.Oilpaint.png */; };
 		AC93A2111BB7F1DB000E4A0C /* net.fxarena.openfx.Polar.png in CopyFiles */ = {isa = PBXBuildFile; fileRef = ACE3CE831BB7E19C0042BAF9 /* net.fxarena.openfx.Polar.png */; };
-		AC93A2121BB7F1DB000E4A0C /* net.fxarena.openfx.Polaroid.png in CopyFiles */ = {isa = PBXBuildFile; fileRef = ACE3CE8B1BB7E19D0042BAF9 /* net.fxarena.openfx.Polaroid.png */; };
 		AC93A2131BB7F1DD000E4A0C /* net.fxarena.openfx.ReadPSD.png in CopyFiles */ = {isa = PBXBuildFile; fileRef = ACE3CE931BB7E19D0042BAF9 /* net.fxarena.openfx.ReadPSD.png */; };
 		AC93A2141BB7F1DE000E4A0C /* net.fxarena.openfx.ReadSVG.png in CopyFiles */ = {isa = PBXBuildFile; fileRef = ACE3CE9B1BB7E19D0042BAF9 /* net.fxarena.openfx.ReadSVG.png */; };
 		AC93A2151BB7F1E4000E4A0C /* net.fxarena.openfx.Reflection.png in CopyFiles */ = {isa = PBXBuildFile; fileRef = ACE3CEA31BB7E19D0042BAF9 /* net.fxarena.openfx.Reflection.png */; };
@@ -39,13 +32,19 @@
 		AC93A21B1BB7F1F1000E4A0C /* net.fxarena.openfx.Texture.png in CopyFiles */ = {isa = PBXBuildFile; fileRef = ACE3CF0E1BB7E19D0042BAF9 /* net.fxarena.openfx.Texture.png */; };
 		AC93A21C1BB7F1F3000E4A0C /* net.fxarena.openfx.Tile.png in CopyFiles */ = {isa = PBXBuildFile; fileRef = ACE3CF161BB7E19D0042BAF9 /* net.fxarena.openfx.Tile.png */; };
 		AC93A21D1BB7F1F7000E4A0C /* net.fxarena.openfx.Wave.png in CopyFiles */ = {isa = PBXBuildFile; fileRef = ACE3CF1E1BB7E19D0042BAF9 /* net.fxarena.openfx.Wave.png */; };
-		ACE3CFEB1BB7EC370042BAF9 /* PluginRegistrationCombined.cpp in Sources */ = {isa = PBXBuildFile; fileRef = ACE3C9241BB7E1600042BAF9 /* PluginRegistrationCombined.cpp */; };
+		AC9743E21C81B68700F5B208 /* Makefile in Sources */ = {isa = PBXBuildFile; fileRef = AC9743D41C81B68700F5B208 /* Makefile */; };
+		AC9743E31C81B68700F5B208 /* ReadCDR.cpp in Sources */ = {isa = PBXBuildFile; fileRef = AC9743D51C81B68700F5B208 /* ReadCDR.cpp */; };
+		AC9743E41C81B68700F5B208 /* Makefile in Sources */ = {isa = PBXBuildFile; fileRef = AC9743DA1C81B68700F5B208 /* Makefile */; };
+		AC9743E51C81B68700F5B208 /* ReadKrita.cpp in Sources */ = {isa = PBXBuildFile; fileRef = AC9743DB1C81B68700F5B208 /* ReadKrita.cpp */; };
+		AC9743E61C81B68700F5B208 /* Makefile in Sources */ = {isa = PBXBuildFile; fileRef = AC9743E01C81B68700F5B208 /* Makefile */; };
+		AC9743E71C81B68700F5B208 /* ReadMisc.cpp in Sources */ = {isa = PBXBuildFile; fileRef = AC9743E11C81B68700F5B208 /* ReadMisc.cpp */; };
+		AC9743EE1C81B94D00F5B208 /* Makefile in Sources */ = {isa = PBXBuildFile; fileRef = AC9743EC1C81B94D00F5B208 /* Makefile */; };
+		AC9743EF1C81B94D00F5B208 /* OpenRaster.cpp in Sources */ = {isa = PBXBuildFile; fileRef = AC9743ED1C81B94D00F5B208 /* OpenRaster.cpp */; };
+		ACB60B221C5F494200AA2374 /* Makefile in Sources */ = {isa = PBXBuildFile; fileRef = ACB60B1E1C5F494200AA2374 /* Makefile */; };
+		ACB60B231C5F494200AA2374 /* Polaroid.cpp in Sources */ = {isa = PBXBuildFile; fileRef = ACB60B211C5F494200AA2374 /* Polaroid.cpp */; };
 		ACE3CFEC1BB7EC3A0042BAF9 /* Charcoal.cpp in Sources */ = {isa = PBXBuildFile; fileRef = ACE3C92F1BB7E19A0042BAF9 /* Charcoal.cpp */; };
-		ACE3CFED1BB7EC3E0042BAF9 /* DaveHill.cpp in Sources */ = {isa = PBXBuildFile; fileRef = ACE3C9371BB7E19A0042BAF9 /* DaveHill.cpp */; };
-		ACE3CFEE1BB7EC410042BAF9 /* Dragan.cpp in Sources */ = {isa = PBXBuildFile; fileRef = ACE3C93F1BB7E19A0042BAF9 /* Dragan.cpp */; };
 		ACE3CFEF1BB7EC450042BAF9 /* Edges.cpp in Sources */ = {isa = PBXBuildFile; fileRef = ACE3C9471BB7E19A0042BAF9 /* Edges.cpp */; };
 		ACE3CFF01BB7EC4A0042BAF9 /* Emboss.cpp in Sources */ = {isa = PBXBuildFile; fileRef = ACE3C94F1BB7E19A0042BAF9 /* Emboss.cpp */; };
-		ACE3CFF11BB7EC4E0042BAF9 /* Glow.cpp in Sources */ = {isa = PBXBuildFile; fileRef = ACE3C97B1BB7E19A0042BAF9 /* Glow.cpp */; };
 		ACE3CFF21BB7EC520042BAF9 /* Modulate.cpp in Sources */ = {isa = PBXBuildFile; fileRef = ACE3C9911BB7E19A0042BAF9 /* Modulate.cpp */; };
 		ACE3CFF31BB7EC560042BAF9 /* Oilpaint.cpp in Sources */ = {isa = PBXBuildFile; fileRef = ACE3C99B1BB7E19A0042BAF9 /* Oilpaint.cpp */; };
 		ACE3CFF41BB7EC670042BAF9 /* ofxsCore.cpp in Sources */ = {isa = PBXBuildFile; fileRef = ACE3CB5E1BB7E19B0042BAF9 /* ofxsCore.cpp */; };
@@ -59,7 +58,6 @@
 		ACE3CFFC1BB7EC7D0042BAF9 /* GenericOCIO.cpp in Sources */ = {isa = PBXBuildFile; fileRef = ACE3CBEE1BB7E19B0042BAF9 /* GenericOCIO.cpp */; };
 		ACE3CFFD1BB7EC7E0042BAF9 /* GenericReader.cpp in Sources */ = {isa = PBXBuildFile; fileRef = ACE3CBF01BB7E19B0042BAF9 /* GenericReader.cpp */; };
 		ACE3CFFE1BB7EC890042BAF9 /* Polar.cpp in Sources */ = {isa = PBXBuildFile; fileRef = ACE3CE861BB7E19C0042BAF9 /* Polar.cpp */; };
-		ACE3CFFF1BB7EC8B0042BAF9 /* Polaroid.cpp in Sources */ = {isa = PBXBuildFile; fileRef = ACE3CE8E1BB7E19D0042BAF9 /* Polaroid.cpp */; };
 		ACE3D0001BB7EC8E0042BAF9 /* ReadPSD.cpp in Sources */ = {isa = PBXBuildFile; fileRef = ACE3CE961BB7E19D0042BAF9 /* ReadPSD.cpp */; };
 		ACE3D0011BB7EC910042BAF9 /* ReadSVG.cpp in Sources */ = {isa = PBXBuildFile; fileRef = ACE3CE9E1BB7E19D0042BAF9 /* ReadSVG.cpp */; };
 		ACE3D0021BB7EC950042BAF9 /* Reflection.cpp in Sources */ = {isa = PBXBuildFile; fileRef = ACE3CEA61BB7E19D0042BAF9 /* Reflection.cpp */; };
@@ -525,10 +523,8 @@
 			dstPath = "";
 			dstSubfolderSpec = 7;
 			files = (
-				AC93A20A1BB7F1CD000E4A0C /* net.fxarena.openfx.Dragan.png in CopyFiles */,
 				AC93A1BE1BB7F1BF000E4A0C /* net.fxarena.openfx.Arc.png in CopyFiles */,
 				AC93A2071BB7F1C5000E4A0C /* net.fxarena.openfx.Charcoal.png in CopyFiles */,
-				AC93A2081BB7F1C8000E4A0C /* Arena.png in CopyFiles */,
 				AC93A20E1BB7F1D6000E4A0C /* net.fxarena.openfx.Implode.png in CopyFiles */,
 				AC93A20C1BB7F1D1000E4A0C /* net.fxarena.openfx.Emboss.png in CopyFiles */,
 				AC93A2111BB7F1DB000E4A0C /* net.fxarena.openfx.Polar.png in CopyFiles */,
@@ -542,13 +538,10 @@
 				AC93A21B1BB7F1F1000E4A0C /* net.fxarena.openfx.Texture.png in CopyFiles */,
 				AC93A21D1BB7F1F7000E4A0C /* net.fxarena.openfx.Wave.png in CopyFiles */,
 				AC93A21A1BB7F1EF000E4A0C /* net.fxarena.openfx.TextPango.png in CopyFiles */,
-				AC93A2121BB7F1DB000E4A0C /* net.fxarena.openfx.Polaroid.png in CopyFiles */,
 				AC93A21C1BB7F1F3000E4A0C /* net.fxarena.openfx.Tile.png in CopyFiles */,
 				AC93A2171BB7F1E7000E4A0C /* net.fxarena.openfx.Sketch.png in CopyFiles */,
 				AC93A2151BB7F1E4000E4A0C /* net.fxarena.openfx.Reflection.png in CopyFiles */,
 				AC93A2141BB7F1DE000E4A0C /* net.fxarena.openfx.ReadSVG.png in CopyFiles */,
-				AC93A20D1BB7F1D4000E4A0C /* net.fxarena.openfx.Glow.png in CopyFiles */,
-				AC93A2091BB7F1CB000E4A0C /* net.fxarena.openfx.DaveHill.png in CopyFiles */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -557,69 +550,51 @@
 /* Begin PBXFileReference section */
 		1E2F4DCA189295F600F4CE25 /* Arena.ofx.bundle */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = Arena.ofx.bundle; sourceTree = BUILT_PRODUCTS_DIR; };
 		1E9B5EFA198A3D040095C8AA /* OpenGL.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = OpenGL.framework; path = System/Library/Frameworks/OpenGL.framework; sourceTree = SDKROOT; };
-		AC74D6351C3134120026BE93 /* Info.plist */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
-		AC74D6361C3134120026BE93 /* Makefile */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.make; path = Makefile; sourceTree = "<group>"; };
-		AC74D6371C3134120026BE93 /* net.fxarena.openfx.ReadMVG.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = net.fxarena.openfx.ReadMVG.png; sourceTree = "<group>"; };
-		AC74D6381C3134120026BE93 /* net.fxarena.openfx.ReadMVG.svg */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.xml; path = net.fxarena.openfx.ReadMVG.svg; sourceTree = "<group>"; };
-		AC74D6391C3134120026BE93 /* PluginRegistration.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = PluginRegistration.cpp; sourceTree = "<group>"; };
-		AC74D63A1C3134120026BE93 /* ReadMVG.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = ReadMVG.cpp; sourceTree = "<group>"; };
-		AC74D63B1C3134120026BE93 /* ReadMVG.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = ReadMVG.h; sourceTree = "<group>"; };
-		ACE3C9241BB7E1600042BAF9 /* PluginRegistrationCombined.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = PluginRegistrationCombined.cpp; path = Bundle/PluginRegistrationCombined.cpp; sourceTree = "<group>"; };
+		AC9743D11C81B68700F5B208 /* fr.inria.openfx.ReadCDR.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = fr.inria.openfx.ReadCDR.png; sourceTree = "<group>"; };
+		AC9743D21C81B68700F5B208 /* fr.inria.openfx.ReadCDR.svg */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.xml; path = fr.inria.openfx.ReadCDR.svg; sourceTree = "<group>"; };
+		AC9743D31C81B68700F5B208 /* Info.plist */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
+		AC9743D41C81B68700F5B208 /* Makefile */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.make; path = Makefile; sourceTree = "<group>"; };
+		AC9743D51C81B68700F5B208 /* ReadCDR.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = ReadCDR.cpp; sourceTree = "<group>"; };
+		AC9743D71C81B68700F5B208 /* fr.inria.openfx.ReadKrita.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = fr.inria.openfx.ReadKrita.png; sourceTree = "<group>"; };
+		AC9743D81C81B68700F5B208 /* fr.inria.openfx.ReadKrita.svg */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.xml; path = fr.inria.openfx.ReadKrita.svg; sourceTree = "<group>"; };
+		AC9743D91C81B68700F5B208 /* Info.plist */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
+		AC9743DA1C81B68700F5B208 /* Makefile */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.make; path = Makefile; sourceTree = "<group>"; };
+		AC9743DB1C81B68700F5B208 /* ReadKrita.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = ReadKrita.cpp; sourceTree = "<group>"; };
+		AC9743DD1C81B68700F5B208 /* fr.inria.openfx.ReadMisc.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = fr.inria.openfx.ReadMisc.png; sourceTree = "<group>"; };
+		AC9743DE1C81B68700F5B208 /* fr.inria.openfx.ReadMisc.svg */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.xml; path = fr.inria.openfx.ReadMisc.svg; sourceTree = "<group>"; };
+		AC9743DF1C81B68700F5B208 /* Info.plist */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
+		AC9743E01C81B68700F5B208 /* Makefile */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.make; path = Makefile; sourceTree = "<group>"; };
+		AC9743E11C81B68700F5B208 /* ReadMisc.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = ReadMisc.cpp; sourceTree = "<group>"; };
+		AC9743E91C81B94D00F5B208 /* fr.inria.openfx.OpenRaster.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = fr.inria.openfx.OpenRaster.png; sourceTree = "<group>"; };
+		AC9743EA1C81B94D00F5B208 /* fr.inria.openfx.OpenRaster.svg */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.xml; path = fr.inria.openfx.OpenRaster.svg; sourceTree = "<group>"; };
+		AC9743EB1C81B94D00F5B208 /* Info.plist */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
+		AC9743EC1C81B94D00F5B208 /* Makefile */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.make; path = Makefile; sourceTree = "<group>"; };
+		AC9743ED1C81B94D00F5B208 /* OpenRaster.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = OpenRaster.cpp; sourceTree = "<group>"; };
+		ACB60B1D1C5F494200AA2374 /* Info.plist */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
+		ACB60B1E1C5F494200AA2374 /* Makefile */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.make; path = Makefile; sourceTree = "<group>"; };
+		ACB60B1F1C5F494200AA2374 /* net.fxarena.openfx.Polaroid.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = net.fxarena.openfx.Polaroid.png; sourceTree = "<group>"; };
+		ACB60B201C5F494200AA2374 /* net.fxarena.openfx.Polaroid.svg */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.xml; path = net.fxarena.openfx.Polaroid.svg; sourceTree = "<group>"; };
+		ACB60B211C5F494200AA2374 /* Polaroid.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = Polaroid.cpp; sourceTree = "<group>"; };
 		ACE3C9271BB7E19A0042BAF9 /* Arc.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = Arc.cpp; sourceTree = "<group>"; };
-		ACE3C9281BB7E19A0042BAF9 /* Arc.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = Arc.h; sourceTree = "<group>"; };
 		ACE3C9291BB7E19A0042BAF9 /* Info.plist */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
 		ACE3C92A1BB7E19A0042BAF9 /* Makefile */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.make; path = Makefile; sourceTree = "<group>"; };
 		ACE3C92B1BB7E19A0042BAF9 /* net.fxarena.openfx.Arc.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = net.fxarena.openfx.Arc.png; sourceTree = "<group>"; };
 		ACE3C92C1BB7E19A0042BAF9 /* net.fxarena.openfx.Arc.svg */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.xml; path = net.fxarena.openfx.Arc.svg; sourceTree = "<group>"; };
-		ACE3C92D1BB7E19A0042BAF9 /* PluginRegistration.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = PluginRegistration.cpp; sourceTree = "<group>"; };
 		ACE3C92F1BB7E19A0042BAF9 /* Charcoal.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = Charcoal.cpp; sourceTree = "<group>"; };
-		ACE3C9301BB7E19A0042BAF9 /* Charcoal.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = Charcoal.h; sourceTree = "<group>"; };
 		ACE3C9311BB7E19A0042BAF9 /* Info.plist */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
 		ACE3C9321BB7E19A0042BAF9 /* Makefile */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.make; path = Makefile; sourceTree = "<group>"; };
 		ACE3C9331BB7E19A0042BAF9 /* net.fxarena.openfx.Charcoal.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = net.fxarena.openfx.Charcoal.png; sourceTree = "<group>"; };
 		ACE3C9341BB7E19A0042BAF9 /* net.fxarena.openfx.Charcoal.svg */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.xml; path = net.fxarena.openfx.Charcoal.svg; sourceTree = "<group>"; };
-		ACE3C9351BB7E19A0042BAF9 /* PluginRegistration.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = PluginRegistration.cpp; sourceTree = "<group>"; };
-		ACE3C9371BB7E19A0042BAF9 /* DaveHill.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = DaveHill.cpp; sourceTree = "<group>"; };
-		ACE3C9381BB7E19A0042BAF9 /* DaveHill.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = DaveHill.h; sourceTree = "<group>"; };
-		ACE3C9391BB7E19A0042BAF9 /* Info.plist */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
-		ACE3C93A1BB7E19A0042BAF9 /* Makefile */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.make; path = Makefile; sourceTree = "<group>"; };
-		ACE3C93B1BB7E19A0042BAF9 /* net.fxarena.openfx.DaveHill.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = net.fxarena.openfx.DaveHill.png; sourceTree = "<group>"; };
-		ACE3C93C1BB7E19A0042BAF9 /* net.fxarena.openfx.DaveHill.svg */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.xml; path = net.fxarena.openfx.DaveHill.svg; sourceTree = "<group>"; };
-		ACE3C93D1BB7E19A0042BAF9 /* PluginRegistration.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = PluginRegistration.cpp; sourceTree = "<group>"; };
-		ACE3C93F1BB7E19A0042BAF9 /* Dragan.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = Dragan.cpp; sourceTree = "<group>"; };
-		ACE3C9401BB7E19A0042BAF9 /* Dragan.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = Dragan.h; sourceTree = "<group>"; };
-		ACE3C9411BB7E19A0042BAF9 /* Info.plist */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
-		ACE3C9421BB7E19A0042BAF9 /* Makefile */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.make; path = Makefile; sourceTree = "<group>"; };
-		ACE3C9431BB7E19A0042BAF9 /* net.fxarena.openfx.Dragan.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = net.fxarena.openfx.Dragan.png; sourceTree = "<group>"; };
-		ACE3C9441BB7E19A0042BAF9 /* net.fxarena.openfx.Dragan.svg */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.xml; path = net.fxarena.openfx.Dragan.svg; sourceTree = "<group>"; };
-		ACE3C9451BB7E19A0042BAF9 /* PluginRegistration.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = PluginRegistration.cpp; sourceTree = "<group>"; };
 		ACE3C9471BB7E19A0042BAF9 /* Edges.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = Edges.cpp; sourceTree = "<group>"; };
-		ACE3C9481BB7E19A0042BAF9 /* Edges.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = Edges.h; sourceTree = "<group>"; };
 		ACE3C9491BB7E19A0042BAF9 /* Info.plist */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
 		ACE3C94A1BB7E19A0042BAF9 /* Makefile */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.make; path = Makefile; sourceTree = "<group>"; };
 		ACE3C94B1BB7E19A0042BAF9 /* net.fxarena.openfx.Edges.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = net.fxarena.openfx.Edges.png; sourceTree = "<group>"; };
 		ACE3C94C1BB7E19A0042BAF9 /* net.fxarena.openfx.Edges.svg */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.xml; path = net.fxarena.openfx.Edges.svg; sourceTree = "<group>"; };
-		ACE3C94D1BB7E19A0042BAF9 /* PluginRegistration.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = PluginRegistration.cpp; sourceTree = "<group>"; };
 		ACE3C94F1BB7E19A0042BAF9 /* Emboss.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = Emboss.cpp; sourceTree = "<group>"; };
-		ACE3C9501BB7E19A0042BAF9 /* Emboss.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = Emboss.h; sourceTree = "<group>"; };
 		ACE3C9511BB7E19A0042BAF9 /* Info.plist */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
 		ACE3C9521BB7E19A0042BAF9 /* Makefile */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.make; path = Makefile; sourceTree = "<group>"; };
 		ACE3C9531BB7E19A0042BAF9 /* net.fxarena.openfx.Emboss.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = net.fxarena.openfx.Emboss.png; sourceTree = "<group>"; };
 		ACE3C9541BB7E19A0042BAF9 /* net.fxarena.openfx.Emboss.svg */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.xml; path = net.fxarena.openfx.Emboss.svg; sourceTree = "<group>"; };
-		ACE3C9551BB7E19A0042BAF9 /* PluginRegistration.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = PluginRegistration.cpp; sourceTree = "<group>"; };
-		ACE3C96A1BB7E19A0042BAF9 /* Info.plist */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
-		ACE3C96B1BB7E19A0042BAF9 /* Makefile */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.make; path = Makefile; sourceTree = "<group>"; };
-		ACE3C96C1BB7E19A0042BAF9 /* PluginRegistrationCombined.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = PluginRegistrationCombined.cpp; sourceTree = "<group>"; };
-		ACE3C9771BB7E19A0042BAF9 /* Info.plist */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
-		ACE3C9781BB7E19A0042BAF9 /* Makefile */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.make; path = Makefile; sourceTree = "<group>"; };
-		ACE3C9791BB7E19A0042BAF9 /* PluginRegistrationCombined.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = PluginRegistrationCombined.cpp; sourceTree = "<group>"; };
-		ACE3C97B1BB7E19A0042BAF9 /* Glow.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = Glow.cpp; sourceTree = "<group>"; };
-		ACE3C97C1BB7E19A0042BAF9 /* Glow.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = Glow.h; sourceTree = "<group>"; };
-		ACE3C97D1BB7E19A0042BAF9 /* Info.plist */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
-		ACE3C97E1BB7E19A0042BAF9 /* Makefile */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.make; path = Makefile; sourceTree = "<group>"; };
-		ACE3C97F1BB7E19A0042BAF9 /* net.fxarena.openfx.Glow.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = net.fxarena.openfx.Glow.png; sourceTree = "<group>"; };
-		ACE3C9801BB7E19A0042BAF9 /* net.fxarena.openfx.Glow.svg */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.xml; path = net.fxarena.openfx.Glow.svg; sourceTree = "<group>"; };
-		ACE3C9811BB7E19A0042BAF9 /* PluginRegistration.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = PluginRegistration.cpp; sourceTree = "<group>"; };
 		ACE3C9831BB7E19A0042BAF9 /* Implode.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = Implode.cpp; sourceTree = "<group>"; };
 		ACE3C9841BB7E19A0042BAF9 /* Implode.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = Implode.h; sourceTree = "<group>"; };
 		ACE3C9851BB7E19A0042BAF9 /* Info.plist */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
@@ -634,10 +609,8 @@
 		ACE3C98F1BB7E19A0042BAF9 /* Info.plist */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
 		ACE3C9901BB7E19A0042BAF9 /* Makefile */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.make; path = Makefile; sourceTree = "<group>"; };
 		ACE3C9911BB7E19A0042BAF9 /* Modulate.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = Modulate.cpp; sourceTree = "<group>"; };
-		ACE3C9921BB7E19A0042BAF9 /* Modulate.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = Modulate.h; sourceTree = "<group>"; };
 		ACE3C9931BB7E19A0042BAF9 /* net.fxarena.openfx.Modulate.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = net.fxarena.openfx.Modulate.png; sourceTree = "<group>"; };
 		ACE3C9941BB7E19A0042BAF9 /* net.fxarena.openfx.Modulate.svg */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.xml; path = net.fxarena.openfx.Modulate.svg; sourceTree = "<group>"; };
-		ACE3C9951BB7E19A0042BAF9 /* PluginRegistration.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = PluginRegistration.cpp; sourceTree = "<group>"; };
 		ACE3C9971BB7E19A0042BAF9 /* Info.plist */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
 		ACE3C9981BB7E19A0042BAF9 /* Makefile */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.make; path = Makefile; sourceTree = "<group>"; };
 		ACE3C9991BB7E19A0042BAF9 /* net.fxarena.openfx.Oilpaint.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = net.fxarena.openfx.Oilpaint.png; sourceTree = "<group>"; };
@@ -645,7 +618,6 @@
 		ACE3C99B1BB7E19A0042BAF9 /* Oilpaint.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = Oilpaint.cpp; sourceTree = "<group>"; };
 		ACE3C99C1BB7E19A0042BAF9 /* Oilpaint.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = Oilpaint.h; sourceTree = "<group>"; };
 		ACE3C99D1BB7E19A0042BAF9 /* PluginRegistration.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = PluginRegistration.cpp; sourceTree = "<group>"; };
-		ACE3C99F1BB7E19A0042BAF9 /* README.md */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = net.daringfireball.markdown; path = README.md; sourceTree = "<group>"; };
 		ACE3C9A11BB7E19A0042BAF9 /* .gitattributes */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text; path = .gitattributes; sourceTree = "<group>"; };
 		ACE3C9A21BB7E19A0042BAF9 /* .gitignore */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text; path = .gitignore; sourceTree = "<group>"; };
 		ACE3C9A31BB7E19A0042BAF9 /* .travis-coverity-scan-build.sh */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.script.sh; path = ".travis-coverity-scan-build.sh"; sourceTree = "<group>"; };
@@ -1728,51 +1700,32 @@
 		ACE3CE821BB7E19C0042BAF9 /* Makefile */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.make; path = Makefile; sourceTree = "<group>"; };
 		ACE3CE831BB7E19C0042BAF9 /* net.fxarena.openfx.Polar.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = net.fxarena.openfx.Polar.png; sourceTree = "<group>"; };
 		ACE3CE841BB7E19C0042BAF9 /* net.fxarena.openfx.Polar.svg */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.xml; path = net.fxarena.openfx.Polar.svg; sourceTree = "<group>"; };
-		ACE3CE851BB7E19C0042BAF9 /* PluginRegistration.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = PluginRegistration.cpp; sourceTree = "<group>"; };
 		ACE3CE861BB7E19C0042BAF9 /* Polar.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = Polar.cpp; sourceTree = "<group>"; };
-		ACE3CE871BB7E19C0042BAF9 /* Polar.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = Polar.h; sourceTree = "<group>"; };
-		ACE3CE891BB7E19C0042BAF9 /* Info.plist */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
-		ACE3CE8A1BB7E19D0042BAF9 /* Makefile */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.make; path = Makefile; sourceTree = "<group>"; };
-		ACE3CE8B1BB7E19D0042BAF9 /* net.fxarena.openfx.Polaroid.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = net.fxarena.openfx.Polaroid.png; sourceTree = "<group>"; };
-		ACE3CE8C1BB7E19D0042BAF9 /* net.fxarena.openfx.Polaroid.svg */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.xml; path = net.fxarena.openfx.Polaroid.svg; sourceTree = "<group>"; };
-		ACE3CE8D1BB7E19D0042BAF9 /* PluginRegistration.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = PluginRegistration.cpp; sourceTree = "<group>"; };
-		ACE3CE8E1BB7E19D0042BAF9 /* Polaroid.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = Polaroid.cpp; sourceTree = "<group>"; };
-		ACE3CE8F1BB7E19D0042BAF9 /* Polaroid.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = Polaroid.h; sourceTree = "<group>"; };
 		ACE3CE911BB7E19D0042BAF9 /* Info.plist */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
 		ACE3CE921BB7E19D0042BAF9 /* Makefile */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.make; path = Makefile; sourceTree = "<group>"; };
 		ACE3CE931BB7E19D0042BAF9 /* net.fxarena.openfx.ReadPSD.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = net.fxarena.openfx.ReadPSD.png; sourceTree = "<group>"; };
 		ACE3CE941BB7E19D0042BAF9 /* net.fxarena.openfx.ReadPSD.svg */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.xml; path = net.fxarena.openfx.ReadPSD.svg; sourceTree = "<group>"; };
-		ACE3CE951BB7E19D0042BAF9 /* PluginRegistration.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = PluginRegistration.cpp; sourceTree = "<group>"; };
 		ACE3CE961BB7E19D0042BAF9 /* ReadPSD.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = ReadPSD.cpp; sourceTree = "<group>"; };
-		ACE3CE971BB7E19D0042BAF9 /* ReadPSD.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = ReadPSD.h; sourceTree = "<group>"; };
 		ACE3CE991BB7E19D0042BAF9 /* Info.plist */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
 		ACE3CE9A1BB7E19D0042BAF9 /* Makefile */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.make; path = Makefile; sourceTree = "<group>"; };
 		ACE3CE9B1BB7E19D0042BAF9 /* net.fxarena.openfx.ReadSVG.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = net.fxarena.openfx.ReadSVG.png; sourceTree = "<group>"; };
 		ACE3CE9C1BB7E19D0042BAF9 /* net.fxarena.openfx.ReadSVG.svg */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.xml; path = net.fxarena.openfx.ReadSVG.svg; sourceTree = "<group>"; };
-		ACE3CE9D1BB7E19D0042BAF9 /* PluginRegistration.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = PluginRegistration.cpp; sourceTree = "<group>"; };
 		ACE3CE9E1BB7E19D0042BAF9 /* ReadSVG.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = ReadSVG.cpp; sourceTree = "<group>"; };
-		ACE3CE9F1BB7E19D0042BAF9 /* ReadSVG.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = ReadSVG.h; sourceTree = "<group>"; };
 		ACE3CEA11BB7E19D0042BAF9 /* Info.plist */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
 		ACE3CEA21BB7E19D0042BAF9 /* Makefile */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.make; path = Makefile; sourceTree = "<group>"; };
 		ACE3CEA31BB7E19D0042BAF9 /* net.fxarena.openfx.Reflection.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = net.fxarena.openfx.Reflection.png; sourceTree = "<group>"; };
 		ACE3CEA41BB7E19D0042BAF9 /* net.fxarena.openfx.Reflection.svg */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.xml; path = net.fxarena.openfx.Reflection.svg; sourceTree = "<group>"; };
-		ACE3CEA51BB7E19D0042BAF9 /* PluginRegistration.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = PluginRegistration.cpp; sourceTree = "<group>"; };
 		ACE3CEA61BB7E19D0042BAF9 /* Reflection.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = Reflection.cpp; sourceTree = "<group>"; };
-		ACE3CEA71BB7E19D0042BAF9 /* Reflection.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = Reflection.h; sourceTree = "<group>"; };
 		ACE3CEA91BB7E19D0042BAF9 /* Info.plist */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
 		ACE3CEAA1BB7E19D0042BAF9 /* Makefile */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.make; path = Makefile; sourceTree = "<group>"; };
 		ACE3CEAB1BB7E19D0042BAF9 /* net.fxarena.openfx.Roll.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = net.fxarena.openfx.Roll.png; sourceTree = "<group>"; };
 		ACE3CEAC1BB7E19D0042BAF9 /* net.fxarena.openfx.Roll.svg */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.xml; path = net.fxarena.openfx.Roll.svg; sourceTree = "<group>"; };
-		ACE3CEAD1BB7E19D0042BAF9 /* PluginRegistration.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = PluginRegistration.cpp; sourceTree = "<group>"; };
 		ACE3CEAE1BB7E19D0042BAF9 /* Roll.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = Roll.cpp; sourceTree = "<group>"; };
-		ACE3CEAF1BB7E19D0042BAF9 /* Roll.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = Roll.h; sourceTree = "<group>"; };
 		ACE3CEB11BB7E19D0042BAF9 /* Info.plist */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
 		ACE3CEB21BB7E19D0042BAF9 /* Makefile */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.make; path = Makefile; sourceTree = "<group>"; };
 		ACE3CEB31BB7E19D0042BAF9 /* net.fxarena.openfx.Sketch.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = net.fxarena.openfx.Sketch.png; sourceTree = "<group>"; };
 		ACE3CEB41BB7E19D0042BAF9 /* net.fxarena.openfx.Sketch.svg */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.xml; path = net.fxarena.openfx.Sketch.svg; sourceTree = "<group>"; };
-		ACE3CEB51BB7E19D0042BAF9 /* PluginRegistration.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = PluginRegistration.cpp; sourceTree = "<group>"; };
 		ACE3CEB61BB7E19D0042BAF9 /* Sketch.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = Sketch.cpp; sourceTree = "<group>"; };
-		ACE3CEB71BB7E19D0042BAF9 /* Sketch.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = Sketch.h; sourceTree = "<group>"; };
 		ACE3CEB91BB7E19D0042BAF9 /* .gitattributes */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text; path = .gitattributes; sourceTree = "<group>"; };
 		ACE3CEBA1BB7E19D0042BAF9 /* .gitignore */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text; path = .gitignore; sourceTree = "<group>"; };
 		ACE3CEBB1BB7E19D0042BAF9 /* gpl-header-c.txt */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text; path = "gpl-header-c.txt"; sourceTree = "<group>"; };
@@ -1814,56 +1767,33 @@
 		ACE3CEE01BB7E19D0042BAF9 /* Makefile */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.make; path = Makefile; sourceTree = "<group>"; };
 		ACE3CEE11BB7E19D0042BAF9 /* net.fxarena.openfx.Swirl.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = net.fxarena.openfx.Swirl.png; sourceTree = "<group>"; };
 		ACE3CEE21BB7E19D0042BAF9 /* net.fxarena.openfx.Swirl.svg */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.xml; path = net.fxarena.openfx.Swirl.svg; sourceTree = "<group>"; };
-		ACE3CEE31BB7E19D0042BAF9 /* PluginRegistration.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = PluginRegistration.cpp; sourceTree = "<group>"; };
 		ACE3CEE41BB7E19D0042BAF9 /* Swirl.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = Swirl.cpp; sourceTree = "<group>"; };
-		ACE3CEE51BB7E19D0042BAF9 /* Swirl.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = Swirl.h; sourceTree = "<group>"; };
-		ACE3CEE71BB7E19D0042BAF9 /* Info.plist */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
-		ACE3CEE81BB7E19D0042BAF9 /* Makefile */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.make; path = Makefile; sourceTree = "<group>"; };
-		ACE3CEE91BB7E19D0042BAF9 /* net.fxarena.openfx.TestGLX.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = net.fxarena.openfx.TestGLX.png; sourceTree = "<group>"; };
-		ACE3CEEA1BB7E19D0042BAF9 /* net.fxarena.openfx.TestGLX.svg */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.xml; path = net.fxarena.openfx.TestGLX.svg; sourceTree = "<group>"; };
-		ACE3CEEB1BB7E19D0042BAF9 /* PluginRegistration.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = PluginRegistration.cpp; sourceTree = "<group>"; };
-		ACE3CEEC1BB7E19D0042BAF9 /* TestGLX.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = TestGLX.cpp; sourceTree = "<group>"; };
-		ACE3CEED1BB7E19D0042BAF9 /* TestGLX.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = TestGLX.h; sourceTree = "<group>"; };
 		ACE3CEEF1BB7E19D0042BAF9 /* Info.plist */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
 		ACE3CEF01BB7E19D0042BAF9 /* Makefile */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.make; path = Makefile; sourceTree = "<group>"; };
 		ACE3CEF11BB7E19D0042BAF9 /* net.fxarena.openfx.Text.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = net.fxarena.openfx.Text.png; sourceTree = "<group>"; };
 		ACE3CEF21BB7E19D0042BAF9 /* net.fxarena.openfx.Text.svg */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.xml; path = net.fxarena.openfx.Text.svg; sourceTree = "<group>"; };
-		ACE3CEF31BB7E19D0042BAF9 /* PluginRegistration.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = PluginRegistration.cpp; sourceTree = "<group>"; };
 		ACE3CEF41BB7E19D0042BAF9 /* Text.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = Text.cpp; sourceTree = "<group>"; };
-		ACE3CEF51BB7E19D0042BAF9 /* Text.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = Text.h; sourceTree = "<group>"; };
-		ACE3CF001BB7E19D0042BAF9 /* Info.plist */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
 		ACE3CF011BB7E19D0042BAF9 /* Makefile */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.make; path = Makefile; sourceTree = "<group>"; };
-		ACE3CF021BB7E19D0042BAF9 /* PluginRegistrationCombined.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = PluginRegistrationCombined.cpp; sourceTree = "<group>"; };
 		ACE3CF041BB7E19D0042BAF9 /* Info.plist */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
 		ACE3CF051BB7E19D0042BAF9 /* Makefile */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.make; path = Makefile; sourceTree = "<group>"; };
 		ACE3CF061BB7E19D0042BAF9 /* net.fxarena.openfx.TextPango.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = net.fxarena.openfx.TextPango.png; sourceTree = "<group>"; };
 		ACE3CF071BB7E19D0042BAF9 /* net.fxarena.openfx.TextPango.svg */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.xml; path = net.fxarena.openfx.TextPango.svg; sourceTree = "<group>"; };
-		ACE3CF081BB7E19D0042BAF9 /* PluginRegistration.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = PluginRegistration.cpp; sourceTree = "<group>"; };
 		ACE3CF091BB7E19D0042BAF9 /* TextPango.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = TextPango.cpp; sourceTree = "<group>"; };
-		ACE3CF0A1BB7E19D0042BAF9 /* TextPango.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = TextPango.h; sourceTree = "<group>"; };
 		ACE3CF0C1BB7E19D0042BAF9 /* Info.plist */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
 		ACE3CF0D1BB7E19D0042BAF9 /* Makefile */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.make; path = Makefile; sourceTree = "<group>"; };
 		ACE3CF0E1BB7E19D0042BAF9 /* net.fxarena.openfx.Texture.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = net.fxarena.openfx.Texture.png; sourceTree = "<group>"; };
 		ACE3CF0F1BB7E19D0042BAF9 /* net.fxarena.openfx.Texture.svg */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.xml; path = net.fxarena.openfx.Texture.svg; sourceTree = "<group>"; };
-		ACE3CF101BB7E19D0042BAF9 /* PluginRegistration.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = PluginRegistration.cpp; sourceTree = "<group>"; };
 		ACE3CF111BB7E19D0042BAF9 /* Texture.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = Texture.cpp; sourceTree = "<group>"; };
-		ACE3CF121BB7E19D0042BAF9 /* Texture.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = Texture.h; sourceTree = "<group>"; };
 		ACE3CF141BB7E19D0042BAF9 /* Info.plist */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
 		ACE3CF151BB7E19D0042BAF9 /* Makefile */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.make; path = Makefile; sourceTree = "<group>"; };
 		ACE3CF161BB7E19D0042BAF9 /* net.fxarena.openfx.Tile.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = net.fxarena.openfx.Tile.png; sourceTree = "<group>"; };
 		ACE3CF171BB7E19D0042BAF9 /* net.fxarena.openfx.Tile.svg */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.xml; path = net.fxarena.openfx.Tile.svg; sourceTree = "<group>"; };
-		ACE3CF181BB7E19D0042BAF9 /* PluginRegistration.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = PluginRegistration.cpp; sourceTree = "<group>"; };
 		ACE3CF191BB7E19D0042BAF9 /* Tile.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = Tile.cpp; sourceTree = "<group>"; };
-		ACE3CF1A1BB7E19D0042BAF9 /* Tile.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = Tile.h; sourceTree = "<group>"; };
 		ACE3CF1C1BB7E19D0042BAF9 /* Info.plist */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
 		ACE3CF1D1BB7E19D0042BAF9 /* Makefile */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.make; path = Makefile; sourceTree = "<group>"; };
 		ACE3CF1E1BB7E19D0042BAF9 /* net.fxarena.openfx.Wave.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = net.fxarena.openfx.Wave.png; sourceTree = "<group>"; };
 		ACE3CF1F1BB7E19D0042BAF9 /* net.fxarena.openfx.Wave.svg */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.xml; path = net.fxarena.openfx.Wave.svg; sourceTree = "<group>"; };
-		ACE3CF201BB7E19D0042BAF9 /* PluginRegistration.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = PluginRegistration.cpp; sourceTree = "<group>"; };
 		ACE3CF211BB7E19D0042BAF9 /* Wave.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = Wave.cpp; sourceTree = "<group>"; };
-		ACE3CF221BB7E19D0042BAF9 /* Wave.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = Wave.h; sourceTree = "<group>"; };
-		ACE3CFE71BB7E1CE0042BAF9 /* Arena.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; name = Arena.png; path = Bundle/Arena.png; sourceTree = "<group>"; };
-		ACE3CFE81BB7E1CE0042BAF9 /* Arena.svg */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.xml; name = Arena.svg; path = Bundle/Arena.svg; sourceTree = "<group>"; };
 		ACE3CFE91BB7E1CE0042BAF9 /* Info.plist */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.plist.xml; name = Info.plist; path = Bundle/Info.plist; sourceTree = "<group>"; };
 		ACE3CFEA1BB7E1CE0042BAF9 /* Makefile */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.make; name = Makefile; path = Bundle/Makefile; sourceTree = "<group>"; };
 		ACED46451C031EE600BBEEA0 /* Cloud9.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = Cloud9.png; sourceTree = "<group>"; };
@@ -1872,9 +1802,7 @@
 		ACED46481C031EE600BBEEA0 /* Makefile */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.make; path = Makefile; sourceTree = "<group>"; };
 		ACED46491C031EE600BBEEA0 /* net.fxarena.openfx.PovRay.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = net.fxarena.openfx.PovRay.png; sourceTree = "<group>"; };
 		ACED464A1C031EE600BBEEA0 /* net.fxarena.openfx.PovRay.svg */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.xml; path = net.fxarena.openfx.PovRay.svg; sourceTree = "<group>"; };
-		ACED464B1C031EE600BBEEA0 /* PluginRegistration.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = PluginRegistration.cpp; sourceTree = "<group>"; };
 		ACED464C1C031EE600BBEEA0 /* PovRay.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = PovRay.cpp; sourceTree = "<group>"; };
-		ACED464D1C031EE600BBEEA0 /* PovRay.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = PovRay.h; sourceTree = "<group>"; };
 		ACED464E1C031EE600BBEEA0 /* povray.spec */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text; path = povray.spec; sourceTree = "<group>"; };
 		ACED46501C031EE600BBEEA0 /* Text3D.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = Text3D.png; sourceTree = "<group>"; };
 		ACED46511C031EE600BBEEA0 /* Text3D.py */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.script.python; path = Text3D.py; sourceTree = "<group>"; };
@@ -1894,28 +1822,71 @@
 /* End PBXFrameworksBuildPhase section */
 
 /* Begin PBXGroup section */
-		AC74D6341C3134120026BE93 /* ReadMVG */ = {
+		AC9743D01C81B68700F5B208 /* ReadCDR */ = {
 			isa = PBXGroup;
 			children = (
-				AC74D6351C3134120026BE93 /* Info.plist */,
-				AC74D6361C3134120026BE93 /* Makefile */,
-				AC74D6371C3134120026BE93 /* net.fxarena.openfx.ReadMVG.png */,
-				AC74D6381C3134120026BE93 /* net.fxarena.openfx.ReadMVG.svg */,
-				AC74D6391C3134120026BE93 /* PluginRegistration.cpp */,
-				AC74D63A1C3134120026BE93 /* ReadMVG.cpp */,
-				AC74D63B1C3134120026BE93 /* ReadMVG.h */,
+				AC9743D11C81B68700F5B208 /* fr.inria.openfx.ReadCDR.png */,
+				AC9743D21C81B68700F5B208 /* fr.inria.openfx.ReadCDR.svg */,
+				AC9743D31C81B68700F5B208 /* Info.plist */,
+				AC9743D41C81B68700F5B208 /* Makefile */,
+				AC9743D51C81B68700F5B208 /* ReadCDR.cpp */,
 			);
-			path = ReadMVG;
+			path = ReadCDR;
+			sourceTree = "<group>";
+		};
+		AC9743D61C81B68700F5B208 /* ReadKrita */ = {
+			isa = PBXGroup;
+			children = (
+				AC9743D71C81B68700F5B208 /* fr.inria.openfx.ReadKrita.png */,
+				AC9743D81C81B68700F5B208 /* fr.inria.openfx.ReadKrita.svg */,
+				AC9743D91C81B68700F5B208 /* Info.plist */,
+				AC9743DA1C81B68700F5B208 /* Makefile */,
+				AC9743DB1C81B68700F5B208 /* ReadKrita.cpp */,
+			);
+			path = ReadKrita;
+			sourceTree = "<group>";
+		};
+		AC9743DC1C81B68700F5B208 /* ReadMisc */ = {
+			isa = PBXGroup;
+			children = (
+				AC9743DD1C81B68700F5B208 /* fr.inria.openfx.ReadMisc.png */,
+				AC9743DE1C81B68700F5B208 /* fr.inria.openfx.ReadMisc.svg */,
+				AC9743DF1C81B68700F5B208 /* Info.plist */,
+				AC9743E01C81B68700F5B208 /* Makefile */,
+				AC9743E11C81B68700F5B208 /* ReadMisc.cpp */,
+			);
+			path = ReadMisc;
+			sourceTree = "<group>";
+		};
+		AC9743E81C81B94D00F5B208 /* OpenRaster */ = {
+			isa = PBXGroup;
+			children = (
+				AC9743E91C81B94D00F5B208 /* fr.inria.openfx.OpenRaster.png */,
+				AC9743EA1C81B94D00F5B208 /* fr.inria.openfx.OpenRaster.svg */,
+				AC9743EB1C81B94D00F5B208 /* Info.plist */,
+				AC9743EC1C81B94D00F5B208 /* Makefile */,
+				AC9743ED1C81B94D00F5B208 /* OpenRaster.cpp */,
+			);
+			path = OpenRaster;
+			sourceTree = "<group>";
+		};
+		ACB60B1C1C5F494200AA2374 /* Polaroid */ = {
+			isa = PBXGroup;
+			children = (
+				ACB60B1D1C5F494200AA2374 /* Info.plist */,
+				ACB60B1E1C5F494200AA2374 /* Makefile */,
+				ACB60B1F1C5F494200AA2374 /* net.fxarena.openfx.Polaroid.png */,
+				ACB60B201C5F494200AA2374 /* net.fxarena.openfx.Polaroid.svg */,
+				ACB60B211C5F494200AA2374 /* Polaroid.cpp */,
+			);
+			path = Polaroid;
 			sourceTree = "<group>";
 		};
 		ACE3C9251BB7E1660042BAF9 /* Bundle */ = {
 			isa = PBXGroup;
 			children = (
-				ACE3CFE71BB7E1CE0042BAF9 /* Arena.png */,
-				ACE3CFE81BB7E1CE0042BAF9 /* Arena.svg */,
 				ACE3CFE91BB7E1CE0042BAF9 /* Info.plist */,
 				ACE3CFEA1BB7E1CE0042BAF9 /* Makefile */,
-				ACE3C9241BB7E1600042BAF9 /* PluginRegistrationCombined.cpp */,
 			);
 			name = Bundle;
 			sourceTree = "<group>";
@@ -1924,12 +1895,10 @@
 			isa = PBXGroup;
 			children = (
 				ACE3C9271BB7E19A0042BAF9 /* Arc.cpp */,
-				ACE3C9281BB7E19A0042BAF9 /* Arc.h */,
 				ACE3C9291BB7E19A0042BAF9 /* Info.plist */,
 				ACE3C92A1BB7E19A0042BAF9 /* Makefile */,
 				ACE3C92B1BB7E19A0042BAF9 /* net.fxarena.openfx.Arc.png */,
 				ACE3C92C1BB7E19A0042BAF9 /* net.fxarena.openfx.Arc.svg */,
-				ACE3C92D1BB7E19A0042BAF9 /* PluginRegistration.cpp */,
 			);
 			path = Arc;
 			sourceTree = "<group>";
@@ -1938,54 +1907,22 @@
 			isa = PBXGroup;
 			children = (
 				ACE3C92F1BB7E19A0042BAF9 /* Charcoal.cpp */,
-				ACE3C9301BB7E19A0042BAF9 /* Charcoal.h */,
 				ACE3C9311BB7E19A0042BAF9 /* Info.plist */,
 				ACE3C9321BB7E19A0042BAF9 /* Makefile */,
 				ACE3C9331BB7E19A0042BAF9 /* net.fxarena.openfx.Charcoal.png */,
 				ACE3C9341BB7E19A0042BAF9 /* net.fxarena.openfx.Charcoal.svg */,
-				ACE3C9351BB7E19A0042BAF9 /* PluginRegistration.cpp */,
 			);
 			path = Charcoal;
-			sourceTree = "<group>";
-		};
-		ACE3C9361BB7E19A0042BAF9 /* DaveHill */ = {
-			isa = PBXGroup;
-			children = (
-				ACE3C9371BB7E19A0042BAF9 /* DaveHill.cpp */,
-				ACE3C9381BB7E19A0042BAF9 /* DaveHill.h */,
-				ACE3C9391BB7E19A0042BAF9 /* Info.plist */,
-				ACE3C93A1BB7E19A0042BAF9 /* Makefile */,
-				ACE3C93B1BB7E19A0042BAF9 /* net.fxarena.openfx.DaveHill.png */,
-				ACE3C93C1BB7E19A0042BAF9 /* net.fxarena.openfx.DaveHill.svg */,
-				ACE3C93D1BB7E19A0042BAF9 /* PluginRegistration.cpp */,
-			);
-			path = DaveHill;
-			sourceTree = "<group>";
-		};
-		ACE3C93E1BB7E19A0042BAF9 /* Dragan */ = {
-			isa = PBXGroup;
-			children = (
-				ACE3C93F1BB7E19A0042BAF9 /* Dragan.cpp */,
-				ACE3C9401BB7E19A0042BAF9 /* Dragan.h */,
-				ACE3C9411BB7E19A0042BAF9 /* Info.plist */,
-				ACE3C9421BB7E19A0042BAF9 /* Makefile */,
-				ACE3C9431BB7E19A0042BAF9 /* net.fxarena.openfx.Dragan.png */,
-				ACE3C9441BB7E19A0042BAF9 /* net.fxarena.openfx.Dragan.svg */,
-				ACE3C9451BB7E19A0042BAF9 /* PluginRegistration.cpp */,
-			);
-			path = Dragan;
 			sourceTree = "<group>";
 		};
 		ACE3C9461BB7E19A0042BAF9 /* Edges */ = {
 			isa = PBXGroup;
 			children = (
 				ACE3C9471BB7E19A0042BAF9 /* Edges.cpp */,
-				ACE3C9481BB7E19A0042BAF9 /* Edges.h */,
 				ACE3C9491BB7E19A0042BAF9 /* Info.plist */,
 				ACE3C94A1BB7E19A0042BAF9 /* Makefile */,
 				ACE3C94B1BB7E19A0042BAF9 /* net.fxarena.openfx.Edges.png */,
 				ACE3C94C1BB7E19A0042BAF9 /* net.fxarena.openfx.Edges.svg */,
-				ACE3C94D1BB7E19A0042BAF9 /* PluginRegistration.cpp */,
 			);
 			path = Edges;
 			sourceTree = "<group>";
@@ -1994,48 +1931,12 @@
 			isa = PBXGroup;
 			children = (
 				ACE3C94F1BB7E19A0042BAF9 /* Emboss.cpp */,
-				ACE3C9501BB7E19A0042BAF9 /* Emboss.h */,
 				ACE3C9511BB7E19A0042BAF9 /* Info.plist */,
 				ACE3C9521BB7E19A0042BAF9 /* Makefile */,
 				ACE3C9531BB7E19A0042BAF9 /* net.fxarena.openfx.Emboss.png */,
 				ACE3C9541BB7E19A0042BAF9 /* net.fxarena.openfx.Emboss.svg */,
-				ACE3C9551BB7E19A0042BAF9 /* PluginRegistration.cpp */,
 			);
 			path = Emboss;
-			sourceTree = "<group>";
-		};
-		ACE3C9561BB7E19A0042BAF9 /* ExtraFX */ = {
-			isa = PBXGroup;
-			children = (
-				ACE3C96A1BB7E19A0042BAF9 /* Info.plist */,
-				ACE3C96B1BB7E19A0042BAF9 /* Makefile */,
-				ACE3C96C1BB7E19A0042BAF9 /* PluginRegistrationCombined.cpp */,
-			);
-			path = ExtraFX;
-			sourceTree = "<group>";
-		};
-		ACE3C96D1BB7E19A0042BAF9 /* ExtraIO */ = {
-			isa = PBXGroup;
-			children = (
-				ACE3C9771BB7E19A0042BAF9 /* Info.plist */,
-				ACE3C9781BB7E19A0042BAF9 /* Makefile */,
-				ACE3C9791BB7E19A0042BAF9 /* PluginRegistrationCombined.cpp */,
-			);
-			path = ExtraIO;
-			sourceTree = "<group>";
-		};
-		ACE3C97A1BB7E19A0042BAF9 /* Glow */ = {
-			isa = PBXGroup;
-			children = (
-				ACE3C97B1BB7E19A0042BAF9 /* Glow.cpp */,
-				ACE3C97C1BB7E19A0042BAF9 /* Glow.h */,
-				ACE3C97D1BB7E19A0042BAF9 /* Info.plist */,
-				ACE3C97E1BB7E19A0042BAF9 /* Makefile */,
-				ACE3C97F1BB7E19A0042BAF9 /* net.fxarena.openfx.Glow.png */,
-				ACE3C9801BB7E19A0042BAF9 /* net.fxarena.openfx.Glow.svg */,
-				ACE3C9811BB7E19A0042BAF9 /* PluginRegistration.cpp */,
-			);
-			path = Glow;
 			sourceTree = "<group>";
 		};
 		ACE3C9821BB7E19A0042BAF9 /* Implode */ = {
@@ -2058,10 +1959,8 @@
 				ACE3C98F1BB7E19A0042BAF9 /* Info.plist */,
 				ACE3C9901BB7E19A0042BAF9 /* Makefile */,
 				ACE3C9911BB7E19A0042BAF9 /* Modulate.cpp */,
-				ACE3C9921BB7E19A0042BAF9 /* Modulate.h */,
 				ACE3C9931BB7E19A0042BAF9 /* net.fxarena.openfx.Modulate.png */,
 				ACE3C9941BB7E19A0042BAF9 /* net.fxarena.openfx.Modulate.svg */,
-				ACE3C9951BB7E19A0042BAF9 /* PluginRegistration.cpp */,
 			);
 			path = Modulate;
 			sourceTree = "<group>";
@@ -2083,7 +1982,6 @@
 		ACE3C99E1BB7E19A0042BAF9 /* OpenCL */ = {
 			isa = PBXGroup;
 			children = (
-				ACE3C99F1BB7E19A0042BAF9 /* README.md */,
 			);
 			path = OpenCL;
 			sourceTree = "<group>";
@@ -4512,25 +4410,9 @@
 				ACE3CE821BB7E19C0042BAF9 /* Makefile */,
 				ACE3CE831BB7E19C0042BAF9 /* net.fxarena.openfx.Polar.png */,
 				ACE3CE841BB7E19C0042BAF9 /* net.fxarena.openfx.Polar.svg */,
-				ACE3CE851BB7E19C0042BAF9 /* PluginRegistration.cpp */,
 				ACE3CE861BB7E19C0042BAF9 /* Polar.cpp */,
-				ACE3CE871BB7E19C0042BAF9 /* Polar.h */,
 			);
 			path = Polar;
-			sourceTree = "<group>";
-		};
-		ACE3CE881BB7E19C0042BAF9 /* Polaroid */ = {
-			isa = PBXGroup;
-			children = (
-				ACE3CE891BB7E19C0042BAF9 /* Info.plist */,
-				ACE3CE8A1BB7E19D0042BAF9 /* Makefile */,
-				ACE3CE8B1BB7E19D0042BAF9 /* net.fxarena.openfx.Polaroid.png */,
-				ACE3CE8C1BB7E19D0042BAF9 /* net.fxarena.openfx.Polaroid.svg */,
-				ACE3CE8D1BB7E19D0042BAF9 /* PluginRegistration.cpp */,
-				ACE3CE8E1BB7E19D0042BAF9 /* Polaroid.cpp */,
-				ACE3CE8F1BB7E19D0042BAF9 /* Polaroid.h */,
-			);
-			path = Polaroid;
 			sourceTree = "<group>";
 		};
 		ACE3CE901BB7E19D0042BAF9 /* ReadPSD */ = {
@@ -4540,9 +4422,7 @@
 				ACE3CE921BB7E19D0042BAF9 /* Makefile */,
 				ACE3CE931BB7E19D0042BAF9 /* net.fxarena.openfx.ReadPSD.png */,
 				ACE3CE941BB7E19D0042BAF9 /* net.fxarena.openfx.ReadPSD.svg */,
-				ACE3CE951BB7E19D0042BAF9 /* PluginRegistration.cpp */,
 				ACE3CE961BB7E19D0042BAF9 /* ReadPSD.cpp */,
-				ACE3CE971BB7E19D0042BAF9 /* ReadPSD.h */,
 			);
 			path = ReadPSD;
 			sourceTree = "<group>";
@@ -4554,9 +4434,7 @@
 				ACE3CE9A1BB7E19D0042BAF9 /* Makefile */,
 				ACE3CE9B1BB7E19D0042BAF9 /* net.fxarena.openfx.ReadSVG.png */,
 				ACE3CE9C1BB7E19D0042BAF9 /* net.fxarena.openfx.ReadSVG.svg */,
-				ACE3CE9D1BB7E19D0042BAF9 /* PluginRegistration.cpp */,
 				ACE3CE9E1BB7E19D0042BAF9 /* ReadSVG.cpp */,
-				ACE3CE9F1BB7E19D0042BAF9 /* ReadSVG.h */,
 			);
 			path = ReadSVG;
 			sourceTree = "<group>";
@@ -4568,9 +4446,7 @@
 				ACE3CEA21BB7E19D0042BAF9 /* Makefile */,
 				ACE3CEA31BB7E19D0042BAF9 /* net.fxarena.openfx.Reflection.png */,
 				ACE3CEA41BB7E19D0042BAF9 /* net.fxarena.openfx.Reflection.svg */,
-				ACE3CEA51BB7E19D0042BAF9 /* PluginRegistration.cpp */,
 				ACE3CEA61BB7E19D0042BAF9 /* Reflection.cpp */,
-				ACE3CEA71BB7E19D0042BAF9 /* Reflection.h */,
 			);
 			path = Reflection;
 			sourceTree = "<group>";
@@ -4582,9 +4458,7 @@
 				ACE3CEAA1BB7E19D0042BAF9 /* Makefile */,
 				ACE3CEAB1BB7E19D0042BAF9 /* net.fxarena.openfx.Roll.png */,
 				ACE3CEAC1BB7E19D0042BAF9 /* net.fxarena.openfx.Roll.svg */,
-				ACE3CEAD1BB7E19D0042BAF9 /* PluginRegistration.cpp */,
 				ACE3CEAE1BB7E19D0042BAF9 /* Roll.cpp */,
-				ACE3CEAF1BB7E19D0042BAF9 /* Roll.h */,
 			);
 			path = Roll;
 			sourceTree = "<group>";
@@ -4596,9 +4470,7 @@
 				ACE3CEB21BB7E19D0042BAF9 /* Makefile */,
 				ACE3CEB31BB7E19D0042BAF9 /* net.fxarena.openfx.Sketch.png */,
 				ACE3CEB41BB7E19D0042BAF9 /* net.fxarena.openfx.Sketch.svg */,
-				ACE3CEB51BB7E19D0042BAF9 /* PluginRegistration.cpp */,
 				ACE3CEB61BB7E19D0042BAF9 /* Sketch.cpp */,
-				ACE3CEB71BB7E19D0042BAF9 /* Sketch.h */,
 			);
 			path = Sketch;
 			sourceTree = "<group>";
@@ -4654,25 +4526,9 @@
 				ACE3CEE01BB7E19D0042BAF9 /* Makefile */,
 				ACE3CEE11BB7E19D0042BAF9 /* net.fxarena.openfx.Swirl.png */,
 				ACE3CEE21BB7E19D0042BAF9 /* net.fxarena.openfx.Swirl.svg */,
-				ACE3CEE31BB7E19D0042BAF9 /* PluginRegistration.cpp */,
 				ACE3CEE41BB7E19D0042BAF9 /* Swirl.cpp */,
-				ACE3CEE51BB7E19D0042BAF9 /* Swirl.h */,
 			);
 			path = Swirl;
-			sourceTree = "<group>";
-		};
-		ACE3CEE61BB7E19D0042BAF9 /* TestGLX */ = {
-			isa = PBXGroup;
-			children = (
-				ACE3CEE71BB7E19D0042BAF9 /* Info.plist */,
-				ACE3CEE81BB7E19D0042BAF9 /* Makefile */,
-				ACE3CEE91BB7E19D0042BAF9 /* net.fxarena.openfx.TestGLX.png */,
-				ACE3CEEA1BB7E19D0042BAF9 /* net.fxarena.openfx.TestGLX.svg */,
-				ACE3CEEB1BB7E19D0042BAF9 /* PluginRegistration.cpp */,
-				ACE3CEEC1BB7E19D0042BAF9 /* TestGLX.cpp */,
-				ACE3CEED1BB7E19D0042BAF9 /* TestGLX.h */,
-			);
-			path = TestGLX;
 			sourceTree = "<group>";
 		};
 		ACE3CEEE1BB7E19D0042BAF9 /* Text */ = {
@@ -4682,9 +4538,7 @@
 				ACE3CEF01BB7E19D0042BAF9 /* Makefile */,
 				ACE3CEF11BB7E19D0042BAF9 /* net.fxarena.openfx.Text.png */,
 				ACE3CEF21BB7E19D0042BAF9 /* net.fxarena.openfx.Text.svg */,
-				ACE3CEF31BB7E19D0042BAF9 /* PluginRegistration.cpp */,
 				ACE3CEF41BB7E19D0042BAF9 /* Text.cpp */,
-				ACE3CEF51BB7E19D0042BAF9 /* Text.h */,
 			);
 			path = Text;
 			sourceTree = "<group>";
@@ -4692,9 +4546,7 @@
 		ACE3CEF61BB7E19D0042BAF9 /* TextFX */ = {
 			isa = PBXGroup;
 			children = (
-				ACE3CF001BB7E19D0042BAF9 /* Info.plist */,
 				ACE3CF011BB7E19D0042BAF9 /* Makefile */,
-				ACE3CF021BB7E19D0042BAF9 /* PluginRegistrationCombined.cpp */,
 			);
 			path = TextFX;
 			sourceTree = "<group>";
@@ -4706,9 +4558,7 @@
 				ACE3CF051BB7E19D0042BAF9 /* Makefile */,
 				ACE3CF061BB7E19D0042BAF9 /* net.fxarena.openfx.TextPango.png */,
 				ACE3CF071BB7E19D0042BAF9 /* net.fxarena.openfx.TextPango.svg */,
-				ACE3CF081BB7E19D0042BAF9 /* PluginRegistration.cpp */,
 				ACE3CF091BB7E19D0042BAF9 /* TextPango.cpp */,
-				ACE3CF0A1BB7E19D0042BAF9 /* TextPango.h */,
 			);
 			path = TextPango;
 			sourceTree = "<group>";
@@ -4720,9 +4570,7 @@
 				ACE3CF0D1BB7E19D0042BAF9 /* Makefile */,
 				ACE3CF0E1BB7E19D0042BAF9 /* net.fxarena.openfx.Texture.png */,
 				ACE3CF0F1BB7E19D0042BAF9 /* net.fxarena.openfx.Texture.svg */,
-				ACE3CF101BB7E19D0042BAF9 /* PluginRegistration.cpp */,
 				ACE3CF111BB7E19D0042BAF9 /* Texture.cpp */,
-				ACE3CF121BB7E19D0042BAF9 /* Texture.h */,
 			);
 			path = Texture;
 			sourceTree = "<group>";
@@ -4734,9 +4582,7 @@
 				ACE3CF151BB7E19D0042BAF9 /* Makefile */,
 				ACE3CF161BB7E19D0042BAF9 /* net.fxarena.openfx.Tile.png */,
 				ACE3CF171BB7E19D0042BAF9 /* net.fxarena.openfx.Tile.svg */,
-				ACE3CF181BB7E19D0042BAF9 /* PluginRegistration.cpp */,
 				ACE3CF191BB7E19D0042BAF9 /* Tile.cpp */,
-				ACE3CF1A1BB7E19D0042BAF9 /* Tile.h */,
 			);
 			path = Tile;
 			sourceTree = "<group>";
@@ -4748,9 +4594,7 @@
 				ACE3CF1D1BB7E19D0042BAF9 /* Makefile */,
 				ACE3CF1E1BB7E19D0042BAF9 /* net.fxarena.openfx.Wave.png */,
 				ACE3CF1F1BB7E19D0042BAF9 /* net.fxarena.openfx.Wave.svg */,
-				ACE3CF201BB7E19D0042BAF9 /* PluginRegistration.cpp */,
 				ACE3CF211BB7E19D0042BAF9 /* Wave.cpp */,
-				ACE3CF221BB7E19D0042BAF9 /* Wave.h */,
 			);
 			path = Wave;
 			sourceTree = "<group>";
@@ -4763,9 +4607,7 @@
 				ACED46481C031EE600BBEEA0 /* Makefile */,
 				ACED46491C031EE600BBEEA0 /* net.fxarena.openfx.PovRay.png */,
 				ACED464A1C031EE600BBEEA0 /* net.fxarena.openfx.PovRay.svg */,
-				ACED464B1C031EE600BBEEA0 /* PluginRegistration.cpp */,
 				ACED464C1C031EE600BBEEA0 /* PovRay.cpp */,
-				ACED464D1C031EE600BBEEA0 /* PovRay.h */,
 				ACED464E1C031EE600BBEEA0 /* povray.spec */,
 				ACED464F1C031EE600BBEEA0 /* Text3D */,
 			);
@@ -4793,17 +4635,16 @@
 		D74E623B1875A79700D8FA13 = {
 			isa = PBXGroup;
 			children = (
+				AC9743E81C81B94D00F5B208 /* OpenRaster */,
+				AC9743D01C81B68700F5B208 /* ReadCDR */,
+				AC9743D61C81B68700F5B208 /* ReadKrita */,
+				AC9743DC1C81B68700F5B208 /* ReadMisc */,
 				ACED46431C031EE600BBEEA0 /* PovRay */,
 				ACE3C9261BB7E19A0042BAF9 /* Arc */,
 				ACE3C9251BB7E1660042BAF9 /* Bundle */,
 				ACE3C92E1BB7E19A0042BAF9 /* Charcoal */,
-				ACE3C9361BB7E19A0042BAF9 /* DaveHill */,
-				ACE3C93E1BB7E19A0042BAF9 /* Dragan */,
 				ACE3C9461BB7E19A0042BAF9 /* Edges */,
 				ACE3C94E1BB7E19A0042BAF9 /* Emboss */,
-				ACE3C9561BB7E19A0042BAF9 /* ExtraFX */,
-				ACE3C96D1BB7E19A0042BAF9 /* ExtraIO */,
-				ACE3C97A1BB7E19A0042BAF9 /* Glow */,
 				ACE3C9821BB7E19A0042BAF9 /* Implode */,
 				ACE3C98A1BB7E19A0042BAF9 /* LICENSE */,
 				ACE3C98B1BB7E19A0042BAF9 /* Makefile */,
@@ -4815,8 +4656,7 @@
 				ACE3C9A01BB7E19A0042BAF9 /* OpenFX */,
 				ACE3CBC01BB7E19B0042BAF9 /* OpenFX-IO */,
 				ACE3CE801BB7E19C0042BAF9 /* Polar */,
-				ACE3CE881BB7E19C0042BAF9 /* Polaroid */,
-				AC74D6341C3134120026BE93 /* ReadMVG */,
+				ACB60B1C1C5F494200AA2374 /* Polaroid */,
 				ACE3CE901BB7E19D0042BAF9 /* ReadPSD */,
 				ACE3CE981BB7E19D0042BAF9 /* ReadSVG */,
 				ACE3CEA01BB7E19D0042BAF9 /* Reflection */,
@@ -4824,7 +4664,6 @@
 				ACE3CEB01BB7E19D0042BAF9 /* Sketch */,
 				ACE3CEB81BB7E19D0042BAF9 /* SupportExt */,
 				ACE3CEDE1BB7E19D0042BAF9 /* Swirl */,
-				ACE3CEE61BB7E19D0042BAF9 /* TestGLX */,
 				ACE3CEEE1BB7E19D0042BAF9 /* Text */,
 				ACE3CEF61BB7E19D0042BAF9 /* TextFX */,
 				ACE3CF031BB7E19D0042BAF9 /* TextPango */,
@@ -5384,21 +5223,24 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				AC74D63C1C3134120026BE93 /* Makefile in Sources */,
+				AC9743E61C81B68700F5B208 /* Makefile in Sources */,
 				ACE3CFF31BB7EC560042BAF9 /* Oilpaint.cpp in Sources */,
 				ACE3CFF01BB7EC4A0042BAF9 /* Emboss.cpp in Sources */,
 				ACE3CFEF1BB7EC450042BAF9 /* Edges.cpp in Sources */,
-				ACE3CFEB1BB7EC370042BAF9 /* PluginRegistrationCombined.cpp in Sources */,
 				ACE3CFEC1BB7EC3A0042BAF9 /* Charcoal.cpp in Sources */,
-				ACE3CFED1BB7EC3E0042BAF9 /* DaveHill.cpp in Sources */,
 				ACE3CFF21BB7EC520042BAF9 /* Modulate.cpp in Sources */,
+				AC9743EE1C81B94D00F5B208 /* Makefile in Sources */,
 				ACED46521C031EE600BBEEA0 /* Makefile in Sources */,
-				ACE3CFF11BB7EC4E0042BAF9 /* Glow.cpp in Sources */,
 				ACE3CFF71BB7EC6C0042BAF9 /* ofxsLog.cpp in Sources */,
 				AC93A1821BB7EE17000E4A0C /* Arc.cpp in Sources */,
 				ACE3CFF51BB7EC690042BAF9 /* ofxsImageEffect.cpp in Sources */,
+				AC9743EF1C81B94D00F5B208 /* OpenRaster.cpp in Sources */,
 				ACE3CFF91BB7EC6F0042BAF9 /* ofxsParams.cpp in Sources */,
+				ACB60B231C5F494200AA2374 /* Polaroid.cpp in Sources */,
 				ACE3CFFA1BB7EC700042BAF9 /* ofxsProperty.cpp in Sources */,
+				AC9743E21C81B68700F5B208 /* Makefile in Sources */,
+				AC9743E41C81B68700F5B208 /* Makefile in Sources */,
+				ACB60B221C5F494200AA2374 /* Makefile in Sources */,
 				ACE3CFF61BB7EC6B0042BAF9 /* ofxsInteract.cpp in Sources */,
 				ACE3CFFB1BB7EC710042BAF9 /* ofxsPropertyValidation.cpp in Sources */,
 				ACE3D0051BB7ECA00042BAF9 /* ofxsLut.cpp in Sources */,
@@ -5410,9 +5252,7 @@
 				ACE3D0071BB7ECA40042BAF9 /* ofxsOGLTextRenderer.cpp in Sources */,
 				ACE3D0091BB7ECA90042BAF9 /* ofxsTransform3x3.cpp in Sources */,
 				AC93A1811BB7ED9B000E4A0C /* SequenceParsing.cpp in Sources */,
-				AC74D63E1C3134120026BE93 /* ReadMVG.cpp in Sources */,
 				ACE3D00E1BB7ECBC0042BAF9 /* TextPango.cpp in Sources */,
-				ACE3CFFF1BB7EC8B0042BAF9 /* Polaroid.cpp in Sources */,
 				AC93A1841BB7EE3B000E4A0C /* Implode.cpp in Sources */,
 				ACE3D00A1BB7ECAA0042BAF9 /* ofxsTransformInteract.cpp in Sources */,
 				ACE3D0111BB7ECC60042BAF9 /* Wave.cpp in Sources */,
@@ -5424,12 +5264,14 @@
 				AC93A1831BB7EE28000E4A0C /* ofxsShutter.cpp in Sources */,
 				ACE3D0081BB7ECA60042BAF9 /* ofxsRectangleInteract.cpp in Sources */,
 				ACE3D0001BB7EC8E0042BAF9 /* ReadPSD.cpp in Sources */,
+				AC9743E71C81B68700F5B208 /* ReadMisc.cpp in Sources */,
+				AC9743E51C81B68700F5B208 /* ReadKrita.cpp in Sources */,
+				AC9743E31C81B68700F5B208 /* ReadCDR.cpp in Sources */,
 				ACE3CFFC1BB7EC7D0042BAF9 /* GenericOCIO.cpp in Sources */,
 				ACE3D0041BB7EC9A0042BAF9 /* Sketch.cpp in Sources */,
 				ACE3D0011BB7EC910042BAF9 /* ReadSVG.cpp in Sources */,
 				ACE3CFFD1BB7EC7E0042BAF9 /* GenericReader.cpp in Sources */,
 				ACE3CFF41BB7EC670042BAF9 /* ofxsCore.cpp in Sources */,
-				ACE3CFEE1BB7EC410042BAF9 /* Dragan.cpp in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -5452,6 +5294,7 @@
 					"$(MAGICK_PATH)/include/ImageMagick-6/Magick++",
 					"$(MAGICK_PATH)/include/ImageMagick-6",
 					"$(POVRAY_PATH)/include/PovRay",
+					"$(ZIP_PATH)",
 				);
 				INFOPLIST_FILE = Bundle/Info.plist;
 				OTHER_LDFLAGS = (
@@ -5513,6 +5356,7 @@
 					"$(MAGICK_PATH)/include/ImageMagick-6/Magick++",
 					"$(MAGICK_PATH)/include/ImageMagick-6",
 					"$(POVRAY_PATH)/include/PovRay",
+					"$(ZIP_PATH)",
 				);
 				INFOPLIST_FILE = Bundle/Info.plist;
 				OTHER_LDFLAGS = (
