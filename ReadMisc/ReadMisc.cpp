@@ -173,6 +173,7 @@ ReadMiscPluginFactory::load()
     _extensions.push_back("xpm");
     _extensions.push_back("gif");
     _extensions.push_back("mvg");
+    _extentions.push_back("miff");
 }
 
 /** @brief The basic describe function, passed a plugin descriptor */
