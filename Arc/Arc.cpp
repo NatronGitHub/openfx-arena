@@ -18,8 +18,8 @@
 #define kPluginName "ArcOFX"
 #define kPluginGrouping "Extra/Distort"
 #define kPluginIdentifier "net.fxarena.openfx.Arc"
-#define kPluginVersionMajor 3
-#define kPluginVersionMinor 2
+#define kPluginVersionMajor 4
+#define kPluginVersionMinor 0
 
 #define kParamVPixel "pixel"
 #define kParamVPixelLabel "Virtual Pixel"
@@ -45,11 +45,6 @@
 #define kParamArcBottomRadiusLabel "Bottom radius"
 #define kParamArcBottomRadiusHint "Arc bottom radius"
 #define kParamArcBottomRadiusDefault 0
-
-#define kParamScale "scale"
-#define kParamScaleLabel "Scale"
-#define kParamScaleHint "Force scale to original image size"
-#define kParamScaleDefault true
 
 #define kParamMatte "matte"
 #define kParamMatteLabel "Matte"
@@ -80,7 +75,6 @@ private:
     OFX::DoubleParam *arcTopRadius_;
     OFX::DoubleParam *arcBottomRadius_;
     OFX::BooleanParam *matte_;
-    OFX::BooleanParam *scale_;
 };
 
 ArcPlugin::ArcPlugin(OfxImageEffectHandle handle)
@@ -100,9 +94,8 @@ ArcPlugin::ArcPlugin(OfxImageEffectHandle handle)
     arcTopRadius_ = fetchDoubleParam(kParamArcTopRadius);
     arcBottomRadius_ = fetchDoubleParam(kParamArcBottomRadius);
     matte_ = fetchBooleanParam(kParamMatte);
-    scale_ = fetchBooleanParam(kParamScale);
 
-    assert(vpixel_ && arcAngle_ && arcRotate_ && arcTopRadius_&& arcBottomRadius_ && matte_ && scale_);
+    assert(vpixel_ && arcAngle_ && arcRotate_ && arcTopRadius_&& arcBottomRadius_ && matte_);
 }
 
 ArcPlugin::~ArcPlugin()
@@ -184,14 +177,12 @@ void ArcPlugin::render(const OFX::RenderArguments &args)
     int vpixel;
     double arcAngle,arcRotate,arcTopRadius,arcBottomRadius;
     bool matte = false;
-    bool scale = false;
     vpixel_->getValueAtTime(args.time, vpixel);
     arcAngle_->getValueAtTime(args.time, arcAngle);
     arcRotate_->getValueAtTime(args.time, arcRotate);
     arcTopRadius_->getValueAtTime(args.time, arcTopRadius);
     arcBottomRadius_->getValueAtTime(args.time, arcBottomRadius);
     matte_->getValueAtTime(args.time, matte);
-    scale_->getValueAtTime(args.time, scale);
 
     // setup
     int width = srcRod.x2-srcRod.x1;
@@ -212,10 +203,6 @@ void ArcPlugin::render(const OFX::RenderArguments &args)
     Magick::Image output(Magick::Geometry(width,height),Magick::Color("rgba(0,0,0,1)"));
     if (srcClip_ && srcClip_->isConnected())
         image.read(width,height,"RGBA",Magick::FloatPixel,(float*)srcImg->getPixelData());
-
-    #ifdef DEBUG_MAGICK
-    image.debug(true);
-    #endif
 
     // flip
     image.flip();
@@ -272,56 +259,46 @@ void ArcPlugin::render(const OFX::RenderArguments &args)
         break;
     }
 
-    // distort method
-    double distortArgs[4];
-    int distortOpts = 0;
-    if (arcAngle!=0) {
-        distortArgs[distortOpts] = arcAngle;
-        distortOpts++;
-    }
-    if (arcRotate!=0) {
-        distortArgs[distortOpts] = arcRotate;
-        distortOpts++;
-    }
-    else {
-        distortArgs[distortOpts] = 0;
-        distortOpts++;
-    }
-    if (arcTopRadius!=0) {
-        distortArgs[distortOpts] = std::floor(arcTopRadius * args.renderScale.x + 0.5);
-        distortOpts++;
-    }
-    if (arcBottomRadius!=0 && arcTopRadius!=0) {
-        distortArgs[distortOpts] = std::floor(arcBottomRadius * args.renderScale.x + 0.5);
-        distortOpts++;
-    }
+    // set args
+    double arcTopRadiusRenderScale = std::floor(arcTopRadius * args.renderScale.x + 0.5);
+    double arcBottomRadiusRenderScale = std::floor(arcBottomRadius * args.renderScale.x + 0.5);
+
+    int numArgs=4;
+    if (arcTopRadius==0||arcBottomRadius==0)
+        numArgs=2;
+
+    const double distortArgs1[2] = {arcAngle,arcRotate};
+    const double distortArgs2[4] = {arcAngle,arcRotate,arcTopRadiusRenderScale,arcBottomRadiusRenderScale};
+
+    // force transparent background
     image.backgroundColor(Magick::Color("rgba(0,0,0,0)"));
+
+    // merge alpha if requested
     if (matte) {
         image.matte(false);
         image.matte(true);
     }
-    image.distort(Magick::ArcDistortion, distortOpts, distortArgs, Magick::MagickTrue);
 
-    if (scale) {
-        std::ostringstream scaleW;
-        scaleW << width << "x";
-        std::ostringstream scaleH;
-        scaleH << "x" << height;
-        std::size_t columns = width;
-        std::size_t rows = height;
-        if (image.columns()>columns)
-            image.scale(scaleW.str());
-        if (image.rows()>rows)
-            image.scale(scaleH.str());
-    }
+    // distort
+    if (numArgs==2)
+        image.distort(Magick::ArcDistortion, numArgs, distortArgs1, Magick::MagickTrue);
+    else if (numArgs==4)
+        image.distort(Magick::ArcDistortion, numArgs, distortArgs2, Magick::MagickTrue);
 
-    if (!scale) {
-        output.size(Magick::Geometry(dstBounds.x2-dstBounds.x1,dstBounds.y2-dstBounds.y1));
-        image.extent(Magick::Geometry(dstBounds.x2-dstBounds.x1,dstBounds.y2-dstBounds.y1),Magick::CenterGravity);
-    }
-    else
-        image.extent(Magick::Geometry(width,height),Magick::CenterGravity);
+    // scale
+    std::ostringstream scaleW;
+    scaleW << width << "x";
+    std::ostringstream scaleH;
+    scaleH << "x" << height;
+    std::size_t columns = width;
+    std::size_t rows = height;
+    if (image.columns()>columns)
+        image.scale(scaleW.str());
+    if (image.rows()>rows)
+        image.scale(scaleH.str());
+    image.extent(Magick::Geometry(width,height),Magick::CenterGravity);
 
+    // flip it
     image.flip();
 
     // return image
@@ -338,64 +315,8 @@ bool ArcPlugin::getRegionOfDefinition(const OFX::RegionOfDefinitionArguments &ar
         OFX::throwSuiteStatusException(kOfxStatFailed);
         return false;
     }
-
-    // Set max threads allowed by host
-    unsigned int threads = 0;
-    threads = OFX::MultiThread::getNumCPUs();
-    if (threads>0) {
-        Magick::ResourceLimits::thread(threads);
-        #ifdef DEBUG
-        std::cout << "Setting max threads to " << threads << std::endl;
-        #endif
-    }
-
     if (srcClip_ && srcClip_->isConnected()) {
-        bool scale = false;
-        scale_->getValueAtTime(args.time, scale);
-        if (!scale) {
-            double arcAngle,arcRotate,arcTopRadius,arcBottomRadius;
-            arcAngle_->getValueAtTime(args.time, arcAngle);
-            arcRotate_->getValueAtTime(args.time, arcRotate);
-            arcTopRadius_->getValueAtTime(args.time, arcTopRadius);
-            arcBottomRadius_->getValueAtTime(args.time, arcBottomRadius);
-            const OfxRectD& srcRod = srcClip_->getRegionOfDefinition(args.time);
-            int width = srcRod.x2-srcRod.x1;
-            int height = srcRod.y2-srcRod.y1;
-            Magick::Image image;
-            image.size(Magick::Geometry(width,height));
-            double distortArgs[4];
-            int distortOpts = 0;
-            if (arcAngle!=0) {
-                distortArgs[distortOpts] = arcAngle;
-                distortOpts++;
-            }
-            if (arcRotate!=0) {
-                distortArgs[distortOpts] = arcRotate;
-                distortOpts++;
-            }
-            else {
-                distortArgs[distortOpts] = 0;
-                distortOpts++;
-            }
-            if (arcTopRadius!=0) {
-                distortArgs[distortOpts] = std::floor(arcTopRadius * args.renderScale.x + 0.5);
-                distortOpts++;
-            }
-            if (arcBottomRadius!=0 && arcTopRadius!=0) {
-                distortArgs[distortOpts] = std::floor(arcBottomRadius * args.renderScale.x + 0.5);
-                distortOpts++;
-            }
-            image.distort(Magick::ArcDistortion, distortOpts, distortArgs, Magick::MagickTrue);
-            int w = (int)image.columns();
-            int h = (int)image.rows();
-            rod = srcRod;
-            rod.x1 = srcRod.x1;
-            rod.x2 = w;
-            rod.y1 = srcRod.y1;
-            rod.y2 = h;
-        }
-        else
-            rod = srcClip_->getRegionOfDefinition(args.time);
+        rod = srcClip_->getRegionOfDefinition(args.time);
     } else {
         rod.x1 = rod.y1 = kOfxFlagInfiniteMin;
         rod.x2 = rod.y2 = kOfxFlagInfiniteMax;
@@ -469,8 +390,8 @@ void ArcPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, Conte
         DoubleParamDescriptor *param = desc.defineDoubleParam(kParamArcTopRadius);
         param->setLabel(kParamArcTopRadiusLabel);
         param->setHint(kParamArcTopRadiusHint);
-        param->setRange(0, 360);
-        param->setDisplayRange(0, 360);
+        param->setRange(0, 700);
+        param->setDisplayRange(0, 700);
         param->setDefault(kParamArcTopRadiusDefault);
         page->addChild(*param);
     }
@@ -478,17 +399,9 @@ void ArcPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, Conte
         DoubleParamDescriptor *param = desc.defineDoubleParam(kParamArcBottomRadius);
         param->setLabel(kParamArcBottomRadiusLabel);
         param->setHint(kParamArcBottomRadiusHint);
-        param->setRange(0, 360);
-        param->setDisplayRange(0, 360);
+        param->setRange(0, 350);
+        param->setDisplayRange(0, 350);
         param->setDefault(kParamArcBottomRadiusDefault);
-        page->addChild(*param);
-    }
-    {
-        BooleanParamDescriptor *param = desc.defineBooleanParam(kParamScale);
-        param->setLabel(kParamScaleLabel);
-        param->setHint(kParamScaleHint);
-        param->setDefault(kParamScaleDefault);
-        param->setAnimates(true);
         page->addChild(*param);
     }
     {
