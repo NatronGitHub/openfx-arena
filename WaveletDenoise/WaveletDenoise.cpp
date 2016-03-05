@@ -24,7 +24,7 @@
 #include <cmath>
 
 #define kPluginName "WaveletDenoiseOFX"
-#define kPluginGrouping "Extra/Misc"
+#define kPluginGrouping "Extra/Filter"
 #define kPluginIdentifier "fr.inria.openfx.WaveletDenoise"
 #define kPluginVersionMajor 1
 #define kPluginVersionMinor 0
@@ -32,7 +32,7 @@
 #define kParamThreshold "threshold"
 #define kParamThresholdLabel "Threshold"
 #define kParamThresholdHint "Threshold"
-#define kParamThresholdDefault 1.2
+#define kParamThresholdDefault 0.1
 
 #define kParamSoftness "softness"
 #define kParamSoftnessLabel "Softness"
@@ -193,7 +193,8 @@ void WaveletDenoisePlugin::render(const OFX::RenderArguments &args)
     }
 
     // denoise
-    image.waveletDenoise(threshold/*,softness*/);
+    image.waveletDenoise(threshold,softness);
+    //image.write("/tmp/denoise.png");
 
     // return image
     if (dstClip_ && dstClip_->isConnected()) {
@@ -266,8 +267,8 @@ void WaveletDenoisePluginFactory::describeInContext(OFX::ImageEffectDescriptor &
         DoubleParamDescriptor *param = desc.defineDoubleParam(kParamThreshold);
         param->setLabel(kParamThresholdLabel);
         param->setHint(kParamThresholdHint);
-        param->setRange(0, 100);
-        param->setDisplayRange(0, 100);
+        param->setRange(0, 10);
+        param->setDisplayRange(0, 10);
         param->setDefault(kParamThresholdDefault);
         page->addChild(*param);
     }
@@ -275,8 +276,8 @@ void WaveletDenoisePluginFactory::describeInContext(OFX::ImageEffectDescriptor &
         DoubleParamDescriptor *param = desc.defineDoubleParam(kParamSoftness);
         param->setLabel(kParamSoftnessLabel);
         param->setHint(kParamSoftnessHint);
-        param->setRange(0, 100);
-        param->setDisplayRange(0, 100);
+        param->setRange(0, 10);
+        param->setDisplayRange(0, 10);
         param->setDefault(kParamSoftnessDefault);
         page->addChild(*param);
     }
