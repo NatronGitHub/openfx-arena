@@ -18,18 +18,13 @@
 #define kPluginName "PolarOFX"
 #define kPluginGrouping "Extra/Distort"
 #define kPluginIdentifier "net.fxarena.openfx.Polar"
-#define kPluginVersionMajor 3
-#define kPluginVersionMinor 2
+#define kPluginVersionMajor 4
+#define kPluginVersionMinor 0
 
 #define kParamVPixel "pixel"
 #define kParamVPixelLabel "Virtual Pixel"
 #define kParamVPixelHint "Virtual Pixel Method"
 #define kParamVPixelDefault 12
-
-#define kParamPolarRotate "rotate"
-#define kParamPolarRotateLabel "Rotate"
-#define kParamPolarRotateHint "Polar rotate"
-#define kParamPolarRotateDefault 0
 
 #define kParamDePolar "dePolar"
 #define kParamDePolarLabel "DePolar"
@@ -70,11 +65,9 @@ private:
     OFX::Clip *dstClip_;
     OFX::Clip *srcClip_;
     OFX::ChoiceParam *vpixel_;
-    OFX::DoubleParam *polarRotate_;
     OFX::BooleanParam *polarFlip_;
     OFX::BooleanParam *dePolar_;
     OFX::BooleanParam *matte_;
-    OFX::BooleanParam *scale_;
 };
 
 PolarPlugin::PolarPlugin(OfxImageEffectHandle handle)
@@ -89,13 +82,11 @@ PolarPlugin::PolarPlugin(OfxImageEffectHandle handle)
     assert(srcClip_ && srcClip_->getPixelComponents() == OFX::ePixelComponentRGBA);
 
     vpixel_ = fetchChoiceParam(kParamVPixel);
-    polarRotate_ = fetchDoubleParam(kParamPolarRotate);
     polarFlip_ = fetchBooleanParam(kParamPolarFlip);
     dePolar_ = fetchBooleanParam(kParamDePolar);
     matte_ = fetchBooleanParam(kParamMatte);
-    scale_ = fetchBooleanParam(kParamScale);
 
-    assert(vpixel_ && polarRotate_ && polarFlip_ && dePolar_ && matte_ && scale_);
+    assert(vpixel_ && polarFlip_ && dePolar_ && matte_);
 }
 
 PolarPlugin::~PolarPlugin()
@@ -175,17 +166,13 @@ void PolarPlugin::render(const OFX::RenderArguments &args)
 
     // get params
     int vpixel;
-    double polarRotate;
     bool polarFlip = false;
     bool dePolar = false;
     bool matte = false;
-    bool scale = false;
     vpixel_->getValueAtTime(args.time, vpixel);
-    polarRotate_->getValueAtTime(args.time, polarRotate);
     polarFlip_->getValueAtTime(args.time, polarFlip);
     dePolar_->getValueAtTime(args.time, dePolar);
     matte_->getValueAtTime(args.time, matte);
-    scale_->getValueAtTime(args.time, scale);
 
     // setup
     int width = srcRod.x2-srcRod.x1;
@@ -262,36 +249,39 @@ void PolarPlugin::render(const OFX::RenderArguments &args)
         break;
     }
 
-    // distort
+    // setup
     double distortArgs[0];
     image.backgroundColor(Magick::Color("rgba(0,0,0,0)"));
+
+    // merge alpha if requested
     if (matte) {
         image.matte(false);
         image.matte(true);
     }
+
+    // flip?
     if (polarFlip)
         image.flip();
+
+    // distort
     if (dePolar)
         image.distort(Magick::DePolarDistortion, 0, distortArgs, Magick::MagickFalse);
     else
         image.distort(Magick::PolarDistortion, 0, distortArgs, Magick::MagickTrue);
-    if (polarRotate!=0)
-        image.rotate(polarRotate);
 
-    if (scale) {
-        std::ostringstream scaleW;
-        scaleW << width << "x";
-        std::ostringstream scaleH;
-        scaleH << "x" << height;
-        std::size_t rows = height;
-        if (image.rows()>rows)
-            image.scale(scaleH.str());
-    }
+    // the effect will produce a 4:3 image, scale to fit original image
+    std::ostringstream scaleW;
+    scaleW << width << "x";
+    std::ostringstream scaleH;
+    scaleH << "x" << height;
+    std::size_t rows = height;
+    if (image.rows()>rows)
+        image.scale(scaleH.str());
 
-    if (scale)
-        image.extent(Magick::Geometry(width,height),Magick::CenterGravity);
-    else
-        image.extent(Magick::Geometry(dstBounds.x2-dstBounds.x1,dstBounds.y2-dstBounds.y1),Magick::CenterGravity);
+    // the effect adds 2 pixels to image, "scale" to original size and center
+    image.extent(Magick::Geometry(width,height),Magick::CenterGravity);
+
+    // final flip
     image.flip();
 
     // return image
@@ -309,46 +299,8 @@ bool PolarPlugin::getRegionOfDefinition(const OFX::RegionOfDefinitionArguments &
         return false;
     }
 
-    // Set max threads allowed by host
-    unsigned int threads = 0;
-    threads = OFX::MultiThread::getNumCPUs();
-    if (threads>0) {
-        Magick::ResourceLimits::thread(threads);
-        #ifdef DEBUG
-        std::cout << "Setting max threads to " << threads << std::endl;
-        #endif
-    }
-
     if (srcClip_ && srcClip_->isConnected()) {
-        bool scale = false;
-        scale_->getValueAtTime(args.time, scale);
-        if (!scale) {
-            double polarRotate;
-            bool dePolar = false;
-            polarRotate_->getValueAtTime(args.time, polarRotate);
-            dePolar_->getValueAtTime(args.time, dePolar);
-            const OfxRectD& srcRod = srcClip_->getRegionOfDefinition(args.time);
-            int width = srcRod.x2-srcRod.x1;
-            int height = srcRod.y2-srcRod.y1;
-            double distortArgs[0];
-            Magick::Image image;
-            image.size(Magick::Geometry(width,height));
-            if (dePolar)
-                image.distort(Magick::DePolarDistortion, 0, distortArgs, Magick::MagickFalse);
-            else
-                image.distort(Magick::PolarDistortion, 0, distortArgs, Magick::MagickTrue);
-            if (polarRotate!=0)
-                image.rotate(polarRotate);
-            int w = (int)image.columns();
-            int h = (int)image.rows();
-            rod = srcRod;
-            rod.x1 = 0;
-            rod.x2 = w;
-            rod.y1 = 0;
-            rod.y2 = h;
-        }
-        else
-            rod = srcClip_->getRegionOfDefinition(args.time);
+        rod = srcClip_->getRegionOfDefinition(args.time);
     } else {
         rod.x1 = rod.y1 = kOfxFlagInfiniteMin;
         rod.x2 = rod.y2 = kOfxFlagInfiniteMax;
@@ -401,15 +353,6 @@ void PolarPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, Con
     // make some pages
     PageParamDescriptor *page = desc.definePageParam(kPluginName);
     {
-        DoubleParamDescriptor *param = desc.defineDoubleParam(kParamPolarRotate);
-        param->setLabel(kParamPolarRotateLabel);
-        param->setHint(kParamPolarRotateHint);
-        param->setRange(-360, 360);
-        param->setDisplayRange(-360, 360);
-        param->setDefault(kParamPolarRotateDefault);
-        page->addChild(*param);
-    }
-    {
         BooleanParamDescriptor *param = desc.defineBooleanParam(kParamDePolar);
         param->setLabel(kParamDePolarLabel);
         param->setHint(kParamDePolarHint);
@@ -422,14 +365,6 @@ void PolarPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, Con
         param->setLabel(kParamPolarFlipLabel);
         param->setHint(kParamPolarFlipHint);
         param->setDefault(kParamPolarFlipDefault);
-        param->setAnimates(true);
-        page->addChild(*param);
-    }
-    {
-        BooleanParamDescriptor *param = desc.defineBooleanParam(kParamScale);
-        param->setLabel(kParamScaleLabel);
-        param->setHint(kParamScaleHint);
-        param->setDefault(kParamScaleDefault);
         param->setAnimates(true);
         page->addChild(*param);
     }
