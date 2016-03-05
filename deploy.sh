@@ -12,7 +12,7 @@
 
 CWD=$(pwd)
 
-MAGICK=6.9.3-7mod
+MAGICK=6.9.3-5
 OCIO=1.0.9
 OCIO_URL=https://github.com/imageworks/OpenColorIO/archive/v${OCIO}.tar.gz
 MAGICK_URL=https://github.com/olear/openfx-arena/releases/download/Natron-2.0.0-RC6/ImageMagick-6.9.3-5.tar.xz
@@ -145,6 +145,7 @@ if [ "$OPENCL" = "1" ]; then
       OPENCL_PATH="-I${CWD}/3rdparty/OpenCL -L${CWD}/3rdparty/OpenCL/win${BIT}"
       MAGICK_OPT="$MAGICK_OPT --enable-opencl"
     fi
+    PKG="${PKG}-OpenCL"
   fi
 fi
 
