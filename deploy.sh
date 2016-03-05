@@ -1,5 +1,5 @@
 #!/bin/sh
-# Build and deploy plugins
+# Build and deploy plugins on Linux/FreeBSD/Mac/Windows
 #
 # Copyright (c) 2015, FxArena DA <mail@fxarena.net>
 # All rights reserved.
@@ -7,15 +7,13 @@
 # OpenFX-Arena is free software: you can redistribute it and/or modify it under the terms of the GNU General Public License version 2. You should have received a copy of the GNU General Public License version 2 along with OpenFX-Arena. If not, see http://www.gnu.org/licenses/.
 # OpenFX-Arena is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
 #
-# Need custom licensing terms or conditions? Commercial license for proprietary software? Contact us.
-#
 
 CWD=$(pwd)
 
 MAGICK=6.9.3-5
 OCIO=1.0.9
 OCIO_URL=https://github.com/imageworks/OpenColorIO/archive/v${OCIO}.tar.gz
-MAGICK_URL=https://github.com/olear/openfx-arena/releases/download/Natron-2.0.0-RC6/ImageMagick-6.9.3-5.tar.xz
+MAGICK_URL=https://github.com/olear/openfx-arena/releases/download/Natron-2.0.0-RC6/ImageMagick-${MAGICK}.tar.xz
 OPENCL_GIT=https://github.com/olear/OpenCL
 
 if [ -z "$QUANTUM" ]; then
@@ -206,6 +204,7 @@ if [ ! -f $PREFIX/lib/libOpenColorIO.a ] && [ "$BUILD_OCIO" = "1" ]; then
     make -j${MKJOBS} || exit 1
     make install || exit 1
     cp ext/dist/lib/{liby*.a,libt*.a} $PREFIX/lib/ || exit 1
+    cp ../LICENSE "$PREFIX/share/doc/LICENSE.OCIO" || exit 1
     sed -i "s/-lOpenColorIO/-lOpenColorIO -lyaml-cpp -ltinyxml -llcms2/" $PREFIX/lib/pkgconfig/OpenColorIO.pc || exit 1
 fi
 
@@ -215,15 +214,17 @@ if [ "$PKGNAME" != "Arena" ]; then
   cd $PKGNAME || exit 1
 fi
 
-if [ "$STATIC_GCC" = "1" ]; then
+# Nuke compat on Linux
+if [ "$STATIC_GCC" = "1" ] && [ "$PKGOS" = "Linux" ]; then
   GCC_LINK="-static-libgcc -static-libstdc++"
 fi
+
 if [ "$PKGOS" != "Windows" ]; then
-  $MAKE STATIC=1 FREEBSD=$USE_FREEBSD BITS=$BIT LDFLAGS_ADD="$GCC_LINK" CONFIG=$TAG clean
-  $MAKE STATIC=1 FREEBSD=$USE_FREEBSD BITS=$BIT LDFLAGS_ADD="$GCC_LINK" CONFIG=$TAG || exit 1
+  $MAKE STATIC=1 FREEBSD=$USE_FREEBSD BITS=$BIT LDFLAGS_ADD="$GCC_LINK $MAGICK_LFLAGS" CONFIG=$TAG clean
+  $MAKE STATIC=1 FREEBSD=$USE_FREEBSD BITS=$BIT LDFLAGS_ADD="$GCC_LINK $MAGICK_LFLAGS" CONFIG=$TAG || exit 1
 else
-  make MINGW=1 BIT=$BIT CONFIG=$TAG clean
-  make STATIC=1 MINGW=1 BIT=$BIT CONFIG=$TAG || exit 1
+  make MINGW=1 BIT=$BIT LDFLAGS_ADD="$MAGICK_LFLAGS" CONFIG=$TAG clean
+  make STATIC=1 MINGW=1 BIT=$BIT LDFLAGS_ADD="$MAGICK_LFLAGS" CONFIG=$TAG || exit 1
 fi
 
 cd $CWD || exit 1
@@ -235,6 +236,10 @@ cp LICENSE COPYING README.md $CWD/$PKG/ || exit 1
 cp $PREFIX/share/doc/ImageMagick/LICENSE $CWD/$PKG/LICENSE.ImageMagick || exit 1
 cp OpenFX/Support/LICENSE $CWD/$PKG/LICENSE.OpenFX || exit 1
 cp OpenFX-IO/LICENSE $CWD/$PKG/LICENSE.OpenFX-IO || exit 1
+cp SupportExt/LICENSE $CWD/$PKG/LICENSE.SupportExt || exit 1
+if [ "$BUILD_OCIO" = "1" ]; then
+  cp $PREFIX/share/doc/LICENSE.OCIO $CWD/$PKG/ || exit 1
+fi
 if [ "$NOPNG" != "1" ]; then 
   cp $PREFIX/share/doc/libpng/LICENSE $CWD/$PKG/LICENSE.libpng || exit 1
 fi
@@ -245,7 +250,7 @@ if [ "$PKGNAME" != "Arena" ]; then
 else
   PKGSRC=Bundle
 fi
-if [ "$BIT" == "64" ]; then
+if [ "$BIT" = "64" ]; then
   PKGBIT=x86-$BIT
 else
   PKGBIT=x86
