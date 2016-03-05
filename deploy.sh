@@ -12,10 +12,12 @@
 
 CWD=$(pwd)
 
-MAGICK=6.9.3-5
+MAGICK=6.9.3-7mod
 OCIO=1.0.9
 OCIO_URL=https://github.com/imageworks/OpenColorIO/archive/v${OCIO}.tar.gz
 MAGICK_URL=https://github.com/olear/openfx-arena/releases/download/Natron-2.0.0-RC6/ImageMagick-6.9.3-5.tar.xz
+OPENCL_GIT=https://github.com/olear/OpenCL
+
 if [ -z "$QUANTUM" ]; then
   Q=32
 else
@@ -129,6 +131,23 @@ if [ ! -f ${PREFIX}/lib/libpng.a ] && [ "$NOPNG" != "1" ]; then
   rm -rf libpng-$PNG || exit 1
 fi
 
+# opencl
+if [ "$OPENCL" = "1" ]; then
+  if [ "$PKGOS" = "Linux" ] || [ "$PKGOS" = "Windows" ]; then
+    if [ ! -d "$CWD/3rdparty/OpenCL" ]; then
+      git clone $OPENCL_GIT "$CWD/3rdparty/OpenCL" || exit 1
+    fi
+    if [ "$PKGOS" = "Linux" ]; then
+      OPENCL_PATH="-I${CWD}/3rdparty/OpenCL -L${CWD}/3rdparty/OpenCL/linux${BIT}"
+      MAGICK_OPT="$MAGICK_OPT --with-x --enable-opencl"
+    fi
+    if [ "$PKGOS" = "Windows" ]; then
+      OPENCL_PATH="-I${CWD}/3rdparty/OpenCL -L${CWD}/3rdparty/OpenCL/win${BIT}"
+      MAGICK_OPT="$MAGICK_OPT --enable-opencl"
+    fi
+  fi
+fi
+
 # magick
 if [ "$CLEAN" = "1" ]; then
   rm -rf $CWD/3rdparty/ImageMagick-$MAGICK
@@ -140,6 +159,9 @@ if [ ! -f ${PREFIX}/lib/libMagick++-6.Q${Q}HDRI.a ]; then
     git clone https://github.com/ImageMagick/ImageMagick ImageMagick-6 || exit 1
     cd ImageMagick-6 || exit 1
     git checkout ImageMagick-6 || exit 1
+    if [ "$MAGICK_GIT_COMMIT" != "" ]; then
+      git checkout $MAGICK_GIT_COMMIT
+    fi
     MAGICK=6
   else
     if [ ! -f $CWD/3rdparty/ImageMagick-$MAGICK.tar.xz ]; then
@@ -158,7 +180,7 @@ if [ ! -f ${PREFIX}/lib/libMagick++-6.Q${Q}HDRI.a ]; then
     MAGICK_LFLAGS="-lws2_32"
   fi
   $MAKE distclean
-  CFLAGS="-m${BIT} ${BF}" CXXFLAGS="-m${BIT} ${BF} ${BSD} -I${PREFIX}/include" CPPFLAGS="-I${PREFIX}/include -L${PREFIX}/lib" LDFLAGS="$MAGICK_LFLAGS" ./configure --libdir=${PREFIX}/lib --prefix=${PREFIX} $MAGICK_OPT || exit 1
+  CFLAGS="-m${BIT} ${BF}" CXXFLAGS="-m${BIT} ${BF} ${BSD} -I${PREFIX}/include" CPPFLAGS="-I${PREFIX}/include -L${PREFIX}/lib ${OPENCL_PATH}" LDFLAGS="$MAGICK_LFLAGS" ./configure --libdir=${PREFIX}/lib --prefix=${PREFIX} $MAGICK_OPT || exit 1
   $MAKE -j$JOBS install || exit 1
   mkdir -p $PREFIX/share/doc/ImageMagick/ || exit 1
   cp LICENSE $PREFIX/share/doc/ImageMagick/ || exit 1
