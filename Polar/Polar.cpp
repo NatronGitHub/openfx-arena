@@ -19,7 +19,7 @@
 #define kPluginGrouping "Extra/Distort"
 #define kPluginIdentifier "net.fxarena.openfx.Polar"
 #define kPluginVersionMajor 4
-#define kPluginVersionMinor 0
+#define kPluginVersionMinor 1
 
 #define kParamVPixel "pixel"
 #define kParamVPixelLabel "Virtual Pixel"
@@ -36,10 +36,10 @@
 #define kParamPolarFlipHint "Polar Flip"
 #define kParamPolarFlipDefault false
 
-#define kParamScale "scale"
-#define kParamScaleLabel "Scale"
-#define kParamScaleHint "Force scale to original image size"
-#define kParamScaleDefault true
+#define kParamPolarRotate "rotate"
+#define kParamPolarRotateLabel "Rotate"
+#define kParamPolarRotateHint "Polar rotate"
+#define kParamPolarRotateDefault 0
 
 #define kParamMatte "matte"
 #define kParamMatteLabel "Matte"
@@ -68,6 +68,7 @@ private:
     OFX::BooleanParam *polarFlip_;
     OFX::BooleanParam *dePolar_;
     OFX::BooleanParam *matte_;
+    OFX::DoubleParam *polarRotate_;
 };
 
 PolarPlugin::PolarPlugin(OfxImageEffectHandle handle)
@@ -85,8 +86,9 @@ PolarPlugin::PolarPlugin(OfxImageEffectHandle handle)
     polarFlip_ = fetchBooleanParam(kParamPolarFlip);
     dePolar_ = fetchBooleanParam(kParamDePolar);
     matte_ = fetchBooleanParam(kParamMatte);
+    polarRotate_ = fetchDoubleParam(kParamPolarRotate);
 
-    assert(vpixel_ && polarFlip_ && dePolar_ && matte_);
+    assert(vpixel_ && polarFlip_ && dePolar_ && matte_ && polarRotate_);
 }
 
 PolarPlugin::~PolarPlugin()
@@ -165,6 +167,7 @@ void PolarPlugin::render(const OFX::RenderArguments &args)
     }
 
     // get params
+    double polarRotate;
     int vpixel;
     bool polarFlip = false;
     bool dePolar = false;
@@ -173,6 +176,7 @@ void PolarPlugin::render(const OFX::RenderArguments &args)
     polarFlip_->getValueAtTime(args.time, polarFlip);
     dePolar_->getValueAtTime(args.time, dePolar);
     matte_->getValueAtTime(args.time, matte);
+    polarRotate_->getValueAtTime(args.time, polarRotate);
 
     // setup
     int width = srcRod.x2-srcRod.x1;
@@ -269,6 +273,10 @@ void PolarPlugin::render(const OFX::RenderArguments &args)
     else
         image.distort(Magick::PolarDistortion, 0, distortArgs, Magick::MagickTrue);
 
+    // rotate
+    if (polarRotate!=0)
+        image.rotate(polarRotate);
+
     // the effect will produce a 4:3 image, scale to fit original image
     std::ostringstream scaleW;
     scaleW << width << "x";
@@ -352,6 +360,15 @@ void PolarPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, Con
 
     // make some pages
     PageParamDescriptor *page = desc.definePageParam(kPluginName);
+    {
+        DoubleParamDescriptor *param = desc.defineDoubleParam(kParamPolarRotate);
+        param->setLabel(kParamPolarRotateLabel);
+        param->setHint(kParamPolarRotateHint);
+        param->setRange(-360, 360);
+        param->setDisplayRange(-360, 360);
+        param->setDefault(kParamPolarRotateDefault);
+        page->addChild(*param);
+    }
     {
         BooleanParamDescriptor *param = desc.defineBooleanParam(kParamDePolar);
         param->setLabel(kParamDePolarLabel);
