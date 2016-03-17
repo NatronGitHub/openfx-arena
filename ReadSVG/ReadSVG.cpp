@@ -28,8 +28,8 @@
 
 #define kParamDpi "dpi"
 #define kParamDpiLabel "DPI"
-#define kParamDpiHint "Dots-per-inch (0 is default)"
-#define kParamDpiDefault 0
+#define kParamDpiHint "Dots-per-inch (90 is default)"
+#define kParamDpiDefault 90
 
 #define kSupportsRGBA true
 #define kSupportsRGB false
@@ -229,8 +229,8 @@ void ReadSVGPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, C
         IntParamDescriptor* param = desc.defineIntParam(kParamDpi);
         param->setLabel(kParamDpiLabel);
         param->setHint(kParamDpiHint);
-        param->setRange(0, 10000);
-        param->setDisplayRange(0, 500);
+        param->setRange(1, 10000);
+        param->setDisplayRange(1, 500);
         param->setDefault(kParamDpiDefault);
         param->setAnimates(false);
         param->setLayoutHint(OFX::eLayoutHintDivider);
