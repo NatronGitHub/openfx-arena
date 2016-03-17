@@ -19,7 +19,7 @@
 #define kPluginGrouping "Extra/Distort"
 #define kPluginIdentifier "net.fxarena.openfx.Polar"
 #define kPluginVersionMajor 4
-#define kPluginVersionMinor 1
+#define kPluginVersionMinor 2
 
 #define kParamVPixel "pixel"
 #define kParamVPixelLabel "Virtual Pixel"
@@ -274,8 +274,13 @@ void PolarPlugin::render(const OFX::RenderArguments &args)
         image.distort(Magick::PolarDistortion, 0, distortArgs, Magick::MagickTrue);
 
     // rotate
-    if (polarRotate!=0)
-        image.rotate(polarRotate);
+    if (polarRotate!=0) {
+        double rotateArgs[3];
+        rotateArgs[0] = (int)image.columns()/2;
+        rotateArgs[1] = (int)image.rows()/2;
+        rotateArgs[2] = polarRotate;
+        image.distort(Magick::ScaleRotateTranslateDistortion, 3, rotateArgs, Magick::MagickFalse);
+    }
 
     // the effect will produce a 4:3 image, scale to fit original image
     std::ostringstream scaleW;
