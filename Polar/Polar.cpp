@@ -274,7 +274,7 @@ void PolarPlugin::render(const OFX::RenderArguments &args)
         image.distort(Magick::PolarDistortion, 0, distortArgs, Magick::MagickTrue);
 
     // rotate
-    if (polarRotate!=0) {
+    if (polarRotate!=0 && !dePolar) {
         double rotateArgs[3];
         rotateArgs[0] = (int)image.columns()/2;
         rotateArgs[1] = (int)image.rows()/2;
