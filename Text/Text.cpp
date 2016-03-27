@@ -141,11 +141,6 @@
 #define kParamWrapHint "Wrap text if larger than width"
 #define kParamWrapDefault false
 
-#define kParamPadding "padding"
-#define kParamPaddingLabel "Padding"
-#define kParamPaddingHint "Padding used for word wrap"
-#define kParamPaddingDefault 0
-
 using namespace OFX;
 static bool gHostIsNatron = false;
 
@@ -190,9 +185,9 @@ private:
     OFX::ChoiceParam *gravity_;
     OFX::StringParam *font_;
     OFX::BooleanParam *wrap_;
-    OFX::IntParam *padding_;
     bool has_fontconfig;
     bool has_freetype;
+    std::string wordWrap(std::string textInput, unsigned lineWidth);
 };
 
 TextPlugin::TextPlugin(OfxImageEffectHandle handle)
@@ -240,9 +235,8 @@ TextPlugin::TextPlugin(OfxImageEffectHandle handle)
     gravity_ = fetchChoiceParam(kParamGravity);
     font_ = fetchStringParam(kParamFont);
     wrap_ = fetchBooleanParam(kParamWrap);
-    padding_ = fetchIntParam(kParamPadding);
 
-    assert(position_ && text_ && fontSize_ && fontName_ && textColor_ && strokeColor_ && strokeWidth_ && fontOverride_ && shadowOpacity_ && shadowSigma_ && interlineSpacing_ && interwordSpacing_ && textSpacing_ && shadowColor_ && shadowX_ && shadowY_ && shadowBlur_ && width_ && height_ && gravity_ && font_ && wrap_ && padding_);
+    assert(position_ && text_ && fontSize_ && fontName_ && textColor_ && strokeColor_ && strokeWidth_ && fontOverride_ && shadowOpacity_ && shadowSigma_ && interlineSpacing_ && interwordSpacing_ && textSpacing_ && shadowColor_ && shadowX_ && shadowY_ && shadowBlur_ && width_ && height_ && gravity_ && font_ && wrap_);
 
     // Setup selected font
     std::string fontString, fontCombo;
@@ -269,6 +263,35 @@ TextPlugin::TextPlugin(OfxImageEffectHandle handle)
         if (!fontCombo.empty())
             font_->setValue(fontCombo);
     }
+}
+
+
+std::string TextPlugin::wordWrap(std::string textInput, unsigned textWidth)
+{
+    unsigned line_begin = 0;
+    while (line_begin < textInput.size()) {
+        const unsigned ideal_end = line_begin + textWidth ;
+        unsigned line_end = ideal_end <= textInput.size() ? ideal_end : textInput.size()-1;
+        if (line_end == textInput.size() - 1)
+            ++line_end;
+        else if (std::isspace(textInput[line_end])) {
+            textInput[line_end] = '\n';
+            ++line_end;
+        }
+        else {
+            unsigned end = line_end;
+            while ( end > line_begin && !std::isspace(textInput[end]))
+                --end;
+            if (end != line_begin) {
+                line_end = end;
+                textInput[line_end++] = '\n';
+            }
+            else
+                textInput.insert(line_end++, 1, '\n');
+        }
+        line_begin = line_end;
+    }
+    return textInput;
 }
 
 TextPlugin::~TextPlugin()
@@ -339,7 +362,7 @@ void TextPlugin::render(const OFX::RenderArguments &args)
 
     // Get params
     double x, y, r, g, b, a, r_s, g_s, b_s, a_s, strokeWidth, shadowOpacity, shadowSigma, interlineSpacing, interwordSpacing, textSpacing, shadowR, shadowG, shadowB, shadowBlur;
-    int fontSize, fontID, shadowX, shadowY, gravity,cwidth,cheight,padding;
+    int fontSize, fontID, shadowX, shadowY, gravity,cwidth,cheight;
     std::string text, fontOverride, fontName, font;
     bool wrap;
 
@@ -366,7 +389,6 @@ void TextPlugin::render(const OFX::RenderArguments &args)
     font_->getValueAtTime(args.time, font);
     fontName_->getOption(fontID,fontName);
     wrap_->getValueAtTime(args.time, wrap);
-    padding_->getValueAtTime(args.time, padding);
 
     // always prefer font
     if (!font.empty())
@@ -451,20 +473,19 @@ void TextPlugin::render(const OFX::RenderArguments &args)
     image.fontFamily(fontName);
     image.fontPointsize(std::floor(fontSize * args.renderScale.x + 0.5));
 
-    bool multiline = false;
-    if (text.find("\n") != std::string::npos)
-        multiline = true;
-
-    Magick::TypeMetric metrics;
-    if (multiline)
-        image.fontTypeMetricsMultiline(text,&metrics);
-    else
-        image.fontTypeMetrics(text,&metrics);
-
-    int textWidth = (int)metrics.textWidth()+padding;
-    if (textWidth>width && wrap) { // wrap it!
-        size_t space = text.find_last_of(" ");
-        text.replace(space,1,"\n");
+    if (wrap) {
+        int maxWidth = 0;
+        int maxText = 0;
+        std::string tmpString = "X";
+        while (maxWidth<width) {
+            Magick::TypeMetric metrics;
+            image.fontTypeMetrics(tmpString,&metrics);
+            tmpString.append("X");
+            maxWidth=metrics.textWidth();
+            maxText++;
+        }
+        if (maxText>0)
+            text = wordWrap(text,maxText);
     }
 
     draw.push_back(Magick::DrawableText(xtext, ytext, text));
@@ -670,16 +691,6 @@ void TextPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, Cont
         param->setHint(kParamWrapHint);
         param->setAnimates(false);
         param->setDefault(kParamWrapDefault);
-        page->addChild(*param);
-    }
-    {
-        IntParamDescriptor* param = desc.defineIntParam(kParamPadding);
-        param->setLabel(kParamPaddingLabel);
-        param->setHint(kParamPaddingHint);
-        param->setRange(0, 10000);
-        param->setDisplayRange(0, 1000);
-        param->setDefault(kParamPaddingDefault);
-        param->setAnimates(false);
         page->addChild(*param);
     }
     {
