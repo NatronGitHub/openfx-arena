@@ -24,8 +24,8 @@
 #define kPluginName "TextOFX"
 #define kPluginGrouping "Draw"
 #define kPluginIdentifier "net.fxarena.openfx.Text"
-#define kPluginVersionMajor 5
-#define kPluginVersionMinor 7
+#define kPluginVersionMajor 6
+#define kPluginVersionMinor 0
 
 #define kSupportsTiles 0
 #define kSupportsMultiResolution 0
@@ -136,6 +136,16 @@
 #define kParamGravityHint "Select text gravity"
 #define kParamGravityDefault 0
 
+#define kParamWrap "wordWrap"
+#define kParamWrapLabel "Word Wrap"
+#define kParamWrapHint "Wrap text if larger than width"
+#define kParamWrapDefault false
+
+#define kParamPadding "padding"
+#define kParamPaddingLabel "Padding"
+#define kParamPaddingHint "Padding used for word wrap"
+#define kParamPaddingDefault 0
+
 using namespace OFX;
 static bool gHostIsNatron = false;
 
@@ -179,6 +189,8 @@ private:
     OFX::IntParam *height_;
     OFX::ChoiceParam *gravity_;
     OFX::StringParam *font_;
+    OFX::BooleanParam *wrap_;
+    OFX::IntParam *padding_;
     bool has_fontconfig;
     bool has_freetype;
 };
@@ -227,8 +239,10 @@ TextPlugin::TextPlugin(OfxImageEffectHandle handle)
     height_ = fetchIntParam(kParamHeight);
     gravity_ = fetchChoiceParam(kParamGravity);
     font_ = fetchStringParam(kParamFont);
+    wrap_ = fetchBooleanParam(kParamWrap);
+    padding_ = fetchIntParam(kParamPadding);
 
-    assert(position_ && text_ && fontSize_ && fontName_ && textColor_ && strokeColor_ && strokeWidth_ && fontOverride_ && shadowOpacity_ && shadowSigma_ && interlineSpacing_ && interwordSpacing_ && textSpacing_ && shadowColor_ && shadowX_ && shadowY_ && shadowBlur_ && width_ && height_ && gravity_ && font_);
+    assert(position_ && text_ && fontSize_ && fontName_ && textColor_ && strokeColor_ && strokeWidth_ && fontOverride_ && shadowOpacity_ && shadowSigma_ && interlineSpacing_ && interwordSpacing_ && textSpacing_ && shadowColor_ && shadowX_ && shadowY_ && shadowBlur_ && width_ && height_ && gravity_ && font_ && wrap_ && padding_);
 
     // Setup selected font
     std::string fontString, fontCombo;
@@ -325,8 +339,9 @@ void TextPlugin::render(const OFX::RenderArguments &args)
 
     // Get params
     double x, y, r, g, b, a, r_s, g_s, b_s, a_s, strokeWidth, shadowOpacity, shadowSigma, interlineSpacing, interwordSpacing, textSpacing, shadowR, shadowG, shadowB, shadowBlur;
-    int fontSize, fontID, shadowX, shadowY, gravity,cwidth,cheight;
+    int fontSize, fontID, shadowX, shadowY, gravity,cwidth,cheight,padding;
     std::string text, fontOverride, fontName, font;
+    bool wrap;
 
     position_->getValueAtTime(args.time, x, y);
     text_->getValueAtTime(args.time, text);
@@ -350,6 +365,8 @@ void TextPlugin::render(const OFX::RenderArguments &args)
     height_->getValueAtTime(args.time, cheight);
     font_->getValueAtTime(args.time, font);
     fontName_->getOption(fontID,fontName);
+    wrap_->getValueAtTime(args.time, wrap);
+    padding_->getValueAtTime(args.time, padding);
 
     // always prefer font
     if (!font.empty())
@@ -430,8 +447,26 @@ void TextPlugin::render(const OFX::RenderArguments &args)
         //
         break;
     }
-    draw.push_back(Magick::DrawableFont(fontName));
-    draw.push_back(Magick::DrawablePointSize(std::floor(fontSize * args.renderScale.x + 0.5)));
+
+    image.fontFamily(fontName);
+    image.fontPointsize(std::floor(fontSize * args.renderScale.x + 0.5));
+
+    bool multiline = false;
+    if (text.find("\n") != std::string::npos)
+        multiline = true;
+
+    Magick::TypeMetric metrics;
+    if (multiline)
+        image.fontTypeMetricsMultiline(text,&metrics);
+    else
+        image.fontTypeMetrics(text,&metrics);
+
+    int textWidth = (int)metrics.textWidth()+padding;
+    if (textWidth>width && wrap) { // wrap it!
+        size_t space = text.find_last_of(" ");
+        text.replace(space,1,"\n");
+    }
+
     draw.push_back(Magick::DrawableText(xtext, ytext, text));
     draw.push_back(Magick::DrawableFillColor(Magick::Color(textRGBA.str())));
 
@@ -627,6 +662,24 @@ void TextPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, Cont
         param->appendOption("Center");
         param->appendOption("Center forced");
         param->setAnimates(true);
+        page->addChild(*param);
+    }
+    {
+        BooleanParamDescriptor* param = desc.defineBooleanParam(kParamWrap);
+        param->setLabel(kParamWrapLabel);
+        param->setHint(kParamWrapHint);
+        param->setAnimates(false);
+        param->setDefault(kParamWrapDefault);
+        page->addChild(*param);
+    }
+    {
+        IntParamDescriptor* param = desc.defineIntParam(kParamPadding);
+        param->setLabel(kParamPaddingLabel);
+        param->setHint(kParamPaddingHint);
+        param->setRange(0, 10000);
+        param->setDisplayRange(0, 1000);
+        param->setDefault(kParamPaddingDefault);
+        param->setAnimates(false);
         page->addChild(*param);
     }
     {
