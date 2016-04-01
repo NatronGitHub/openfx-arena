@@ -19,7 +19,7 @@
 #define kPluginGrouping "Extra/Transform"
 #define kPluginIdentifier "net.fxarena.openfx.Roll"
 #define kPluginVersionMajor 2
-#define kPluginVersionMinor 1
+#define kPluginVersionMinor 2
 
 #define kParamRollX "x"
 #define kParamRollXLabel "X"
@@ -31,6 +31,11 @@
 #define kParamRollYHint "Adjust roll Y"
 #define kParamRollYDefault 0
 
+#define kParamOpenMP "openmp"
+#define kParamOpenMPLabel "OpenMP"
+#define kParamOpenMPHint "Enable/Disable OpenMP support. This will enable the plugin to use as many threads as allowed by host."
+#define kParamOpenMPDefault false
+
 #define kSupportsTiles 0
 #define kSupportsMultiResolution 1
 #define kSupportsRenderScale 1
@@ -38,6 +43,8 @@
 #define kHostFrameThreading false
 
 using namespace OFX;
+
+static bool _hasOpenMP = false;
 
 class RollPlugin : public OFX::ImageEffect
 {
@@ -51,6 +58,7 @@ private:
     OFX::Clip *srcClip_;
     OFX::DoubleParam *rollX_;
     OFX::DoubleParam *rollY_;
+    OFX::BooleanParam *enableOpenMP_;
 };
 
 RollPlugin::RollPlugin(OfxImageEffectHandle handle)
@@ -66,8 +74,9 @@ RollPlugin::RollPlugin(OfxImageEffectHandle handle)
 
     rollX_ = fetchDoubleParam(kParamRollX);
     rollY_ = fetchDoubleParam(kParamRollY);
+    enableOpenMP_ = fetchBooleanParam(kParamOpenMP);
 
-    assert(rollX_ && rollY_);
+    assert(rollX_ && rollY_ && enableOpenMP_);
 }
 
 RollPlugin::~RollPlugin()
@@ -147,22 +156,25 @@ void RollPlugin::render(const OFX::RenderArguments &args)
 
     // get params
     double x,y;
+    bool enableOpenMP = false;
     rollX_->getValueAtTime(args.time, x);
     rollY_->getValueAtTime(args.time, y);
+    enableOpenMP_->getValueAtTime(args.time, enableOpenMP);
 
     // setup
     int width = srcRod.x2-srcRod.x1;
     int height = srcRod.y2-srcRod.y1;
 
-    // Set max threads allowed by host
-    unsigned int threads = 0;
-    threads = OFX::MultiThread::getNumCPUs();
-    if (threads>0) {
-        Magick::ResourceLimits::thread(threads);
-        #ifdef DEBUG
-        std::cout << "Setting max threads to " << threads << std::endl;
-        #endif
-    }
+    // OpenMP
+    unsigned int threads = 1;
+    if (_hasOpenMP && enableOpenMP)
+        threads = OFX::MultiThread::getNumCPUs();
+
+    Magick::ResourceLimits::thread(threads);
+
+#ifdef DEBUG
+    std::cout << "Roll threads: " << threads << std::endl;
+#endif
 
     // read image
     Magick::Image image(Magick::Geometry(width,height),Magick::Color("rgba(0,0,0,0)"));
@@ -226,6 +238,10 @@ void RollPluginFactory::describe(OFX::ImageEffectDescriptor &desc)
 /** @brief The describe in context function, passed a plugin descriptor and a context */
 void RollPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, ContextEnum /*context*/)
 {
+    std::string features = MagickCore::GetMagickFeatures();
+    if (features.find("OpenMP") != std::string::npos)
+        _hasOpenMP = true;
+
     // create the mandated source clip
     ClipDescriptor *srcClip = desc.defineClip(kOfxImageEffectSimpleSourceClipName);
     srcClip->addSupportedComponent(ePixelComponentRGBA);
@@ -256,6 +272,18 @@ void RollPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, Cont
         param->setRange(-100000, 100000);
         param->setDisplayRange(-2000, 2000);
         param->setDefault(kParamRollYDefault);
+        param->setLayoutHint(OFX::eLayoutHintDivider);
+        page->addChild(*param);
+    }
+    {
+        BooleanParamDescriptor *param = desc.defineBooleanParam(kParamOpenMP);
+        param->setLabel(kParamOpenMPLabel);
+        param->setHint(kParamOpenMPHint);
+        param->setDefault(kParamOpenMPDefault);
+        param->setAnimates(false);
+        if (!_hasOpenMP)
+            param->setEnabled(false);
+        param->setLayoutHint(OFX::eLayoutHintDivider);
         page->addChild(*param);
     }
 }
