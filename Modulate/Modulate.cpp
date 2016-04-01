@@ -17,7 +17,7 @@
 #define kPluginGrouping "Extra/Color"
 #define kPluginIdentifier "net.fxarena.openfx.Modulate"
 #define kPluginVersionMajor 1
-#define kPluginVersionMinor 1
+#define kPluginVersionMinor 2
 
 #define kParamSaturation "saturation"
 #define kParamSaturationLabel "Saturation"
@@ -34,6 +34,16 @@
 #define kParamBrightnessHint "Adjust brightness (%)"
 #define kParamBrightnessDefault 100
 
+#define kParamOpenMP "openmp"
+#define kParamOpenMPLabel "OpenMP"
+#define kParamOpenMPHint "Enable/Disable OpenMP support. This will enable the plugin to use as many threads as allowed by host."
+#define kParamOpenMPDefault true
+
+#define kParamOpenCL "opencl"
+#define kParamOpenCLLabel "OpenCL"
+#define kParamOpenCLHint "Enable/Disable OpenCL. This will enable the plugin to use supported GPU(s) for better performance."
+#define kParamOpenCLDefault true
+
 #define kSupportsTiles 0
 #define kSupportsMultiResolution 1
 #define kSupportsRenderScale 1
@@ -41,6 +51,9 @@
 #define kHostFrameThreading false
 
 using namespace OFX;
+
+static bool _hasOpenMP = false;
+static bool _hasOpenCL = false;
 
 class ModulatePlugin : public OFX::ImageEffect
 {
@@ -55,6 +68,8 @@ private:
     OFX::DoubleParam *brightness_;
     OFX::DoubleParam *hue_;
     OFX::DoubleParam *saturation_;
+    OFX::BooleanParam *enableOpenMP_;
+    OFX::BooleanParam *enableOpenCL_;
 };
 
 ModulatePlugin::ModulatePlugin(OfxImageEffectHandle handle)
@@ -71,8 +86,10 @@ ModulatePlugin::ModulatePlugin(OfxImageEffectHandle handle)
     brightness_ = fetchDoubleParam(kParamBrightness);
     hue_ = fetchDoubleParam(kParamHue);
     saturation_ = fetchDoubleParam(kParamSaturation);
+    enableOpenMP_ = fetchBooleanParam(kParamOpenMP);
+    enableOpenCL_ = fetchBooleanParam(kParamOpenCL);
 
-    assert(brightness_ && hue_ && saturation_);
+    assert(brightness_ && hue_ && saturation_ && enableOpenMP_ && enableOpenCL_);
 }
 
 ModulatePlugin::~ModulatePlugin()
@@ -152,23 +169,34 @@ void ModulatePlugin::render(const OFX::RenderArguments &args)
 
     // get params
     double brightness, hue, saturation;
+    bool enableOpenMP = false;
+    bool enableOpenCL = false;
     brightness_->getValueAtTime(args.time, brightness);
     hue_->getValueAtTime(args.time, hue);
     saturation_->getValueAtTime(args.time, saturation);
+    enableOpenMP_->getValueAtTime(args.time, enableOpenMP);
+    enableOpenCL_->getValueAtTime(args.time, enableOpenCL);
 
     // setup
     int width = srcRod.x2-srcRod.x1;
     int height = srcRod.y2-srcRod.y1;
 
-    // Set max threads allowed by host
-    unsigned int threads = 0;
-    threads = OFX::MultiThread::getNumCPUs();
-    if (threads>0) {
-        Magick::ResourceLimits::thread(threads);
-        #ifdef DEBUG
-        std::cout << "Setting max threads to " << threads << std::endl;
-        #endif
-    }
+    // OpenMP
+    unsigned int threads = 1;
+    if (_hasOpenMP && enableOpenMP)
+        threads = OFX::MultiThread::getNumCPUs();
+
+    Magick::ResourceLimits::thread(threads);
+
+#ifdef DEBUG
+    std::cout << "Modulate threads: " << threads << std::endl;
+#endif
+
+    // OpenCL
+    if (_hasOpenCL && enableOpenCL)
+        Magick::EnableOpenCL(true);
+    else if (_hasOpenCL && !enableOpenCL)
+        Magick::DisableOpenCL();
 
     // read image
     Magick::Image image(Magick::Geometry(width,height),Magick::Color("rgba(0,0,0,0)"));
@@ -231,6 +259,12 @@ void ModulatePluginFactory::describe(OFX::ImageEffectDescriptor &desc)
 /** @brief The describe in context function, passed a plugin descriptor and a context */
 void ModulatePluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, ContextEnum /*context*/)
 {
+    std::string features = MagickCore::GetMagickFeatures();
+    if (features.find("OpenMP") != std::string::npos)
+        _hasOpenMP = true;
+    if (features.find("OpenCL") != std::string::npos)
+        _hasOpenCL = true;
+
     // create the mandated source clip
     ClipDescriptor *srcClip = desc.defineClip(kOfxImageEffectSimpleSourceClipName);
     srcClip->addSupportedComponent(ePixelComponentRGBA);
@@ -270,6 +304,28 @@ void ModulatePluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, 
         param->setRange(0, 200);
         param->setDisplayRange(0, 200);
         param->setDefault(kParamHueDefault);
+        param->setLayoutHint(OFX::eLayoutHintDivider);
+        page->addChild(*param);
+    }
+    {
+        BooleanParamDescriptor *param = desc.defineBooleanParam(kParamOpenMP);
+        param->setLabel(kParamOpenMPLabel);
+        param->setHint(kParamOpenMPHint);
+        param->setDefault(kParamOpenMPDefault);
+        param->setAnimates(false);
+        if (!_hasOpenMP)
+            param->setEnabled(false);
+        page->addChild(*param);
+    }
+    {
+        BooleanParamDescriptor *param = desc.defineBooleanParam(kParamOpenCL);
+        param->setLabel(kParamOpenCLLabel);
+        param->setHint(kParamOpenCLHint);
+        param->setDefault(kParamOpenCLDefault);
+        param->setAnimates(false);
+        if (!_hasOpenCL)
+            param->setEnabled(false);
+        param->setLayoutHint(OFX::eLayoutHintDivider);
         page->addChild(*param);
     }
 }
