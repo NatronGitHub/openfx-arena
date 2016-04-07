@@ -18,7 +18,7 @@ Requirements:
  * fontconfig
  * libxml2
  * libzip
- * ImageMagick (6.9.2-10 Q32HDRI) with:
+ * ImageMagick (6.9.3-5 Q32HDRI) with:
    * freetype
    * fontconfig
    * libpng
