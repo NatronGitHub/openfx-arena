@@ -9,5 +9,5 @@ RESOURCES = net.fxarena.openfx.ReadSVG.png net.fxarena.openfx.ReadSVG.svg
 include ../Makefile.master
 include ../Makefile.io
 
-CXXFLAGS += $(MAGICK_CXXFLAGS)
-LINKFLAGS += $(MAGICK_LINKFLAGS)
+CXXFLAGS += $(SVG_CXXFLAGS)
+LINKFLAGS += $(SVG_LINKFLAGS)

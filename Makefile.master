@@ -37,6 +37,10 @@ XML_LINKFLAGS= $(shell pkg-config libxml-2.0 --libs --static)
 ZIP_CXXFLAGS= $(shell pkg-config libzip --cflags)
 ZIP_LINKFLAGS= $(shell pkg-config libzip --libs --static)
 
+# librsvg
+SVG_CXXFLAGS = $(shell pkg-config librsvg-2.0 --cflags)
+SVG_LINKFLAGS = $(shell pkg-config librsvg-2.0 --libs --static)
+
 # mingw
 ifeq ($(MINGW),1)
   MAGICK_CXXFLAGS = $(shell Magick++-config --cppflags --cxxflags)

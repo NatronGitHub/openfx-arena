@@ -79,7 +79,9 @@ INCLUDEPATH += . \
             /usr/include \
             /usr/include/libxml2 \
             /usr/include/librevenge-0.0 \
-            /usr/include/libcdr-0.1
+            /usr/include/libcdr-0.1 \
+            /usr/include/librsvg-2.0 \
+            /usr/include/cairo
 HEADERS += \
             SupportExt/ofxsCoords.h \
             SupportExt/ofxsCopier.h \
