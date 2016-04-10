@@ -81,7 +81,8 @@ INCLUDEPATH += . \
             /usr/include/librevenge-0.0 \
             /usr/include/libcdr-0.1 \
             /usr/include/librsvg-2.0 \
-            /usr/include/cairo
+            /usr/include/cairo \
+            /usr/include/glib-2.0
 HEADERS += \
             SupportExt/ofxsCoords.h \
             SupportExt/ofxsCopier.h \

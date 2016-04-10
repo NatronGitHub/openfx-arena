@@ -10,8 +10,6 @@ Plugins
  * Arc
  * Charcoal
  * Edges
- * Emboss (wip)
- * Filmstrip (wip)
  * Implode
  * Modulate
  * Oilpaint
@@ -19,50 +17,43 @@ Plugins
  * Polar
  * Polaroid
  * PovRay
- * ReadCDR (wip)
- * ReadPDF (wip)
+ * ReadCDR
  * ReadKrita
  * ReadMisc
  * ReadPSD
  * ReadSVG
- * ReadVisio (wip)
  * Reflection
  * Roll
  * Sketch
  * Swirl
  * Text
  * TextPango
- * TextFX (wip)
  * Texture
  * Tile
  * Wave
- * WaveletDenoise (wip)
 
 Requirements
 ============
 
- * MSYS2 (for building on Windows)
  * lcms2
  * OpenColorIO
  * POV-Ray (runtime)
  * fontconfig
  * libxml2
  * libzip
- * librevenge (wip)
- * libcdr (wip)
- * libvisio (wip)
- * pangocairo (wip)
- * ImageMagick (6.9.3-6+ Q32HDRI) with:
+ * librevenge
+ * libcdr
+ * librsvg2
+ * pango
+ * cairo
+ * ImageMagick (6.9.3-5+ Q32HDRI) with:
    * freetype
    * fontconfig
    * libpng
    * zlib
-   * libxml2
-   * librsvg
    * lcms2
    * pango
    * cairo
-   * ps/ghostscript (wip)
    
  Note that custom patches to ImageMagick is needed to build the plugins, see 'deploy.sh' for more information.
 
@@ -83,15 +74,15 @@ Compatibility
 
  * All plugin work in Natron
  * Most of the plugins work in Nuke
- * Some of the plugins work in Shake
+ * Some of the plugins work(ed) in Shake
 
 Contribute
 ==========
 
 You are welcome to contribute, please fork and do a pull request. Note that major contributions may require a CLA.
 
-Credits
-=======
+Contributors
+============
 
  * Ole-André Rodlie (FxArena/INRIA)
  * Alexandre Gauthier-Foichat (INRIA)
