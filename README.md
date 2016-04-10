@@ -46,7 +46,7 @@ Requirements
  * librsvg2
  * pango
  * cairo
- * ImageMagick (6.9.3-5+ Q32HDRI) with:
+ * ImageMagick (6.9.3-5 Q32HDRI) with:
    * freetype
    * fontconfig
    * libpng
