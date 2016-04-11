@@ -5,6 +5,7 @@
 # 2) Build Enviroment: add 'DEBUG=1', you can also add PACKAGE=<plugin_name> if you only want to build one plugin
 
 OTHER_FILES += \
+            .travis.yml \
             Makefile \
             Makefile.master \
             Makefile.io \

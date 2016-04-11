@@ -21,6 +21,7 @@ PLUGINOBJECTS = \
         OpenRaster.o \
         ReadKrita.o \
         ReadMisc.o \
+        ReadCDR \
         ofxsOGLTextRenderer.o \
         ofxsOGLFontData.o \
         ofxsRectangleInteract.o \
@@ -78,7 +79,9 @@ RESOURCES = \
 ../ReadKrita/fr.inria.openfx.ReadKrita.png \
 ../ReadKrita/fr.inria.openfx.ReadKrita.svg \
 ../ReadMisc/fr.inria.openfx.ReadMisc.png \
-../ReadMisc/fr.inria.openfx.ReadMisc.svg
+../ReadMisc/fr.inria.openfx.ReadMisc.svg \
+../ReadCDR/fr.inria.openfx.ReadCDR.png \
+../ReadCDR/fr.inria.openfx.ReadCDR.svg
 
 ifeq ($(OS),$(filter $(OS),Linux FreeBSD Darwin))
     RESOURCES +=../PovRay/net.fxarena.openfx.PovRay.png
@@ -107,7 +110,8 @@ VPATH += \
 ../Modulate \
 ../OpenRaster \
 ../ReadKrita \
-../ReadMisc
+../ReadMisc \
+../ReadCDR
 
 ifeq ($(OS),$(filter $(OS),Linux FreeBSD Darwin))
     VPATH += ../PovRay
@@ -138,12 +142,13 @@ CXXFLAGS += \
 -I../Modulate \
 -I../OpenRaster \
 -I../ReadKrita \
--I../ReadMisc
+-I../ReadMisc \
+-I../ReadCDR
 
 ifeq ($(OS),$(filter $(OS),Linux FreeBSD Darwin))
     CXXFLAGS += -I../PovRay
 endif
 
-CXXFLAGS  += $(MAGICK_CXXFLAGS) $(LCMS_CXXFLAGS) $(FCONFIG_CXXFLAGS) $(XML_CXXFLAGS) $(ZIP_CXXFLAGS) $(SVG_CXXFLAGS)
-LINKFLAGS += $(MAGICK_LINKFLAGS) $(LCMS_LINKFLAGS) $(FCONFIG_LINKFLAGS) $(XML_LINKFLAGS) $(ZIP_LINKFLAGS) $(SVG_LINKFLAGS)
+CXXFLAGS  += $(MAGICK_CXXFLAGS) $(LCMS_CXXFLAGS) $(FCONFIG_CXXFLAGS) $(XML_CXXFLAGS) $(ZIP_CXXFLAGS) $(SVG_CXXFLAGS) $(REVENGE_CXXFLAGS) $(CDR_CXXFLAGS)
+LINKFLAGS += $(MAGICK_LINKFLAGS) $(LCMS_LINKFLAGS) $(FCONFIG_LINKFLAGS) $(XML_LINKFLAGS) $(ZIP_LINKFLAGS) $(SVG_LINKFLAGS) $(REVENGE_LINKFLAGS) $(CDR_LINKFLAGS)
 
