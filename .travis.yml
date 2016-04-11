@@ -25,4 +25,4 @@ install:
 
 script:
   - git submodule update -i --recursive
-  - DEBUG=1 bash deploy.sh
+  - FIX_TRAVIS=1 DEBUG=1 bash deploy.sh
