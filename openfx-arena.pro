@@ -18,7 +18,6 @@ OTHER_FILES += \
             Arc/Makefile \
             Charcoal/Makefile \
             Edges/Makefile \
-            Emboss/Makefile \
             Implode/Makefile \
             Modulate/Makefile \
             Oilpaint/Makefile \
@@ -40,11 +39,9 @@ OTHER_FILES += \
             ReadKrita/Makefile \
             ReadMisc/Makefile \
             ReadCDR/Makefile \
-            WaveletDenoise/Makefile \
             Arc/Info.plist \
             Charcoal/Info.plist \
             Edges/Info.plist \
-            Emboss/Info.plist \
             Implode/Info.plist \
             Modulate/Info.plist \
             Oilpaint/Info.plist \
@@ -66,8 +63,7 @@ OTHER_FILES += \
             ReadKrita/Info.plist \
             Bundle/Info.plist \
             ReadMisc/Info.plist \
-            ReadCDR/Info.plist \
-            WaveletDenoise.plist
+            ReadCDR/Info.plist
 INCLUDEPATH += . \
             SupportExt \
             OpenFX/Support/include \
@@ -166,7 +162,6 @@ SOURCES += \
             Arc/Arc.cpp \
             Charcoal/Charcoal.cpp \
             Edges/Edges.cpp \
-            Emboss/Emboss.cpp \
             Implode/Implode.cpp \
             Modulate/Modulate.cpp \
             Oilpaint/Oilpaint.cpp \
@@ -187,5 +182,4 @@ SOURCES += \
             Wave/Wave.cpp \
             ReadKrita/ReadKrita.cpp \
             ReadMisc/ReadMisc.cpp \
-            ReadCDR/ReadCDR.cpp \
-            WaveletDenoise/WaveletDenoise.cpp
+            ReadCDR/ReadCDR.cpp

@@ -18,7 +18,7 @@
 
 #include <librsvg/rsvg.h>
 
-#ifdef FIX_TRAVIS /// stupid ubuntu
+#ifdef LEGACY
 #include "librsvg/rsvg-cairo.h"
 #endif
 

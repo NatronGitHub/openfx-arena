@@ -4,7 +4,6 @@ SUBDIRS_NOMULTI = \
 Arc \
 Charcoal \
 Edges \
-Emboss \
 Implode \
 Modulate \
 Oilpaint \

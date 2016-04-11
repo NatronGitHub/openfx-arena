@@ -221,7 +221,7 @@ fi
 
 if [ "$PKGOS" != "Windows" ]; then
   if [ "$FIX_TRAVIS" = "1" ]; then
-    MORE_FLAGS="-DFIX_TRAVIS -I/usr/include/libcdr-0.1 -I/usr/include/librevenge-0.0"
+    MORE_FLAGS="-DLEGACY -I/usr/include/libcdr-0.1 -I/usr/include/librevenge-0.0"
   fi
   $MAKE STATIC=1 FREEBSD=$USE_FREEBSD BITS=$BIT LDFLAGS_ADD="$GCC_LINK $MAGICK_LFLAGS" CXXFLAGS_ADD="$MORE_FLAGS" CONFIG=$TAG clean
   $MAKE STATIC=1 FREEBSD=$USE_FREEBSD BITS=$BIT LDFLAGS_ADD="$GCC_LINK $MAGICK_LFLAGS" CXXFLAGS_ADD="$MORE_FLAGS" CONFIG=$TAG || exit 1
