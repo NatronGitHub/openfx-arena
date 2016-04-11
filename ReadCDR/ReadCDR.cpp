@@ -19,6 +19,11 @@
 #include <iostream>
 
 #include <librsvg/rsvg.h>
+
+#ifdef FIX_TRAVIS /// stupid ubuntu
+#include "librsvg/rsvg-cairo.h"
+#endif
+
 #include <librevenge/librevenge.h>
 #include <librevenge-generators/librevenge-generators.h>
 #include <librevenge-stream/librevenge-stream.h>

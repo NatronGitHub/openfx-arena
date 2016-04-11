@@ -18,6 +18,10 @@
 
 #include <librsvg/rsvg.h>
 
+#ifdef FIX_TRAVIS /// stupid ubuntu
+#include "librsvg/rsvg-cairo.h"
+#endif
+
 #include "GenericReader.h"
 #include "GenericOCIO.h"
 #include "ofxsImageEffect.h"
