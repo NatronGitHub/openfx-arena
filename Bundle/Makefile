@@ -21,7 +21,7 @@ PLUGINOBJECTS = \
         OpenRaster.o \
         ReadKrita.o \
         ReadMisc.o \
-        ReadCDR \
+        ReadCDR.o \
         ofxsOGLTextRenderer.o \
         ofxsOGLFontData.o \
         ofxsRectangleInteract.o \
