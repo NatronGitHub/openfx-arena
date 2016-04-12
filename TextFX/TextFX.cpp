@@ -32,7 +32,7 @@
 #define kPluginGrouping "Draw"
 #define kPluginIdentifier "fr.inria.openfx.TextFX"
 #define kPluginVersionMajor 1
-#define kPluginVersionMinor 0
+#define kPluginVersionMinor 1
 
 #define kSupportsTiles 0
 #define kSupportsMultiResolution 0
@@ -74,8 +74,8 @@
 
 #define kParamWrap "wrap"
 #define kParamWrapLabel "Wrap"
-#define kParamWrapHint "Word wrap"
-#define kParamWrapDefault 1
+#define kParamWrapHint "Word wrap. Disabled if auto size is active"
+#define kParamWrapDefault 0
 
 #define kParamAlign "align"
 #define kParamAlignLabel "Align"
@@ -88,13 +88,18 @@
 
 #define kParamWidth "width"
 #define kParamWidthLabel "Width"
-#define kParamWidthHint "Set canvas width, default (0) is project format"
+#define kParamWidthHint "Set canvas width, default (0) is project format. Disabled if auto size is active"
 #define kParamWidthDefault 0
 
 #define kParamHeight "height"
 #define kParamHeightLabel "Height"
-#define kParamHeightHint "Set canvas height, default (0) is project format"
+#define kParamHeightHint "Set canvas height, default (0) is project format. Disabled if auto size is active"
 #define kParamHeightDefault 0
+
+#define kParamAutoSize "autoSize"
+#define kParamAutoSizeLabel "Auto size"
+#define kParamAutoSizeHint "Set canvas sized based on text. This will disable word wrap and custom canvas size"
+#define kParamAutoSizeDefault true
 
 using namespace OFX;
 static bool gHostIsNatron = false;
@@ -133,6 +138,7 @@ private:
     OFX::ChoiceParam *align_;
     OFX::BooleanParam *markup_;
     OFX::ChoiceParam *style_;
+    OFX::BooleanParam *auto_;
 };
 
 TextFXPlugin::TextFXPlugin(OfxImageEffectHandle handle)
@@ -154,8 +160,9 @@ TextFXPlugin::TextFXPlugin(OfxImageEffectHandle handle)
     align_ = fetchChoiceParam(kParamAlign);
     markup_ = fetchBooleanParam(kParamMarkup);
     style_ = fetchChoiceParam(kParamStyle);
+    auto_ = fetchBooleanParam(kParamAutoSize);
 
-    assert(text_ && fontSize_ && fontName_ && textColor_ && width_ && height_ && font_ && wrap_ && justify_ && align_ && markup_ && style_);
+    assert(text_ && fontSize_ && fontName_ && textColor_ && width_ && height_ && font_ && wrap_ && justify_ && align_ && markup_ && style_ && auto_);
 
     // Setup selected font
     std::string fontString, fontCombo;
@@ -250,6 +257,7 @@ void TextFXPlugin::render(const OFX::RenderArguments &args)
     std::string text, fontName, font;
     bool justify;
     bool markup;
+    bool autoSize;
 
     text_->getValueAtTime(args.time, text);
     fontSize_->getValueAtTime(args.time, fontSize);
@@ -264,6 +272,7 @@ void TextFXPlugin::render(const OFX::RenderArguments &args)
     align_->getValueAtTime(args.time, align);
     markup_->getValueAtTime(args.time, markup);
     style_->getValueAtTime(args.time, style);
+    auto_->getValueAtTime(args.time, autoSize);
 
     if (!font.empty())
         fontName=font;
@@ -313,22 +322,24 @@ void TextFXPlugin::render(const OFX::RenderArguments &args)
     pango_layout_set_font_description(layout, desc);
     pango_font_description_free(desc);
 
-    switch(wrap) {
-    case 1:
-        pango_layout_set_width(layout, width * PANGO_SCALE);
-        pango_layout_set_wrap(layout, PANGO_WRAP_WORD);
-        break;
-    case 2:
-        pango_layout_set_width(layout, width * PANGO_SCALE);
-        pango_layout_set_wrap(layout, PANGO_WRAP_CHAR);
-        break;
-    case 3:
-        pango_layout_set_width(layout, width * PANGO_SCALE);
-        pango_layout_set_wrap(layout, PANGO_WRAP_WORD_CHAR);
-        break;
-    default:
-        pango_layout_set_width(layout, -1);
-        break;
+    if (!autoSize) {
+        switch(wrap) {
+        case 1:
+            pango_layout_set_width(layout, width * PANGO_SCALE);
+            pango_layout_set_wrap(layout, PANGO_WRAP_WORD);
+            break;
+        case 2:
+            pango_layout_set_width(layout, width * PANGO_SCALE);
+            pango_layout_set_wrap(layout, PANGO_WRAP_CHAR);
+            break;
+        case 3:
+            pango_layout_set_width(layout, width * PANGO_SCALE);
+            pango_layout_set_wrap(layout, PANGO_WRAP_WORD_CHAR);
+            break;
+        default:
+            pango_layout_set_width(layout, -1);
+            break;
+        }
     }
 
     switch(align) {
@@ -415,8 +426,79 @@ bool TextFXPlugin::getRegionOfDefinition(const OFX::RegionOfDefinitionArguments 
     }
 
     int width,height;
+    bool autoSize;
+
     width_->getValue(width);
     height_->getValue(height);
+    auto_->getValue(autoSize);
+
+    if (autoSize) {
+        int fontSize, fontID, style;
+        std::string text, fontName, font;
+        bool markup;
+
+        text_->getValueAtTime(args.time, text);
+        fontSize_->getValueAtTime(args.time, fontSize);
+        fontName_->getValueAtTime(args.time, fontID);
+        font_->getValueAtTime(args.time, font);
+        fontName_->getOption(fontID,fontName);
+        style_->getValueAtTime(args.time, style);
+        markup_->getValueAtTime(args.time, markup);
+
+        if (!font.empty()) {
+            fontName=font;
+
+            if (gHostIsNatron)
+                fontName.erase(0,2);
+
+            std::ostringstream pangoFont;
+            pangoFont << fontName;
+            switch(style) {
+            case 0:
+                pangoFont << " " << "normal";
+                break;
+            case 1:
+                pangoFont << " " << "bold";
+                break;
+            case 2:
+                pangoFont << " " << "italic";
+                break;
+            }
+            pangoFont << " " << fontSize;
+
+            width = rod.x2-rod.x1;
+            height = rod.y2-rod.y1;
+
+            cairo_t *cr;
+            cairo_surface_t *surface;
+            PangoLayout *layout;
+            PangoFontDescription *desc;
+
+            surface = cairo_image_surface_create (CAIRO_FORMAT_ARGB32, width, height);
+            cr = cairo_create (surface);
+
+            layout = pango_cairo_create_layout(cr);
+
+            if (markup)
+                pango_layout_set_markup(layout, text.c_str(), -1);
+            else
+                pango_layout_set_text(layout, text.c_str(), -1);
+
+            desc = pango_font_description_from_string(pangoFont.str().c_str());
+            pango_layout_set_font_description(layout, desc);
+            pango_font_description_free(desc);
+
+            int autoWidth, autoHeight;
+            pango_layout_get_pixel_size(layout, &autoWidth, &autoHeight);
+
+            width = autoWidth;
+            height = autoHeight;
+
+            g_object_unref(layout);
+            cairo_destroy(cr);
+            cairo_surface_destroy(surface);
+        }
+    }
 
     if (width>0 && height>0) {
         rod.x1 = rod.y1 = 0;
@@ -642,6 +724,14 @@ void TextFXPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, Co
         param->setDisplayRange(0, 4000);
         param->setDefault(kParamHeightDefault);
         param->setParent(*groupCanvas);
+    }
+    {
+        BooleanParamDescriptor *param = desc.defineBooleanParam(kParamAutoSize);
+        param->setLabel(kParamAutoSizeLabel);
+        param->setHint(kParamAutoSizeHint);
+        param->setDefault(kParamAutoSizeDefault);
+        param->setAnimates(false);
+        page->addChild(*groupCanvas);
     }
 }
 
