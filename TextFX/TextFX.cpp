@@ -32,7 +32,7 @@
 #define kPluginGrouping "Draw"
 #define kPluginIdentifier "fr.inria.openfx.TextFX"
 #define kPluginVersionMajor 1
-#define kPluginVersionMinor 1
+#define kPluginVersionMinor 2
 
 #define kSupportsTiles 0
 #define kSupportsMultiResolution 0
@@ -101,6 +101,16 @@
 #define kParamAutoSizeHint "Set canvas sized based on text. This will disable word wrap and custom canvas size"
 #define kParamAutoSizeDefault true
 
+#define kParamStretch "stretch"
+#define kParamStretchLabel "Stretch"
+#define kParamStretchHint "Width of the font relative to other designs within a family"
+#define kParamStretchDefault 4
+
+#define kParamWeight "weight"
+#define kParamWeightLabel "Weight"
+#define kParamWeightHint "The weight field specifies how bold or light the font should be"
+#define kParamWeightDefault 5
+
 using namespace OFX;
 static bool gHostIsNatron = false;
 
@@ -139,6 +149,8 @@ private:
     OFX::BooleanParam *markup_;
     OFX::ChoiceParam *style_;
     OFX::BooleanParam *auto_;
+    OFX::ChoiceParam *stretch_;
+    OFX::ChoiceParam *weight_;
 };
 
 TextFXPlugin::TextFXPlugin(OfxImageEffectHandle handle)
@@ -161,8 +173,10 @@ TextFXPlugin::TextFXPlugin(OfxImageEffectHandle handle)
     markup_ = fetchBooleanParam(kParamMarkup);
     style_ = fetchChoiceParam(kParamStyle);
     auto_ = fetchBooleanParam(kParamAutoSize);
+    stretch_ = fetchChoiceParam(kParamStretch);
+    weight_ = fetchChoiceParam(kParamWeight);
 
-    assert(text_ && fontSize_ && fontName_ && textColor_ && width_ && height_ && font_ && wrap_ && justify_ && align_ && markup_ && style_ && auto_);
+    assert(text_ && fontSize_ && fontName_ && textColor_ && width_ && height_ && font_ && wrap_ && justify_ && align_ && markup_ && style_ && auto_ && stretch_ && weight_);
 
     // Setup selected font
     std::string fontString, fontCombo;
@@ -253,7 +267,7 @@ void TextFXPlugin::render(const OFX::RenderArguments &args)
 
     // Get params
     double r, g, b, a;
-    int fontSize, fontID, cwidth,cheight, wrap, align, style;
+    int fontSize, fontID, cwidth,cheight, wrap, align, style, stretch, weight;
     std::string text, fontName, font;
     bool justify;
     bool markup;
@@ -273,6 +287,8 @@ void TextFXPlugin::render(const OFX::RenderArguments &args)
     markup_->getValueAtTime(args.time, markup);
     style_->getValueAtTime(args.time, style);
     auto_->getValueAtTime(args.time, autoSize);
+    stretch_->getValueAtTime(args.time, stretch);
+    weight_->getValueAtTime(args.time, weight);
 
     if (!font.empty())
         fontName=font;
@@ -319,6 +335,76 @@ void TextFXPlugin::render(const OFX::RenderArguments &args)
         pango_layout_set_text(layout, text.c_str(), -1);
 
     desc = pango_font_description_from_string(pangoFont.str().c_str());
+
+    switch(stretch) {
+    case 0:
+        pango_font_description_set_stretch(desc, PANGO_STRETCH_ULTRA_CONDENSED);
+        break;
+    case 1:
+        pango_font_description_set_stretch(desc, PANGO_STRETCH_EXTRA_CONDENSED);
+        break;
+    case 2:
+        pango_font_description_set_stretch(desc, PANGO_STRETCH_CONDENSED);
+        break;
+    case 3:
+        pango_font_description_set_stretch(desc, PANGO_STRETCH_SEMI_CONDENSED);
+        break;
+    case 4:
+        pango_font_description_set_stretch(desc, PANGO_STRETCH_NORMAL);
+        break;
+    case 5:
+        pango_font_description_set_stretch(desc, PANGO_STRETCH_SEMI_EXPANDED);
+        break;
+    case 6:
+        pango_font_description_set_stretch(desc, PANGO_STRETCH_EXPANDED);
+        break;
+    case 7:
+        pango_font_description_set_stretch(desc, PANGO_STRETCH_EXTRA_EXPANDED);
+        break;
+    case 8:
+        pango_font_description_set_stretch(desc, PANGO_STRETCH_ULTRA_EXPANDED);
+        break;
+    }
+
+    switch(weight) {
+    case 0:
+        pango_font_description_set_weight(desc, PANGO_WEIGHT_THIN);
+        break;
+    case 1:
+        pango_font_description_set_weight(desc, PANGO_WEIGHT_ULTRALIGHT);
+        break;
+    case 2:
+        pango_font_description_set_weight(desc, PANGO_WEIGHT_LIGHT);
+        break;
+    case 3:
+        pango_font_description_set_weight(desc, PANGO_WEIGHT_SEMILIGHT);
+        break;
+    case 4:
+        pango_font_description_set_weight(desc, PANGO_WEIGHT_BOOK);
+        break;
+    case 5:
+        pango_font_description_set_weight(desc, PANGO_WEIGHT_NORMAL);
+        break;
+    case 6:
+        pango_font_description_set_weight(desc, PANGO_WEIGHT_MEDIUM);
+        break;
+    case 7:
+        pango_font_description_set_weight(desc, PANGO_WEIGHT_SEMIBOLD);
+        break;
+    case 8:
+        pango_font_description_set_weight(desc, PANGO_WEIGHT_BOLD);
+        break;
+    case 9:
+        pango_font_description_set_weight(desc, PANGO_WEIGHT_ULTRABOLD);
+        break;
+    case 10:
+        pango_font_description_set_weight(desc, PANGO_WEIGHT_HEAVY);
+        break;
+    case 11:
+        pango_font_description_set_weight(desc, PANGO_WEIGHT_ULTRAHEAVY);
+        break;
+    }
+
     pango_layout_set_font_description(layout, desc);
     pango_font_description_free(desc);
 
@@ -433,7 +519,7 @@ bool TextFXPlugin::getRegionOfDefinition(const OFX::RegionOfDefinitionArguments 
     auto_->getValue(autoSize);
 
     if (autoSize) {
-        int fontSize, fontID, style;
+        int fontSize, fontID, style, stretch, weight;
         std::string text, fontName, font;
         bool markup;
 
@@ -444,6 +530,8 @@ bool TextFXPlugin::getRegionOfDefinition(const OFX::RegionOfDefinitionArguments 
         fontName_->getOption(fontID,fontName);
         style_->getValueAtTime(args.time, style);
         markup_->getValueAtTime(args.time, markup);
+        stretch_->getValueAtTime(args.time, stretch);
+        weight_->getValueAtTime(args.time, weight);
 
         if (!font.empty()) {
             fontName=font;
@@ -484,12 +572,82 @@ bool TextFXPlugin::getRegionOfDefinition(const OFX::RegionOfDefinitionArguments 
                 pango_layout_set_text(layout, text.c_str(), -1);
 
             desc = pango_font_description_from_string(pangoFont.str().c_str());
+
+            switch(stretch) {
+            case 0:
+                pango_font_description_set_stretch(desc, PANGO_STRETCH_ULTRA_CONDENSED);
+                break;
+            case 1:
+                pango_font_description_set_stretch(desc, PANGO_STRETCH_EXTRA_CONDENSED);
+                break;
+            case 2:
+                pango_font_description_set_stretch(desc, PANGO_STRETCH_CONDENSED);
+                break;
+            case 3:
+                pango_font_description_set_stretch(desc, PANGO_STRETCH_SEMI_CONDENSED);
+                break;
+            case 4:
+                pango_font_description_set_stretch(desc, PANGO_STRETCH_NORMAL);
+                break;
+            case 5:
+                pango_font_description_set_stretch(desc, PANGO_STRETCH_SEMI_EXPANDED);
+                break;
+            case 6:
+                pango_font_description_set_stretch(desc, PANGO_STRETCH_EXPANDED);
+                break;
+            case 7:
+                pango_font_description_set_stretch(desc, PANGO_STRETCH_EXTRA_EXPANDED);
+                break;
+            case 8:
+                pango_font_description_set_stretch(desc, PANGO_STRETCH_ULTRA_EXPANDED);
+                break;
+            }
+
+            switch(weight) {
+            case 0:
+                pango_font_description_set_weight(desc, PANGO_WEIGHT_THIN);
+                break;
+            case 1:
+                pango_font_description_set_weight(desc, PANGO_WEIGHT_ULTRALIGHT);
+                break;
+            case 2:
+                pango_font_description_set_weight(desc, PANGO_WEIGHT_LIGHT);
+                break;
+            case 3:
+                pango_font_description_set_weight(desc, PANGO_WEIGHT_SEMILIGHT);
+                break;
+            case 4:
+                pango_font_description_set_weight(desc, PANGO_WEIGHT_BOOK);
+                break;
+            case 5:
+                pango_font_description_set_weight(desc, PANGO_WEIGHT_NORMAL);
+                break;
+            case 6:
+                pango_font_description_set_weight(desc, PANGO_WEIGHT_MEDIUM);
+                break;
+            case 7:
+                pango_font_description_set_weight(desc, PANGO_WEIGHT_SEMIBOLD);
+                break;
+            case 8:
+                pango_font_description_set_weight(desc, PANGO_WEIGHT_BOLD);
+                break;
+            case 9:
+                pango_font_description_set_weight(desc, PANGO_WEIGHT_ULTRABOLD);
+                break;
+            case 10:
+                pango_font_description_set_weight(desc, PANGO_WEIGHT_HEAVY);
+                break;
+            case 11:
+                pango_font_description_set_weight(desc, PANGO_WEIGHT_ULTRAHEAVY);
+                break;
+            }
+
             pango_layout_set_font_description(layout, desc);
             pango_font_description_free(desc);
 
             pango_layout_get_pixel_size(layout, &width, &height);
 
-            //g_object_unref(layout);
+            g_object_unref(layout);
             cairo_destroy(cr);
             cairo_surface_destroy(surface);
         }
@@ -673,6 +831,43 @@ void TextFXPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, Co
         param->appendOption("Char");
         param->appendOption("Word-Char");
         param->setDefault(kParamWrapDefault);
+        param->setAnimates(false);
+        page->addChild(*param);
+    }
+    {
+        ChoiceParamDescriptor *param = desc.defineChoiceParam(kParamStretch);
+        param->setLabel(kParamStretchLabel);
+        param->setHint(kParamStretchHint);
+        param->appendOption("Ultra condensed");
+        param->appendOption("Extra condensed");
+        param->appendOption("Condensed");
+        param->appendOption("Semi condensed");
+        param->appendOption("Normal");
+        param->appendOption("Semi expanded");
+        param->appendOption("Expanded");
+        param->appendOption("Extra expanded");
+        param->appendOption("Ultra expanded");
+        param->setDefault(kParamStretchDefault);
+        param->setAnimates(false);
+        page->addChild(*param);
+    }
+    {
+        ChoiceParamDescriptor *param = desc.defineChoiceParam(kParamWeight);
+        param->setLabel(kParamWeightLabel);
+        param->setHint(kParamWeightHint);
+        param->appendOption("Thin");
+        param->appendOption("Ultra light");
+        param->appendOption("Light");
+        param->appendOption("Semi light");
+        param->appendOption("Book");
+        param->appendOption("Normal");
+        param->appendOption("Medium");
+        param->appendOption("Semi bold");
+        param->appendOption("Bold");
+        param->appendOption("Ultra bold");
+        param->appendOption("Heavy");
+        param->appendOption("Ultra heavy");
+        param->setDefault(kParamWeightDefault);
         param->setAnimates(false);
         page->addChild(*param);
     }
