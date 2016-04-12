@@ -44,8 +44,8 @@ Requirements
  * libzip
  * librevenge
  * libcdr
- * librsvg2
- * pango
+ * librsvg2 2.39+
+ * pango 1.36.8+
  * cairo
  * ImageMagick (6.9.3-5 Q32HDRI) with:
    * freetype
