@@ -28,7 +28,6 @@ Plugins
  * Swirl
  * Text (EOL)
  * TextFX
- * TextPango (EOL)
  * Texture
  * Tile
  * Wave
@@ -36,26 +35,22 @@ Plugins
 Requirements
 ============
 
- * lcms2
- * OpenColorIO
- * POV-Ray (runtime)
- * fontconfig
- * libxml2
- * libzip
- * librevenge
- * libcdr
+ * lcms2 2.1+
+ * OpenColorIO 1.0.9+
+ * fontconfig 2.10+
+ * libxml2 2.9+
+ * libzip 0.10+
+ * librevenge 0.0.2+
+ * libcdr 0.1.1+
  * librsvg2 2.39+
  * pango 1.36.8+
- * cairo
+ * cairo 1.14+
  * ImageMagick (6.9.3-5 Q32HDRI) with:
    * freetype
    * fontconfig
    * libpng
    * zlib
    * lcms2
-   * pango
-   * cairo
-   * libxml2
    
  Note that custom patches to ImageMagick is needed to build the plugins, see 'deploy.sh' for more information.
 
