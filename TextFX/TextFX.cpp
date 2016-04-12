@@ -447,7 +447,6 @@ bool TextFXPlugin::getRegionOfDefinition(const OFX::RegionOfDefinitionArguments 
 
         if (!font.empty()) {
             fontName=font;
-
             if (gHostIsNatron)
                 fontName.erase(0,2);
 
@@ -488,13 +487,9 @@ bool TextFXPlugin::getRegionOfDefinition(const OFX::RegionOfDefinitionArguments 
             pango_layout_set_font_description(layout, desc);
             pango_font_description_free(desc);
 
-            int autoWidth, autoHeight;
-            pango_layout_get_pixel_size(layout, &autoWidth, &autoHeight);
+            pango_layout_get_pixel_size(layout, &width, &height);
 
-            width = autoWidth;
-            height = autoHeight;
-
-            g_object_unref(layout);
+            //g_object_unref(layout);
             cairo_destroy(cr);
             cairo_surface_destroy(surface);
         }
@@ -717,6 +712,14 @@ void TextFXPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, Co
         param->setParent(*groupCanvas);
     }
     {
+        BooleanParamDescriptor *param = desc.defineBooleanParam(kParamAutoSize);
+        param->setLabel(kParamAutoSizeLabel);
+        param->setHint(kParamAutoSizeHint);
+        param->setDefault(kParamAutoSizeDefault);
+        param->setAnimates(false);
+        page->addChild(*param);
+    }
+    {
         IntParamDescriptor* param = desc.defineIntParam(kParamHeight);
         param->setLabel(kParamHeightLabel);
         param->setHint(kParamHeightHint);
@@ -724,14 +727,6 @@ void TextFXPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, Co
         param->setDisplayRange(0, 4000);
         param->setDefault(kParamHeightDefault);
         param->setParent(*groupCanvas);
-    }
-    {
-        BooleanParamDescriptor *param = desc.defineBooleanParam(kParamAutoSize);
-        param->setLabel(kParamAutoSizeLabel);
-        param->setHint(kParamAutoSizeHint);
-        param->setDefault(kParamAutoSizeDefault);
-        param->setAnimates(false);
-        page->addChild(*groupCanvas);
     }
 }
 
