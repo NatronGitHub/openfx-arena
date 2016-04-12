@@ -39,6 +39,7 @@ OTHER_FILES += \
             ReadKrita/Makefile \
             ReadMisc/Makefile \
             ReadCDR/Makefile \
+            TextFX/Makefile \
             Arc/Info.plist \
             Charcoal/Info.plist \
             Edges/Info.plist \
@@ -63,7 +64,8 @@ OTHER_FILES += \
             ReadKrita/Info.plist \
             Bundle/Info.plist \
             ReadMisc/Info.plist \
-            ReadCDR/Info.plist
+            ReadCDR/Info.plist \
+            TextFX/Info.plist
 INCLUDEPATH += . \
             SupportExt \
             OpenFX/Support/include \
@@ -79,7 +81,8 @@ INCLUDEPATH += . \
             /usr/include/libcdr-0.1 \
             /usr/include/librsvg-2.0 \
             /usr/include/cairo \
-            /usr/include/glib-2.0
+            /usr/include/glib-2.0 \
+            /usr/include/pango-1.0
 HEADERS += \
             SupportExt/ofxsCoords.h \
             SupportExt/ofxsCopier.h \
@@ -182,4 +185,5 @@ SOURCES += \
             Wave/Wave.cpp \
             ReadKrita/ReadKrita.cpp \
             ReadMisc/ReadMisc.cpp \
-            ReadCDR/ReadCDR.cpp
+            ReadCDR/ReadCDR.cpp \
+            TextFX/TextFX.cpp

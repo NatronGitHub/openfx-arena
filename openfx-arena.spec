@@ -3,7 +3,7 @@
 Summary: A set of extra OpenFX plugins for Natron/Nuke
 Name: openfx-arena
 
-Version: 20160227
+Version: 2.1.0
 Release: 1.el7
 License: GPLv2
 

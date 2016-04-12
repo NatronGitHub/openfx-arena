@@ -24,7 +24,8 @@ PovRay \
 OpenRaster \
 ReadKrita \
 ReadMisc \
-ReadCDR
+ReadCDR \
+TextFX
 
 all: subdirs
 

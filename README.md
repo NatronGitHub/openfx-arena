@@ -26,8 +26,9 @@ Plugins
  * Roll
  * Sketch
  * Swirl
- * Text
- * TextPango
+ * Text (EOL)
+ * TextFX
+ * TextPango (EOL)
  * Texture
  * Tile
  * Wave
@@ -54,6 +55,7 @@ Requirements
    * lcms2
    * pango
    * cairo
+   * libxml2
    
  Note that custom patches to ImageMagick is needed to build the plugins, see 'deploy.sh' for more information.
 
