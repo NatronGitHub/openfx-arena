@@ -11,7 +11,6 @@ PLUGINOBJECTS = \
         Implode.o \
         Charcoal.o \
         Oilpaint.o \
-        TextPango.o \
         ReadPSD.o \
         ReadSVG.o \
         Sketch.o \
@@ -61,8 +60,6 @@ RESOURCES = \
 ../Charcoal/net.fxarena.openfx.Charcoal.svg \
 ../Oilpaint/net.fxarena.openfx.Oilpaint.png \
 ../Oilpaint/net.fxarena.openfx.Oilpaint.svg \
-../TextPango/net.fxarena.openfx.TextPango.png \
-../TextPango/net.fxarena.openfx.TextPango.svg \
 ../ReadPSD/net.fxarena.openfx.ReadPSD.png \
 ../ReadPSD/net.fxarena.openfx.ReadPSD.svg \
 ../ReadSVG/net.fxarena.openfx.ReadSVG.png \
@@ -104,7 +101,6 @@ VPATH += \
 ../Implode \
 ../Charcoal \
 ../Oilpaint \
-../TextPango \
 ../ReadPSD \
 ../ReadSVG \
 ../Sketch \
@@ -137,7 +133,6 @@ CXXFLAGS += \
 -I../Implode \
 -I../Charcoal \
 -I../Oilpaint \
--I../TextPango \
 -I../ReadPSD \
 -I../ReadSVG \
 -I../Sketch \
