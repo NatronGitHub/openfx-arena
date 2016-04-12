@@ -25,5 +25,4 @@ install:
 
 script:
   - git submodule update -i --recursive
-  - cat travis/pango-font.h > /usr/include/pango-1.0/pango/pango-font.h
   - FIX_TRAVIS=1 DEBUG=1 bash deploy.sh
