@@ -24,7 +24,8 @@ Wave \
 PovRay \
 OpenRaster \
 ReadKrita \
-ReadMisc
+ReadMisc \
+TextFX
 
 all: subdirs
 
