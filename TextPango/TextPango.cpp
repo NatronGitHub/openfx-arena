@@ -20,7 +20,7 @@
 #include <cstring>
 
 #define kPluginName "TextPangoOFX"
-#define kPluginGrouping "Draw"
+#define kPluginGrouping "Extra/Draw"
 #define kPluginIdentifier "net.fxarena.openfx.TextPango"
 #define kPluginVersionMajor 2
 #define kPluginVersionMinor 3
@@ -566,7 +566,7 @@ void TextPangoPluginFactory::describe(OFX::ImageEffectDescriptor &desc)
     desc.setPluginGrouping(kPluginGrouping);
     size_t magickNumber;
     std::string magickString = MagickCore::GetMagickVersion(&magickNumber);
-    desc.setPluginDescription("Pango text generator node.\n\nPowered by "+magickString+"\n\nImageMagick (R) is Copyright 1999-2015 ImageMagick Studio LLC, a non-profit organization dedicated to making software imaging solutions freely available.\n\nImageMagick is distributed under the Apache 2.0 license.");
+    desc.setPluginDescription("Pango text generator node. This node is EOL, please use the TextFX node instead.\n\nPowered by "+magickString+"\n\nImageMagick (R) is Copyright 1999-2015 ImageMagick Studio LLC, a non-profit organization dedicated to making software imaging solutions freely available.\n\nImageMagick is distributed under the Apache 2.0 license.");
 
     // add the supported contexts
     desc.addSupportedContext(eContextGeneral);
