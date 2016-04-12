@@ -103,11 +103,11 @@ bool stringCompare(const std::string & l, const std::string & r) {
     return (l==r);
 }
 
-class TextPlugin : public OFX::ImageEffect
+class TextFXPlugin : public OFX::ImageEffect
 {
 public:
-    TextPlugin(OfxImageEffectHandle handle);
-    virtual ~TextPlugin();
+    TextFXPlugin(OfxImageEffectHandle handle);
+    virtual ~TextFXPlugin();
 
     /* Override the render */
     virtual void render(const OFX::RenderArguments &args) OVERRIDE FINAL;
@@ -135,7 +135,7 @@ private:
     OFX::ChoiceParam *style_;
 };
 
-TextPlugin::TextPlugin(OfxImageEffectHandle handle)
+TextFXPlugin::TextFXPlugin(OfxImageEffectHandle handle)
 : OFX::ImageEffect(handle)
 , dstClip_(0)
 {
@@ -185,12 +185,12 @@ TextPlugin::TextPlugin(OfxImageEffectHandle handle)
 }
 
 
-TextPlugin::~TextPlugin()
+TextFXPlugin::~TextFXPlugin()
 {
 }
 
 /* Override the render */
-void TextPlugin::render(const OFX::RenderArguments &args)
+void TextFXPlugin::render(const OFX::RenderArguments &args)
 {
     // renderscale
     if (!kSupportsRenderScale && (args.renderScale.x != 1. || args.renderScale.y != 1.)) {
@@ -389,7 +389,7 @@ void TextPlugin::render(const OFX::RenderArguments &args)
     delete[] pixels;
 }
 
-void TextPlugin::changedParam(const OFX::InstanceChangedArgs &args, const std::string &paramName)
+void TextFXPlugin::changedParam(const OFX::InstanceChangedArgs &args, const std::string &paramName)
 {
     if (!kSupportsRenderScale && (args.renderScale.x != 1. || args.renderScale.y != 1.)) {
         OFX::throwSuiteStatusException(kOfxStatFailed);
@@ -407,7 +407,7 @@ void TextPlugin::changedParam(const OFX::InstanceChangedArgs &args, const std::s
     clearPersistentMessage();
 }
 
-bool TextPlugin::getRegionOfDefinition(const OFX::RegionOfDefinitionArguments &args, OfxRectD &rod)
+bool TextFXPlugin::getRegionOfDefinition(const OFX::RegionOfDefinitionArguments &args, OfxRectD &rod)
 {
     if (!kSupportsRenderScale && (args.renderScale.x != 1. || args.renderScale.y != 1.)) {
         OFX::throwSuiteStatusException(kOfxStatFailed);
@@ -431,10 +431,10 @@ bool TextPlugin::getRegionOfDefinition(const OFX::RegionOfDefinitionArguments &a
     return true;
 }
 
-mDeclarePluginFactory(TextPluginFactory, {}, {});
+mDeclarePluginFactory(TextFXPluginFactory, {}, {});
 
 /** @brief The basic describe function, passed a plugin descriptor */
-void TextPluginFactory::describe(OFX::ImageEffectDescriptor &desc)
+void TextFXPluginFactory::describe(OFX::ImageEffectDescriptor &desc)
 {
     // basic labels
     desc.setLabel(kPluginName);
@@ -454,7 +454,7 @@ void TextPluginFactory::describe(OFX::ImageEffectDescriptor &desc)
 }
 
 /** @brief The describe in context function, passed a plugin descriptor and a context */
-void TextPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, ContextEnum /*context*/)
+void TextFXPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, ContextEnum /*context*/)
 {
     // natron?
     gHostIsNatron = (OFX::getImageEffectHostDescription()->isNatron);
@@ -646,10 +646,10 @@ void TextPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, Cont
 }
 
 /** @brief The create instance function, the plugin must return an object derived from the \ref OFX::ImageEffect class */
-ImageEffect* TextPluginFactory::createInstance(OfxImageEffectHandle handle, ContextEnum /*context*/)
+ImageEffect* TextFXPluginFactory::createInstance(OfxImageEffectHandle handle, ContextEnum /*context*/)
 {
-    return new TextPlugin(handle);
+    return new TextFXPlugin(handle);
 }
 
-static TextPluginFactory p(kPluginIdentifier, kPluginVersionMajor, kPluginVersionMinor);
+static TextFXPluginFactory p(kPluginIdentifier, kPluginVersionMajor, kPluginVersionMinor);
 mRegisterPluginFactoryInstance(p)
