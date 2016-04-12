@@ -111,10 +111,6 @@
 #define kParamWeightHint "The weight field specifies how bold or light the font should be"
 #define kParamWeightDefault 5
 
-#ifdef LEGACY
-#define PANGO_WEIGHT_SEMILIGHT 350
-#endif
-
 using namespace OFX;
 static bool gHostIsNatron = false;
 
