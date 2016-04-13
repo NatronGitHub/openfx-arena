@@ -120,6 +120,15 @@
 #define kParamStrokeWidthHint "Stroke size"
 #define kParamStrokeWidthDefault 0.0
 
+#define kParamStrokeDash "strokeDash"
+#define kParamStrokeDashLabel "Stroke dash length"
+#define kParamStrokeDashHint "The length of the dashes"
+#define kParamStrokeDashDefault 0
+
+#define kParamStrokeDashPattern "strokeDashPattern"
+#define kParamStrokeDashPatternLabel "Stroke dash pattern"
+#define kParamStrokeDashPatternHint "An array specifying alternate lengths of on and off stroke portions"
+
 using namespace OFX;
 static bool gHostIsNatron = false;
 
@@ -162,6 +171,8 @@ private:
     OFX::ChoiceParam *weight_;
     OFX::RGBAParam *strokeColor_;
     OFX::DoubleParam *strokeWidth_;
+    OFX::IntParam *strokeDash_;
+    OFX::Double3DParam *strokeDashPattern_;
 };
 
 TextFXPlugin::TextFXPlugin(OfxImageEffectHandle handle)
@@ -188,8 +199,10 @@ TextFXPlugin::TextFXPlugin(OfxImageEffectHandle handle)
     weight_ = fetchChoiceParam(kParamWeight);
     strokeColor_ = fetchRGBAParam(kParamStrokeColor);
     strokeWidth_ = fetchDoubleParam(kParamStrokeWidth);
+    strokeDash_ = fetchIntParam(kParamStrokeDash);
+    strokeDashPattern_ = fetchDouble3DParam(kParamStrokeDashPattern);
 
-    assert(text_ && fontSize_ && fontName_ && textColor_ && width_ && height_ && font_ && wrap_ && justify_ && align_ && markup_ && style_ && auto_ && stretch_ && weight_ && strokeColor_ && strokeWidth_);
+    assert(text_ && fontSize_ && fontName_ && textColor_ && width_ && height_ && font_ && wrap_ && justify_ && align_ && markup_ && style_ && auto_ && stretch_ && weight_ && strokeColor_ && strokeWidth_ && strokeDash_ && strokeDashPattern_);
 
     // Setup selected font
     std::string fontString, fontCombo;
@@ -279,8 +292,8 @@ void TextFXPlugin::render(const OFX::RenderArguments &args)
     }
 
     // Get params
-    double r, g, b, a, s_r, s_g, s_b, s_a, strokeWidth;
-    int fontSize, fontID, cwidth,cheight, wrap, align, style, stretch, weight;
+    double r, g, b, a, s_r, s_g, s_b, s_a, strokeWidth, strokeDashX, strokeDashY, strokeDashZ;
+    int fontSize, fontID, cwidth,cheight, wrap, align, style, stretch, weight, strokeDash;
     std::string text, fontName, font;
     bool justify;
     bool markup;
@@ -304,6 +317,8 @@ void TextFXPlugin::render(const OFX::RenderArguments &args)
     weight_->getValueAtTime(args.time, weight);
     strokeColor_->getValueAtTime(args.time, s_r, s_g, s_b, s_a);
     strokeWidth_->getValueAtTime(args.time, strokeWidth);
+    strokeDash_->getValueAtTime(args.time, strokeDash);
+    strokeDashPattern_->getValueAtTime(args.time, strokeDashX, strokeDashY, strokeDashZ);
 
     if (!font.empty())
         fontName=font;
@@ -460,6 +475,12 @@ void TextFXPlugin::render(const OFX::RenderArguments &args)
     }
 
     if (strokeWidth>0) {
+
+        if (strokeDash>0) {
+            double dash[] = {strokeDashX, strokeDashY, strokeDashZ};
+            cairo_set_dash(cr, dash, strokeDash, 0);
+        }
+
         cairo_new_path(cr);
 
         if (autoSize)
@@ -849,6 +870,24 @@ void TextFXPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, Co
         param->setRange(0, 500);
         param->setDisplayRange(0, 100);
         param->setDefault(kParamStrokeWidthDefault);
+        param->setAnimates(true);
+        page->addChild(*param);
+    }
+    {
+        IntParamDescriptor* param = desc.defineIntParam(kParamStrokeDash);
+        param->setLabel(kParamStrokeDashLabel);
+        param->setHint(kParamStrokeDashHint);
+        param->setRange(0, 100);
+        param->setDisplayRange(0, 10);
+        param->setDefault(kParamStrokeDashDefault);
+        param->setAnimates(true);
+        page->addChild(*param);
+    }
+    {
+        Double3DParamDescriptor* param = desc.defineDouble3DParam(kParamStrokeDashPattern);
+        param->setLabel(kParamStrokeDashPatternLabel);
+        param->setHint(kParamStrokeDashPatternHint);
+        param->setDefault(1.0, 0.0, 0.0);
         param->setAnimates(true);
         page->addChild(*param);
     }
