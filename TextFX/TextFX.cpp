@@ -32,7 +32,7 @@
 #define kPluginGrouping "Draw"
 #define kPluginIdentifier "fr.inria.openfx.TextFX"
 #define kPluginVersionMajor 1
-#define kPluginVersionMinor 2
+#define kPluginVersionMinor 3
 
 #define kSupportsTiles 0
 #define kSupportsMultiResolution 0
@@ -111,6 +111,15 @@
 #define kParamWeightHint "The weight field specifies how bold or light the font should be"
 #define kParamWeightDefault 5
 
+#define kParamStrokeColor "strokeColor"
+#define kParamStrokeColorLabel "Stroke color"
+#define kParamStrokeColorHint "The fill color of the stroke to render"
+
+#define kParamStrokeWidth "strokeSize"
+#define kParamStrokeWidthLabel "Stroke size"
+#define kParamStrokeWidthHint "Stroke size"
+#define kParamStrokeWidthDefault 0.0
+
 using namespace OFX;
 static bool gHostIsNatron = false;
 
@@ -151,6 +160,8 @@ private:
     OFX::BooleanParam *auto_;
     OFX::ChoiceParam *stretch_;
     OFX::ChoiceParam *weight_;
+    OFX::RGBAParam *strokeColor_;
+    OFX::DoubleParam *strokeWidth_;
 };
 
 TextFXPlugin::TextFXPlugin(OfxImageEffectHandle handle)
@@ -175,8 +186,10 @@ TextFXPlugin::TextFXPlugin(OfxImageEffectHandle handle)
     auto_ = fetchBooleanParam(kParamAutoSize);
     stretch_ = fetchChoiceParam(kParamStretch);
     weight_ = fetchChoiceParam(kParamWeight);
+    strokeColor_ = fetchRGBAParam(kParamStrokeColor);
+    strokeWidth_ = fetchDoubleParam(kParamStrokeWidth);
 
-    assert(text_ && fontSize_ && fontName_ && textColor_ && width_ && height_ && font_ && wrap_ && justify_ && align_ && markup_ && style_ && auto_ && stretch_ && weight_);
+    assert(text_ && fontSize_ && fontName_ && textColor_ && width_ && height_ && font_ && wrap_ && justify_ && align_ && markup_ && style_ && auto_ && stretch_ && weight_ && strokeColor_ && strokeWidth_);
 
     // Setup selected font
     std::string fontString, fontCombo;
@@ -266,7 +279,7 @@ void TextFXPlugin::render(const OFX::RenderArguments &args)
     }
 
     // Get params
-    double r, g, b, a;
+    double r, g, b, a, s_r, s_g, s_b, s_a, strokeWidth;
     int fontSize, fontID, cwidth,cheight, wrap, align, style, stretch, weight;
     std::string text, fontName, font;
     bool justify;
@@ -289,6 +302,8 @@ void TextFXPlugin::render(const OFX::RenderArguments &args)
     auto_->getValueAtTime(args.time, autoSize);
     stretch_->getValueAtTime(args.time, stretch);
     weight_->getValueAtTime(args.time, weight);
+    strokeColor_->getValueAtTime(args.time, s_r, s_g, s_b, s_a);
+    strokeWidth_->getValueAtTime(args.time, strokeWidth);
 
     if (!font.empty())
         fontName=font;
@@ -444,9 +459,25 @@ void TextFXPlugin::render(const OFX::RenderArguments &args)
         pango_layout_set_justify (layout, true);
     }
 
-    cairo_set_source_rgba(cr, r, g, b, a);
-    pango_cairo_update_layout(cr, layout);
-    pango_cairo_show_layout(cr, layout);
+    if (strokeWidth>0) {
+        cairo_new_path(cr);
+
+        if (autoSize)
+            cairo_move_to(cr, std::floor((strokeWidth/2) * args.renderScale.x + 0.5), 0.0);
+
+        pango_cairo_layout_path(cr, layout);
+        cairo_set_line_width(cr, std::floor(strokeWidth * args.renderScale.x + 0.5));
+        //cairo_set_miter_limit(cr, );
+        cairo_set_source_rgba(cr, s_r, s_g, s_b, s_a);
+        cairo_stroke_preserve(cr);
+        cairo_set_source_rgba(cr, r, g, b, a);
+        cairo_fill(cr);
+    }
+    else {
+        cairo_set_source_rgba(cr, r, g, b, a);
+        pango_cairo_update_layout(cr, layout);
+        pango_cairo_show_layout(cr, layout);
+    }
 
     status = cairo_status(cr);
 
@@ -520,6 +551,7 @@ bool TextFXPlugin::getRegionOfDefinition(const OFX::RegionOfDefinitionArguments 
 
     if (autoSize) {
         int fontSize, fontID, style, stretch, weight;
+        double strokeWidth;
         std::string text, fontName, font;
         bool markup;
 
@@ -532,6 +564,7 @@ bool TextFXPlugin::getRegionOfDefinition(const OFX::RegionOfDefinitionArguments 
         markup_->getValueAtTime(args.time, markup);
         stretch_->getValueAtTime(args.time, stretch);
         weight_->getValueAtTime(args.time, weight);
+        strokeWidth_->getValueAtTime(args.time, strokeWidth);
 
         if (!font.empty()) {
             fontName=font;
@@ -646,6 +679,12 @@ bool TextFXPlugin::getRegionOfDefinition(const OFX::RegionOfDefinitionArguments 
             pango_font_description_free(desc);
 
             pango_layout_get_pixel_size(layout, &width, &height);
+
+            /// WIP
+            if (strokeWidth>0) {
+                width = width+(strokeWidth*2);
+                height = height+(strokeWidth/2);
+            }
 
             g_object_unref(layout);
             cairo_destroy(cr);
@@ -804,10 +843,28 @@ void TextFXPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, Co
         page->addChild(*param);
     }
     {
+        DoubleParamDescriptor* param = desc.defineDoubleParam(kParamStrokeWidth);
+        param->setLabel(kParamStrokeWidthLabel);
+        param->setHint(kParamStrokeWidthHint);
+        param->setRange(0, 500);
+        param->setDisplayRange(0, 100);
+        param->setDefault(kParamStrokeWidthDefault);
+        param->setAnimates(true);
+        page->addChild(*param);
+    }
+    {
         RGBAParamDescriptor* param = desc.defineRGBAParam(kParamTextColor);
         param->setLabel(kParamTextColorLabel);
         param->setHint(kParamTextColorHint);
         param->setDefault(1., 1., 1., 1.);
+        param->setAnimates(true);
+        page->addChild(*param);
+    }
+    {
+        RGBAParamDescriptor* param = desc.defineRGBAParam(kParamStrokeColor);
+        param->setLabel(kParamStrokeColorLabel);
+        param->setHint(kParamStrokeColorHint);
+        param->setDefault(1., 0., 0., 1.);
         param->setAnimates(true);
         page->addChild(*param);
     }
