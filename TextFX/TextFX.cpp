@@ -129,6 +129,11 @@
 #define kParamStrokeDashPatternLabel "Stroke dash pattern"
 #define kParamStrokeDashPatternHint "An array specifying alternate lengths of on and off stroke portions"
 
+#define kParamFontAA "antialiasing"
+#define kParamFontAALabel "Antialiasing"
+#define kParamFontAAHint "Sets the antialiasing mode for the font"
+#define kParamFontAADefault 0
+
 using namespace OFX;
 static bool gHostIsNatron = false;
 
@@ -173,6 +178,7 @@ private:
     OFX::DoubleParam *strokeWidth_;
     OFX::IntParam *strokeDash_;
     OFX::Double3DParam *strokeDashPattern_;
+    OFX::ChoiceParam *fontAA_;
 };
 
 TextFXPlugin::TextFXPlugin(OfxImageEffectHandle handle)
@@ -201,8 +207,9 @@ TextFXPlugin::TextFXPlugin(OfxImageEffectHandle handle)
     strokeWidth_ = fetchDoubleParam(kParamStrokeWidth);
     strokeDash_ = fetchIntParam(kParamStrokeDash);
     strokeDashPattern_ = fetchDouble3DParam(kParamStrokeDashPattern);
+    fontAA_ = fetchChoiceParam(kParamFontAA);
 
-    assert(text_ && fontSize_ && fontName_ && textColor_ && width_ && height_ && font_ && wrap_ && justify_ && align_ && markup_ && style_ && auto_ && stretch_ && weight_ && strokeColor_ && strokeWidth_ && strokeDash_ && strokeDashPattern_);
+    assert(text_ && fontSize_ && fontName_ && textColor_ && width_ && height_ && font_ && wrap_ && justify_ && align_ && markup_ && style_ && auto_ && stretch_ && weight_ && strokeColor_ && strokeWidth_ && strokeDash_ && strokeDashPattern_ && fontAA_);
 
     // Setup selected font
     std::string fontString, fontCombo;
@@ -293,7 +300,7 @@ void TextFXPlugin::render(const OFX::RenderArguments &args)
 
     // Get params
     double r, g, b, a, s_r, s_g, s_b, s_a, strokeWidth, strokeDashX, strokeDashY, strokeDashZ;
-    int fontSize, fontID, cwidth,cheight, wrap, align, style, stretch, weight, strokeDash;
+    int fontSize, fontID, cwidth,cheight, wrap, align, style, stretch, weight, strokeDash, fontAA;
     std::string text, fontName, font;
     bool justify;
     bool markup;
@@ -319,6 +326,7 @@ void TextFXPlugin::render(const OFX::RenderArguments &args)
     strokeWidth_->getValueAtTime(args.time, strokeWidth);
     strokeDash_->getValueAtTime(args.time, strokeDash);
     strokeDashPattern_->getValueAtTime(args.time, strokeDashX, strokeDashY, strokeDashZ);
+    fontAA_->getValueAtTime(args.time, fontAA);
 
     if (!font.empty())
         fontName=font;
@@ -358,6 +366,24 @@ void TextFXPlugin::render(const OFX::RenderArguments &args)
     cr = cairo_create (surface);
 
     layout = pango_cairo_create_layout(cr);
+
+    cairo_font_options_t* options = cairo_font_options_create();
+    switch(fontAA) {
+    case 0:
+        cairo_font_options_set_antialias(options, CAIRO_ANTIALIAS_DEFAULT);
+        break;
+    case 1:
+        cairo_font_options_set_antialias(options, CAIRO_ANTIALIAS_NONE);
+        break;
+    case 2:
+        cairo_font_options_set_antialias(options, CAIRO_ANTIALIAS_GRAY);
+        break;
+    case 3:
+        cairo_font_options_set_antialias(options, CAIRO_ANTIALIAS_SUBPIXEL);
+        break;
+    }
+
+    pango_cairo_context_set_font_options(pango_layout_get_context(layout), options);
 
     if (markup)
         pango_layout_set_markup(layout, text.c_str(), -1);
@@ -530,6 +556,7 @@ void TextFXPlugin::render(const OFX::RenderArguments &args)
         }
     }
 
+    cairo_font_options_destroy(options);
     g_object_unref(layout);
     cairo_destroy(cr);
     cairo_surface_destroy(surface);
@@ -905,6 +932,18 @@ void TextFXPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, Co
         param->setHint(kParamStrokeColorHint);
         param->setDefault(1., 0., 0., 1.);
         param->setAnimates(true);
+        page->addChild(*param);
+    }
+    {
+        ChoiceParamDescriptor *param = desc.defineChoiceParam(kParamFontAA);
+        param->setLabel(kParamFontAALabel);
+        param->setHint(kParamFontAAHint);
+        param->appendOption("Default");
+        param->appendOption("None");
+        param->appendOption("Gray");
+        param->appendOption("Subpixel");
+        param->setDefault(kParamFontAADefault);
+        param->setAnimates(false);
         page->addChild(*param);
     }
     {
