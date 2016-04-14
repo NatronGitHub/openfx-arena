@@ -149,6 +149,23 @@
 #define kParamHintMetricsHint "This controls whether metrics are quantized to integer values in device units."
 #define kParamHintMetricsDefault 0
 
+#define kParamCirclePage "Circle Effect"
+
+#define kParamCircle "circle"
+#define kParamCircleLabel "Circle"
+#define kParamCircleHint "Create a circle effect using text. Auto size must be disabled for this effect to work."
+#define kParamCircleDefault false
+
+#define kParamCircleRadius "circleRadius"
+#define kParamCircleRadiusLabel "Circle radius"
+#define kParamCircleRadiusHint "Circle radius"
+#define kParamCircleRadiusDefault 150
+
+#define kParamCircleWords "circleWords"
+#define kParamCircleWordsLabel "Circle Words"
+#define kParamCircleWordsHint "X times text in circle"
+#define kParamCircleWordsDefault 10
+
 using namespace OFX;
 static bool gHostIsNatron = false;
 
@@ -197,6 +214,9 @@ private:
     OFX::ChoiceParam *subpixel_;
     OFX::ChoiceParam *hintStyle_;
     OFX::ChoiceParam *hintMetrics_;
+    OFX::BooleanParam *circle_;
+    OFX::DoubleParam *circleRadius_;
+    OFX::IntParam *circleWords_;
 };
 
 TextFXPlugin::TextFXPlugin(OfxImageEffectHandle handle)
@@ -229,8 +249,14 @@ TextFXPlugin::TextFXPlugin(OfxImageEffectHandle handle)
     subpixel_ = fetchChoiceParam(kParamSubpixel);
     hintStyle_ = fetchChoiceParam(kParamHintStyle);
     hintMetrics_ = fetchChoiceParam(kParamHintMetrics);
+    circle_ = fetchBooleanParam(kParamCircle);
+    circleRadius_ = fetchDoubleParam(kParamCircleRadius);
+    circleWords_ = fetchIntParam(kParamCircleWords);
 
-    assert(text_ && fontSize_ && fontName_ && textColor_ && width_ && height_ && font_ && wrap_ && justify_ && align_ && markup_ && style_ && auto_ && stretch_ && weight_ && strokeColor_ && strokeWidth_ && strokeDash_ && strokeDashPattern_ && fontAA_ && subpixel_ && hintStyle_ && hintMetrics_);
+    assert(text_ && fontSize_ && fontName_ && textColor_ && width_ && height_ && font_ && wrap_
+           && justify_ && align_ && markup_ && style_ && auto_ && stretch_ && weight_ && strokeColor_
+           && strokeWidth_ && strokeDash_ && strokeDashPattern_ && fontAA_ && subpixel_ && hintStyle_
+           && hintMetrics_ && circle_ && circleRadius_ && circleWords_);
 
     // Setup selected font
     std::string fontString, fontCombo;
@@ -320,12 +346,13 @@ void TextFXPlugin::render(const OFX::RenderArguments &args)
     }
 
     // Get params
-    double r, g, b, a, s_r, s_g, s_b, s_a, strokeWidth, strokeDashX, strokeDashY, strokeDashZ;
-    int fontSize, fontID, cwidth,cheight, wrap, align, style, stretch, weight, strokeDash, fontAA, subpixel, hintStyle, hintMetrics;
+    double r, g, b, a, s_r, s_g, s_b, s_a, strokeWidth, strokeDashX, strokeDashY, strokeDashZ, circleRadius;
+    int fontSize, fontID, cwidth,cheight, wrap, align, style, stretch, weight, strokeDash, fontAA, subpixel, hintStyle, hintMetrics, circleWords;
     std::string text, fontName, font;
     bool justify;
     bool markup;
     bool autoSize;
+    bool circle;
 
     text_->getValueAtTime(args.time, text);
     fontSize_->getValueAtTime(args.time, fontSize);
@@ -351,6 +378,9 @@ void TextFXPlugin::render(const OFX::RenderArguments &args)
     subpixel_->getValueAtTime(args.time, subpixel);
     hintStyle_->getValueAtTime(args.time, hintStyle);
     hintMetrics_->getValueAtTime(args.time, hintMetrics);
+    circle_->getValueAtTime(args.time, circle);
+    circleRadius_->getValueAtTime(args.time, circleRadius);
+    circleWords_->getValueAtTime(args.time, circleWords);
 
     if (!font.empty())
         fontName=font;
@@ -574,35 +604,54 @@ void TextFXPlugin::render(const OFX::RenderArguments &args)
     }
 
     if (strokeWidth>0) {
+        if (!circle) {
+            if (strokeDash>0) {
+                if (strokeDashX<0.1)
+                    strokeDashX=0.1;
+                if (strokeDashY<0)
+                    strokeDashY=0;
+                if (strokeDashZ<0)
+                    strokeDashZ=0;
+                double dash[] = {strokeDashX, strokeDashY, strokeDashZ};
+                cairo_set_dash(cr, dash, strokeDash, 0);
+            }
 
-        if (strokeDash>0) {
-            if (strokeDashX<0.1)
-                strokeDashX=0.1;
-            if (strokeDashY<0)
-                strokeDashY=0;
-            if (strokeDashZ<0)
-                strokeDashZ=0;
-            double dash[] = {strokeDashX, strokeDashY, strokeDashZ};
-            cairo_set_dash(cr, dash, strokeDash, 0);
+            cairo_new_path(cr);
+
+            if (autoSize)
+                cairo_move_to(cr, std::floor((strokeWidth/2) * args.renderScale.x + 0.5), 0.0);
+
+            pango_cairo_layout_path(cr, layout);
+            cairo_set_line_width(cr, std::floor(strokeWidth * args.renderScale.x + 0.5));
+            //cairo_set_miter_limit(cr, );
+            cairo_set_source_rgba(cr, s_r, s_g, s_b, s_a);
+            cairo_stroke_preserve(cr);
+            cairo_set_source_rgba(cr, r, g, b, a);
+            cairo_fill(cr);
         }
-
-        cairo_new_path(cr);
-
-        if (autoSize)
-            cairo_move_to(cr, std::floor((strokeWidth/2) * args.renderScale.x + 0.5), 0.0);
-
-        pango_cairo_layout_path(cr, layout);
-        cairo_set_line_width(cr, std::floor(strokeWidth * args.renderScale.x + 0.5));
-        //cairo_set_miter_limit(cr, );
-        cairo_set_source_rgba(cr, s_r, s_g, s_b, s_a);
-        cairo_stroke_preserve(cr);
-        cairo_set_source_rgba(cr, r, g, b, a);
-        cairo_fill(cr);
     }
     else {
-        cairo_set_source_rgba(cr, r, g, b, a);
-        pango_cairo_update_layout(cr, layout);
-        pango_cairo_show_layout(cr, layout);
+        if (!circle) {
+            cairo_set_source_rgba(cr, r, g, b, a);
+            pango_cairo_update_layout(cr, layout);
+            pango_cairo_show_layout(cr, layout);
+        }
+    }
+
+    if (circle && !autoSize) {
+        cairo_translate (cr, width/2, height/2);
+        for (int i = 0; i < circleWords; i++) {
+            int rwidth, rheight;
+            double angle = (360. * i) / circleWords;
+            cairo_save (cr);
+            cairo_set_source_rgba (cr, r, g, b, a);
+            cairo_rotate (cr, angle * G_PI / 180.);
+            pango_cairo_update_layout (cr, layout);
+            pango_layout_get_size (layout, &rwidth, &rheight);
+            cairo_move_to (cr, - ((double)rwidth / PANGO_SCALE) / 2, - std::floor(circleRadius * args.renderScale.x + 0.5));
+            pango_cairo_show_layout (cr, layout);
+            cairo_restore (cr);
+        }
     }
 
     status = cairo_status(cr);
@@ -871,6 +920,7 @@ void TextFXPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, Co
 
     // make some pages
     PageParamDescriptor *page = desc.definePageParam(kPluginName);
+    PageParamDescriptor *circlepage = desc.definePageParam(kParamCirclePage);
     GroupParamDescriptor *groupCanvas = desc.defineGroupParam("Canvas");
 
     groupCanvas->setOpen(false);
@@ -1173,6 +1223,34 @@ void TextFXPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, Co
         param->setDisplayRange(0, 4000);
         param->setDefault(kParamHeightDefault);
         param->setParent(*groupCanvas);
+    }
+    {
+        BooleanParamDescriptor *param = desc.defineBooleanParam(kParamCircle);
+        param->setLabel(kParamCircleLabel);
+        param->setHint(kParamCircleHint);
+        param->setDefault(kParamCircleDefault);
+        param->setAnimates(false);
+        circlepage->addChild(*param);
+    }
+    {
+        DoubleParamDescriptor* param = desc.defineDoubleParam(kParamCircleRadius);
+        param->setLabel(kParamCircleRadiusLabel);
+        param->setHint(kParamCircleRadiusHint);
+        param->setRange(0, 10000);
+        param->setDisplayRange(0, 1000);
+        param->setDefault(kParamCircleRadiusDefault);
+        param->setAnimates(true);
+        circlepage->addChild(*param);
+    }
+    {
+        IntParamDescriptor* param = desc.defineIntParam(kParamCircleWords);
+        param->setLabel(kParamCircleWordsLabel);
+        param->setHint(kParamCircleWordsHint);
+        param->setRange(1, 1000);
+        param->setDisplayRange(1, 100);
+        param->setDefault(kParamCircleWordsDefault);
+        param->setAnimates(true);
+        circlepage->addChild(*param);
     }
 }
 
