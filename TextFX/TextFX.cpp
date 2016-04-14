@@ -32,7 +32,7 @@
 #define kPluginGrouping "Draw"
 #define kPluginIdentifier "fr.inria.openfx.TextFX"
 #define kPluginVersionMajor 1
-#define kPluginVersionMinor 3
+#define kPluginVersionMinor 4
 
 #define kSupportsTiles 0
 #define kSupportsMultiResolution 0
@@ -59,12 +59,12 @@
 #define kParamFontHint "Selected font"
 
 #define kParamStyle "style"
-#define kParamStyleLabel "Font style"
+#define kParamStyleLabel "Style"
 #define kParamStyleHint "Font style"
 #define kParamStyleDefault 0
 
 #define kParamTextColor "color"
-#define kParamTextColorLabel "Font color"
+#define kParamTextColorLabel "Text color"
 #define kParamTextColorHint "The fill color of the text to render"
 
 #define kParamJustify "justify"
@@ -122,17 +122,32 @@
 
 #define kParamStrokeDash "strokeDash"
 #define kParamStrokeDashLabel "Stroke dash length"
-#define kParamStrokeDashHint "The length of the dashes"
+#define kParamStrokeDashHint "The length of the dashes."
 #define kParamStrokeDashDefault 0
 
 #define kParamStrokeDashPattern "strokeDashPattern"
 #define kParamStrokeDashPatternLabel "Stroke dash pattern"
-#define kParamStrokeDashPatternHint "An array specifying alternate lengths of on and off stroke portions"
+#define kParamStrokeDashPatternHint "An array specifying alternate lengths of on and off stroke portions."
 
 #define kParamFontAA "antialiasing"
 #define kParamFontAALabel "Antialiasing"
-#define kParamFontAAHint "Sets the antialiasing mode for the font"
+#define kParamFontAAHint "This specifies the type of antialiasing to do when rendering text."
 #define kParamFontAADefault 0
+
+#define kParamSubpixel "subpixel"
+#define kParamSubpixelLabel "Subpixel"
+#define kParamSubpixelHint " The subpixel order specifies the order of color elements within each pixel on the dets the antialiasing mode for the fontisplay device when rendering with an antialiasing mode."
+#define kParamSubpixelDefault 0
+
+#define kParamHintStyle "hintStyle"
+#define kParamHintStyleLabel "Hint style"
+#define kParamHintStyleHint "This controls whether to fit font outlines to the pixel grid, and if so, whether to optimize for fidelity or contrast."
+#define kParamHintStyleDefault 0
+
+#define kParamHintMetrics "hintMetrics"
+#define kParamHintMetricsLabel "Hint metrics"
+#define kParamHintMetricsHint "This controls whether metrics are quantized to integer values in device units."
+#define kParamHintMetricsDefault 0
 
 using namespace OFX;
 static bool gHostIsNatron = false;
@@ -179,6 +194,9 @@ private:
     OFX::IntParam *strokeDash_;
     OFX::Double3DParam *strokeDashPattern_;
     OFX::ChoiceParam *fontAA_;
+    OFX::ChoiceParam *subpixel_;
+    OFX::ChoiceParam *hintStyle_;
+    OFX::ChoiceParam *hintMetrics_;
 };
 
 TextFXPlugin::TextFXPlugin(OfxImageEffectHandle handle)
@@ -208,8 +226,11 @@ TextFXPlugin::TextFXPlugin(OfxImageEffectHandle handle)
     strokeDash_ = fetchIntParam(kParamStrokeDash);
     strokeDashPattern_ = fetchDouble3DParam(kParamStrokeDashPattern);
     fontAA_ = fetchChoiceParam(kParamFontAA);
+    subpixel_ = fetchChoiceParam(kParamSubpixel);
+    hintStyle_ = fetchChoiceParam(kParamHintStyle);
+    hintMetrics_ = fetchChoiceParam(kParamHintMetrics);
 
-    assert(text_ && fontSize_ && fontName_ && textColor_ && width_ && height_ && font_ && wrap_ && justify_ && align_ && markup_ && style_ && auto_ && stretch_ && weight_ && strokeColor_ && strokeWidth_ && strokeDash_ && strokeDashPattern_ && fontAA_);
+    assert(text_ && fontSize_ && fontName_ && textColor_ && width_ && height_ && font_ && wrap_ && justify_ && align_ && markup_ && style_ && auto_ && stretch_ && weight_ && strokeColor_ && strokeWidth_ && strokeDash_ && strokeDashPattern_ && fontAA_ && subpixel_ && hintStyle_ && hintMetrics_);
 
     // Setup selected font
     std::string fontString, fontCombo;
@@ -300,7 +321,7 @@ void TextFXPlugin::render(const OFX::RenderArguments &args)
 
     // Get params
     double r, g, b, a, s_r, s_g, s_b, s_a, strokeWidth, strokeDashX, strokeDashY, strokeDashZ;
-    int fontSize, fontID, cwidth,cheight, wrap, align, style, stretch, weight, strokeDash, fontAA;
+    int fontSize, fontID, cwidth,cheight, wrap, align, style, stretch, weight, strokeDash, fontAA, subpixel, hintStyle, hintMetrics;
     std::string text, fontName, font;
     bool justify;
     bool markup;
@@ -327,6 +348,9 @@ void TextFXPlugin::render(const OFX::RenderArguments &args)
     strokeDash_->getValueAtTime(args.time, strokeDash);
     strokeDashPattern_->getValueAtTime(args.time, strokeDashX, strokeDashY, strokeDashZ);
     fontAA_->getValueAtTime(args.time, fontAA);
+    subpixel_->getValueAtTime(args.time, subpixel);
+    hintStyle_->getValueAtTime(args.time, hintStyle);
+    hintMetrics_->getValueAtTime(args.time, hintMetrics);
 
     if (!font.empty())
         fontName=font;
@@ -368,6 +392,37 @@ void TextFXPlugin::render(const OFX::RenderArguments &args)
     layout = pango_cairo_create_layout(cr);
 
     cairo_font_options_t* options = cairo_font_options_create();
+
+    switch(hintStyle) {
+    case 0:
+        cairo_font_options_set_hint_style(options, CAIRO_HINT_STYLE_DEFAULT);
+        break;
+    case 1:
+        cairo_font_options_set_hint_style(options, CAIRO_HINT_STYLE_NONE);
+        break;
+    case 2:
+        cairo_font_options_set_hint_style(options, CAIRO_HINT_STYLE_SLIGHT);
+        break;
+    case 3:
+        cairo_font_options_set_hint_style(options, CAIRO_HINT_STYLE_MEDIUM);
+        break;
+    case 4:
+        cairo_font_options_set_hint_style(options, CAIRO_HINT_STYLE_FULL);
+        break;
+    }
+
+    switch(hintMetrics) {
+    case 0:
+        cairo_font_options_set_hint_metrics(options, CAIRO_HINT_METRICS_DEFAULT);
+        break;
+    case 1:
+        cairo_font_options_set_hint_metrics(options, CAIRO_HINT_METRICS_OFF);
+        break;
+    case 2:
+        cairo_font_options_set_hint_metrics(options, CAIRO_HINT_METRICS_ON);
+        break;
+    }
+
     switch(fontAA) {
     case 0:
         cairo_font_options_set_antialias(options, CAIRO_ANTIALIAS_DEFAULT);
@@ -380,6 +435,24 @@ void TextFXPlugin::render(const OFX::RenderArguments &args)
         break;
     case 3:
         cairo_font_options_set_antialias(options, CAIRO_ANTIALIAS_SUBPIXEL);
+        break;
+    }
+
+    switch(subpixel) {
+    case 0:
+        cairo_font_options_set_subpixel_order(options, CAIRO_SUBPIXEL_ORDER_DEFAULT);
+        break;
+    case 1:
+        cairo_font_options_set_subpixel_order(options, CAIRO_SUBPIXEL_ORDER_RGB);
+        break;
+    case 2:
+        cairo_font_options_set_subpixel_order(options, CAIRO_SUBPIXEL_ORDER_BGR);
+        break;
+    case 3:
+        cairo_font_options_set_subpixel_order(options, CAIRO_SUBPIXEL_ORDER_VRGB);
+        break;
+    case 4:
+        cairo_font_options_set_subpixel_order(options, CAIRO_SUBPIXEL_ORDER_VBGR);
         break;
     }
 
@@ -891,6 +964,22 @@ void TextFXPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, Co
         page->addChild(*param);
     }
     {
+        RGBAParamDescriptor* param = desc.defineRGBAParam(kParamTextColor);
+        param->setLabel(kParamTextColorLabel);
+        param->setHint(kParamTextColorHint);
+        param->setDefault(1., 1., 1., 1.);
+        param->setAnimates(true);
+        page->addChild(*param);
+    }
+    {
+        RGBAParamDescriptor* param = desc.defineRGBAParam(kParamStrokeColor);
+        param->setLabel(kParamStrokeColorLabel);
+        param->setHint(kParamStrokeColorHint);
+        param->setDefault(1., 0., 0., 1.);
+        param->setAnimates(true);
+        page->addChild(*param);
+    }
+    {
         DoubleParamDescriptor* param = desc.defineDoubleParam(kParamStrokeWidth);
         param->setLabel(kParamStrokeWidthLabel);
         param->setHint(kParamStrokeWidthHint);
@@ -919,19 +1008,27 @@ void TextFXPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, Co
         page->addChild(*param);
     }
     {
-        RGBAParamDescriptor* param = desc.defineRGBAParam(kParamTextColor);
-        param->setLabel(kParamTextColorLabel);
-        param->setHint(kParamTextColorHint);
-        param->setDefault(1., 1., 1., 1.);
-        param->setAnimates(true);
+        ChoiceParamDescriptor *param = desc.defineChoiceParam(kParamHintStyle);
+        param->setLabel(kParamHintStyleLabel);
+        param->setHint(kParamHintStyleHint);
+        param->appendOption("Default");
+        param->appendOption("None");
+        param->appendOption("Slight");
+        param->appendOption("Medium");
+        param->appendOption("Full");
+        param->setDefault(kParamHintStyleDefault);
+        param->setAnimates(false);
         page->addChild(*param);
     }
     {
-        RGBAParamDescriptor* param = desc.defineRGBAParam(kParamStrokeColor);
-        param->setLabel(kParamStrokeColorLabel);
-        param->setHint(kParamStrokeColorHint);
-        param->setDefault(1., 0., 0., 1.);
-        param->setAnimates(true);
+        ChoiceParamDescriptor *param = desc.defineChoiceParam(kParamHintMetrics);
+        param->setLabel(kParamHintMetricsLabel);
+        param->setHint(kParamHintMetricsHint);
+        param->appendOption("Default");
+        param->appendOption("Off");
+        param->appendOption("On");
+        param->setDefault(kParamHintMetricsDefault);
+        param->setAnimates(false);
         page->addChild(*param);
     }
     {
@@ -943,6 +1040,19 @@ void TextFXPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, Co
         param->appendOption("Gray");
         param->appendOption("Subpixel");
         param->setDefault(kParamFontAADefault);
+        param->setAnimates(false);
+        page->addChild(*param);
+    }
+    {
+        ChoiceParamDescriptor *param = desc.defineChoiceParam(kParamSubpixel);
+        param->setLabel(kParamSubpixelLabel);
+        param->setHint(kParamSubpixelHint);
+        param->appendOption("Default");
+        param->appendOption("RGB");
+        param->appendOption("BGR");
+        param->appendOption("VRGB");
+        param->appendOption("VBGR");
+        param->setDefault(kParamSubpixelDefault);
         param->setAnimates(false);
         page->addChild(*param);
     }
