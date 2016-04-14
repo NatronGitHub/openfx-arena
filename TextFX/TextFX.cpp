@@ -576,6 +576,12 @@ void TextFXPlugin::render(const OFX::RenderArguments &args)
     if (strokeWidth>0) {
 
         if (strokeDash>0) {
+            if (strokeDashX<0.1)
+                strokeDashX=0.1;
+            if (strokeDashY<0)
+                strokeDashY=0;
+            if (strokeDashZ<0)
+                strokeDashZ=0;
             double dash[] = {strokeDashX, strokeDashY, strokeDashZ};
             cairo_set_dash(cr, dash, strokeDash, 0);
         }
