@@ -149,6 +149,11 @@
 #define kParamHintMetricsHint "This controls whether metrics are quantized to integer values in device units."
 #define kParamHintMetricsDefault 0
 
+#define kParamLetterSpace "letterSpace"
+#define kParamLetterSpaceLabel "Letter spacing"
+#define kParamLetterSpaceHint "Spacing between letters"
+#define kParamLetterSpaceDefault 0
+
 #define kParamCirclePage "Circle Effect"
 
 #define kParamCircle "circle"
@@ -217,6 +222,7 @@ private:
     OFX::BooleanParam *circle_;
     OFX::DoubleParam *circleRadius_;
     OFX::IntParam *circleWords_;
+    OFX::IntParam *letterSpace_;
 };
 
 TextFXPlugin::TextFXPlugin(OfxImageEffectHandle handle)
@@ -252,11 +258,12 @@ TextFXPlugin::TextFXPlugin(OfxImageEffectHandle handle)
     circle_ = fetchBooleanParam(kParamCircle);
     circleRadius_ = fetchDoubleParam(kParamCircleRadius);
     circleWords_ = fetchIntParam(kParamCircleWords);
+    letterSpace_ = fetchIntParam(kParamLetterSpace);
 
     assert(text_ && fontSize_ && fontName_ && textColor_ && width_ && height_ && font_ && wrap_
            && justify_ && align_ && markup_ && style_ && auto_ && stretch_ && weight_ && strokeColor_
            && strokeWidth_ && strokeDash_ && strokeDashPattern_ && fontAA_ && subpixel_ && hintStyle_
-           && hintMetrics_ && circle_ && circleRadius_ && circleWords_);
+           && hintMetrics_ && circle_ && circleRadius_ && circleWords_ && letterSpace_);
 
     // Setup selected font
     std::string fontString, fontCombo;
@@ -347,7 +354,7 @@ void TextFXPlugin::render(const OFX::RenderArguments &args)
 
     // Get params
     double r, g, b, a, s_r, s_g, s_b, s_a, strokeWidth, strokeDashX, strokeDashY, strokeDashZ, circleRadius;
-    int fontSize, fontID, cwidth,cheight, wrap, align, style, stretch, weight, strokeDash, fontAA, subpixel, hintStyle, hintMetrics, circleWords;
+    int fontSize, fontID, cwidth,cheight, wrap, align, style, stretch, weight, strokeDash, fontAA, subpixel, hintStyle, hintMetrics, circleWords, letterSpace;
     std::string text, fontName, font;
     bool justify;
     bool markup;
@@ -381,6 +388,7 @@ void TextFXPlugin::render(const OFX::RenderArguments &args)
     circle_->getValueAtTime(args.time, circle);
     circleRadius_->getValueAtTime(args.time, circleRadius);
     circleWords_->getValueAtTime(args.time, circleWords);
+    letterSpace_->getValueAtTime(args.time, letterSpace);
 
     if (!font.empty())
         fontName=font;
@@ -415,11 +423,13 @@ void TextFXPlugin::render(const OFX::RenderArguments &args)
     cairo_surface_t *surface;
     PangoLayout *layout;
     PangoFontDescription *desc;
+    PangoAttrList *alist;
 
     surface = cairo_image_surface_create (CAIRO_FORMAT_ARGB32, width, height);
     cr = cairo_create (surface);
 
     layout = pango_cairo_create_layout(cr);
+    alist = pango_attr_list_new();
 
     cairo_font_options_t* options = cairo_font_options_create();
 
@@ -603,6 +613,14 @@ void TextFXPlugin::render(const OFX::RenderArguments &args)
         pango_layout_set_justify (layout, true);
     }
 
+    if (letterSpace != 0) {
+        PangoAttribute *lineAttr;
+        lineAttr = pango_attr_letter_spacing_new(std::floor((letterSpace*PANGO_SCALE) * args.renderScale.x + 0.5));
+        pango_attr_list_insert(alist,lineAttr);
+    }
+
+    pango_layout_set_attributes(layout,alist);
+
     if (strokeWidth>0) {
         if (!circle) {
             if (strokeDash>0) {
@@ -699,6 +717,7 @@ void TextFXPlugin::render(const OFX::RenderArguments &args)
         }
     }
 
+    pango_attr_list_unref(alist);
     cairo_font_options_destroy(options);
     g_object_unref(layout);
     cairo_destroy(cr);
@@ -741,7 +760,7 @@ bool TextFXPlugin::getRegionOfDefinition(const OFX::RegionOfDefinitionArguments 
     auto_->getValue(autoSize);
 
     if (autoSize) {
-        int fontSize, fontID, style, stretch, weight;
+        int fontSize, fontID, style, stretch, weight, letterSpace;
         double strokeWidth;
         std::string text, fontName, font;
         bool markup;
@@ -756,6 +775,7 @@ bool TextFXPlugin::getRegionOfDefinition(const OFX::RegionOfDefinitionArguments 
         stretch_->getValueAtTime(args.time, stretch);
         weight_->getValueAtTime(args.time, weight);
         strokeWidth_->getValueAtTime(args.time, strokeWidth);
+        letterSpace_->getValueAtTime(args.time, letterSpace);
 
         if (!font.empty()) {
             fontName=font;
@@ -784,11 +804,13 @@ bool TextFXPlugin::getRegionOfDefinition(const OFX::RegionOfDefinitionArguments 
             cairo_surface_t *surface;
             PangoLayout *layout;
             PangoFontDescription *desc;
+            PangoAttrList *alist;
 
             surface = cairo_image_surface_create (CAIRO_FORMAT_ARGB32, width, height);
             cr = cairo_create (surface);
 
             layout = pango_cairo_create_layout(cr);
+            alist = pango_attr_list_new();
 
             if (markup)
                 pango_layout_set_markup(layout, text.c_str(), -1);
@@ -869,6 +891,14 @@ bool TextFXPlugin::getRegionOfDefinition(const OFX::RegionOfDefinitionArguments 
             pango_layout_set_font_description(layout, desc);
             pango_font_description_free(desc);
 
+            if (letterSpace != 0) {
+                PangoAttribute *lineAttr;
+                lineAttr = pango_attr_letter_spacing_new(letterSpace*PANGO_SCALE);
+                pango_attr_list_insert(alist,lineAttr);
+            }
+
+            pango_layout_set_attributes(layout,alist);
+
             pango_layout_get_pixel_size(layout, &width, &height);
 
             /// WIP
@@ -877,6 +907,7 @@ bool TextFXPlugin::getRegionOfDefinition(const OFX::RegionOfDefinitionArguments 
                 height = height+(strokeWidth/2);
             }
 
+            pango_attr_list_unref(alist);
             g_object_unref(layout);
             cairo_destroy(cr);
             cairo_surface_destroy(surface);
@@ -1211,6 +1242,15 @@ void TextFXPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, Co
         param->setHint(kParamMarkupHint);
         param->setDefault(kParamMarkupDefault);
         param->setAnimates(false);
+        page->addChild(*param);
+    }
+    {
+        IntParamDescriptor* param = desc.defineIntParam(kParamLetterSpace);
+        param->setLabel(kParamLetterSpaceLabel);
+        param->setHint(kParamLetterSpaceHint);
+        param->setRange(0, 10000);
+        param->setDisplayRange(0, 500);
+        param->setDefault(kParamLetterSpaceDefault);
         page->addChild(*param);
     }
     {
