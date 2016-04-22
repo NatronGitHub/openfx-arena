@@ -32,7 +32,7 @@
 #define kPluginGrouping "Draw"
 #define kPluginIdentifier "fr.inria.openfx.TextFX"
 #define kPluginVersionMajor 1
-#define kPluginVersionMinor 4
+#define kPluginVersionMinor 5
 
 #define kSupportsTiles 0
 #define kSupportsMultiResolution 0
@@ -632,9 +632,17 @@ void TextFXPlugin::render(const OFX::RenderArguments &args)
     }
     else {
         if (!circle) {
+#if defined(_WIN32) || defined(__WIN32__) || defined(WIN32)
+            // workaround antialias issues on windows
+            cairo_new_path(cr);
+            pango_cairo_layout_path(cr, layout);
+            cairo_set_source_rgba(cr, r, g, b, a);
+            cairo_fill(cr);
+#else
             cairo_set_source_rgba(cr, r, g, b, a);
             pango_cairo_update_layout(cr, layout);
             pango_cairo_show_layout(cr, layout);
+#endif
         }
     }
 
@@ -649,7 +657,14 @@ void TextFXPlugin::render(const OFX::RenderArguments &args)
             pango_cairo_update_layout (cr, layout);
             pango_layout_get_size (layout, &rwidth, &rheight);
             cairo_move_to (cr, - ((double)rwidth / PANGO_SCALE) / 2, - std::floor(circleRadius * args.renderScale.x + 0.5));
+#if defined(_WIN32) || defined(__WIN32__) || defined(WIN32)
+            // workaround antialias issues on windows
+            cairo_new_path(cr);
+            pango_cairo_layout_path(cr, layout);
+            cairo_fill(cr);
+#else
             pango_cairo_show_layout (cr, layout);
+#endif
             cairo_restore (cr);
         }
     }
