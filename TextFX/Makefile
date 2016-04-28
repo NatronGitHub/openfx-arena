@@ -1,7 +1,4 @@
-PLUGINOBJECTS = TextFX.o \
-ofxsOGLTextRenderer.o \
-ofxsOGLFontData.o \
-ofxsRectangleInteract.o
+PLUGINOBJECTS = TextFX.o
 
 PLUGINNAME = TextFX
 
