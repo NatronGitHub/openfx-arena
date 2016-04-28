@@ -10,7 +10,8 @@ git submodule update -i --recursive
 make
 ```
 
-Requirements:
+Requirements
+============
 
  * lcms2
  * OpenColorIO
@@ -18,6 +19,7 @@ Requirements:
  * fontconfig
  * libxml2
  * libzip
+ * pangocairo
  * ImageMagick (6.9.3-5+ Q32HDRI) with:
    * freetype
    * fontconfig
@@ -28,3 +30,19 @@ Requirements:
    * lcms2
    * pango
    * cairo
+   * libxml2
+   
+ Note that custom patches to ImageMagick is needed to build the plugins, see 'deploy.sh' for more information.
+
+Build
+=====
+
+```
+git clone https://github.com/olear/openfx-arena
+cd openfx-arena
+git submodule update -i --recursive
+make
+```
+
+Also see  'deploy.sh' and 'openfx-arena.spec'.
+
