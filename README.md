@@ -33,16 +33,3 @@ Requirements
    * libxml2
    
  Note that custom patches to ImageMagick is needed to build the plugins, see 'deploy.sh' for more information.
-
-Build
-=====
-
-```
-git clone https://github.com/olear/openfx-arena
-cd openfx-arena
-git submodule update -i --recursive
-make
-```
-
-Also see  'deploy.sh' and 'openfx-arena.spec'.
-
