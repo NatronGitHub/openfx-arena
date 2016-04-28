@@ -64,7 +64,7 @@
 #define kParamStyleDefault 0
 
 #define kParamTextColor "color"
-#define kParamTextColorLabel "Text color"
+#define kParamTextColorLabel "Font color"
 #define kParamTextColorHint "The fill color of the text to render"
 
 #define kParamJustify "justify"
@@ -80,6 +80,7 @@
 #define kParamAlign "align"
 #define kParamAlignLabel "Align"
 #define kParamAlignHint "Text align"
+#define kParamAlignDefault 0
 
 #define kParamMarkup "markup"
 #define kParamMarkupLabel "Markup"
@@ -87,18 +88,18 @@
 #define kParamMarkupDefault false
 
 #define kParamWidth "width"
-#define kParamWidthLabel "Width"
+#define kParamWidthLabel "Canvas width"
 #define kParamWidthHint "Set canvas width, default (0) is project format. Disabled if auto size is active"
 #define kParamWidthDefault 0
 
 #define kParamHeight "height"
-#define kParamHeightLabel "Height"
+#define kParamHeightLabel "Canvas height"
 #define kParamHeightHint "Set canvas height, default (0) is project format. Disabled if auto size is active"
 #define kParamHeightDefault 0
 
 #define kParamAutoSize "autoSize"
 #define kParamAutoSizeLabel "Auto size"
-#define kParamAutoSizeHint "Set canvas sized based on text. This will disable word wrap and custom canvas size"
+#define kParamAutoSizeHint "Set canvas sized based on text. This will disable word wrap, custom canvas size and circle effect."
 #define kParamAutoSizeDefault true
 
 #define kParamStretch "stretch"
@@ -154,17 +155,10 @@
 #define kParamLetterSpaceHint "Spacing between letters"
 #define kParamLetterSpaceDefault 0
 
-#define kParamCirclePage "Circle Effect"
-
-#define kParamCircle "circle"
-#define kParamCircleLabel "Circle"
-#define kParamCircleHint "Create a circle effect using text. Auto size must be disabled for this effect to work."
-#define kParamCircleDefault false
-
 #define kParamCircleRadius "circleRadius"
 #define kParamCircleRadiusLabel "Circle radius"
-#define kParamCircleRadiusHint "Circle radius"
-#define kParamCircleRadiusDefault 150
+#define kParamCircleRadiusHint "Circle radius. Effect only works if auto size is disabled."
+#define kParamCircleRadiusDefault 0
 
 #define kParamCircleWords "circleWords"
 #define kParamCircleWordsLabel "Circle Words"
@@ -219,7 +213,6 @@ private:
     OFX::ChoiceParam *subpixel_;
     OFX::ChoiceParam *hintStyle_;
     OFX::ChoiceParam *hintMetrics_;
-    OFX::BooleanParam *circle_;
     OFX::DoubleParam *circleRadius_;
     OFX::IntParam *circleWords_;
     OFX::IntParam *letterSpace_;
@@ -255,7 +248,6 @@ TextFXPlugin::TextFXPlugin(OfxImageEffectHandle handle)
     subpixel_ = fetchChoiceParam(kParamSubpixel);
     hintStyle_ = fetchChoiceParam(kParamHintStyle);
     hintMetrics_ = fetchChoiceParam(kParamHintMetrics);
-    circle_ = fetchBooleanParam(kParamCircle);
     circleRadius_ = fetchDoubleParam(kParamCircleRadius);
     circleWords_ = fetchIntParam(kParamCircleWords);
     letterSpace_ = fetchIntParam(kParamLetterSpace);
@@ -263,7 +255,7 @@ TextFXPlugin::TextFXPlugin(OfxImageEffectHandle handle)
     assert(text_ && fontSize_ && fontName_ && textColor_ && width_ && height_ && font_ && wrap_
            && justify_ && align_ && markup_ && style_ && auto_ && stretch_ && weight_ && strokeColor_
            && strokeWidth_ && strokeDash_ && strokeDashPattern_ && fontAA_ && subpixel_ && hintStyle_
-           && hintMetrics_ && circle_ && circleRadius_ && circleWords_ && letterSpace_);
+           && hintMetrics_ && circleRadius_ && circleWords_ && letterSpace_);
 
     // Setup selected font
     std::string fontString, fontCombo;
@@ -359,7 +351,6 @@ void TextFXPlugin::render(const OFX::RenderArguments &args)
     bool justify;
     bool markup;
     bool autoSize;
-    bool circle;
 
     text_->getValueAtTime(args.time, text);
     fontSize_->getValueAtTime(args.time, fontSize);
@@ -385,7 +376,6 @@ void TextFXPlugin::render(const OFX::RenderArguments &args)
     subpixel_->getValueAtTime(args.time, subpixel);
     hintStyle_->getValueAtTime(args.time, hintStyle);
     hintMetrics_->getValueAtTime(args.time, hintMetrics);
-    circle_->getValueAtTime(args.time, circle);
     circleRadius_->getValueAtTime(args.time, circleRadius);
     circleWords_->getValueAtTime(args.time, circleWords);
     letterSpace_->getValueAtTime(args.time, letterSpace);
@@ -622,7 +612,7 @@ void TextFXPlugin::render(const OFX::RenderArguments &args)
     pango_layout_set_attributes(layout,alist);
 
     if (strokeWidth>0) {
-        if (!circle) {
+        if (circleRadius==0) {
             if (strokeDash>0) {
                 if (strokeDashX<0.1)
                     strokeDashX=0.1;
@@ -649,7 +639,7 @@ void TextFXPlugin::render(const OFX::RenderArguments &args)
         }
     }
     else {
-        if (!circle) {
+        if (circleRadius==0) {
 #if defined(_WIN32) || defined(__WIN32__) || defined(WIN32)
             // workaround antialias issues on windows
             cairo_new_path(cr);
@@ -664,7 +654,7 @@ void TextFXPlugin::render(const OFX::RenderArguments &args)
         }
     }
 
-    if (circle && !autoSize) {
+    if (circleRadius>0 && !autoSize) {
         cairo_translate (cr, width/2, height/2);
         for (int i = 0; i < circleWords; i++) {
             int rwidth, rheight;
@@ -966,12 +956,40 @@ void TextFXPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, Co
 
     // make some pages
     PageParamDescriptor *page = desc.definePageParam(kPluginName);
-    PageParamDescriptor *circlepage = desc.definePageParam(kParamCirclePage);
-    GroupParamDescriptor *groupCanvas = desc.defineGroupParam("Canvas");
-
-    groupCanvas->setOpen(false);
     {
-        page->addChild(*groupCanvas);
+        BooleanParamDescriptor *param = desc.defineBooleanParam(kParamAutoSize);
+        param->setLabel(kParamAutoSizeLabel);
+        param->setHint(kParamAutoSizeHint);
+        param->setDefault(kParamAutoSizeDefault);
+        param->setAnimates(false);
+        page->addChild(*param);
+    }
+    {
+        IntParamDescriptor* param = desc.defineIntParam(kParamWidth);
+        param->setLabel(kParamWidthLabel);
+        param->setHint(kParamWidthHint);
+        param->setRange(0, 10000);
+        param->setDisplayRange(0, 4000);
+        param->setDefault(kParamWidthDefault);
+        page->addChild(*param);
+    }
+    {
+        IntParamDescriptor* param = desc.defineIntParam(kParamHeight);
+        param->setLabel(kParamHeightLabel);
+        param->setHint(kParamHeightHint);
+        param->setRange(0, 10000);
+        param->setDisplayRange(0, 4000);
+        param->setDefault(kParamHeightDefault);
+        param->setLayoutHint(OFX::eLayoutHintDivider);
+        page->addChild(*param);
+    }
+    {
+        BooleanParamDescriptor *param = desc.defineBooleanParam(kParamMarkup);
+        param->setLabel(kParamMarkupLabel);
+        param->setHint(kParamMarkupHint);
+        param->setDefault(kParamMarkupDefault);
+        param->setAnimates(false);
+        page->addChild(*param);
     }
     {
         StringParamDescriptor* param = desc.defineStringParam(kParamText);
@@ -980,6 +998,40 @@ void TextFXPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, Co
         param->setStringType(eStringTypeMultiLine);
         param->setAnimates(true);
         param->setDefault("Enter text");
+        page->addChild(*param);
+    }
+    {
+        BooleanParamDescriptor *param = desc.defineBooleanParam(kParamJustify);
+        param->setLabel(kParamJustifyLabel);
+        param->setHint(kParamJustifyHint);
+        param->setDefault(kParamJustifyDefault);
+        param->setLayoutHint(eLayoutHintNoNewLine, 1);
+        param->setAnimates(false);
+        page->addChild(*param);
+    }
+    {
+        ChoiceParamDescriptor *param = desc.defineChoiceParam(kParamWrap);
+        param->setLabel(kParamWrapLabel);
+        param->setHint(kParamWrapHint);
+        param->appendOption("None");
+        param->appendOption("Word");
+        param->appendOption("Char");
+        param->appendOption("Word-Char");
+        param->setDefault(kParamWrapDefault);
+        param->setLayoutHint(eLayoutHintNoNewLine, 1);
+        param->setAnimates(false);
+        page->addChild(*param);
+    }
+    {
+        ChoiceParamDescriptor *param = desc.defineChoiceParam(kParamAlign);
+        param->setLabel(kParamAlignLabel);
+        param->setHint(kParamAlignHint);
+        param->appendOption("Left");
+        param->appendOption("Right");
+        param->appendOption("Center");
+        param->setDefault(kParamAlignDefault);
+        param->setAnimates(false);
+        param->setLayoutHint(OFX::eLayoutHintDivider);
         page->addChild(*param);
     }
     {
@@ -1074,39 +1126,13 @@ void TextFXPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, Co
         page->addChild(*param);
     }
     {
-        RGBAParamDescriptor* param = desc.defineRGBAParam(kParamStrokeColor);
-        param->setLabel(kParamStrokeColorLabel);
-        param->setHint(kParamStrokeColorHint);
-        param->setDefault(1., 0., 0., 1.);
-        param->setAnimates(true);
-        page->addChild(*param);
-    }
-    {
-        DoubleParamDescriptor* param = desc.defineDoubleParam(kParamStrokeWidth);
-        param->setLabel(kParamStrokeWidthLabel);
-        param->setHint(kParamStrokeWidthHint);
-        param->setRange(0, 500);
-        param->setDisplayRange(0, 100);
-        param->setDefault(kParamStrokeWidthDefault);
-        param->setAnimates(true);
-        page->addChild(*param);
-    }
-    {
-        IntParamDescriptor* param = desc.defineIntParam(kParamStrokeDash);
-        param->setLabel(kParamStrokeDashLabel);
-        param->setHint(kParamStrokeDashHint);
-        param->setRange(0, 100);
-        param->setDisplayRange(0, 10);
-        param->setDefault(kParamStrokeDashDefault);
-        param->setAnimates(true);
-        page->addChild(*param);
-    }
-    {
-        Double3DParamDescriptor* param = desc.defineDouble3DParam(kParamStrokeDashPattern);
-        param->setLabel(kParamStrokeDashPatternLabel);
-        param->setHint(kParamStrokeDashPatternHint);
-        param->setDefault(1.0, 0.0, 0.0);
-        param->setAnimates(true);
+        IntParamDescriptor* param = desc.defineIntParam(kParamLetterSpace);
+        param->setLabel(kParamLetterSpaceLabel);
+        param->setHint(kParamLetterSpaceHint);
+        param->setRange(0, 10000);
+        param->setDisplayRange(0, 500);
+        param->setDefault(kParamLetterSpaceDefault);
+        param->setLayoutHint(OFX::eLayoutHintDivider);
         page->addChild(*param);
     }
     {
@@ -1119,6 +1145,7 @@ void TextFXPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, Co
         param->appendOption("Medium");
         param->appendOption("Full");
         param->setDefault(kParamHintStyleDefault);
+        param->setLayoutHint(eLayoutHintNoNewLine, 1);
         param->setAnimates(false);
         page->addChild(*param);
     }
@@ -1142,6 +1169,7 @@ void TextFXPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, Co
         param->appendOption("Gray");
         param->appendOption("Subpixel");
         param->setDefault(kParamFontAADefault);
+        param->setLayoutHint(eLayoutHintNoNewLine, 1);
         param->setAnimates(false);
         page->addChild(*param);
     }
@@ -1166,35 +1194,7 @@ void TextFXPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, Co
         param->appendOption("Bold");
         param->appendOption("Italic");
         param->setDefault(kParamStyleDefault);
-        param->setAnimates(false);
-        page->addChild(*param);
-    }
-    {
-        ChoiceParamDescriptor *param = desc.defineChoiceParam(kParamWrap);
-        param->setLabel(kParamWrapLabel);
-        param->setHint(kParamWrapHint);
-        param->appendOption("None");
-        param->appendOption("Word");
-        param->appendOption("Char");
-        param->appendOption("Word-Char");
-        param->setDefault(kParamWrapDefault);
-        param->setAnimates(false);
-        page->addChild(*param);
-    }
-    {
-        ChoiceParamDescriptor *param = desc.defineChoiceParam(kParamStretch);
-        param->setLabel(kParamStretchLabel);
-        param->setHint(kParamStretchHint);
-        param->appendOption("Ultra condensed");
-        param->appendOption("Extra condensed");
-        param->appendOption("Condensed");
-        param->appendOption("Semi condensed");
-        param->appendOption("Normal");
-        param->appendOption("Semi expanded");
-        param->appendOption("Expanded");
-        param->appendOption("Extra expanded");
-        param->appendOption("Ultra expanded");
-        param->setDefault(kParamStretchDefault);
+        param->setLayoutHint(eLayoutHintNoNewLine, 1);
         param->setAnimates(false);
         page->addChild(*param);
     }
@@ -1219,73 +1219,59 @@ void TextFXPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, Co
         page->addChild(*param);
     }
     {
-        ChoiceParamDescriptor *param = desc.defineChoiceParam(kParamAlign);
-        param->setLabel(kParamAlignLabel);
-        param->setHint(kParamAlignHint);
-        param->appendOption("Left");
-        param->appendOption("Right");
-        param->appendOption("Center");
+        ChoiceParamDescriptor *param = desc.defineChoiceParam(kParamStretch);
+        param->setLabel(kParamStretchLabel);
+        param->setHint(kParamStretchHint);
+        param->appendOption("Ultra condensed");
+        param->appendOption("Extra condensed");
+        param->appendOption("Condensed");
+        param->appendOption("Semi condensed");
+        param->appendOption("Normal");
+        param->appendOption("Semi expanded");
+        param->appendOption("Expanded");
+        param->appendOption("Extra expanded");
+        param->appendOption("Ultra expanded");
+        param->setDefault(kParamStretchDefault);
+        param->setLayoutHint(OFX::eLayoutHintDivider);
         param->setAnimates(false);
         page->addChild(*param);
     }
     {
-        BooleanParamDescriptor *param = desc.defineBooleanParam(kParamJustify);
-        param->setLabel(kParamJustifyLabel);
-        param->setHint(kParamJustifyHint);
-        param->setDefault(kParamJustifyDefault);
-        param->setAnimates(false);
+        DoubleParamDescriptor* param = desc.defineDoubleParam(kParamStrokeWidth);
+        param->setLabel(kParamStrokeWidthLabel);
+        param->setHint(kParamStrokeWidthHint);
+        param->setRange(0, 500);
+        param->setDisplayRange(0, 100);
+        param->setDefault(kParamStrokeWidthDefault);
+        param->setAnimates(true);
         page->addChild(*param);
     }
     {
-        BooleanParamDescriptor *param = desc.defineBooleanParam(kParamMarkup);
-        param->setLabel(kParamMarkupLabel);
-        param->setHint(kParamMarkupHint);
-        param->setDefault(kParamMarkupDefault);
-        param->setAnimates(false);
+        RGBAParamDescriptor* param = desc.defineRGBAParam(kParamStrokeColor);
+        param->setLabel(kParamStrokeColorLabel);
+        param->setHint(kParamStrokeColorHint);
+        param->setDefault(1., 0., 0., 1.);
+        param->setAnimates(true);
         page->addChild(*param);
     }
     {
-        IntParamDescriptor* param = desc.defineIntParam(kParamLetterSpace);
-        param->setLabel(kParamLetterSpaceLabel);
-        param->setHint(kParamLetterSpaceHint);
-        param->setRange(0, 10000);
-        param->setDisplayRange(0, 500);
-        param->setDefault(kParamLetterSpaceDefault);
+        IntParamDescriptor* param = desc.defineIntParam(kParamStrokeDash);
+        param->setLabel(kParamStrokeDashLabel);
+        param->setHint(kParamStrokeDashHint);
+        param->setRange(0, 100);
+        param->setDisplayRange(0, 10);
+        param->setDefault(kParamStrokeDashDefault);
+        param->setAnimates(true);
         page->addChild(*param);
     }
     {
-        IntParamDescriptor* param = desc.defineIntParam(kParamWidth);
-        param->setLabel(kParamWidthLabel);
-        param->setHint(kParamWidthHint);
-        param->setRange(0, 10000);
-        param->setDisplayRange(0, 4000);
-        param->setDefault(kParamWidthDefault);
-        param->setParent(*groupCanvas);
-    }
-    {
-        BooleanParamDescriptor *param = desc.defineBooleanParam(kParamAutoSize);
-        param->setLabel(kParamAutoSizeLabel);
-        param->setHint(kParamAutoSizeHint);
-        param->setDefault(kParamAutoSizeDefault);
-        param->setAnimates(false);
+        Double3DParamDescriptor* param = desc.defineDouble3DParam(kParamStrokeDashPattern);
+        param->setLabel(kParamStrokeDashPatternLabel);
+        param->setHint(kParamStrokeDashPatternHint);
+        param->setDefault(1.0, 0.0, 0.0);
+        param->setAnimates(true);
+        param->setLayoutHint(OFX::eLayoutHintDivider);
         page->addChild(*param);
-    }
-    {
-        IntParamDescriptor* param = desc.defineIntParam(kParamHeight);
-        param->setLabel(kParamHeightLabel);
-        param->setHint(kParamHeightHint);
-        param->setRange(0, 10000);
-        param->setDisplayRange(0, 4000);
-        param->setDefault(kParamHeightDefault);
-        param->setParent(*groupCanvas);
-    }
-    {
-        BooleanParamDescriptor *param = desc.defineBooleanParam(kParamCircle);
-        param->setLabel(kParamCircleLabel);
-        param->setHint(kParamCircleHint);
-        param->setDefault(kParamCircleDefault);
-        param->setAnimates(false);
-        circlepage->addChild(*param);
     }
     {
         DoubleParamDescriptor* param = desc.defineDoubleParam(kParamCircleRadius);
@@ -1295,7 +1281,7 @@ void TextFXPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, Co
         param->setDisplayRange(0, 1000);
         param->setDefault(kParamCircleRadiusDefault);
         param->setAnimates(true);
-        circlepage->addChild(*param);
+        page->addChild(*param);
     }
     {
         IntParamDescriptor* param = desc.defineIntParam(kParamCircleWords);
@@ -1305,7 +1291,8 @@ void TextFXPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, Co
         param->setDisplayRange(1, 100);
         param->setDefault(kParamCircleWordsDefault);
         param->setAnimates(true);
-        circlepage->addChild(*param);
+        param->setLayoutHint(OFX::eLayoutHintDivider);
+        page->addChild(*param);
     }
 }
 
