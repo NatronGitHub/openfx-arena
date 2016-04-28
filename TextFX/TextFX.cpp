@@ -87,16 +87,6 @@
 #define kParamMarkupHint "Pango Text Attribute Markup Language, https://developer.gnome.org/pango/stable/PangoMarkupFormat.html"
 #define kParamMarkupDefault false
 
-#define kParamWidth "width"
-#define kParamWidthLabel "Canvas width"
-#define kParamWidthHint "Set canvas width, default (0) is project format. Disabled if auto size is active"
-#define kParamWidthDefault 0
-
-#define kParamHeight "height"
-#define kParamHeightLabel "Canvas height"
-#define kParamHeightHint "Set canvas height, default (0) is project format. Disabled if auto size is active"
-#define kParamHeightDefault 0
-
 #define kParamAutoSize "autoSize"
 #define kParamAutoSizeLabel "Auto size"
 #define kParamAutoSizeHint "Set canvas sized based on text. This will disable word wrap, custom canvas size and circle effect."
@@ -165,6 +155,11 @@
 #define kParamCircleWordsHint "X times text in circle"
 #define kParamCircleWordsDefault 10
 
+#define kParamCanvas "canvas"
+#define kParamCanvasLabel "Canvas size"
+#define kParamCanvasHint "Set canvas size, default (0) is project format. Disabled if auto size is active"
+#define kParamCanvasDefault 0
+
 using namespace OFX;
 static bool gHostIsNatron = false;
 
@@ -194,8 +189,6 @@ private:
     OFX::IntParam *fontSize_;
     OFX::ChoiceParam *fontName_;
     OFX::RGBAParam *textColor_;
-    OFX::IntParam *width_;
-    OFX::IntParam *height_;
     OFX::StringParam *font_;
     OFX::BooleanParam *justify_;
     OFX::ChoiceParam *wrap_;
@@ -216,6 +209,7 @@ private:
     OFX::DoubleParam *circleRadius_;
     OFX::IntParam *circleWords_;
     OFX::IntParam *letterSpace_;
+    OFX::Int2DParam *canvas_;
 };
 
 TextFXPlugin::TextFXPlugin(OfxImageEffectHandle handle)
@@ -229,8 +223,6 @@ TextFXPlugin::TextFXPlugin(OfxImageEffectHandle handle)
     fontSize_ = fetchIntParam(kParamFontSize);
     fontName_ = fetchChoiceParam(kParamFontName);
     textColor_ = fetchRGBAParam(kParamTextColor);
-    width_ = fetchIntParam(kParamWidth);
-    height_ = fetchIntParam(kParamHeight);
     font_ = fetchStringParam(kParamFont);
     justify_ = fetchBooleanParam(kParamJustify);
     wrap_ = fetchChoiceParam(kParamWrap);
@@ -251,11 +243,12 @@ TextFXPlugin::TextFXPlugin(OfxImageEffectHandle handle)
     circleRadius_ = fetchDoubleParam(kParamCircleRadius);
     circleWords_ = fetchIntParam(kParamCircleWords);
     letterSpace_ = fetchIntParam(kParamLetterSpace);
+    canvas_ = fetchInt2DParam(kParamCanvas);
 
-    assert(text_ && fontSize_ && fontName_ && textColor_ && width_ && height_ && font_ && wrap_
+    assert(text_ && fontSize_ && fontName_ && textColor_ && font_ && wrap_
            && justify_ && align_ && markup_ && style_ && auto_ && stretch_ && weight_ && strokeColor_
            && strokeWidth_ && strokeDash_ && strokeDashPattern_ && fontAA_ && subpixel_ && hintStyle_
-           && hintMetrics_ && circleRadius_ && circleWords_ && letterSpace_);
+           && hintMetrics_ && circleRadius_ && circleWords_ && letterSpace_ && canvas_);
 
     // Setup selected font
     std::string fontString, fontCombo;
@@ -346,7 +339,7 @@ void TextFXPlugin::render(const OFX::RenderArguments &args)
 
     // Get params
     double r, g, b, a, s_r, s_g, s_b, s_a, strokeWidth, strokeDashX, strokeDashY, strokeDashZ, circleRadius;
-    int fontSize, fontID, cwidth,cheight, wrap, align, style, stretch, weight, strokeDash, fontAA, subpixel, hintStyle, hintMetrics, circleWords, letterSpace;
+    int fontSize, fontID, cwidth, cheight, wrap, align, style, stretch, weight, strokeDash, fontAA, subpixel, hintStyle, hintMetrics, circleWords, letterSpace;
     std::string text, fontName, font;
     bool justify;
     bool markup;
@@ -356,8 +349,6 @@ void TextFXPlugin::render(const OFX::RenderArguments &args)
     fontSize_->getValueAtTime(args.time, fontSize);
     fontName_->getValueAtTime(args.time, fontID);
     textColor_->getValueAtTime(args.time, r, g, b, a);
-    width_->getValueAtTime(args.time, cwidth);
-    height_->getValueAtTime(args.time, cheight);
     font_->getValueAtTime(args.time, font);
     fontName_->getOption(fontID,fontName);
     justify_->getValueAtTime(args.time, justify);
@@ -379,6 +370,7 @@ void TextFXPlugin::render(const OFX::RenderArguments &args)
     circleRadius_->getValueAtTime(args.time, circleRadius);
     circleWords_->getValueAtTime(args.time, circleWords);
     letterSpace_->getValueAtTime(args.time, letterSpace);
+    canvas_->getValueAtTime(args.time, cwidth, cheight);
 
     if (!font.empty())
         fontName=font;
@@ -745,8 +737,7 @@ bool TextFXPlugin::getRegionOfDefinition(const OFX::RegionOfDefinitionArguments 
     int width,height;
     bool autoSize;
 
-    width_->getValue(width);
-    height_->getValue(height);
+    canvas_->getValue(width, height);
     auto_->getValue(autoSize);
 
     if (autoSize) {
@@ -962,24 +953,17 @@ void TextFXPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, Co
         param->setHint(kParamAutoSizeHint);
         param->setDefault(kParamAutoSizeDefault);
         param->setAnimates(false);
+        param->setLayoutHint(eLayoutHintNoNewLine, 1);
         page->addChild(*param);
     }
     {
-        IntParamDescriptor* param = desc.defineIntParam(kParamWidth);
-        param->setLabel(kParamWidthLabel);
-        param->setHint(kParamWidthHint);
-        param->setRange(0, 10000);
-        param->setDisplayRange(0, 4000);
-        param->setDefault(kParamWidthDefault);
-        page->addChild(*param);
-    }
-    {
-        IntParamDescriptor* param = desc.defineIntParam(kParamHeight);
-        param->setLabel(kParamHeightLabel);
-        param->setHint(kParamHeightHint);
-        param->setRange(0, 10000);
-        param->setDisplayRange(0, 4000);
-        param->setDefault(kParamHeightDefault);
+        Int2DParamDescriptor* param = desc.defineInt2DParam(kParamCanvas);
+        param->setLabel(kParamCanvasLabel);
+        param->setHint(kParamCanvasHint);
+        param->setRange(0, 0, 10000, 10000);
+        param->setDisplayRange(0, 0, 4000, 4000);
+        param->setDefault(kParamCanvasDefault, kParamCanvasDefault);
+        param->setAnimates(false);
         param->setLayoutHint(OFX::eLayoutHintDivider);
         page->addChild(*param);
     }
