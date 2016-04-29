@@ -1095,8 +1095,8 @@ void TextFXPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, Co
         IntParamDescriptor* param = desc.defineIntParam(kParamFontSize);
         param->setLabel(kParamFontSizeLabel);
         param->setHint(kParamFontSizeHint);
-        param->setRange(0, 10000);
-        param->setDisplayRange(0, 500);
+        param->setRange(1, 10000);
+        param->setDisplayRange(1, 500);
         param->setDefault(kParamFontSizeDefault);
         param->setAnimates(true);
         page->addChild(*param);
