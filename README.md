@@ -33,3 +33,4 @@ Requirements
    * libxml2
    
  Note that custom patches to ImageMagick is needed to build the plugins, see 'deploy.sh' for more information.
+
