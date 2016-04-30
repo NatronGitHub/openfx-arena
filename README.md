@@ -15,11 +15,14 @@ Requirements
 
  * lcms2
  * OpenColorIO
- * POV-Ray (runtime)
  * fontconfig
  * libxml2
  * libzip
- * pangocairo
+ * pango
+ * cairo
+ * librsvg2
+ * libcdr
+ * librevenge
  * ImageMagick (6.9.3-5+ Q32HDRI) with:
    * freetype
    * fontconfig
@@ -31,7 +34,4 @@ Requirements
    * pango
    * cairo
    * libxml2
-   
- Note that custom patches to ImageMagick is needed to build the plugins, see 'deploy.sh' for more information.
-
 
