@@ -11,7 +11,7 @@ install:
   - sudo add-apt-repository -y ppa:libreoffice/ppa
   - sudo add-apt-repository -y ppa:kubuntu-ppa/backports
   - sudo apt-get update
-  - sudo apt-get install -y libfreetype6-dev libfontconfig1-dev libpango1.0-dev librsvg2-dev liblcms2-dev libzip-dev libcdr-dev libicu-dev libcppunit-dev libopencolorio-dev librevenge-dev libboost-all-dev gtk-doc-tools libharfbuzz-dev 
+  - sudo apt-get install -y libfreetype6-dev libfontconfig1-dev libpango1.0-dev librsvg2-dev liblcms2-dev libzip-dev libcdr-dev libicu-dev libcppunit-dev libopencolorio-dev librevenge-dev libboost-all-dev gtk-doc-tools libharfbuzz-dev libselinux1-dev
   - sudo rm -rf /usr/include/libcdr* /usr/lib*/*cdr* /usr/lib*/pkgconfig/*cdr*
   - sudo git clone https://github.com/LibreOffice/libcdr
   - cd libcdr
@@ -29,5 +29,5 @@ install:
 script:
   - git submodule update -i --recursive
   - make -C Extra CXXFLAGS_ADD="-DLEGACY"
-  - make -C Magick
+  - make
 
