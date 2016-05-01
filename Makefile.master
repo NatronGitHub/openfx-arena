@@ -9,15 +9,19 @@ VPATH += ../SupportExt
 MAGICK_CXXFLAGS = $(shell pkg-config Magick++ --cflags)
 MAGICK_LINKFLAGS = $(shell pkg-config Magick++ --libs --static)
 
+#librevenge
+REVENGE_CXXFLAGS = $(shell pkg-config librevenge-0.0 --cflags)
+REVENGE_CXXFLAGS += $(shell pkg-config librevenge-generators-0.0 --cflags)
+REVENGE_CXXFLAGS += $(shell pkg-config librevenge-stream-0.0 --cflags)
+REVENGE_LINKFLAGS = $(shell pkg-config librevenge-0.0 --libs --static)
+REVENGE_LINKFLAGS += $(shell pkg-config librevenge-generators-0.0 --libs --static)
+REVENGE_LINKFLAGS += $(shell pkg-config librevenge-stream-0.0 --libs --static)
+
 # libcdr
 CDR_CXXFLAGS = $(shell pkg-config libcdr-0.1 --cflags)
-CDR_CXXFLAGS += $(shell pkg-config librevenge-0.0 --cflags)
-CDR_CXXFLAGS += $(shell pkg-config librevenge-generators-0.0 --cflags)
-CDR_CXXFLAGS += $(shell pkg-config librevenge-stream-0.0 --cflags)
+CDR_CXXFLAGS += $(REVENGE_CXXFLAGS)
 CDR_LINKFLAGS = $(shell pkg-config libcdr-0.1 --libs --static)
-CDR_LINKFLAGS += $(shell pkg-config librevenge-0.0 --libs --static)
-CDR_LINKFLAGS += $(shell pkg-config librevenge-generators-0.0 --libs --static)
-CDR_LINKFLAGS += $(shell pkg-config librevenge-stream-0.0 --libs --static)
+CDR_LINKFLAGS += $(REVENGE_LINKFLAGS)
 
 # lcms
 LCMS_CXXFLAGS = $(shell pkg-config lcms2 --cflags)
@@ -34,6 +38,10 @@ XML_LINKFLAGS= $(shell pkg-config libxml-2.0 --libs --static)
 # libzip
 ZIP_CXXFLAGS= $(shell pkg-config libzip --cflags)
 ZIP_LINKFLAGS= $(shell pkg-config libzip --libs --static)
+
+# librsvg
+SVG_CXXFLAGS = $(shell pkg-config librsvg-2.0 --cflags)
+SVG_LINKFLAGS = $(shell pkg-config librsvg-2.0 --libs --static)
 
 # pangocairo
 PANGO_CXXFLAGS = $(shell pkg-config pangocairo --cflags)

@@ -528,7 +528,9 @@ void TextFXPlugin::render(const OFX::RenderArguments &args)
         pango_font_description_set_weight(desc, PANGO_WEIGHT_LIGHT);
         break;
     case 3:
+#ifndef LEGACY
         pango_font_description_set_weight(desc, PANGO_WEIGHT_SEMILIGHT);
+#endif
         break;
     case 4:
         pango_font_description_set_weight(desc, PANGO_WEIGHT_BOOK);
@@ -841,7 +843,9 @@ bool TextFXPlugin::getRegionOfDefinition(const OFX::RegionOfDefinitionArguments 
                 pango_font_description_set_weight(desc, PANGO_WEIGHT_LIGHT);
                 break;
             case 3:
+#ifndef LEGACY
                 pango_font_description_set_weight(desc, PANGO_WEIGHT_SEMILIGHT);
+#endif
                 break;
             case 4:
                 pango_font_description_set_weight(desc, PANGO_WEIGHT_BOOK);

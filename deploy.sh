@@ -12,19 +12,19 @@
 
 CWD=$(pwd)
 
-MAGICK=6.9.2-10
+MAGICK=6.9.3-5
 OCIO=1.0.9
 OCIO_URL=https://github.com/imageworks/OpenColorIO/archive/v${OCIO}.tar.gz
-MAGICK_URL=https://github.com/olear/openfx-arena/releases/download/Natron-2.0.0-RC5/ImageMagick-6.9.2-10.tar.xz
+MAGICK_URL=https://github.com/olear/openfx-arena/releases/download/Natron-2.0.0-RC6/ImageMagick-6.9.3-5.tar.xz
 if [ -z "$QUANTUM" ]; then
   Q=32
 else
   Q=$QUANTUM
 fi
-if [ "$MAGICK_SIMPLE" = "1" ]; then
-  MAGICK_OPT="--disable-docs --disable-deprecated --with-magick-plus-plus=yes --with-quantum-depth=${Q} --without-dps --without-djvu --without-fftw --without-fpx --without-gslib --without-gvc --without-jbig --without-jpeg --without-lcms --without-openjp2 --without-lqr --without-lzma --without-openexr --without-pango --with-png --without-rsvg --without-tiff --without-webp --without-xml --without-zlib --without-bzlib --enable-static --disable-shared --enable-hdri --without-freetype --without-fontconfig --without-x --without-modules"
+if [ "$MAGICK_OFX" = "1" ]; then
+  MAGICK_OPT="--disable-docs --disable-deprecated --with-magick-plus-plus=yes --with-quantum-depth=${Q} --without-dps --without-djvu --without-fftw --without-fpx --without-gslib --without-gvc --without-jbig --without-jpeg --with-lcms --without-openjp2 --without-lqr --without-lzma --without-openexr --without-pango --without-png --without-rsvg --without-tiff --without-webp --without-xml --without-zlib --without-bzlib --enable-static --disable-shared --enable-hdri --without-freetype --without-fontconfig --without-x --without-modules --without-wmf"
 else
-  MAGICK_OPT="--disable-docs --disable-deprecated --with-magick-plus-plus=yes --with-quantum-depth=${Q} --without-dps --without-djvu --without-fftw --without-fpx --without-gslib --without-gvc --without-jbig --without-jpeg --with-lcms --without-openjp2 --without-lqr --without-lzma --without-openexr --with-pango --with-png --with-rsvg --without-tiff --without-webp --with-xml --with-zlib --without-bzlib --enable-static --disable-shared --enable-hdri --with-freetype --with-fontconfig --without-x --without-modules"
+  MAGICK_OPT="--disable-docs --disable-deprecated --with-magick-plus-plus=yes --with-quantum-depth=${Q} --without-dps --without-djvu --without-fftw --without-fpx --without-gslib --without-gvc --without-jbig --without-jpeg --with-lcms --without-openjp2 --without-lqr --without-lzma --without-openexr --with-pango --with-png --with-rsvg --without-tiff --without-webp --with-xml --with-zlib --without-bzlib --enable-static --disable-shared --enable-hdri --with-freetype --with-fontconfig --without-x --without-modules --without-wmf"
 fi
 
 PNG=1.2.56
@@ -151,7 +151,6 @@ if [ ! -f ${PREFIX}/lib/libMagick++-6.Q${Q}HDRI.a ]; then
     cd $CWD/3rdparty/ImageMagick-$MAGICK || exit 1
   fi
   patch -p0 < $CWD/TextPango/magick-6.9.1-10-pango-align-hack.diff || exit 1
-  patch -p0 < $CWD/ReadPSD/xcf-layername.diff || exit 1
   if [ "$PKGOS" = "Windows" ]; then
     patch -p1 < $CWD/Bundle/mingw.patch || exit 1
     patch -p0 < $CWD/Bundle/mingw-utf8.diff || exit 1
@@ -195,9 +194,12 @@ fi
 if [ "$STATIC_GCC" = "1" ]; then
   GCC_LINK="-static-libgcc -static-libstdc++"
 fi
+if [ "$TRAVIS" = "1" ]; then
+  TRAVIS_FLAGS="-DLEGACY"
+fi
 if [ "$PKGOS" != "Windows" ]; then
-  $MAKE STATIC=1 FREEBSD=$USE_FREEBSD BITS=$BIT LDFLAGS_ADD="$GCC_LINK" CONFIG=$TAG clean
-  $MAKE STATIC=1 FREEBSD=$USE_FREEBSD BITS=$BIT LDFLAGS_ADD="$GCC_LINK" CONFIG=$TAG || exit 1
+  $MAKE STATIC=1 FREEBSD=$USE_FREEBSD BITS=$BIT LDFLAGS_ADD="$GCC_LINK" CXXFLAGS_ADD="$TRAVIS_FLAGS" CONFIG=$TAG clean
+  $MAKE STATIC=1 FREEBSD=$USE_FREEBSD BITS=$BIT LDFLAGS_ADD="$GCC_LINK" CXXFLAGS_ADD="$TRAVIS_FLAGS" CONFIG=$TAG || exit 1
 else
   make MINGW=1 BIT=$BIT CONFIG=$TAG clean
   make STATIC=1 MINGW=1 BIT=$BIT CONFIG=$TAG || exit 1

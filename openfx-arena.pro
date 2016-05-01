@@ -5,10 +5,12 @@
 # 2) Build Enviroment: add 'DEBUG=1', you can also add PACKAGE=<plugin_name> if you only want to build one plugin
 
 OTHER_FILES += \
+            .travis.yml \
             Makefile \
             Makefile.master \
             Makefile.io \
             Bundle/Makefile \
+            Extra/Makefile \
             LICENSE \
             COPYING \
             README.md \
@@ -17,16 +19,13 @@ OTHER_FILES += \
             Arc/Makefile \
             Charcoal/Makefile \
             Edges/Makefile \
-            Emboss/Makefile \
             Implode/Makefile \
             Modulate/Makefile \
             Oilpaint/Makefile \
             Polar/Makefile \
             Polaroid/Makefile \
             PovRay/Makefile \
-            OpenRaster/Makefile \
             ReadPSD/Makefile \
-            ReadSVG/Makefile \
             Reflection/Makefile \
             Roll/Makefile \
             Sketch/Makefile \
@@ -36,23 +35,17 @@ OTHER_FILES += \
             Texture/Makefile \
             Tile/Makefile \
             Wave/Makefile \
-            ReadKrita/Makefile \
             ReadMisc/Makefile \
-            ReadCDR/Makefile \
-            TextFX/Makefile \
             Arc/Info.plist \
             Charcoal/Info.plist \
             Edges/Info.plist \
-            Emboss/Info.plist \
             Implode/Info.plist \
             Modulate/Info.plist \
             Oilpaint/Info.plist \
             Polar/Info.plist \
             Polaroid/Info.plist \
             PovRay/Info.plist \
-            OpenRaster/Info.plist \
             ReadPSD/Info.plist \
-            ReadSVG/Info.plist \
             Reflection/Info.plist \
             Roll/Info.plist \
             Sketch/Info.plist \
@@ -62,11 +55,9 @@ OTHER_FILES += \
             Texture/Info.plist \
             Tile/Info.plist \
             Wave/Info.plist \
-            ReadKrita/Info.plist \
             Bundle/Info.plist \
             ReadMisc/Info.plist \
-            ReadCDR/Info.plist \
-            TextFX/Info.plist
+            Extra/Info.plist
 INCLUDEPATH += . \
             SupportExt \
             OpenFX/Support/include \
@@ -166,16 +157,15 @@ SOURCES += \
             Arc/Arc.cpp \
             Charcoal/Charcoal.cpp \
             Edges/Edges.cpp \
-            Emboss/Emboss.cpp \
             Implode/Implode.cpp \
             Modulate/Modulate.cpp \
             Oilpaint/Oilpaint.cpp \
             Polar/Polar.cpp \
             Polaroid/Polaroid.cpp \
             PovRay/PovRay.cpp \
-            OpenRaster/OpenRaster.cpp \
+            Extra/OpenRaster.cpp \
             ReadPSD/ReadPSD.cpp \
-            ReadSVG/ReadSVG.cpp \
+            Extra/ReadSVG.cpp \
             Reflection/Reflection.cpp \
             Roll/Roll.cpp \
             Sketch/Sketch.cpp \
@@ -185,7 +175,7 @@ SOURCES += \
             Texture/Texture.cpp \
             Tile/Tile.cpp \
             Wave/Wave.cpp \
-            ReadKrita/ReadKrita.cpp \
+            Extra/ReadKrita.cpp \
             ReadMisc/ReadMisc.cpp \
-            ReadCDR/ReadCDR.cpp \
-            TextFX/TextFX.cpp
+            Extra/ReadCDR.cpp \
+            Extra/TextFX.cpp

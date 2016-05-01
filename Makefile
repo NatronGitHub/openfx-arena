@@ -11,7 +11,6 @@ Oilpaint \
 Polar \
 Polaroid \
 ReadPSD \
-ReadSVG \
 Reflection \
 Roll \
 Sketch \
@@ -22,10 +21,7 @@ Texture \
 Tile \
 Wave \
 PovRay \
-OpenRaster \
-ReadKrita \
-ReadMisc \
-TextFX
+ReadMisc
 
 all: subdirs
 
