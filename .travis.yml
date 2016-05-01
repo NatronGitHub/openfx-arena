@@ -28,6 +28,6 @@ install:
 
 script:
   - git submodule update -i --recursive
-  - make -C Extra
+  - make -C Extra CXXFLAGS_ADD="-DLEGACY"
   - make -C Magick
 
