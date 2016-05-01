@@ -330,7 +330,7 @@ OpenRasterPlugin::decodePlane(const std::string& filename, OfxTime /*time*/, int
 
     int width = 0;
     int height = 0;
-    unsigned char* buffer;
+    unsigned char* buffer = NULL;
     int renderWidth= renderWindow.x2 - renderWindow.x1;
     int renderHeight= renderWindow.y2 - renderWindow.y1;
 

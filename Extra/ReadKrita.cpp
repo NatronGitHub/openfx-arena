@@ -161,7 +161,7 @@ ReadKritaPlugin::decode(const std::string& filename,
 
     int width = 0;
     int height = 0;
-    unsigned char* buffer;
+    unsigned char* buffer = NULL;
     int renderWidth= renderWindow.x2 - renderWindow.x1;
     int renderHeight= renderWindow.y2 - renderWindow.y1;
 
