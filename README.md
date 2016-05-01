@@ -23,6 +23,7 @@ Requirements
  * librsvg2
  * libcdr
  * librevenge
+ * poppler-glib
  * ImageMagick (6.9.3-5+ Q32HDRI) with:
    * freetype
    * fontconfig
