@@ -105,8 +105,8 @@ ReadPDFPlugin::decode(const std::string& filename,
     }
 
     GError *error = NULL;
-    PopplerDocument *document;
-    PopplerPage *page;
+    PopplerDocument *document = NULL;
+    PopplerPage *page = NULL;
     cairo_surface_t *surface;
     cairo_t *cr;
     cairo_status_t status;
@@ -209,10 +209,11 @@ bool ReadPDFPlugin::getFrameBounds(const std::string& filename,
     _page->getValueAtTime(time, pageNum);
 
     GError *error = NULL;
-    PopplerDocument *document;
-    PopplerPage *page;
+    PopplerDocument *document = NULL;
+    PopplerPage *page = NULL;
     double imageWidth, imageHeight;
-    int width, height;
+    int width = 0;
+    int height = 0;
 
     gchar *absolute, *uri;
     absolute = g_strdup(filename.c_str());
@@ -260,7 +261,7 @@ void ReadPDFPlugin::getPageNum(std::string filename)
         _page->resetOptions();
 
         GError *error = NULL;
-        PopplerDocument *document;
+        PopplerDocument *document = NULL;
         int pages = 0;
 
         gchar *absolute, *uri;
@@ -303,7 +304,7 @@ void ReadPDFPlugin::onInputFileChanged(const std::string& newFile,
     }
 
     GError *error = NULL;
-    PopplerDocument *document;
+    PopplerDocument *document = NULL;
 
     gchar *absolute, *uri;
     absolute = g_strdup(newFile.c_str());
