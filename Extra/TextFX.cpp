@@ -44,45 +44,45 @@
 
 #define kParamText "text"
 #define kParamTextLabel "Text"
-#define kParamTextHint "The text that will be drawn"
+#define kParamTextHint "The text that will be drawn."
 
 #define kParamFontSize "size"
 #define kParamFontSizeLabel "Font size"
-#define kParamFontSizeHint "The height of the characters to render in pixels"
+#define kParamFontSizeHint "The height of the characters to render in pixels. Should not be used for animation, see the scale param."
 #define kParamFontSizeDefault 64
 
 #define kParamFontName "name"
 #define kParamFontNameLabel "Font family"
-#define kParamFontNameHint "The name of the font to be used"
+#define kParamFontNameHint "The name of the font to be used."
 #define kParamFontNameDefault "Arial"
 #define kParamFontNameAltDefault "DejaVu Sans" // failsafe on Linux/BSD
 
 #define kParamFont "font"
 #define kParamFontLabel "Font"
-#define kParamFontHint "Selected font"
+#define kParamFontHint "Selected font."
 
 #define kParamStyle "style"
 #define kParamStyleLabel "Style"
-#define kParamStyleHint "Font style"
+#define kParamStyleHint "Font style."
 #define kParamStyleDefault 0
 
 #define kParamTextColor "color"
 #define kParamTextColorLabel "Font color"
-#define kParamTextColorHint "The fill color of the text to render"
+#define kParamTextColorHint "The fill color of the text to render."
 
 #define kParamJustify "justify"
 #define kParamJustifyLabel "Justify"
-#define kParamJustifyHint "Text justify"
+#define kParamJustifyHint "Text justify."
 #define kParamJustifyDefault false
 
 #define kParamWrap "wrap"
 #define kParamWrapLabel "Wrap"
-#define kParamWrapHint "Word wrap. Disabled if auto size is active"
+#define kParamWrapHint "Word wrap. Disabled if auto size or custom position is enabled."
 #define kParamWrapDefault 0
 
 #define kParamAlign "align"
 #define kParamAlignLabel "Align"
-#define kParamAlignHint "Text align"
+#define kParamAlignHint "Text align. Disabled if custom position is enabled."
 #define kParamAlignDefault 0
 
 #define kParamMarkup "markup"
@@ -97,21 +97,21 @@
 
 #define kParamStretch "stretch"
 #define kParamStretchLabel "Stretch"
-#define kParamStretchHint "Width of the font relative to other designs within a family"
+#define kParamStretchHint "Width of the font relative to other designs within a family."
 #define kParamStretchDefault 4
 
 #define kParamWeight "weight"
 #define kParamWeightLabel "Weight"
-#define kParamWeightHint "The weight field specifies how bold or light the font should be"
+#define kParamWeightHint "The weight field specifies how bold or light the font should be."
 #define kParamWeightDefault 5
 
 #define kParamStrokeColor "strokeColor"
 #define kParamStrokeColorLabel "Stroke color"
-#define kParamStrokeColorHint "The fill color of the stroke to render"
+#define kParamStrokeColorHint "The fill color of the stroke to render."
 
 #define kParamStrokeWidth "strokeSize"
 #define kParamStrokeWidthLabel "Stroke size"
-#define kParamStrokeWidthHint "Stroke size"
+#define kParamStrokeWidthHint "Stroke size."
 #define kParamStrokeWidthDefault 0.0
 
 #define kParamStrokeDash "strokeDash"
@@ -155,32 +155,32 @@
 
 #define kParamCircleWords "circleWords"
 #define kParamCircleWordsLabel "Circle Words"
-#define kParamCircleWordsHint "X times text in circle"
+#define kParamCircleWordsHint "X times text in circle."
 #define kParamCircleWordsDefault 10
 
 #define kParamCanvas "canvas"
 #define kParamCanvasLabel "Canvas size"
-#define kParamCanvasHint "Set canvas size, default (0) is project format. Disabled if auto size is active"
+#define kParamCanvasHint "Set canvas size, default (0) is project format. Disabled if auto size is active."
 #define kParamCanvasDefault 0
 
 #define kParamArcRadius "arcRadius"
 #define kParamArcRadiusLabel "Arc Radius"
-#define kParamArcRadiusHint "Arch Radius"
+#define kParamArcRadiusHint "Arc path radius (size of the path)."
 #define kParamArcRadiusDefault 100.0
 
 #define kParamArcAngle "arcAngle"
 #define kParamArcAngleLabel "Arc Angle"
-#define kParamArcAngleHint "Arch Angle"
+#define kParamArcAngleHint "Arc Angle, set to 360 for a full circle."
 #define kParamArcAngleDefault 0
 
 #define kParamRotate "rotate"
 #define kParamRotateLabel "Rotate"
-#define kParamRotateHint "Rotate"
+#define kParamRotateHint "Rotate canvas."
 #define kParamRotateDefault 0
 
 #define kParamScale "scale"
 #define kParamScaleLabel "Scale"
-#define kParamScaleHint "Scale"
+#define kParamScaleHint "Scale the text. Should be used during animation instead of font size."
 #define kParamScaleDefault 0
 
 #define kParamPosition "position"
@@ -1007,7 +1007,7 @@ void TextFXPluginFactory::describe(OFX::ImageEffectDescriptor &desc)
     // basic labels
     desc.setLabel(kPluginName);
     desc.setPluginGrouping(kPluginGrouping);
-    desc.setPluginDescription("Text generator node");
+    desc.setPluginDescription("Advanced text generator node using Pango and Cairo.");
 
     // add the supported contexts
     desc.addSupportedContext(eContextGenerator);
