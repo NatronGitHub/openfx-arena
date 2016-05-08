@@ -19,6 +19,7 @@
 #include <pango/pangocairo.h>
 #include <fontconfig/fontconfig.h>
 
+#include "ofxsPositionInteract.h"
 #include "ofxsMacros.h"
 #include "ofxsImageEffect.h"
 #include "ofxNatron.h"
@@ -34,7 +35,7 @@
 #define kPluginGrouping "Draw"
 #define kPluginIdentifier "fr.inria.openfx.TextFX"
 #define kPluginVersionMajor 1
-#define kPluginVersionMinor 6
+#define kPluginVersionMinor 7
 
 #define kSupportsTiles 0
 #define kSupportsMultiResolution 0
@@ -182,6 +183,15 @@
 #define kParamScaleHint "Scale"
 #define kParamScaleDefault 0
 
+#define kParamPosition "position"
+#define kParamPositionLabel "Position"
+#define kParamPositionHint "The position of the first character on the first line. Auto size and a transform node is recommended. Will not work if auto size or markup is enabled. Will also disable text align, wrap and other features."
+
+#define kParamPositionMove "custom"
+#define kParamPositionMoveLabel "Custom"
+#define kParamPositionMoveHint "Enable custom position. Auto size and a transform node is recommended. Will not work if auto size or markup is enabled. Will also disable text align, wrap and other features."
+#define kParamPositionMoveDefault false
+
 using namespace OFX;
 static bool gHostIsNatron = false;
 
@@ -236,6 +246,8 @@ private:
     OFX::DoubleParam *arcAngle_;
     OFX::DoubleParam *rotate_;
     OFX::DoubleParam *scale_;
+    OFX::Double2DParam *position_;
+    OFX::BooleanParam *move_;
 };
 
 TextFXPlugin::TextFXPlugin(OfxImageEffectHandle handle)
@@ -274,12 +286,14 @@ TextFXPlugin::TextFXPlugin(OfxImageEffectHandle handle)
     arcAngle_ = fetchDoubleParam(kParamArcAngle);
     rotate_ = fetchDoubleParam(kParamRotate);
     scale_ = fetchDoubleParam(kParamScale);
+    position_ = fetchDouble2DParam(kParamPosition);
+    move_ = fetchBooleanParam(kParamPositionMove);
 
     assert(text_ && fontSize_ && fontName_ && textColor_ && font_ && wrap_
            && justify_ && align_ && markup_ && style_ && auto_ && stretch_ && weight_ && strokeColor_
            && strokeWidth_ && strokeDash_ && strokeDashPattern_ && fontAA_ && subpixel_ && hintStyle_
            && hintMetrics_ && circleRadius_ && circleWords_ && letterSpace_ && canvas_
-           && arcRadius_ && arcAngle_ && rotate_ && scale_);
+           && arcRadius_ && arcAngle_ && rotate_ && scale_ && position_ && move_);
 
     // Setup selected font
     std::string fontString, fontCombo;
@@ -369,12 +383,13 @@ void TextFXPlugin::render(const OFX::RenderArguments &args)
     }
 
     // Get params
-    double r, g, b, a, s_r, s_g, s_b, s_a, strokeWidth, strokeDashX, strokeDashY, strokeDashZ, circleRadius, arcRadius, arcAngle, rotate, scale;
+    double x, y, r, g, b, a, s_r, s_g, s_b, s_a, strokeWidth, strokeDashX, strokeDashY, strokeDashZ, circleRadius, arcRadius, arcAngle, rotate, scale;
     int fontSize, fontID, cwidth, cheight, wrap, align, style, stretch, weight, strokeDash, fontAA, subpixel, hintStyle, hintMetrics, circleWords, letterSpace;
     std::string text, fontName, font;
     bool justify;
     bool markup;
     bool autoSize;
+    bool move;
 
     text_->getValueAtTime(args.time, text);
     fontSize_->getValueAtTime(args.time, fontSize);
@@ -406,6 +421,14 @@ void TextFXPlugin::render(const OFX::RenderArguments &args)
     arcAngle_->getValueAtTime(args.time, arcAngle);
     rotate_->getValueAtTime(args.time, rotate);
     scale_->getValueAtTime(args.time, scale);
+    position_->getValueAtTime(args.time, x, y);
+    move_->getValueAtTime(args.time, move);
+
+    double ytext = y*args.renderScale.y;
+    double xtext = x*args.renderScale.x;
+    int tmp_y = dstRod.y2 - dstBounds.y2;
+    int tmp_height = dstBounds.y2 - dstBounds.y1;
+    ytext = tmp_y + ((tmp_y+tmp_height-1) - ytext);
 
     if (!font.empty())
         fontName=font;
@@ -596,7 +619,7 @@ void TextFXPlugin::render(const OFX::RenderArguments &args)
     pango_layout_set_font_description(layout, desc);
     pango_font_description_free(desc);
 
-    if (!autoSize) {
+    if (!autoSize && !move) {
         switch(wrap) {
         case 1:
             pango_layout_set_width(layout, width * PANGO_SCALE);
@@ -616,20 +639,22 @@ void TextFXPlugin::render(const OFX::RenderArguments &args)
         }
     }
 
-    switch(align) {
-    case 0:
-        pango_layout_set_alignment (layout, PANGO_ALIGN_LEFT);
-        break;
-    case 1:
-        pango_layout_set_alignment (layout, PANGO_ALIGN_RIGHT);
-        break;
-    case 2:
-        pango_layout_set_alignment (layout, PANGO_ALIGN_CENTER);
-        break;
-    }
+    if (!move) {
+        switch(align) {
+        case 0:
+            pango_layout_set_alignment (layout, PANGO_ALIGN_LEFT);
+            break;
+        case 1:
+            pango_layout_set_alignment (layout, PANGO_ALIGN_RIGHT);
+            break;
+        case 2:
+            pango_layout_set_alignment (layout, PANGO_ALIGN_CENTER);
+            break;
+        }
 
-    if (justify) {
-        pango_layout_set_justify (layout, true);
+        if (justify) {
+            pango_layout_set_justify (layout, true);
+        }
     }
 
     if (letterSpace != 0) {
@@ -638,6 +663,10 @@ void TextFXPlugin::render(const OFX::RenderArguments &args)
 
     if (!markup)
         pango_layout_set_attributes(layout,alist);
+
+    if (!autoSize && !markup && circleRadius==0 && arcAngle==0 && strokeWidth==0 && move) {
+        cairo_move_to(cr, xtext, ytext);
+    }
 
     if (scale>0) {
         cairo_scale(cr, scale, scale);
@@ -666,6 +695,9 @@ void TextFXPlugin::render(const OFX::RenderArguments &args)
 
             if (autoSize)
                 cairo_move_to(cr, std::floor((strokeWidth/2) * args.renderScale.x + 0.5), 0.0);
+            else if (move) {
+                cairo_move_to(cr, xtext, ytext);
+            }
 
             pango_cairo_layout_path(cr, layout);
             cairo_set_line_width(cr, std::floor(strokeWidth * args.renderScale.x + 0.5));
@@ -1006,6 +1038,29 @@ void TextFXPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, Co
 
     // make some pages
     PageParamDescriptor *page = desc.definePageParam(kPluginName);
+    bool hostHasNativeOverlayForPosition;
+    {
+        BooleanParamDescriptor *param = desc.defineBooleanParam(kParamPositionMove);
+        param->setLabel(kParamPositionMoveLabel);
+        param->setHint(kParamPositionMoveHint);
+        param->setDefault(kParamPositionMoveDefault);
+        param->setAnimates(false);
+        param->setLayoutHint(eLayoutHintNoNewLine, 1);
+        page->addChild(*param);
+    }
+    {
+        Double2DParamDescriptor* param = desc.defineDouble2DParam(kParamPosition);
+        param->setLabel(kParamPositionLabel);
+        param->setHint(kParamPositionHint);
+        param->setDoubleType(eDoubleTypeXYAbsolute);
+        param->setDefaultCoordinateSystem(eCoordinatesNormalised);
+        param->setDefault(0.5, 0.5);
+        param->setAnimates(true);
+        hostHasNativeOverlayForPosition = param->getHostHasNativeOverlayHandle();
+        if (hostHasNativeOverlayForPosition)
+            param->setUseHostNativeOverlayHandle(true);
+        page->addChild(*param);
+    }
     {
         BooleanParamDescriptor *param = desc.defineBooleanParam(kParamAutoSize);
         param->setLabel(kParamAutoSizeLabel);
@@ -1366,7 +1421,6 @@ void TextFXPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, Co
         param->setDisplayRange(-360, 360);
         param->setDefault(kParamRotateDefault);
         param->setAnimates(true);
-        param->setLayoutHint(OFX::eLayoutHintDivider);
         page->addChild(*param);
     }
     {

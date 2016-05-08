@@ -5,6 +5,7 @@ PLUGINOBJECTS = \
         ReadSVG.o \
         ReadKrita.o \
         OpenRaster.o \
+        ofxsOGLTextRenderer.o ofxsOGLFontData.o ofxsRectangleInteract.o \
         GenericReader.o GenericOCIO.o SequenceParsing.o
 
 PLUGINNAME = Extra
