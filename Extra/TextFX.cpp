@@ -144,7 +144,7 @@
 
 #define kParamLetterSpace "letterSpace"
 #define kParamLetterSpaceLabel "Letter spacing"
-#define kParamLetterSpaceHint "Spacing between letters"
+#define kParamLetterSpaceHint "Spacing between letters. Disabled if markup is used."
 #define kParamLetterSpaceDefault 0
 
 #define kParamCircleRadius "circleRadius"
@@ -633,12 +633,11 @@ void TextFXPlugin::render(const OFX::RenderArguments &args)
     }
 
     if (letterSpace != 0) {
-        PangoAttribute *lineAttr;
-        lineAttr = pango_attr_letter_spacing_new(std::floor((letterSpace*PANGO_SCALE) * args.renderScale.x + 0.5));
-        pango_attr_list_insert(alist,lineAttr);
+        pango_attr_list_insert(alist,pango_attr_letter_spacing_new(std::floor((letterSpace*PANGO_SCALE) * args.renderScale.x + 0.5)));
     }
 
-    pango_layout_set_attributes(layout,alist);
+    if (!markup)
+        pango_layout_set_attributes(layout,alist);
 
     if (scale>0) {
         cairo_scale(cr, scale, scale);
@@ -934,12 +933,11 @@ bool TextFXPlugin::getRegionOfDefinition(const OFX::RegionOfDefinitionArguments 
             pango_font_description_free(desc);
 
             if (letterSpace != 0) {
-                PangoAttribute *lineAttr;
-                lineAttr = pango_attr_letter_spacing_new(letterSpace*PANGO_SCALE);
-                pango_attr_list_insert(alist,lineAttr);
+                pango_attr_list_insert(alist,pango_attr_letter_spacing_new(letterSpace*PANGO_SCALE));
             }
 
-            pango_layout_set_attributes(layout,alist);
+            if (!markup)
+                pango_layout_set_attributes(layout,alist);
 
             pango_layout_get_pixel_size(layout, &width, &height);
 
