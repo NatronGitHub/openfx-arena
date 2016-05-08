@@ -28,11 +28,13 @@
 #include <cstring>
 #include <algorithm>
 
+#include "map-path-onto.c" // used to map path onto path, should be rewritten
+
 #define kPluginName "TextFX"
 #define kPluginGrouping "Draw"
 #define kPluginIdentifier "fr.inria.openfx.TextFX"
 #define kPluginVersionMajor 1
-#define kPluginVersionMinor 5
+#define kPluginVersionMinor 6
 
 #define kSupportsTiles 0
 #define kSupportsMultiResolution 0
@@ -160,6 +162,26 @@
 #define kParamCanvasHint "Set canvas size, default (0) is project format. Disabled if auto size is active"
 #define kParamCanvasDefault 0
 
+#define kParamArcRadius "arcRadius"
+#define kParamArcRadiusLabel "Arc Radius"
+#define kParamArcRadiusHint "Arch Radius"
+#define kParamArcRadiusDefault 100.0
+
+#define kParamArcAngle "arcAngle"
+#define kParamArcAngleLabel "Arc Angle"
+#define kParamArcAngleHint "Arch Angle"
+#define kParamArcAngleDefault 0
+
+#define kParamRotate "rotate"
+#define kParamRotateLabel "Rotate"
+#define kParamRotateHint "Rotate"
+#define kParamRotateDefault 0
+
+#define kParamScale "scale"
+#define kParamScaleLabel "Scale"
+#define kParamScaleHint "Scale"
+#define kParamScaleDefault 0
+
 using namespace OFX;
 static bool gHostIsNatron = false;
 
@@ -210,6 +232,10 @@ private:
     OFX::IntParam *circleWords_;
     OFX::IntParam *letterSpace_;
     OFX::Int2DParam *canvas_;
+    OFX::DoubleParam *arcRadius_;
+    OFX::DoubleParam *arcAngle_;
+    OFX::DoubleParam *rotate_;
+    OFX::DoubleParam *scale_;
 };
 
 TextFXPlugin::TextFXPlugin(OfxImageEffectHandle handle)
@@ -244,11 +270,16 @@ TextFXPlugin::TextFXPlugin(OfxImageEffectHandle handle)
     circleWords_ = fetchIntParam(kParamCircleWords);
     letterSpace_ = fetchIntParam(kParamLetterSpace);
     canvas_ = fetchInt2DParam(kParamCanvas);
+    arcRadius_ = fetchDoubleParam(kParamArcRadius);
+    arcAngle_ = fetchDoubleParam(kParamArcAngle);
+    rotate_ = fetchDoubleParam(kParamRotate);
+    scale_ = fetchDoubleParam(kParamScale);
 
     assert(text_ && fontSize_ && fontName_ && textColor_ && font_ && wrap_
            && justify_ && align_ && markup_ && style_ && auto_ && stretch_ && weight_ && strokeColor_
            && strokeWidth_ && strokeDash_ && strokeDashPattern_ && fontAA_ && subpixel_ && hintStyle_
-           && hintMetrics_ && circleRadius_ && circleWords_ && letterSpace_ && canvas_);
+           && hintMetrics_ && circleRadius_ && circleWords_ && letterSpace_ && canvas_
+           && arcRadius_ && arcAngle_ && rotate_ && scale_);
 
     // Setup selected font
     std::string fontString, fontCombo;
@@ -338,7 +369,7 @@ void TextFXPlugin::render(const OFX::RenderArguments &args)
     }
 
     // Get params
-    double r, g, b, a, s_r, s_g, s_b, s_a, strokeWidth, strokeDashX, strokeDashY, strokeDashZ, circleRadius;
+    double r, g, b, a, s_r, s_g, s_b, s_a, strokeWidth, strokeDashX, strokeDashY, strokeDashZ, circleRadius, arcRadius, arcAngle, rotate, scale;
     int fontSize, fontID, cwidth, cheight, wrap, align, style, stretch, weight, strokeDash, fontAA, subpixel, hintStyle, hintMetrics, circleWords, letterSpace;
     std::string text, fontName, font;
     bool justify;
@@ -371,6 +402,10 @@ void TextFXPlugin::render(const OFX::RenderArguments &args)
     circleWords_->getValueAtTime(args.time, circleWords);
     letterSpace_->getValueAtTime(args.time, letterSpace);
     canvas_->getValueAtTime(args.time, cwidth, cheight);
+    arcRadius_->getValueAtTime(args.time, arcRadius);
+    arcAngle_->getValueAtTime(args.time, arcAngle);
+    rotate_->getValueAtTime(args.time, rotate);
+    scale_->getValueAtTime(args.time, scale);
 
     if (!font.empty())
         fontName=font;
@@ -605,6 +640,16 @@ void TextFXPlugin::render(const OFX::RenderArguments &args)
 
     pango_layout_set_attributes(layout,alist);
 
+    if (scale>0) {
+        cairo_scale(cr, scale, scale);
+    }
+
+    if (rotate!=0) {
+        cairo_translate(cr, width/2.0, height/2.0);
+        cairo_rotate(cr, rotate * (M_PI/180.0));
+        cairo_translate(cr, - width/2.0, -height/2.0);
+    }
+
     if (strokeWidth>0) {
         if (circleRadius==0) {
             if (strokeDash>0) {
@@ -634,17 +679,30 @@ void TextFXPlugin::render(const OFX::RenderArguments &args)
     }
     else {
         if (circleRadius==0) {
+            if (arcAngle>0) {
+                cairo_arc(cr, width/2.0, height/2.0, std::floor(arcRadius * args.renderScale.x + 0.5), 0.0, arcAngle * (M_PI/180.0));
+                cairo_path_t *path;
+                cairo_save(cr);
+                path = cairo_copy_path_flat(cr);
+                cairo_new_path(cr);
+                pango_cairo_layout_line_path(cr, pango_layout_get_line_readonly(layout, 0)); //TODO if more than one line add support for that
+                map_path_onto(cr, path);
+                cairo_path_destroy(path);
+                cairo_set_source_rgba(cr, r, g, b, a);
+                cairo_fill(cr);
+            }
+            else {
 #if defined(_WIN32) || defined(__WIN32__) || defined(WIN32)
-            // workaround antialias issues on windows
-            cairo_new_path(cr);
-            pango_cairo_layout_path(cr, layout);
-            cairo_set_source_rgba(cr, r, g, b, a);
-            cairo_fill(cr);
+                cairo_new_path(cr);
+                pango_cairo_layout_path(cr, layout);
+                cairo_set_source_rgba(cr, r, g, b, a);
+                cairo_fill(cr);
 #else
-            cairo_set_source_rgba(cr, r, g, b, a);
-            pango_cairo_update_layout(cr, layout);
-            pango_cairo_show_layout(cr, layout);
+                cairo_set_source_rgba(cr, r, g, b, a);
+                pango_cairo_update_layout(cr, layout);
+                pango_cairo_show_layout(cr, layout);
 #endif
+            }
         }
     }
 
@@ -660,7 +718,6 @@ void TextFXPlugin::render(const OFX::RenderArguments &args)
             pango_layout_get_size (layout, &rwidth, &rheight);
             cairo_move_to (cr, - ((double)rwidth / PANGO_SCALE) / 2, - std::floor(circleRadius * args.renderScale.x + 0.5));
 #if defined(_WIN32) || defined(__WIN32__) || defined(WIN32)
-            // workaround antialias issues on windows
             cairo_new_path(cr);
             pango_cairo_layout_path(cr, layout);
             cairo_fill(cr);
@@ -1278,6 +1335,49 @@ void TextFXPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, Co
         param->setRange(1, 1000);
         param->setDisplayRange(1, 100);
         param->setDefault(kParamCircleWordsDefault);
+        param->setAnimates(true);
+        param->setLayoutHint(OFX::eLayoutHintDivider);
+        page->addChild(*param);
+    }
+    {
+        DoubleParamDescriptor* param = desc.defineDoubleParam(kParamArcRadius);
+        param->setLabel(kParamArcRadiusLabel);
+        param->setHint(kParamArcRadiusHint);
+        param->setRange(0, 10000);
+        param->setDisplayRange(0, 1000);
+        param->setDefault(kParamArcRadiusDefault);
+        param->setAnimates(true);
+        page->addChild(*param);
+    }
+    {
+        DoubleParamDescriptor* param = desc.defineDoubleParam(kParamArcAngle);
+        param->setLabel(kParamArcAngleLabel);
+        param->setHint(kParamArcAngleHint);
+        param->setRange(0, 360);
+        param->setDisplayRange(0, 360);
+        param->setDefault(kParamArcAngleDefault);
+        param->setAnimates(true);
+        param->setLayoutHint(OFX::eLayoutHintDivider);
+        page->addChild(*param);
+    }
+    {
+        DoubleParamDescriptor* param = desc.defineDoubleParam(kParamRotate);
+        param->setLabel(kParamRotateLabel);
+        param->setHint(kParamRotateHint);
+        param->setRange(-360, 360);
+        param->setDisplayRange(-360, 360);
+        param->setDefault(kParamRotateDefault);
+        param->setAnimates(true);
+        param->setLayoutHint(OFX::eLayoutHintDivider);
+        page->addChild(*param);
+    }
+    {
+        DoubleParamDescriptor* param = desc.defineDoubleParam(kParamScale);
+        param->setLabel(kParamScaleLabel);
+        param->setHint(kParamScaleHint);
+        param->setRange(0, 10000);
+        param->setDisplayRange(0, 100);
+        param->setDefault(kParamScaleDefault);
         param->setAnimates(true);
         param->setLayoutHint(OFX::eLayoutHintDivider);
         page->addChild(*param);
