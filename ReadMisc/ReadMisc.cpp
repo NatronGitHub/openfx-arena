@@ -172,7 +172,6 @@ ReadMiscPluginFactory::load()
     _extensions.push_back("pcx");
     _extensions.push_back("xpm");
     _extensions.push_back("gif");
-    _extensions.push_back("mvg");
     _extensions.push_back("miff");
 }
 
