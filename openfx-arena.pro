@@ -182,4 +182,5 @@ SOURCES += \
             ReadMisc/ReadMisc.cpp \
             Extra/ReadCDR.cpp \
             Extra/TextFX.cpp \
-            ReadPDF/ReadPDF.cpp
+            ReadPDF/ReadPDF.cpp \
+            Extra/map-path-onto.c
