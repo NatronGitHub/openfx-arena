@@ -16,6 +16,10 @@ PLUGINOBJECTS = \
         Edges.o \
         Modulate.o \
         ReadMisc.o \
+        Text.ofx \
+        ofxsOGLTextRenderer.o \
+        ofxsOGLFontData.o \
+        ofxsRectangleInteract.o \
         GenericReader.o GenericOCIO.o SequenceParsing.o
 
 PLUGINNAME = Magick
@@ -56,7 +60,9 @@ RESOURCES = \
 ../Modulate/net.fxarena.openfx.Modulate.png \
 ../Modulate/net.fxarena.openfx.Modulate.svg \
 ../ReadMisc/fr.inria.openfx.ReadMisc.png \
-../ReadMisc/fr.inria.openfx.ReadMisc.svg
+../ReadMisc/fr.inria.openfx.ReadMisc.svg \
+../Text/net.fxarena.Text.png \
+../Text/net.fxarena.Text.svg
 
 VPATH += \
 ../Texture \
@@ -75,7 +81,8 @@ VPATH += \
 ../Polaroid \
 ../Edges \
 ../Modulate \
-../ReadMisc
+../ReadMisc \
+../Text
 
 include ../Makefile.master
 include ../Makefile.io
@@ -97,7 +104,8 @@ CXXFLAGS += \
 -I../Polaroid \
 -I../Edges \
 -I../Modulate \
--I../ReadMisc
+-I../ReadMisc \
+-I../Text
 
 CXXFLAGS  += $(MAGICK_CXXFLAGS) $(LCMS_CXXFLAGS)
 LINKFLAGS += $(MAGICK_LINKFLAGS) $(LCMS_LINKFLAGS)
