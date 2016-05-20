@@ -61,8 +61,8 @@ RESOURCES = \
 ../Modulate/net.fxarena.openfx.Modulate.svg \
 ../ReadMisc/fr.inria.openfx.ReadMisc.png \
 ../ReadMisc/fr.inria.openfx.ReadMisc.svg \
-../Text/net.fxarena.Text.png \
-../Text/net.fxarena.Text.svg
+../Text/net.fxarena.openfx.Text.png \
+../Text/net.fxarena.openfx.Text.svg
 
 VPATH += \
 ../Texture \
