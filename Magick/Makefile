@@ -16,7 +16,7 @@ PLUGINOBJECTS = \
         Edges.o \
         Modulate.o \
         ReadMisc.o \
-        Text.ofx \
+        Text.o \
         ofxsOGLTextRenderer.o \
         ofxsOGLFontData.o \
         ofxsRectangleInteract.o \
