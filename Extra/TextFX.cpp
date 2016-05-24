@@ -747,16 +747,22 @@ void TextFXPlugin::render(const OFX::RenderArguments &args)
     }
 
     if (circleRadius>0 && !autoSize) {
-        cairo_translate (cr, width/2, height/2);
+        double circleX = width/2;
+        double circleY = height/2;
+        if (move) {
+            circleX = xtext;
+            circleY = ytext;
+        }
+        cairo_translate(cr, circleX, circleY);
         for (int i = 0; i < circleWords; i++) {
             int rwidth, rheight;
             double angle = (360. * i) / circleWords;
-            cairo_save (cr);
-            cairo_set_source_rgba (cr, r, g, b, a);
+            cairo_save(cr);
+            cairo_set_source_rgba(cr, r, g, b, a);
             cairo_rotate (cr, angle * G_PI / 180.);
-            pango_cairo_update_layout (cr, layout);
-            pango_layout_get_size (layout, &rwidth, &rheight);
-            cairo_move_to (cr, - ((double)rwidth / PANGO_SCALE) / 2, - std::floor(circleRadius * args.renderScale.x + 0.5));
+            pango_cairo_update_layout(cr, layout);
+            pango_layout_get_size(layout, &rwidth, &rheight);
+            cairo_move_to(cr, - ((double)rwidth / PANGO_SCALE) / 2, - std::floor(circleRadius * args.renderScale.x + 0.5));
             cairo_new_path(cr);
             pango_cairo_layout_path(cr, layout);
             cairo_fill(cr);
