@@ -29,7 +29,7 @@
 #include <cstring>
 #include <algorithm>
 
-#include "map-path-onto.c" // used to map path onto path, should be rewritten
+#include "fx.h"
 
 #define kPluginName "TextFX"
 #define kPluginGrouping "Draw"
