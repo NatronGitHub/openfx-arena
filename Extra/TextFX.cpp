@@ -673,9 +673,15 @@ void TextFXPlugin::render(const OFX::RenderArguments &args)
     }
 
     if (rotate!=0) {
-        cairo_translate(cr, width/2.0, height/2.0);
+        double rotateX = width/2;
+        double rotateY = width/2;
+        if (move) {
+            rotateX = xtext;
+            rotateY = ytext;
+        }
+        cairo_translate(cr, rotateX, rotateY);
         cairo_rotate(cr, rotate * (M_PI/180.0));
-        cairo_translate(cr, - width/2.0, -height/2.0);
+        cairo_translate(cr, -rotateX, -rotateY);
     }
 
     if (strokeWidth>0) {
@@ -711,7 +717,13 @@ void TextFXPlugin::render(const OFX::RenderArguments &args)
     else {
         if (circleRadius==0) {
             if (arcAngle>0) {
-                cairo_arc(cr, width/2.0, height/2.0, std::floor(arcRadius * args.renderScale.x + 0.5), 0.0, arcAngle * (M_PI/180.0));
+                double arcX = width/2.0;
+                double arcY = width/2.0;
+                if (move) {
+                    arcX = xtext;
+                    arcY = ytext;
+                }
+                cairo_arc(cr, arcX, arcY, std::floor(arcRadius * args.renderScale.x + 0.5), 0.0, arcAngle * (M_PI/180.0));
                 cairo_path_t *path;
                 cairo_save(cr);
                 path = cairo_copy_path_flat(cr);
@@ -723,16 +735,13 @@ void TextFXPlugin::render(const OFX::RenderArguments &args)
                 cairo_fill(cr);
             }
             else {
-#if defined(_WIN32) || defined(__WIN32__) || defined(WIN32)
                 cairo_new_path(cr);
+                if (!autoSize && move) {
+                    cairo_move_to(cr, xtext, ytext);
+                }
                 pango_cairo_layout_path(cr, layout);
                 cairo_set_source_rgba(cr, r, g, b, a);
                 cairo_fill(cr);
-#else
-                cairo_set_source_rgba(cr, r, g, b, a);
-                pango_cairo_update_layout(cr, layout);
-                pango_cairo_show_layout(cr, layout);
-#endif
             }
         }
     }
@@ -748,13 +757,9 @@ void TextFXPlugin::render(const OFX::RenderArguments &args)
             pango_cairo_update_layout (cr, layout);
             pango_layout_get_size (layout, &rwidth, &rheight);
             cairo_move_to (cr, - ((double)rwidth / PANGO_SCALE) / 2, - std::floor(circleRadius * args.renderScale.x + 0.5));
-#if defined(_WIN32) || defined(__WIN32__) || defined(WIN32)
             cairo_new_path(cr);
             pango_cairo_layout_path(cr, layout);
             cairo_fill(cr);
-#else
-            pango_cairo_show_layout (cr, layout);
-#endif
             cairo_restore (cr);
         }
     }
