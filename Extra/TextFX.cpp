@@ -386,10 +386,10 @@ void TextFXPlugin::render(const OFX::RenderArguments &args)
     double x, y, r, g, b, a, s_r, s_g, s_b, s_a, strokeWidth, strokeDashX, strokeDashY, strokeDashZ, circleRadius, arcRadius, arcAngle, rotate, scale;
     int fontSize, fontID, cwidth, cheight, wrap, align, style, stretch, weight, strokeDash, fontAA, subpixel, hintStyle, hintMetrics, circleWords, letterSpace;
     std::string text, fontName, font;
-    bool justify;
-    bool markup;
-    bool autoSize;
-    bool move;
+    bool justify = false;
+    bool markup = false;
+    bool autoSize = false;
+    bool move = false;
 
     text_->getValueAtTime(args.time, text);
     fontSize_->getValueAtTime(args.time, fontSize);
@@ -673,8 +673,8 @@ void TextFXPlugin::render(const OFX::RenderArguments &args)
     }
 
     if (rotate!=0) {
-        double rotateX = width/2;
-        double rotateY = width/2;
+        double rotateX = width/2.0;
+        double rotateY = height/2.0;
         if (move) {
             rotateX = xtext;
             rotateY = ytext;
@@ -718,7 +718,7 @@ void TextFXPlugin::render(const OFX::RenderArguments &args)
         if (circleRadius==0) {
             if (arcAngle>0) {
                 double arcX = width/2.0;
-                double arcY = width/2.0;
+                double arcY = height/2.0;
                 if (move) {
                     arcX = xtext;
                     arcY = ytext;
@@ -747,8 +747,8 @@ void TextFXPlugin::render(const OFX::RenderArguments &args)
     }
 
     if (circleRadius>0 && !autoSize) {
-        double circleX = width/2;
-        double circleY = height/2;
+        double circleX = width/2.0;
+        double circleY = height/2.0;
         if (move) {
             circleX = xtext;
             circleY = ytext;
@@ -763,7 +763,6 @@ void TextFXPlugin::render(const OFX::RenderArguments &args)
             pango_cairo_update_layout(cr, layout);
             pango_layout_get_size(layout, &rwidth, &rheight);
             cairo_move_to(cr, - ((double)rwidth / PANGO_SCALE) / 2, - std::floor(circleRadius * args.renderScale.x + 0.5));
-            cairo_new_path(cr);
             pango_cairo_layout_path(cr, layout);
             cairo_fill(cr);
             cairo_restore (cr);
@@ -836,7 +835,7 @@ bool TextFXPlugin::getRegionOfDefinition(const OFX::RegionOfDefinitionArguments 
     }
 
     int width,height;
-    bool autoSize;
+    bool autoSize = false;
 
     canvas_->getValue(width, height);
     auto_->getValue(autoSize);
@@ -845,7 +844,7 @@ bool TextFXPlugin::getRegionOfDefinition(const OFX::RegionOfDefinitionArguments 
         int fontSize, fontID, style, stretch, weight, letterSpace;
         double strokeWidth;
         std::string text, fontName, font;
-        bool markup;
+        bool markup = false;
 
         text_->getValueAtTime(args.time, text);
         fontSize_->getValueAtTime(args.time, fontSize);
