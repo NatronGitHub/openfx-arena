@@ -42,7 +42,13 @@
 #define kRenderThreadSafety eRenderFullySafe
 #define kHostFrameThreading false
 
+#define kParamOpenMP "openmp"
+#define kParamOpenMPLabel "OpenMP"
+#define kParamOpenMPHint "Enable/Disable OpenMP support. This will enable the plugin to use as many threads as allowed by host."
+#define kParamOpenMPDefault false
+
 using namespace OFX;
+static bool _hasOpenMP = false;
 
 class ImplodePlugin : public OFX::ImageEffect
 {
@@ -57,6 +63,7 @@ private:
     OFX::DoubleParam *implode_;
     OFX::BooleanParam *matte_;
     OFX::DoubleParam *swirl_;
+    OFX::BooleanParam *enableOpenMP_;
 };
 
 ImplodePlugin::ImplodePlugin(OfxImageEffectHandle handle)
@@ -73,8 +80,9 @@ ImplodePlugin::ImplodePlugin(OfxImageEffectHandle handle)
     implode_ = fetchDoubleParam(kParamImplode);
     matte_ = fetchBooleanParam(kParamMatte);
     swirl_ = fetchDoubleParam(kParamSwirl);
+    enableOpenMP_ = fetchBooleanParam(kParamOpenMP);
 
-    assert(implode_ && matte_ && swirl_);
+    assert(implode_ && matte_ && swirl_ && enableOpenMP_);
 }
 
 ImplodePlugin::~ImplodePlugin()
@@ -155,23 +163,22 @@ void ImplodePlugin::render(const OFX::RenderArguments &args)
     // get params
     double implode,swirl;
     bool matte = false;
+    bool enableOpenMP = false;
     implode_->getValueAtTime(args.time, implode);
     matte_->getValueAtTime(args.time, matte);
     swirl_->getValueAtTime(args.time, swirl);
+    enableOpenMP_->getValueAtTime(args.time, enableOpenMP);
 
     // setup
     int width = srcRod.x2-srcRod.x1;
     int height = srcRod.y2-srcRod.y1;
 
-    // Set max threads allowed by host
-    unsigned int threads = 0;
-    threads = OFX::MultiThread::getNumCPUs();
-    if (threads>0) {
-        Magick::ResourceLimits::thread(threads);
-        #ifdef DEBUG
-        std::cout << "Setting max threads to " << threads << std::endl;
-        #endif
-    }
+    // OpenMP
+    unsigned int threads = 1;
+    if (_hasOpenMP && enableOpenMP)
+        threads = OFX::MultiThread::getNumCPUs();
+
+    Magick::ResourceLimits::thread(threads);
 
     // read image
     Magick::Image image(Magick::Geometry(width,height),Magick::Color("rgba(0,0,0,0)"));
@@ -245,6 +252,10 @@ void ImplodePluginFactory::describe(OFX::ImageEffectDescriptor &desc)
 /** @brief The describe in context function, passed a plugin descriptor and a context */
 void ImplodePluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, ContextEnum /*context*/)
 {
+    std::string features = MagickCore::GetMagickFeatures();
+    if (features.find("OpenMP") != std::string::npos)
+        _hasOpenMP = true;
+
     // create the mandated source clip
     ClipDescriptor *srcClip = desc.defineClip(kOfxImageEffectSimpleSourceClipName);
     srcClip->addSupportedComponent(ePixelComponentRGBA);
@@ -283,6 +294,18 @@ void ImplodePluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, C
         param->setHint(kParamMatteHint);
         param->setDefault(kParamMatteDefault);
         param->setAnimates(true);
+        param->setLayoutHint(OFX::eLayoutHintDivider);
+        page->addChild(*param);
+    }
+    {
+        BooleanParamDescriptor *param = desc.defineBooleanParam(kParamOpenMP);
+        param->setLabel(kParamOpenMPLabel);
+        param->setHint(kParamOpenMPHint);
+        param->setDefault(kParamOpenMPDefault);
+        param->setAnimates(false);
+        if (!_hasOpenMP)
+            param->setEnabled(false);
+        param->setLayoutHint(OFX::eLayoutHintDivider);
         page->addChild(*param);
     }
 }

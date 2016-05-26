@@ -369,11 +369,7 @@ void TextPangoPlugin::render(const OFX::RenderArguments &args)
         OFX::throwSuiteStatusException(kOfxStatFailed);
     }
 
-    // Set max threads allowed by host
-    unsigned int threads = 0;
-    threads = OFX::MultiThread::getNumCPUs();
-    if (threads>0)
-        Magick::ResourceLimits::thread(threads);
+    Magick::ResourceLimits::thread(1);
 
     // Generate empty image
     int width = dstRod.x2-dstRod.x1;

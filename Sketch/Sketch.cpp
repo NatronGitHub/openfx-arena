@@ -42,7 +42,13 @@
 #define kRenderThreadSafety eRenderFullySafe
 #define kHostFrameThreading false
 
+#define kParamOpenMP "openmp"
+#define kParamOpenMPLabel "OpenMP"
+#define kParamOpenMPHint "Enable/Disable OpenMP support. This will enable the plugin to use as many threads as allowed by host."
+#define kParamOpenMPDefault false
+
 using namespace OFX;
+static bool _hasOpenMP = false;
 
 class SketchPlugin : public OFX::ImageEffect
 {
@@ -57,6 +63,7 @@ private:
     OFX::DoubleParam *radius_;
     OFX::DoubleParam *sigma_;
     OFX::DoubleParam *angle_;
+    OFX::BooleanParam *enableOpenMP_;
 };
 
 SketchPlugin::SketchPlugin(OfxImageEffectHandle handle)
@@ -73,8 +80,9 @@ SketchPlugin::SketchPlugin(OfxImageEffectHandle handle)
     radius_ = fetchDoubleParam(kParamRadius);
     sigma_ = fetchDoubleParam(kParamSigma);
     angle_ = fetchDoubleParam(kParamAngle);
+    enableOpenMP_ = fetchBooleanParam(kParamOpenMP);
 
-    assert(radius_ && sigma_ && angle_);
+    assert(radius_ && sigma_ && angle_ && enableOpenMP_);
 }
 
 SketchPlugin::~SketchPlugin()
@@ -154,23 +162,22 @@ void SketchPlugin::render(const OFX::RenderArguments &args)
 
     // get params
     double radius, sigma, angle;
+    bool enableOpenMP = false;
     radius_->getValueAtTime(args.time, radius);
     sigma_->getValueAtTime(args.time, sigma);
     angle_->getValueAtTime(args.time, angle);
+    enableOpenMP_->getValueAtTime(args.time, enableOpenMP);
 
     // setup
     int width = srcRod.x2-srcRod.x1;
     int height = srcRod.y2-srcRod.y1;
 
-    // Set max threads allowed by host
-    unsigned int threads = 0;
-    threads = OFX::MultiThread::getNumCPUs();
-    if (threads>0) {
-        Magick::ResourceLimits::thread(threads);
-        #ifdef DEBUG
-        std::cout << "Setting max threads to " << threads << std::endl;
-        #endif
-    }
+    // OpenMP
+    unsigned int threads = 1;
+    if (_hasOpenMP && enableOpenMP)
+        threads = OFX::MultiThread::getNumCPUs();
+
+    Magick::ResourceLimits::thread(threads);
 
     // read image
     Magick::Image image(Magick::Geometry(width,height),Magick::Color("rgba(0,0,0,0)"));
@@ -234,6 +241,10 @@ void SketchPluginFactory::describe(OFX::ImageEffectDescriptor &desc)
 /** @brief The describe in context function, passed a plugin descriptor and a context */
 void SketchPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, ContextEnum /*context*/)
 {
+    std::string features = MagickCore::GetMagickFeatures();
+    if (features.find("OpenMP") != std::string::npos)
+        _hasOpenMP = true;
+
     // create the mandated source clip
     ClipDescriptor *srcClip = desc.defineClip(kOfxImageEffectSimpleSourceClipName);
     srcClip->addSupportedComponent(ePixelComponentRGBA);
@@ -273,6 +284,18 @@ void SketchPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, Co
         param->setRange(-360, 360);
         param->setDisplayRange(-360, 360);
         param->setDefault(kParamAngleDefault);
+        param->setLayoutHint(OFX::eLayoutHintDivider);
+        page->addChild(*param);
+    }
+    {
+        BooleanParamDescriptor *param = desc.defineBooleanParam(kParamOpenMP);
+        param->setLabel(kParamOpenMPLabel);
+        param->setHint(kParamOpenMPHint);
+        param->setDefault(kParamOpenMPDefault);
+        param->setAnimates(false);
+        if (!_hasOpenMP)
+            param->setEnabled(false);
+        param->setLayoutHint(OFX::eLayoutHintDivider);
         page->addChild(*param);
     }
 }

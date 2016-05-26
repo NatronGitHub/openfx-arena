@@ -32,7 +32,13 @@
 #define kRenderThreadSafety eRenderFullySafe
 #define kHostFrameThreading false
 
+#define kParamOpenMP "openmp"
+#define kParamOpenMPLabel "OpenMP"
+#define kParamOpenMPHint "Enable/Disable OpenMP support. This will enable the plugin to use as many threads as allowed by host."
+#define kParamOpenMPDefault false
+
 using namespace OFX;
+static bool _hasOpenMP = false;
 
 class OilpaintPlugin : public OFX::ImageEffect
 {
@@ -45,6 +51,7 @@ private:
     OFX::Clip *dstClip_;
     OFX::Clip *srcClip_;
     OFX::DoubleParam *radius_;
+    OFX::BooleanParam *enableOpenMP_;
 };
 
 OilpaintPlugin::OilpaintPlugin(OfxImageEffectHandle handle)
@@ -59,8 +66,9 @@ OilpaintPlugin::OilpaintPlugin(OfxImageEffectHandle handle)
     assert(srcClip_ && srcClip_->getPixelComponents() == OFX::ePixelComponentRGBA);
 
     radius_ = fetchDoubleParam(kParamRadius);
+    enableOpenMP_ = fetchBooleanParam(kParamOpenMP);
 
-    assert(radius_);
+    assert(radius_ && enableOpenMP_);
 }
 
 OilpaintPlugin::~OilpaintPlugin()
@@ -140,21 +148,20 @@ void OilpaintPlugin::render(const OFX::RenderArguments &args)
 
     // get params
     double radius;
+    bool enableOpenMP = false;
     radius_->getValueAtTime(args.time, radius);
+    enableOpenMP_->getValueAtTime(args.time, enableOpenMP);
 
     // setup
     int width = srcRod.x2-srcRod.x1;
     int height = srcRod.y2-srcRod.y1;
 
-    // Set max threads allowed by host
-    unsigned int threads = 0;
-    threads = OFX::MultiThread::getNumCPUs();
-    if (threads>0) {
-        Magick::ResourceLimits::thread(threads);
-        #ifdef DEBUG
-        std::cout << "Setting max threads to " << threads << std::endl;
-        #endif
-    }
+    // OpenMP
+    unsigned int threads = 1;
+    if (_hasOpenMP && enableOpenMP)
+        threads = OFX::MultiThread::getNumCPUs();
+
+    Magick::ResourceLimits::thread(threads);
 
     // read image
     Magick::Image image(Magick::Geometry(width,height),Magick::Color("rgba(0,0,0,0)"));
@@ -219,6 +226,10 @@ void OilpaintPluginFactory::describe(OFX::ImageEffectDescriptor &desc)
 /** @brief The describe in context function, passed a plugin descriptor and a context */
 void OilpaintPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, ContextEnum /*context*/)
 {
+    std::string features = MagickCore::GetMagickFeatures();
+    if (features.find("OpenMP") != std::string::npos)
+        _hasOpenMP = true;
+
     // create the mandated source clip
     ClipDescriptor *srcClip = desc.defineClip(kOfxImageEffectSimpleSourceClipName);
     srcClip->addSupportedComponent(ePixelComponentRGBA);
@@ -240,6 +251,18 @@ void OilpaintPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, 
         param->setRange(0, 1000);
         param->setDisplayRange(0, 50);
         param->setDefault(kParamRadiusDefault);
+        param->setLayoutHint(OFX::eLayoutHintDivider);
+        page->addChild(*param);
+    }
+    {
+        BooleanParamDescriptor *param = desc.defineBooleanParam(kParamOpenMP);
+        param->setLabel(kParamOpenMPLabel);
+        param->setHint(kParamOpenMPHint);
+        param->setDefault(kParamOpenMPDefault);
+        param->setAnimates(false);
+        if (!_hasOpenMP)
+            param->setEnabled(false);
+        param->setLayoutHint(OFX::eLayoutHintDivider);
         page->addChild(*param);
     }
 }

@@ -53,8 +53,14 @@
 #define kRenderThreadSafety eRenderFullySafe
 #define kHostFrameThreading false
 
+#define kParamOpenMP "openmp"
+#define kParamOpenMPLabel "OpenMP"
+#define kParamOpenMPHint "Enable/Disable OpenMP support. This will enable the plugin to use as many threads as allowed by host."
+#define kParamOpenMPDefault false
+
 using namespace OFX;
 static bool gHostIsNatron = false;
+static bool _hasOpenMP = false;
 
 class PolaroidPlugin : public OFX::ImageEffect
 {
@@ -74,6 +80,7 @@ private:
     OFX::StringParam *font_;
     bool has_fontconfig;
     bool has_freetype;
+    OFX::BooleanParam *enableOpenMP_;
 };
 
 PolaroidPlugin::PolaroidPlugin(OfxImageEffectHandle handle)
@@ -101,8 +108,9 @@ PolaroidPlugin::PolaroidPlugin(OfxImageEffectHandle handle)
     fontSize_ = fetchIntParam(kParamFontSize);
     fontName_ = fetchChoiceParam(kParamFontName);
     font_ = fetchStringParam(kParamFont);
+    enableOpenMP_ = fetchBooleanParam(kParamOpenMP);
 
-    assert(text_ && angle_ && fontSize_ && fontName_ && font_);
+    assert(text_ && angle_ && fontSize_ && fontName_ && font_ && enableOpenMP_);
 
     // Setup selected font
     std::string fontString, fontCombo;
@@ -217,12 +225,14 @@ void PolaroidPlugin::render(const OFX::RenderArguments &args)
     std::string text, fontName, font;
     double angle;
     int fontSize,fontID;
+    bool enableOpenMP = false;
     text_->getValueAtTime(args.time, text);
     angle_->getValueAtTime(args.time, angle);
     fontSize_->getValueAtTime(args.time, fontSize);
     fontName_->getValueAtTime(args.time, fontID);
     font_->getValueAtTime(args.time, font);
     fontName_->getOption(fontID,fontName);
+    enableOpenMP_->getValueAtTime(args.time, enableOpenMP);
 
     // always prefer font
     if (!font.empty())
@@ -236,15 +246,12 @@ void PolaroidPlugin::render(const OFX::RenderArguments &args)
     int width = srcRod.x2-srcRod.x1;
     int height = srcRod.y2-srcRod.y1;
 
-    // Set max threads allowed by host
-    unsigned int threads = 0;
-    threads = OFX::MultiThread::getNumCPUs();
-    if (threads>0) {
-        Magick::ResourceLimits::thread(threads);
-        #ifdef DEBUG
-        std::cout << "Setting max threads to " << threads << std::endl;
-        #endif
-    }
+    // OpenMP
+    unsigned int threads = 1;
+    if (_hasOpenMP && enableOpenMP)
+        threads = OFX::MultiThread::getNumCPUs();
+
+    Magick::ResourceLimits::thread(threads);
 
     // read image
     Magick::Image image(Magick::Geometry(width,height),Magick::Color("rgba(0,0,0,0)"));
@@ -353,6 +360,10 @@ void PolaroidPluginFactory::describe(OFX::ImageEffectDescriptor &desc)
 /** @brief The describe in context function, passed a plugin descriptor and a context */
 void PolaroidPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, ContextEnum /*context*/)
 {
+    std::string features = MagickCore::GetMagickFeatures();
+    if (features.find("OpenMP") != std::string::npos)
+        _hasOpenMP = true;
+
     gHostIsNatron = (OFX::getImageEffectHostDescription()->isNatron);
 
     // create the mandated source clip
@@ -451,6 +462,18 @@ void PolaroidPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, 
         param->setDisplayRange(0, 500);
         param->setDefault(kParamFontSizeDefault);
         param->setAnimates(true);
+        param->setLayoutHint(OFX::eLayoutHintDivider);
+        page->addChild(*param);
+    }
+    {
+        BooleanParamDescriptor *param = desc.defineBooleanParam(kParamOpenMP);
+        param->setLabel(kParamOpenMPLabel);
+        param->setHint(kParamOpenMPHint);
+        param->setDefault(kParamOpenMPDefault);
+        param->setAnimates(false);
+        if (!_hasOpenMP)
+            param->setEnabled(false);
+        param->setLayoutHint(OFX::eLayoutHintDivider);
         page->addChild(*param);
     }
 }

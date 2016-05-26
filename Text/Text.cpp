@@ -136,8 +136,14 @@
 #define kParamGravityHint "Select text gravity"
 #define kParamGravityDefault 0
 
+#define kParamOpenMP "openmp"
+#define kParamOpenMPLabel "OpenMP"
+#define kParamOpenMPHint "Enable/Disable OpenMP support. This will enable the plugin to use as many threads as allowed by host."
+#define kParamOpenMPDefault false
+
 using namespace OFX;
 static bool gHostIsNatron = false;
+static bool _hasOpenMP = false;
 
 class TextPlugin : public OFX::ImageEffect
 {
@@ -181,6 +187,7 @@ private:
     OFX::StringParam *font_;
     bool has_fontconfig;
     bool has_freetype;
+    OFX::BooleanParam *enableOpenMP_;
 };
 
 TextPlugin::TextPlugin(OfxImageEffectHandle handle)
@@ -227,8 +234,9 @@ TextPlugin::TextPlugin(OfxImageEffectHandle handle)
     height_ = fetchIntParam(kParamHeight);
     gravity_ = fetchChoiceParam(kParamGravity);
     font_ = fetchStringParam(kParamFont);
+    enableOpenMP_ = fetchBooleanParam(kParamOpenMP);
 
-    assert(position_ && text_ && fontSize_ && fontName_ && textColor_ && strokeColor_ && strokeWidth_ && fontOverride_ && shadowOpacity_ && shadowSigma_ && interlineSpacing_ && interwordSpacing_ && textSpacing_ && shadowColor_ && shadowX_ && shadowY_ && shadowBlur_ && width_ && height_ && gravity_ && font_);
+    assert(position_ && text_ && fontSize_ && fontName_ && textColor_ && strokeColor_ && strokeWidth_ && fontOverride_ && shadowOpacity_ && shadowSigma_ && interlineSpacing_ && interwordSpacing_ && textSpacing_ && shadowColor_ && shadowX_ && shadowY_ && shadowBlur_ && width_ && height_ && gravity_ && font_ && enableOpenMP_);
 
     // Setup selected font
     std::string fontString, fontCombo;
@@ -327,6 +335,7 @@ void TextPlugin::render(const OFX::RenderArguments &args)
     double x, y, r, g, b, a, r_s, g_s, b_s, a_s, strokeWidth, shadowOpacity, shadowSigma, interlineSpacing, interwordSpacing, textSpacing, shadowR, shadowG, shadowB, shadowBlur;
     int fontSize, fontID, shadowX, shadowY, gravity,cwidth,cheight;
     std::string text, fontOverride, fontName, font;
+    bool enableOpenMP = false;
 
     position_->getValueAtTime(args.time, x, y);
     text_->getValueAtTime(args.time, text);
@@ -350,6 +359,7 @@ void TextPlugin::render(const OFX::RenderArguments &args)
     height_->getValueAtTime(args.time, cheight);
     font_->getValueAtTime(args.time, font);
     fontName_->getOption(fontID,fontName);
+    enableOpenMP_->getValueAtTime(args.time, enableOpenMP);
 
     // always prefer font
     if (!font.empty())
@@ -363,11 +373,12 @@ void TextPlugin::render(const OFX::RenderArguments &args)
     if (!fontOverride.empty())
         fontName=fontOverride;
 
-    // Set max threads allowed by host
-    unsigned int threads = 0;
-    threads = OFX::MultiThread::getNumCPUs();
-    if (threads>0)
-        Magick::ResourceLimits::thread(threads);
+    // OpenMP
+    unsigned int threads = 1;
+    if (_hasOpenMP && enableOpenMP)
+        threads = OFX::MultiThread::getNumCPUs();
+
+    Magick::ResourceLimits::thread(threads);
 
     // Generate empty image
     int width = dstRod.x2-dstRod.x1;
@@ -572,6 +583,10 @@ void TextPluginFactory::describe(OFX::ImageEffectDescriptor &desc)
 /** @brief The describe in context function, passed a plugin descriptor and a context */
 void TextPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, ContextEnum /*context*/)
 {
+    std::string features = MagickCore::GetMagickFeatures();
+    if (features.find("OpenMP") != std::string::npos)
+        _hasOpenMP = true;
+
     // natron?
     gHostIsNatron = (OFX::getImageEffectHostDescription()->isNatron);
 
@@ -606,6 +621,16 @@ void TextPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, Cont
         hostHasNativeOverlayForPosition = param->getHostHasNativeOverlayHandle();
         if (hostHasNativeOverlayForPosition)
             param->setUseHostNativeOverlayHandle(true);
+        page->addChild(*param);
+    }
+    {
+        BooleanParamDescriptor *param = desc.defineBooleanParam(kParamOpenMP);
+        param->setLabel(kParamOpenMPLabel);
+        param->setHint(kParamOpenMPHint);
+        param->setDefault(kParamOpenMPDefault);
+        param->setAnimates(false);
+        if (!_hasOpenMP)
+            param->setEnabled(false);
         page->addChild(*param);
     }
     {

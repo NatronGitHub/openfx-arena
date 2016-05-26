@@ -42,7 +42,7 @@
 #define kParamOpenCL "opencl"
 #define kParamOpenCLLabel "OpenCL"
 #define kParamOpenCLHint "Enable/Disable OpenCL. This will enable the plugin to use supported GPU(s) for better performance."
-#define kParamOpenCLDefault true
+#define kParamOpenCLDefault false
 
 #define kSupportsTiles 0
 #define kSupportsMultiResolution 1

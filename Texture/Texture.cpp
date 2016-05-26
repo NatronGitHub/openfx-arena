@@ -55,8 +55,14 @@
 #define kParamToColorLabel "Color to"
 #define kParamToColorHint "Set end color, you must set a start color for this to work. Valid values are : none (transparent), color name (red, blue etc) or hex colors"
 
+#define kParamOpenMP "openmp"
+#define kParamOpenMPLabel "OpenMP"
+#define kParamOpenMPHint "Enable/Disable OpenMP support. This will enable the plugin to use as many threads as allowed by host."
+#define kParamOpenMPDefault false
+
 using namespace OFX;
 static bool gHostIsNatron = false;
+static bool _hasOpenMP = false;
 
 static unsigned int hash(unsigned int a)
 {
@@ -84,6 +90,7 @@ private:
     OFX::IntParam *height_;
     OFX::StringParam *fromColor_;
     OFX::StringParam *toColor_;
+    OFX::BooleanParam *enableOpenMP_;
 };
 
 TexturePlugin::TexturePlugin(OfxImageEffectHandle handle)
@@ -103,8 +110,9 @@ TexturePlugin::TexturePlugin(OfxImageEffectHandle handle)
     height_ = fetchIntParam(kParamHeight);
     fromColor_ = fetchStringParam(kParamFromColor);
     toColor_ = fetchStringParam(kParamToColor);
+    enableOpenMP_ = fetchBooleanParam(kParamOpenMP);
 
-    assert(effect_ && seed_ && width_ && height_ && fromColor_ && toColor_);
+    assert(effect_ && seed_ && width_ && height_ && fromColor_ && toColor_ && enableOpenMP_);
 }
 
 TexturePlugin::~TexturePlugin()
@@ -168,21 +176,20 @@ void TexturePlugin::render(const OFX::RenderArguments &args)
 
     // Get params
     int effect,seed;
+    bool enableOpenMP = false;
     std::string fromColor, toColor;
     effect_->getValueAtTime(args.time, effect);
     seed_->getValueAtTime(args.time, seed);
     fromColor_->getValueAtTime(args.time, fromColor);
     toColor_->getValueAtTime(args.time, toColor);
+    enableOpenMP_->getValueAtTime(args.time, enableOpenMP);
 
-    // Set max threads allowed by host
-    unsigned int threads = 0;
-    threads = OFX::MultiThread::getNumCPUs();
-    if (threads>0) {
-        Magick::ResourceLimits::thread(threads);
-        #ifdef DEBUG
-        std::cout << "Setting max threads to " << threads << std::endl;
-        #endif
-    }
+    // OpenMP
+    unsigned int threads = 1;
+    if (_hasOpenMP && enableOpenMP)
+        threads = OFX::MultiThread::getNumCPUs();
+
+    Magick::ResourceLimits::thread(threads);
 
     // Generate empty image
     int width = dstRod.x2-dstRod.x1;
@@ -321,6 +328,10 @@ void TexturePluginFactory::describe(OFX::ImageEffectDescriptor &desc)
 /** @brief The describe in context function, passed a plugin descriptor and a context */
 void TexturePluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, ContextEnum /*context*/)
 {   
+    std::string features = MagickCore::GetMagickFeatures();
+    if (features.find("OpenMP") != std::string::npos)
+        _hasOpenMP = true;
+
     gHostIsNatron = (OFX::getImageEffectHostDescription()->isNatron);
 
     // there has to be an input clip, even for generators
@@ -419,6 +430,18 @@ void TexturePluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, C
         param->setHint(kParamToColorHint);
         param->setStringType(eStringTypeSingleLine);
         param->setAnimates(true);
+        param->setLayoutHint(OFX::eLayoutHintDivider);
+        page->addChild(*param);
+    }
+    {
+        BooleanParamDescriptor *param = desc.defineBooleanParam(kParamOpenMP);
+        param->setLabel(kParamOpenMPLabel);
+        param->setHint(kParamOpenMPHint);
+        param->setDefault(kParamOpenMPDefault);
+        param->setAnimates(false);
+        if (!_hasOpenMP)
+            param->setEnabled(false);
+        param->setLayoutHint(OFX::eLayoutHintDivider);
         page->addChild(*param);
     }
 }

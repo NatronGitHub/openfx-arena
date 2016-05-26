@@ -52,7 +52,13 @@
 #define kRenderThreadSafety eRenderFullySafe
 #define kHostFrameThreading false
 
+#define kParamOpenMP "openmp"
+#define kParamOpenMPLabel "OpenMP"
+#define kParamOpenMPHint "Enable/Disable OpenMP support. This will enable the plugin to use as many threads as allowed by host."
+#define kParamOpenMPDefault false
+
 using namespace OFX;
+static bool _hasOpenMP = false;
 
 class ReflectionPlugin : public OFX::ImageEffect
 {
@@ -69,6 +75,7 @@ private:
     OFX::BooleanParam *matte_;
     OFX::BooleanParam *reflection_;
     OFX::ChoiceParam *mirror_;
+    OFX::BooleanParam *enableOpenMP_;
 };
 
 ReflectionPlugin::ReflectionPlugin(OfxImageEffectHandle handle)
@@ -87,8 +94,9 @@ ReflectionPlugin::ReflectionPlugin(OfxImageEffectHandle handle)
     matte_ = fetchBooleanParam(kParamMatte);
     reflection_ = fetchBooleanParam(kParamReflection);
     mirror_ = fetchChoiceParam(kParamMirror);
+    enableOpenMP_ = fetchBooleanParam(kParamOpenMP);
 
-    assert(spacing_ && offset_ && matte_ && mirror_ && reflection_);
+    assert(spacing_ && offset_ && matte_ && mirror_ && reflection_ && enableOpenMP_);
 }
 
 ReflectionPlugin::~ReflectionPlugin()
@@ -172,11 +180,13 @@ void ReflectionPlugin::render(const OFX::RenderArguments &args)
     int mirror = 0;
     bool matte = false;
     bool reflection = false;
+    bool enableOpenMP = false;
     mirror_->getValueAtTime(args.time, mirror);
     spacing_->getValueAtTime(args.time, spacing);
     offset_->getValueAtTime(args.time, offset);
     matte_->getValueAtTime(args.time, matte);
     reflection_->getValueAtTime(args.time, reflection);
+    enableOpenMP_->getValueAtTime(args.time, enableOpenMP);
 
     // setup
     int srcWidth = srcRod.x2-srcRod.x1;
@@ -190,15 +200,12 @@ void ReflectionPlugin::render(const OFX::RenderArguments &args)
     Magick::Image image3;
     Magick::Image image4;
 
-    // Set max threads allowed by host
-    unsigned int threads = 0;
-    threads = OFX::MultiThread::getNumCPUs();
-    if (threads>0) {
-        Magick::ResourceLimits::thread(threads);
-        #ifdef DEBUG
-        std::cout << "Setting max threads to " << threads << std::endl;
-        #endif
-    }
+    // OpenMP
+    unsigned int threads = 1;
+    if (_hasOpenMP && enableOpenMP)
+        threads = OFX::MultiThread::getNumCPUs();
+
+    Magick::ResourceLimits::thread(threads);
 
     // read source image
     Magick::Image container(Magick::Geometry(srcWidth,srcHeight),Magick::Color("rgba(0,0,0,0)"));
@@ -403,6 +410,10 @@ void ReflectionPluginFactory::describe(OFX::ImageEffectDescriptor &desc)
 /** @brief The describe in context function, passed a plugin descriptor and a context */
 void ReflectionPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, ContextEnum /*context*/)
 {
+    std::string features = MagickCore::GetMagickFeatures();
+    if (features.find("OpenMP") != std::string::npos)
+        _hasOpenMP = true;
+
     // create the mandated source clip
     ClipDescriptor *srcClip = desc.defineClip(kOfxImageEffectSimpleSourceClipName);
     srcClip->addSupportedComponent(ePixelComponentRGBA);
@@ -469,6 +480,18 @@ void ReflectionPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc
         param->appendOption("Flip+Flop");
         param->setDefault(kParamMirrorDefault);
         param->setAnimates(true);
+        param->setLayoutHint(OFX::eLayoutHintDivider);
+        page->addChild(*param);
+    }
+    {
+        BooleanParamDescriptor *param = desc.defineBooleanParam(kParamOpenMP);
+        param->setLabel(kParamOpenMPLabel);
+        param->setHint(kParamOpenMPHint);
+        param->setDefault(kParamOpenMPDefault);
+        param->setAnimates(false);
+        if (!_hasOpenMP)
+            param->setEnabled(false);
+        param->setLayoutHint(OFX::eLayoutHintDivider);
         page->addChild(*param);
     }
 }
