@@ -24,7 +24,7 @@ Requirements
  * libcdr
  * librevenge
  * poppler-glib
- * ImageMagick (6.9.3-5+ Q32HDRI) with:
+ * ImageMagick (6.9.4-4+ Q32HDRI) with:
    * freetype
    * fontconfig
    * libpng
