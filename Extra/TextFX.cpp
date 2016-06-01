@@ -1075,9 +1075,14 @@ void TextFXPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, Co
         BooleanParamDescriptor *param = desc.defineBooleanParam(kParamAutoSize);
         param->setLabel(kParamAutoSizeLabel);
         param->setHint(kParamAutoSizeHint);
-        param->setDefault(kParamAutoSizeDefault);
         param->setAnimates(false);
         param->setLayoutHint(eLayoutHintNoNewLine, 1);
+#if defined(_WIN32) || defined(__WIN32__) || defined(WIN32)
+        param->setEnabled(false);
+        param->setDefault(false);
+#else
+        param->setDefault(kParamAutoSizeDefault);
+#endif
         page->addChild(*param);
     }
     {
