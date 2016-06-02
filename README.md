@@ -36,4 +36,3 @@ Requirements
    * cairo
    * libxml2
 
-
