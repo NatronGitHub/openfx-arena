@@ -37,3 +37,5 @@ lodepng.h:
 	curl -o $@ https://raw.githubusercontent.com/lvandeve/lodepng/$(PNGVERSION)/lodepng.h
 
 $(OBJECTPATH)/lodepng.o: lodepng.cpp lodepng.h
+$(OBJECTPATH)/ReadKrita.o: ReadKrita.cpp lodepng.h
+$(OBJECTPATH)/OpenRaster.o: OpenRaster.cpp lodepng.h
