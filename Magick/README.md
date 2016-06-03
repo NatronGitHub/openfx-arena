@@ -37,7 +37,7 @@ Build
 
 Build instructions for Linux, should be similar for BSD, OS X, MinGW.
 
-Install lcms2, zlib, freetype, fontconfig through your package manager, then build a custom version of ImageMagick:
+Install lcms2, zlib, freetype through your package manager, then build a custom version of ImageMagick:
 
 ```
 sh magick.sh
