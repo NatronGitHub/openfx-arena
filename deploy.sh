@@ -15,7 +15,7 @@ CWD=$(pwd)
 MAGICK=6.9.4-6
 OCIO=1.0.9
 OCIO_URL=https://github.com/imageworks/OpenColorIO/archive/v${OCIO}.tar.gz
-MAGICK_URL=https://github.com/olear/openfx-arena/releases/download/Natron-2.0.0-RC6/ImageMagick-${MAGICK}.tar.xz
+MAGICK_URL=https://github.com/olear/openfx-arena/releases/download/Natron-2.0.4/ImageMagick-${MAGICK}.tar.xz
 if [ -z "$QUANTUM" ]; then
   Q=32
 else
