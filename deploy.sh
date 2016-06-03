@@ -201,14 +201,34 @@ else
 fi
 if [ "$PKGOS" = "Windows" ]; then
   if [ "$TAG" = "release" ]; then
-    strip -s $PKGSRC/$(uname -s)-$BIT-$TAG/$PKGNAME.ofx.bundle/Contents/Win$BIT/*
+    if [ "$PKGNAME" = "Arena" ]; then
+      strip -s Extra/$(uname -s)-$BIT-$TAG/Extra.ofx.bundle/Contents/Win$BIT/*
+      strip -s Magick/$(uname -s)-$BIT-$TAG/Magick.ofx.bundle/Contents/Win$BIT/*
+    else
+      strip -s $PKGSRC/$(uname -s)-$BIT-$TAG/$PKGNAME.ofx.bundle/Contents/Win$BIT/*
+    fi
   fi
-  mv $PKGSRC/$(uname -s)-$BIT-$TAG/$PKGNAME.ofx.bundle $CWD/$PKG/ || exit 1
+  if [ "$PKGNAME" = "Arena" ]; then
+    mv Extra/$(uname -s)-$BIT-$TAG/Extra.ofx.bundle $CWD/$PKG/ || exit 1
+    mv Magick/$(uname -s)-$BIT-$TAG/Magick.ofx.bundle $CWD/$PKG/ || exit 1
+  else
+    mv $PKGSRC/$(uname -s)-$BIT-$TAG/$PKGNAME.ofx.bundle $CWD/$PKG/ || exit 1
+  fi
 else
   if [ "$TAG" = "release" ]; then
-    strip -s $PKGSRC/$(uname -s)-$BIT-$TAG/$PKGNAME.ofx.bundle/Contents/$PKGOS-$PKGBIT/$PKGNAME.ofx
+    if [ "$PKGNAME" = "Arena" ]; then
+      strip -s Extra/$(uname -s)-$BIT-$TAG/Extra.ofx.bundle/Contents/$PKGOS-$PKGBIT/Extra.ofx
+      strip -s Magick/$(uname -s)-$BIT-$TAG/Magick.ofx.bundle/Contents/$PKGOS-$PKGBIT/Magick.ofx
+    else
+      strip -s $PKGSRC/$(uname -s)-$BIT-$TAG/$PKGNAME.ofx.bundle/Contents/$PKGOS-$PKGBIT/$PKGNAME.ofx
+    fi
   fi
-  mv $PKGSRC/$(uname -s)-$BIT-$TAG/$PKGNAME.ofx.bundle $CWD/$PKG/ || exit 1
+  if [ "$PKGNAME" = "Arena" ]; then
+    mv Extra/$(uname -s)-$BIT-$TAG/Extra.ofx.bundle $CWD/$PKG/ || exit 1
+    mv Magick/$(uname -s)-$BIT-$TAG/Magick.ofx.bundle $CWD/$PKG/ || exit 1
+  else
+    mv $PKGSRC/$(uname -s)-$BIT-$TAG/$PKGNAME.ofx.bundle $CWD/$PKG/ || exit 1
+  fi
 fi
 
 # Package
