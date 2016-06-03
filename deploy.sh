@@ -125,14 +125,12 @@ if [ ! -f ${PREFIX}/lib/libMagick++-6.Q${Q}HDRI.a ]; then
     fi
     cd $CWD/3rdparty/ImageMagick-$MAGICK || exit 1
   fi
-  patch -p0 < $CWD/TextPango/magick-6.9.1-10-pango-align-hack.diff || exit 1
   if [ "$PKGOS" = "Windows" ]; then
-    patch -p1 < $CWD/Bundle/mingw.patch || exit 1
-    patch -p0 < $CWD/Bundle/mingw-utf8.diff || exit 1
-    MAGICK_LFLAGS="-lws2_32"
+    patch -p1 < $CWD/Magick/mingw.patch || exit 1
+    patch -p0 < $CWD/Magick/mingw-utf8.diff || exit 1
   fi
   $MAKE distclean
-  CFLAGS="-m${BIT} ${BF}" CXXFLAGS="-m${BIT} ${BF} ${BSD} -I${PREFIX}/include" CPPFLAGS="-I${PREFIX}/include -L${PREFIX}/lib" LDFLAGS="$MAGICK_LFLAGS" ./configure --libdir=${PREFIX}/lib --prefix=${PREFIX} $MAGICK_OPT || exit 1
+  CFLAGS="-m${BIT} ${BF}" CXXFLAGS="-m${BIT} ${BF} ${BSD} -I${PREFIX}/include" CPPFLAGS="-I${PREFIX}/include -L${PREFIX}/lib" ./configure --libdir=${PREFIX}/lib --prefix=${PREFIX} $MAGICK_OPT || exit 1
   $MAKE -j$JOBS install || exit 1
   mkdir -p $PREFIX/share/doc/ImageMagick/ || exit 1
   cp LICENSE $PREFIX/share/doc/ImageMagick/ || exit 1

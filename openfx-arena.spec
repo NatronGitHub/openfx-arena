@@ -58,8 +58,7 @@ cp LICENSE LICENSE.ImageMagick
 cd ..
 
 # Build plugins (link static for nuke compat)
-make -C Extra CONFIG=release LDFLAGS_ADD="-static-libgcc -static-libstdc++"
-make -C Magick CONFIG=release LDFLAGS_ADD="-static-libgcc -static-libstdc++"
+make CONFIG=release LDFLAGS_ADD="-static-libgcc -static-libstdc++"
 cp OpenFX/Support/LICENSE OpenFX/Support/LICENSE.OpenFX
 cp OpenFX-IO/LICENSE OpenFX-IO/LICENSE.OpenFX-IO
 cp SupportExt/LICENSE SupportExt/LICENSE.SupportExt
