@@ -40,12 +40,7 @@ Build instructions for Linux, should be similar for BSD, OS X, MinGW.
 Install lcms2, zlib, freetype, fontconfig through your package manager, then build a custom version of ImageMagick:
 
 ```
-wget http://imagemagick.org/download/releases/ImageMagick-6.9.4-4.tar.xz
-tar xvf ImageMagick-6.9.4-4.tar.xz
-cd ImageMagick-6.9.4-4
-CPPFLAGS="-fPIC" ./configure --prefix=/usr/local/magick6 --disable-docs --disable-deprecated --with-magick-plus-plus=yes --with-quantum-depth=32 --without-dps --without-djvu --without-fftw --without-fpx --without-gslib --without-gvc --without-jbig --without-jpeg --with-lcms --without-openjp2 --without-lqr --without-lzma --without-openexr --without-pango --without-png --without-rsvg --without-tiff --without-webp --without-xml --with-zlib --without-bzlib --enable-static --disable-shared --enable-hdri --with-freetype --with-fontconfig --without-x --without-modules --without-wmf
-make
-sudo make install
+sh magick.sh
 ```
 
 Building Magick.ofx:

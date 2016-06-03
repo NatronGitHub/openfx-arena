@@ -25,87 +25,47 @@ PLUGINOBJECTS = \
 PLUGINNAME = Magick
 
 RESOURCES = \
-../Bundle/Extra.png \
-../Bundle/Extra.svg \
-../Texture/net.fxarena.openfx.Texture.png \
-../Texture/net.fxarena.openfx.Texture.svg \
-../Tile/net.fxarena.openfx.Tile.png \
-../Tile/net.fxarena.openfx.Tile.svg \
-../Reflection/net.fxarena.openfx.Reflection.png \
-../Reflection/net.fxarena.openfx.Reflection.svg \
-../Arc/net.fxarena.openfx.Arc.png \
-../Arc/net.fxarena.openfx.Arc.svg \
-../Polar/net.fxarena.openfx.Polar.png \
-../Polar/net.fxarena.openfx.Polar.svg \
-../Roll/net.fxarena.openfx.Roll.png \
-../Roll/net.fxarena.openfx.Roll.svg \
-../Wave/net.fxarena.openfx.Wave.png \
-../Wave/net.fxarena.openfx.Wave.svg \
-../Swirl/net.fxarena.openfx.Swirl.png \
-../Swirl/net.fxarena.openfx.Swirl.svg \
-../Implode/net.fxarena.openfx.Implode.png \
-../Implode/net.fxarena.openfx.Implode.svg \
-../Charcoal/net.fxarena.openfx.Charcoal.png \
-../Charcoal/net.fxarena.openfx.Charcoal.svg \
-../Oilpaint/net.fxarena.openfx.Oilpaint.png \
-../Oilpaint/net.fxarena.openfx.Oilpaint.svg \
-../ReadPSD/net.fxarena.openfx.ReadPSD.png \
-../ReadPSD/net.fxarena.openfx.ReadPSD.svg \
-../Sketch/net.fxarena.openfx.Sketch.png \
-../Sketch/net.fxarena.openfx.Sketch.svg \
-../Polaroid/net.fxarena.openfx.Polaroid.png \
-../Polaroid/net.fxarena.openfx.Polaroid.svg \
-../Edges/net.fxarena.openfx.Edges.png \
-../Edges/net.fxarena.openfx.Edges.svg \
-../Modulate/net.fxarena.openfx.Modulate.png \
-../Modulate/net.fxarena.openfx.Modulate.svg \
-../ReadMisc/fr.inria.openfx.ReadMisc.png \
-../ReadMisc/fr.inria.openfx.ReadMisc.svg \
-../Text/net.fxarena.openfx.Text.png \
-../Text/net.fxarena.openfx.Text.svg
-
-VPATH += \
-../Texture \
-../Tile \
-../Reflection \
-../Arc \
-../Polar \
-../Roll \
-../Wave \
-../Swirl \
-../Implode \
-../Charcoal \
-../Oilpaint \
-../ReadPSD \
-../Sketch \
-../Polaroid \
-../Edges \
-../Modulate \
-../ReadMisc \
-../Text
+Magick.png \
+Magick.svg \
+net.fxarena.openfx.Texture.png \
+net.fxarena.openfx.Texture.svg \
+net.fxarena.openfx.Tile.png \
+net.fxarena.openfx.Tile.svg \
+net.fxarena.openfx.Reflection.png \
+net.fxarena.openfx.Reflection.svg \
+net.fxarena.openfx.Arc.png \
+net.fxarena.openfx.Arc.svg \
+net.fxarena.openfx.Polar.png \
+net.fxarena.openfx.Polar.svg \
+net.fxarena.openfx.Roll.png \
+net.fxarena.openfx.Roll.svg \
+net.fxarena.openfx.Wave.png \
+net.fxarena.openfx.Wave.svg \
+net.fxarena.openfx.Swirl.png \
+net.fxarena.openfx.Swirl.svg \
+net.fxarena.openfx.Implode.png \
+net.fxarena.openfx.Implode.svg \
+net.fxarena.openfx.Charcoal.png \
+net.fxarena.openfx.Charcoal.svg \
+net.fxarena.openfx.Oilpaint.png \
+net.fxarena.openfx.Oilpaint.svg \
+net.fxarena.openfx.ReadPSD.png \
+net.fxarena.openfx.ReadPSD.svg \
+net.fxarena.openfx.Sketch.png \
+net.fxarena.openfx.Sketch.svg \
+net.fxarena.openfx.Polaroid.png \
+net.fxarena.openfx.Polaroid.svg \
+net.fxarena.openfx.Edges.png \
+net.fxarena.openfx.Edges.svg \
+net.fxarena.openfx.Modulate.png \
+net.fxarena.openfx.Modulate.svg \
+fr.inria.openfx.ReadMisc.png \
+fr.inria.openfx.ReadMisc.svg \
+net.fxarena.openfx.Text.png \
+net.fxarena.openfx.Text.svg
 
 include ../Makefile.master
 include ../Makefile.io
-
-CXXFLAGS += \
--I../Texture \
--I../Tile \
--I../Reflection \
--I../Arc \
--I../Polar \
--I../Roll \
--I../Wave \
--I../Swirl \
--I../Implode \
--I../Charcoal \
--I../Oilpaint \
--I../ReadPSD \
--I../Sketch \
--I../Polaroid \
--I../Edges \
--I../Modulate \
--I../ReadMisc \
--I../Text
 
 CXXFLAGS  += $(MAGICK_CXXFLAGS) $(LCMS_CXXFLAGS)
 LINKFLAGS += $(MAGICK_LINKFLAGS) $(LCMS_LINKFLAGS)
