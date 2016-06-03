@@ -12,26 +12,19 @@
 
 CWD=$(pwd)
 
-MAGICK=6.9.3-5
+MAGICK=6.9.4-6
 OCIO=1.0.9
 OCIO_URL=https://github.com/imageworks/OpenColorIO/archive/v${OCIO}.tar.gz
-MAGICK_URL=https://github.com/olear/openfx-arena/releases/download/Natron-2.0.0-RC6/ImageMagick-6.9.3-5.tar.xz
+MAGICK_URL=https://github.com/olear/openfx-arena/releases/download/Natron-2.0.0-RC6/ImageMagick-${MAGICK}.tar.xz
 if [ -z "$QUANTUM" ]; then
   Q=32
 else
   Q=$QUANTUM
 fi
-if [ "$MAGICK_OFX" = "1" ]; then
-  MAGICK_OPT="--disable-docs --disable-deprecated --with-magick-plus-plus=yes --with-quantum-depth=${Q} --without-dps --without-djvu --without-fftw --without-fpx --without-gslib --without-gvc --without-jbig --without-jpeg --with-lcms --without-openjp2 --without-lqr --without-lzma --without-openexr --without-pango --without-png --without-rsvg --without-tiff --without-webp --without-xml --without-zlib --without-bzlib --enable-static --disable-shared --enable-hdri --with-freetype --with-fontconfig --without-x --without-modules --without-wmf"
-else
-  MAGICK_OPT="--disable-docs --disable-deprecated --with-magick-plus-plus=yes --with-quantum-depth=${Q} --without-dps --without-djvu --without-fftw --without-fpx --without-gslib --without-gvc --without-jbig --without-jpeg --with-lcms --without-openjp2 --without-lqr --without-lzma --without-openexr --with-pango --with-png --with-rsvg --without-tiff --without-webp --with-xml --with-zlib --without-bzlib --enable-static --disable-shared --enable-hdri --with-freetype --with-fontconfig --without-x --without-modules --without-wmf"
-fi
-
-PNG=1.2.56
-PNG_URL=https://github.com/olear/openfx-arena/releases/download/Natron-2.0.0-RC5/libpng-1.2.56.tar.xz
+MAGICK_OPT="--disable-docs --disable-deprecated --with-magick-plus-plus=yes --with-quantum-depth=${Q} --without-dps --without-djvu --without-fftw --without-fpx --without-gslib --without-gvc --without-jbig --without-jpeg --with-lcms --without-openjp2 --without-lqr --without-lzma --without-openexr --without-pango --without-png --without-rsvg --without-tiff --without-webp --without-xml --without-zlib --without-bzlib --enable-static --disable-shared --enable-hdri --with-freetype --without-fontconfig --without-x --without-modules --without-wmf"
 
 if [ -z "$VERSION" ]; then
-  ARENA=2.0.0
+  ARENA=2.1.0
 else
   ARENA=$VERSION
 fi
@@ -75,7 +68,7 @@ fi
 if [ "$OS" = "FreeBSD" ]; then
   PKGOS=FreeBSD
 fi
-if [ "$OS" = "MINGW64_NT-6.1" ]; then
+if [ "$OS" = "MINGW64_NT-6.1" ] || [ "$OS" = "MINGW32_NT-6.1" ]; then
   PKGOS=Windows
 fi
 if [ "$OS" = "Darwin" ]; then
@@ -109,24 +102,6 @@ fi
 if [ ! -d $PREFIX ]; then
   mkdir -p $PREFIX/{bin,lib,include} || exit 1
   (cd $PREFIX ; ln -sf lib lib64)
-fi
-
-# libpng
-if [ ! -f ${PREFIX}/lib/libpng.a ] && [ "$NOPNG" != "1" ]; then
-  if [ ! -f $CWD/3rdparty/libpng-$PNG.tar.gz ]; then
-    wget $PNG_URL -O $CWD/3rdparty/libpng-$PNG.tar.gz || exit 1
-  fi
-  if [ ! -d $CWD/3rdparty/libpng-$PNG ]; then
-    tar xvf $CWD/3rdparty/libpng-$PNG.tar.gz -C $CWD/3rdparty/ || exit 1
-  fi
-  cd $CWD/3rdparty/libpng-$PNG || exit 1
-  $MAKE distclean
-  CFLAGS="-m${BIT} ${BF}" CXXFLAGS="-m${BIT} ${BF} ${BSD} -I${PREFIX}/include" CPPFLAGS="-I${PREFIX}/include -L${PREFIX}/lib" ./configure --prefix=$PREFIX --enable-static --disable-shared || exit 1
-  $MAKE -j$JOBS install || exit 1
-  mkdir -p $PREFIX/share/doc/libpng/ || exit 1
-  cp LICENSE $PREFIX/share/doc/libpng/ || exit 1
-  cd .. || exit 1
-  rm -rf libpng-$PNG || exit 1
 fi
 
 # magick
@@ -198,11 +173,11 @@ if [ "$TRAVIS" = "1" ]; then
   TRAVIS_FLAGS="-DLEGACY"
 fi
 if [ "$PKGOS" != "Windows" ]; then
-  $MAKE STATIC=1 FREEBSD=$USE_FREEBSD BITS=$BIT LDFLAGS_ADD="$GCC_LINK" CXXFLAGS_ADD="$TRAVIS_FLAGS" CONFIG=$TAG clean
-  $MAKE STATIC=1 FREEBSD=$USE_FREEBSD BITS=$BIT LDFLAGS_ADD="$GCC_LINK" CXXFLAGS_ADD="$TRAVIS_FLAGS" CONFIG=$TAG || exit 1
+  $MAKE FREEBSD=$USE_FREEBSD BITS=$BIT LDFLAGS_ADD="$GCC_LINK" CXXFLAGS_ADD="$TRAVIS_FLAGS" CONFIG=$TAG clean
+  $MAKE FREEBSD=$USE_FREEBSD BITS=$BIT LDFLAGS_ADD="$GCC_LINK" CXXFLAGS_ADD="$TRAVIS_FLAGS" CONFIG=$TAG || exit 1
 else
   make MINGW=1 BIT=$BIT CONFIG=$TAG clean
-  make STATIC=1 MINGW=1 BIT=$BIT CONFIG=$TAG || exit 1
+  make MINGW=1 BIT=$BIT CONFIG=$TAG || exit 1
 fi
 
 cd $CWD || exit 1
@@ -214,9 +189,6 @@ cp LICENSE COPYING README.md $CWD/$PKG/ || exit 1
 cp $PREFIX/share/doc/ImageMagick/LICENSE $CWD/$PKG/LICENSE.ImageMagick || exit 1
 cp OpenFX/Support/LICENSE $CWD/$PKG/LICENSE.OpenFX || exit 1
 cp OpenFX-IO/LICENSE $CWD/$PKG/LICENSE.OpenFX-IO || exit 1
-if [ "$NOPNG" != "1" ]; then 
-  cp $PREFIX/share/doc/libpng/LICENSE $CWD/$PKG/LICENSE.libpng || exit 1
-fi
 
 # Strip and copy
 if [ "$PKGNAME" != "Arena" ]; then

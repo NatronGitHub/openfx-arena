@@ -49,12 +49,7 @@ PANGO_LINKFLAGS = $(shell pkg-config pangocairo --libs --static)
 
 # mingw
 ifeq ($(MINGW),1)
-  MAGICK_CXXFLAGS = $(shell Magick++-config --cppflags --cxxflags)
-  MAGICK_LINKFLAGS = $(shell Magick++-config --ldflags --libs)
-  MAGICK_LINKFLAGS += -lgdi32 -lfontconfig -lfreetype -lexpat -lpng -lz -lm -lgomp -lpthread
-  MAGICK_LINKFLAGS += $(shell pkg-config pangocairo --libs --static)
-  MAGICK_LINKFLAGS += $(shell pkg-config librsvg-2.0 --libs --static)
-  MAGICK_LINKFLAGS += $(shell pkg-config libxml-2.0 --libs --static)
+  MAGICK_LINKFLAGS += -lgdi32 -lfreetype -lexpat -lz -lws2_32
 endif
 
 # FreeBSD
@@ -63,9 +58,3 @@ ifeq ($(FREEBSD),1)
   LDFLAGS += -L/usr/local/lib
 endif
 
-# Static
-ifeq ($(STATIC_LIBS),1)
-  MAGICK_LINKFLAGS += $(shell pkg-config pangocairo --libs --static)
-  MAGICK_LINKFLAGS += $(shell pkg-config librsvg-2.0 --libs --static)
-  MAGICK_LINKFLAGS += $(shell pkg-config libxml-2.0 --libs --static)
-endif

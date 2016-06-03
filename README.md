@@ -1,37 +1,40 @@
 OpenFX-Arena [![Build Status](https://travis-ci.org/olear/openfx-arena.svg)](https://travis-ci.org/olear/openfx-arena)
 ============
 
-A set of [OpenFX](http://openfx.sf.net) plugins designed for [Natron](http://natron.fr).
+A set of [OpenFX](http://openfx.sf.net) plugins designed for [Natron](http://natron.fr), but also compatible with other hosts.
 
-```
-git clone https://github.com/olear/openfx-arena
-cd openfx-arena
-git submodule update -i --recursive
-make
-```
+Extra.ofx
+=========
 
-Requirements
-============
+ * OpenRaster
+ * ReadCDR
+ * ReadKrita
+ * ReadSVG
+ * TextFX
 
- * lcms2
- * OpenColorIO
- * fontconfig
- * libxml2
- * libzip
- * pango
- * cairo
- * librsvg2
- * libcdr
- * librevenge
- * poppler-glib
- * ImageMagick (6.9.4-4+ Q32HDRI) with:
-   * freetype
-   * fontconfig
-   * libpng
-   * zlib
-   * libxml2
-   * librsvg
-   * lcms2
-   * pango
-   * cairo
-   * libxml2
+[Read more](Extra/README.md)
+
+Magick.ofx
+==========
+
+ * Arc
+ * Charcoal
+ * Edges
+ * Implode
+ * Modulate
+ * Oilpaint
+ * Polar
+ * Polaroid
+ * ReadMisc
+ * ReadPSD(XCF)
+ * Reflection
+ * Roll
+ * Sketch
+ * Swirl
+ * Text
+ * Texture
+ * Tile
+ * Wave
+
+[Read more](Magick/README.md)
+

@@ -23,7 +23,5 @@ install:
 
 script:
   - git submodule update -i --recursive
-  - NOPNG=1 DEBUG=1 PACKAGE=ReadPDF bash deploy.sh
-  - NOPNG=1 TRAVIS=1 DEBUG=1 PACKAGE=Extra bash deploy.sh
-  - NOPNG=1 NOPNG=1 DEBUG=1 bash deploy.sh
-  - CLEAN=1 MAGICK_OFX=1 NOPNG=1 DEBUG=1 PACKAGE=Magick bash deploy.sh
+  - DEBUG=1 PACKAGE=ReadPDF bash deploy.sh
+  - TRAVIS=1 DEBUG=1 bash deploy.sh
