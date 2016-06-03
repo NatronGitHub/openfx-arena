@@ -11,53 +11,14 @@ OTHER_FILES += \
             Makefile.io \
             Bundle/Makefile \
             Extra/Makefile \
+            Magick/Makefile \
             LICENSE \
             COPYING \
             README.md \
             deploy.sh \
             openfx-arena.spec \
-            Arc/Makefile \
-            Charcoal/Makefile \
-            Edges/Makefile \
-            Implode/Makefile \
-            Modulate/Makefile \
-            Oilpaint/Makefile \
-            Polar/Makefile \
-            Polaroid/Makefile \
-            PovRay/Makefile \
-            ReadPSD/Makefile \
-            Reflection/Makefile \
-            Roll/Makefile \
-            Sketch/Makefile \
-            Swirl/Makefile \
-            Text/Makefile \
-            TextPango/Makefile \
-            Texture/Makefile \
-            Tile/Makefile \
-            Wave/Makefile \
-            ReadMisc/Makefile \
             ReadPDF/Makefile \
-            Arc/Info.plist \
-            Charcoal/Info.plist \
-            Edges/Info.plist \
-            Implode/Info.plist \
-            Modulate/Info.plist \
-            Oilpaint/Info.plist \
-            Polar/Info.plist \
-            Polaroid/Info.plist \
-            PovRay/Info.plist \
-            ReadPSD/Info.plist \
-            Reflection/Info.plist \
-            Roll/Info.plist \
-            Sketch/Info.plist \
-            Swirl/Info.plist \
-            Text/Info.plist \
-            TextPango/Info.plist \
-            Texture/Info.plist \
-            Tile/Info.plist \
-            Wave/Info.plist \
-            Bundle/Info.plist \
-            ReadMisc/Info.plist \
+            Magick/Info.plist \
             Extra/Info.plist
             ReadPDF/Info.plist
 INCLUDEPATH += . \
@@ -68,7 +29,7 @@ INCLUDEPATH += . \
             OpenFX/Support/Plugins/include \
             OpenFX-IO/IOSupport/SequenceParsing \
             OpenFX/Support/Library \
-            tmp/include/ImageMagick-6 \
+            /usr/local/magick6/include/ImageMagick-6 \
             /usr/include \
             /usr/include/libxml2 \
             /usr/include/librevenge-0.0 \
@@ -140,47 +101,44 @@ HEADERS += \
             OpenFX/Support/Plugins/include/ofxsImageBlender.H \
             OpenFX/Support/Plugins/include/ofxsProcessing.H \
             OpenFX-IO/IOSupport/SequenceParsing/tinydir/tinydir.h \
-            tmp/include/ImageMagick-6/Magick++/Blob.h \
-            tmp/include/ImageMagick-6/Magick++/ChannelMoments.h \
-            tmp/include/ImageMagick-6/Magick++/CoderInfo.h \
-            tmp/include/ImageMagick-6/Magick++/Color.h \
-            tmp/include/ImageMagick-6/Magick++/Drawable.h \
-            tmp/include/ImageMagick-6/Magick++/Exception.h \
-            tmp/include/ImageMagick-6/Magick++/Functions.h \
-            tmp/include/ImageMagick-6/Magick++/Geometry.h \
-            tmp/include/ImageMagick-6/Magick++/Image.h \
-            tmp/include/ImageMagick-6/Magick++/Include.h \
-            tmp/include/ImageMagick-6/Magick++/Montage.h \
-            tmp/include/ImageMagick-6/Magick++/Pixels.h \
-            tmp/include/ImageMagick-6/Magick++/ResourceLimits.h \
-            tmp/include/ImageMagick-6/Magick++/STL.h \
-            tmp/include/ImageMagick-6/Magick++/TypeMetric.h \
-            tmp/include/ImageMagick-6/Magick++.h
+            /usr/local/magick6/include/ImageMagick-6/Magick++/Blob.h \
+            /usr/local/magick6/include/ImageMagick-6/Magick++/ChannelMoments.h \
+            /usr/local/magick6/include/ImageMagick-6/Magick++/CoderInfo.h \
+            /usr/local/magick6/include/ImageMagick-6/Magick++/Color.h \
+            /usr/local/magick6/include/ImageMagick-6/Magick++/Drawable.h \
+            /usr/local/magick6/include/ImageMagick-6/Magick++/Exception.h \
+            /usr/local/magick6/include/ImageMagick-6/Magick++/Functions.h \
+            /usr/local/magick6/include/ImageMagick-6/Magick++/Geometry.h \
+            /usr/local/magick6/include/ImageMagick-6/Magick++/Image.h \
+            /usr/local/magick6/include/ImageMagick-6/Magick++/Include.h \
+            /usr/local/magick6/include/ImageMagick-6/Magick++/Montage.h \
+            /usr/local/magick6/include/ImageMagick-6/Magick++/Pixels.h \
+            /usr/local/magick6/include/ImageMagick-6/Magick++/ResourceLimits.h \
+            /usr/local/magick6/include/ImageMagick-6/Magick++/STL.h \
+            /usr/local/magick6/include/ImageMagick-6/Magick++/TypeMetric.h \
+            /usr/local/magick6/include/ImageMagick-6/Magick++.h
 SOURCES += \
-            Arc/Arc.cpp \
-            Charcoal/Charcoal.cpp \
-            Edges/Edges.cpp \
-            Implode/Implode.cpp \
-            Modulate/Modulate.cpp \
-            Oilpaint/Oilpaint.cpp \
-            Polar/Polar.cpp \
-            Polaroid/Polaroid.cpp \
-            PovRay/PovRay.cpp \
+            Magick/Arc.cpp \
+            Magick/Charcoal.cpp \
+            Magick/Edges.cpp \
+            Magick/Implode.cpp \
+            Magick/Modulate.cpp \
+            Magick/Oilpaint.cpp \
+            Magick/Polar.cpp \
+            Magick/Polaroid.cpp \
             Extra/OpenRaster.cpp \
-            ReadPSD/ReadPSD.cpp \
+            Magick/ReadPSD.cpp \
             Extra/ReadSVG.cpp \
-            Reflection/Reflection.cpp \
-            Roll/Roll.cpp \
-            Sketch/Sketch.cpp \
-            Swirl/Swirl.cpp \
-            Text/Text.cpp \
-            TextPango/TextPango.cpp \
-            Texture/Texture.cpp \
-            Tile/Tile.cpp \
-            Wave/Wave.cpp \
+            Magick/Reflection.cpp \
+            Magick/Roll.cpp \
+            Magick/Sketch.cpp \
+            Magick/Swirl.cpp \
+            Magick/Text.cpp \
+            Magick/Texture.cpp \
+            Magick/Tile.cpp \
+            Magick/Wave.cpp \
             Extra/ReadKrita.cpp \
-            ReadMisc/ReadMisc.cpp \
+            Magick/ReadMisc.cpp \
             Extra/ReadCDR.cpp \
             Extra/TextFX.cpp \
-            ReadPDF/ReadPDF.cpp \
-            Extra/map-path-onto.c
+            ReadPDF/ReadPDF.cpp
