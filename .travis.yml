@@ -23,5 +23,4 @@ install:
 
 script:
   - git submodule update -i --recursive
-  - DEBUG=1 PACKAGE=ReadPDF bash deploy.sh
   - TRAVIS=1 DEBUG=1 bash deploy.sh

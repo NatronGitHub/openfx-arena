@@ -17,10 +17,8 @@ OTHER_FILES += \
             README.md \
             deploy.sh \
             openfx-arena.spec \
-            ReadPDF/Makefile \
             Magick/Info.plist \
             Extra/Info.plist
-            ReadPDF/Info.plist
 INCLUDEPATH += . \
             SupportExt \
             OpenFX/Support/include \
@@ -141,4 +139,4 @@ SOURCES += \
             Magick/ReadMisc.cpp \
             Extra/ReadCDR.cpp \
             Extra/TextFX.cpp \
-            ReadPDF/ReadPDF.cpp
+            Extra/ReadPDF.cpp
