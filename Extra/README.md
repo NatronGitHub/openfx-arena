@@ -10,6 +10,7 @@ Plugins
  * ReadCDR
  * ReadKrita
  * ReadSVG
+ * ReadPDF
  * TextFX
 
 Requirements
@@ -24,6 +25,7 @@ Requirements
  * librsvg2
  * libcdr
  * librevenge
+ * poppler-glib
 
 Build
 =====

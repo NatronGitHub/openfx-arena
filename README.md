@@ -10,6 +10,7 @@ Extra.ofx
  * ReadCDR
  * ReadKrita
  * ReadSVG
+ * ReadPDF
  * TextFX
 
 [Read more](Extra/README.md)

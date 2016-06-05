@@ -16,8 +16,8 @@ Source1: ImageMagick-6.9.4-6.tar.xz
 Source2: OpenColorIO-1.0.9.tar.gz
 BuildRoot: %{_tmppath}/%{name}-%{version}-%{release}-root
 
-BuildRequires: freetype-devel fontconfig-devel libxml2-devel librsvg2-devel pango-devel zlib-devel cmake gcc-c++ mesa-libGL-devel expat-devel libstdc++-static libzip-devel libselinux-devel libcdr-devel
-Requires: freetype fontconfig libxml2 librsvg2 pango zlib mesa-libGL expat libzip libcdr
+BuildRequires: freetype-devel fontconfig-devel libxml2-devel librsvg2-devel pango-devel zlib-devel cmake gcc-c++ mesa-libGL-devel expat-devel libstdc++-static libzip-devel libselinux-devel libcdr-devel poppler-glib-devel
+Requires: freetype fontconfig libxml2 librsvg2 pango zlib mesa-libGL expat libzip libcdr poppler-glib
 
 %description
 A set of extra OpenFX plugins for Natron/Nuke.
