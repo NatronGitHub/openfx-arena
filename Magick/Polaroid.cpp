@@ -41,7 +41,7 @@
 #define kParamFontNameLabel "Font family"
 #define kParamFontNameHint "The name of the font to be used"
 #define kParamFontNameDefault "Arial"
-#define kParamFontNameAltDefault "DejaVu-Sans" // failsafe on Linux/BSD
+#define kParamFontNameAltDefault "DejaVu-Sans-Book" // failsafe on Linux/BSD
 
 #define kParamFont "selectedFont"
 #define kParamFontLabel "Font"
