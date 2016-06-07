@@ -258,8 +258,8 @@ void PolaroidPlugin::render(const OFX::RenderArguments &args)
     Magick::Image output(Magick::Geometry(width,height),Magick::Color("rgba(0,0,0,1)"));
     if (srcClip_ && srcClip_->isConnected())
         image.read(width,height,"RGBA",Magick::FloatPixel,(float*)srcImg->getPixelData());
-    //if (!image.matte())
-        //image.matte(true);
+    //if (!image.alpha())
+        //image.alpha(true);
 
     // no fonts?
     if (fontName.empty()) {
@@ -272,9 +272,8 @@ void PolaroidPlugin::render(const OFX::RenderArguments &args)
     image.fontPointsize(std::floor(fontSize * args.renderScale.x + 0.5));
     image.borderColor("white"); // TODO param
     image.backgroundColor("black"); // TODO param
-    // TODO add stuff from Text.ofx
     image.font(fontName);
-    image.polaroid(text,angle);
+    image.polaroid(text,angle,MagickCore::UndefinedInterpolatePixel);
     image.backgroundColor("none");
     image.flip();
     std::ostringstream scaleW;
@@ -292,7 +291,7 @@ void PolaroidPlugin::render(const OFX::RenderArguments &args)
     // return image
     if (dstClip_ && dstClip_->isConnected()) {
         output.composite(image, 0, 0, Magick::OverCompositeOp);
-        output.composite(image, 0, 0, Magick::CopyOpacityCompositeOp);
+        output.composite(image, 0, 0, Magick::CopyAlphaCompositeOp);
         output.write(0,0,args.renderWindow.x2 - args.renderWindow.x1,args.renderWindow.y2 - args.renderWindow.y1,"RGBA",Magick::FloatPixel,(float*)dstImg->getPixelData());
     }
 }

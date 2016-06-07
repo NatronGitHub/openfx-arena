@@ -545,7 +545,7 @@ void ReadPSDPlugin::decodePlane(const std::string& filename, OfxTime time, int /
     // Return image
     Magick::Image container(Magick::Geometry(width,height),Magick::Color("rgba(0,0,0,1)"));
     container.composite(image,offsetX,offsetY,Magick::OverCompositeOp);
-    container.composite(image,offsetX,offsetY,Magick::CopyOpacityCompositeOp);
+    container.composite(image,offsetX,offsetY,Magick::CopyAlphaCompositeOp);
     container.flip();
     container.write(0,0,renderWindow.x2 - renderWindow.x1,renderWindow.y2 - renderWindow.y1,"RGBA",Magick::FloatPixel,pixelData);
 }

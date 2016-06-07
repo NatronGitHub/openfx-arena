@@ -54,7 +54,7 @@
 #define kParamFontNameLabel "Font family"
 #define kParamFontNameHint "The name of the font to be used"
 #define kParamFontNameDefault "Arial"
-#define kParamFontNameAltDefault "DejaVu-Sans" // failsafe on Linux/BSD
+#define kParamFontNameAltDefault "DejaVu-Sans-Book" // failsafe on Linux/BSD
 
 #define kParamFont "font"
 #define kParamFontLabel "Font"
@@ -185,7 +185,6 @@ private:
     OFX::IntParam *height_;
     OFX::ChoiceParam *gravity_;
     OFX::StringParam *font_;
-    bool has_fontconfig;
     bool has_freetype;
     OFX::BooleanParam *enableOpenMP_;
 };
@@ -196,14 +195,11 @@ TextPlugin::TextPlugin(OfxImageEffectHandle handle)
 , dstClip_(0)
 , width_(0)
 , height_(0)
-,has_fontconfig(false)
 ,has_freetype(false)
 {
     Magick::InitializeMagick(NULL);
 
     std::string delegates = MagickCore::GetMagickDelegates();
-    if (delegates.find("fontconfig") != std::string::npos)
-        has_fontconfig = true;
     if (delegates.find("freetype") != std::string::npos)
         has_freetype = true;
 
@@ -293,8 +289,8 @@ void TextPlugin::render(const OFX::RenderArguments &args)
     }
 
     // font support?
-    if (!has_fontconfig||!has_freetype) {
-        setPersistentMessage(OFX::Message::eMessageError, "", "Fontconfig and/or Freetype missing");
+    if (!has_freetype) {
+        setPersistentMessage(OFX::Message::eMessageError, "", "Freetype missing");
         OFX::throwSuiteStatusException(kOfxStatFailed);
         return;
     }
@@ -425,7 +421,7 @@ void TextPlugin::render(const OFX::RenderArguments &args)
     ytext = tmp_y + ((tmp_y+tmp_height-1) - ytext);
 
     // Setup text draw
-    std::list<Magick::Drawable> draw;
+    std::vector<Magick::Drawable> draw;
     switch(gravity) {
     case 1:
         xtext = xtext-(width/2);
@@ -490,7 +486,7 @@ void TextPlugin::render(const OFX::RenderArguments &args)
         if (srcImg.get()) {
             Magick::Image input;
             input.read(width,height,"RGB",Magick::FloatPixel,(float*)srcImg->getPixelData());
-            input.matte(true);
+            input.alpha(true);
             input.composite(image,0,0,Magick::OverCompositeOp);
             image=input;
         }
@@ -499,7 +495,7 @@ void TextPlugin::render(const OFX::RenderArguments &args)
     // return image
     if (dstClip_ && dstClip_->isConnected()) {
         output.composite(image, 0, 0, Magick::OverCompositeOp);
-        output.composite(image, 0, 0, Magick::CopyOpacityCompositeOp);
+        output.composite(image, 0, 0, Magick::CopyAlphaCompositeOp);
         output.write(0,0,args.renderWindow.x2 - args.renderWindow.x1,args.renderWindow.y2 - args.renderWindow.y1,"RGBA",Magick::FloatPixel,(float*)dstImg->getPixelData());
     }
 }
@@ -690,7 +686,7 @@ void TextPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, Cont
 
             if (std::strcmp(fonts[i],kParamFontNameDefault)==0)
                 defaultFont=i;
-            if (std::strcmp(fonts[i],kParamFontNameAltDefault)==0)
+            else if (std::strcmp(fonts[i],kParamFontNameAltDefault)==0)
                 altFont=i;
         }
         for (size_t i = 0; i < fontList; i++)

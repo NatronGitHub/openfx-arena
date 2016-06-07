@@ -256,13 +256,13 @@ void TexturePlugin::render(const OFX::RenderArguments &args)
             break;
         }
         if (effect>8 && effect<12) { // loops 1 2 3
-            image.matte(false);
+            image.alpha(false);
             image.blur(0,10);
             image.normalize();
             image.fx("sin(u*4*pi)*100");
             image.edge(1);
             image.blur(0,10);
-            image.matte(true);
+            image.alpha(true);
         }
     }
     catch(Magick::Warning &warning) { // ignore since warns interupt render

@@ -92,7 +92,7 @@ ReadMiscPlugin::decode(const std::string& filename,
     if (image.columns()>0 && image.rows()>0) {
         Magick::Image container(Magick::Geometry(bounds.x2,bounds.y2),Magick::Color("rgba(0,0,0,1)"));
         container.composite(image,0,0,Magick::OverCompositeOp);
-        container.composite(image,0,0,Magick::CopyOpacityCompositeOp);
+        container.composite(image,0,0,Magick::CopyAlphaCompositeOp);
         container.flip();
         container.write(0,0,renderWindow.x2 - renderWindow.x1,renderWindow.y2 - renderWindow.y1,"RGBA",Magick::FloatPixel,pixelData);
     }

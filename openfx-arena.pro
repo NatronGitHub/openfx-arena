@@ -27,7 +27,7 @@ INCLUDEPATH += . \
             OpenFX/Support/Plugins/include \
             OpenFX-IO/IOSupport/SequenceParsing \
             OpenFX/Support/Library \
-            /usr/local/magick6/include/ImageMagick-6 \
+            /usr/local/magick7/include/ImageMagick-7 \
             /usr/include \
             /usr/include/libxml2 \
             /usr/include/librevenge-0.0 \
@@ -99,22 +99,22 @@ HEADERS += \
             OpenFX/Support/Plugins/include/ofxsImageBlender.H \
             OpenFX/Support/Plugins/include/ofxsProcessing.H \
             OpenFX-IO/IOSupport/SequenceParsing/tinydir/tinydir.h \
-            /usr/local/magick6/include/ImageMagick-6/Magick++/Blob.h \
-            /usr/local/magick6/include/ImageMagick-6/Magick++/ChannelMoments.h \
-            /usr/local/magick6/include/ImageMagick-6/Magick++/CoderInfo.h \
-            /usr/local/magick6/include/ImageMagick-6/Magick++/Color.h \
-            /usr/local/magick6/include/ImageMagick-6/Magick++/Drawable.h \
-            /usr/local/magick6/include/ImageMagick-6/Magick++/Exception.h \
-            /usr/local/magick6/include/ImageMagick-6/Magick++/Functions.h \
-            /usr/local/magick6/include/ImageMagick-6/Magick++/Geometry.h \
-            /usr/local/magick6/include/ImageMagick-6/Magick++/Image.h \
-            /usr/local/magick6/include/ImageMagick-6/Magick++/Include.h \
-            /usr/local/magick6/include/ImageMagick-6/Magick++/Montage.h \
-            /usr/local/magick6/include/ImageMagick-6/Magick++/Pixels.h \
-            /usr/local/magick6/include/ImageMagick-6/Magick++/ResourceLimits.h \
-            /usr/local/magick6/include/ImageMagick-6/Magick++/STL.h \
-            /usr/local/magick6/include/ImageMagick-6/Magick++/TypeMetric.h \
-            /usr/local/magick6/include/ImageMagick-6/Magick++.h
+            /usr/local/magick7/include/ImageMagick-7/Magick++/Blob.h \
+            /usr/local/magick7/include/ImageMagick-7/Magick++/ChannelMoments.h \
+            /usr/local/magick7/include/ImageMagick-7/Magick++/CoderInfo.h \
+            /usr/local/magick7/include/ImageMagick-7/Magick++/Color.h \
+            /usr/local/magick7/include/ImageMagick-7/Magick++/Drawable.h \
+            /usr/local/magick7/include/ImageMagick-7/Magick++/Exception.h \
+            /usr/local/magick7/include/ImageMagick-7/Magick++/Functions.h \
+            /usr/local/magick7/include/ImageMagick-7/Magick++/Geometry.h \
+            /usr/local/magick7/include/ImageMagick-7/Magick++/Image.h \
+            /usr/local/magick7/include/ImageMagick-7/Magick++/Include.h \
+            /usr/local/magick7/include/ImageMagick-7/Magick++/Montage.h \
+            /usr/local/magick7/include/ImageMagick-7/Magick++/Pixels.h \
+            /usr/local/magick7/include/ImageMagick-7/Magick++/ResourceLimits.h \
+            /usr/local/magick7/include/ImageMagick-7/Magick++/STL.h \
+            /usr/local/magick7/include/ImageMagick-7/Magick++/TypeMetric.h \
+            /usr/local/magick7/include/ImageMagick-7/Magick++.h
 SOURCES += \
             Magick/Arc.cpp \
             Magick/Charcoal.cpp \

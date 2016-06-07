@@ -237,8 +237,8 @@ void TilePlugin::render(const OFX::RenderArguments &args)
     montage.tile(grid);
 
     if (matte) {
-        image.matte(false);
-        image.matte(true);
+        image.alpha(false);
+        image.alpha(true);
     }
 
     // add images
@@ -283,7 +283,7 @@ void TilePlugin::render(const OFX::RenderArguments &args)
     // return image
     if (dstClip_ && dstClip_->isConnected()) {
         output.composite(container, 0, 0, Magick::OverCompositeOp);
-        output.composite(container, 0, 0, Magick::CopyOpacityCompositeOp);
+        output.composite(container, 0, 0, Magick::CopyAlphaCompositeOp);
         output.write(0,0,args.renderWindow.x2 - args.renderWindow.x1,args.renderWindow.y2 - args.renderWindow.y1,"RGBA",Magick::FloatPixel,(float*)dstImg->getPixelData());
     }
 }
