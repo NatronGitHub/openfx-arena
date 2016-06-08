@@ -211,15 +211,25 @@ void EdgesPlugin::render(const OFX::RenderArguments &args)
     image.morphology(Magick::EdgeMorphology,Magick::DiamondKernel,edgeWidth.str());
     // multiply
     if (brightness>0) {
+#ifdef IM7
         image.evaluate(Magick::RedChannel,Magick::MultiplyEvaluateOperator,brightness);
         image.evaluate(Magick::GreenChannel,Magick::MultiplyEvaluateOperator,brightness);
         image.evaluate(Magick::BlueChannel,Magick::MultiplyEvaluateOperator,brightness);
+#else
+        image.quantumOperator(Magick::RedChannel,Magick::MultiplyEvaluateOperator,brightness);
+        image.quantumOperator(Magick::GreenChannel,Magick::MultiplyEvaluateOperator,brightness);
+        image.quantumOperator(Magick::BlueChannel,Magick::MultiplyEvaluateOperator,brightness);
+#endif
     }
 
     // return image
     if (dstClip_ && dstClip_->isConnected()) {
         output.composite(image, 0, 0, Magick::OverCompositeOp);
+#ifdef IM7
         output.composite(image, 0, 0, Magick::CopyAlphaCompositeOp);
+#else
+        output.composite(image, 0, 0, Magick::CopyOpacityCompositeOp);
+#endif
         output.write(0,0,args.renderWindow.x2 - args.renderWindow.x1,args.renderWindow.y2 - args.renderWindow.y1,"RGBA",Magick::FloatPixel,(float*)dstImg->getPixelData());
     }
 }

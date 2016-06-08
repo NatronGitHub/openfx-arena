@@ -188,13 +188,14 @@ void ModulatePlugin::render(const OFX::RenderArguments &args)
 
     Magick::ResourceLimits::thread(threads);
 
-#ifdef DEBUG
-    std::cout << "Modulate threads: " << threads << std::endl;
-#endif
-
     // OpenCL
-    if (_hasOpenCL && enableOpenCL)
+    if (_hasOpenCL && enableOpenCL) {
+#ifdef IM7
         Magick::EnableOpenCL();
+#else
+        Magick::EnableOpenCL(true);
+#endif
+    }
     else if (_hasOpenCL && !enableOpenCL)
         Magick::DisableOpenCL();
 
@@ -210,7 +211,11 @@ void ModulatePlugin::render(const OFX::RenderArguments &args)
     // return image
     if (dstClip_ && dstClip_->isConnected()) {
         output.composite(image, 0, 0, Magick::OverCompositeOp);
+#ifdef IM7
         output.composite(image, 0, 0, Magick::CopyAlphaCompositeOp);
+#else
+        output.composite(image, 0, 0, Magick::CopyOpacityCompositeOp);
+#endif
         output.write(0,0,args.renderWindow.x2 - args.renderWindow.x1,args.renderWindow.y2 - args.renderWindow.y1,"RGBA",Magick::FloatPixel,(float*)dstImg->getPixelData());
     }
 }

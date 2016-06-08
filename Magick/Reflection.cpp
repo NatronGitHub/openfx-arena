@@ -214,8 +214,13 @@ void ReflectionPlugin::render(const OFX::RenderArguments &args)
         image.read(srcWidth,srcHeight,"RGBA",Magick::FloatPixel,(float*)srcImg->getPixelData());
 
     if (matte) {
+#ifdef IM7
         image.alpha(false);
         image.alpha(true);
+#else
+        image.matte(false);
+        image.matte(true);
+#endif
     }
 
     // proc mirror
@@ -359,7 +364,11 @@ void ReflectionPlugin::render(const OFX::RenderArguments &args)
     // return image
     if (dstClip_ && dstClip_->isConnected()) {
         output.composite(container, 0, 0, Magick::OverCompositeOp);
+#ifdef IM7
         output.composite(container, 0, 0, Magick::CopyAlphaCompositeOp);
+#else
+        output.composite(container, 0, 0, Magick::CopyOpacityCompositeOp);
+#endif
         output.write(0,0,args.renderWindow.x2 - args.renderWindow.x1,args.renderWindow.y2 - args.renderWindow.y1,"RGBA",Magick::FloatPixel,(float*)dstImg->getPixelData());
     }
 }

@@ -41,7 +41,12 @@
 #define kParamFontNameLabel "Font family"
 #define kParamFontNameHint "The name of the font to be used"
 #define kParamFontNameDefault "Arial"
+
+#ifdef IM7
 #define kParamFontNameAltDefault "DejaVu-Sans-Book" // failsafe on Linux/BSD
+#else
+#define kParamFontNameAltDefault "DejaVu-Sans" // failsafe on Linux/BSD
+#endif
 
 #define kParamFont "selectedFont"
 #define kParamFontLabel "Font"
@@ -273,7 +278,11 @@ void PolaroidPlugin::render(const OFX::RenderArguments &args)
     image.borderColor("white"); // TODO param
     image.backgroundColor("black"); // TODO param
     image.font(fontName);
+#ifdef IM7
     image.polaroid(text,angle,MagickCore::UndefinedInterpolatePixel);
+#else
+    image.polaroid(text,angle);
+#endif
     image.backgroundColor("none");
     image.flip();
     std::ostringstream scaleW;
@@ -291,7 +300,11 @@ void PolaroidPlugin::render(const OFX::RenderArguments &args)
     // return image
     if (dstClip_ && dstClip_->isConnected()) {
         output.composite(image, 0, 0, Magick::OverCompositeOp);
+#ifdef IM7
         output.composite(image, 0, 0, Magick::CopyAlphaCompositeOp);
+#else
+        output.composite(image, 0, 0, Magick::CopyOpacityCompositeOp);
+#endif
         output.write(0,0,args.renderWindow.x2 - args.renderWindow.x1,args.renderWindow.y2 - args.renderWindow.y1,"RGBA",Magick::FloatPixel,(float*)dstImg->getPixelData());
     }
 }

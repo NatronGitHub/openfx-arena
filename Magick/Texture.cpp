@@ -195,9 +195,6 @@ void TexturePlugin::render(const OFX::RenderArguments &args)
     int width = dstRod.x2-dstRod.x1;
     int height = dstRod.y2-dstRod.y1;
     Magick::Image image(Magick::Geometry(width,height),Magick::Color("rgba(0,0,0,0)"));
-    #ifdef DEBUG_MAGICK
-    image.debug(true);
-    #endif
 
     // Set seed
     Magick::SetRandomSeed(hash((unsigned)(args.time)^seed));
@@ -256,13 +253,21 @@ void TexturePlugin::render(const OFX::RenderArguments &args)
             break;
         }
         if (effect>8 && effect<12) { // loops 1 2 3
+#ifdef IM7
             image.alpha(false);
+#else
+            image.matte(false);
+#endif
             image.blur(0,10);
             image.normalize();
             image.fx("sin(u*4*pi)*100");
             image.edge(1);
             image.blur(0,10);
+#ifdef IM7
             image.alpha(true);
+#else
+            image.matte(true);
+#endif
         }
     }
     catch(Magick::Warning &warning) { // ignore since warns interupt render
