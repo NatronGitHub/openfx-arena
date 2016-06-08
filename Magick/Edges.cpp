@@ -24,7 +24,7 @@
 #define kParamWidth "width"
 #define kParamWidthLabel "Width"
 #define kParamWidthHint "Width of edges"
-#define kParamWidthDefault 0.2
+#define kParamWidthDefault 2
 
 #define kParamBrightness "brightness"
 #define kParamBrightnessLabel "Brightness"
@@ -44,7 +44,7 @@
 #define kParamKernel "kernel"
 #define kParamKernelLabel "Kernel"
 #define kParamKernelHint "Convolution Kernel"
-#define kParamKernelDefault 14
+#define kParamKernelDefault 8
 
 #define kSupportsTiles 0
 #define kSupportsMultiResolution 1
@@ -220,111 +220,90 @@ void EdgesPlugin::render(const OFX::RenderArguments &args)
 
     switch (kernel) {
     case 0:
-        image.morphology(Magick::EdgeMorphology,Magick::UnityKernel,edgeWidth.str());
-        break;
-    case 1:
-        image.morphology(Magick::EdgeMorphology,Magick::GaussianKernel,edgeWidth.str());
-        break;
-    case 2:
-        image.morphology(Magick::EdgeMorphology,Magick::DoGKernel,edgeWidth.str());
-        break;
-    case 3:
-        image.morphology(Magick::EdgeMorphology,Magick::LoGKernel,edgeWidth.str());
-        break;
-    case 4:
-        image.morphology(Magick::EdgeMorphology,Magick::BlurKernel,edgeWidth.str());
-        break;
-    case 5:
-        image.morphology(Magick::EdgeMorphology,Magick::CometKernel,edgeWidth.str());
-        break;
-    case 6:
         image.morphology(Magick::EdgeMorphology,Magick::BinomialKernel,edgeWidth.str());
         break;
-    case 7:
+    case 1:
         image.morphology(Magick::EdgeMorphology,Magick::LaplacianKernel,edgeWidth.str());
         break;
-    case 8:
+    case 2:
         image.morphology(Magick::EdgeMorphology,Magick::SobelKernel,edgeWidth.str());
         break;
-    case 9:
+    case 3:
         image.morphology(Magick::EdgeMorphology,Magick::FreiChenKernel,edgeWidth.str());
         break;
-    case 10:
+    case 4:
         image.morphology(Magick::EdgeMorphology,Magick::RobertsKernel,edgeWidth.str());
         break;
-    case 11:
+    case 5:
         image.morphology(Magick::EdgeMorphology,Magick::PrewittKernel,edgeWidth.str());
         break;
-    case 12:
+    case 6:
         image.morphology(Magick::EdgeMorphology,Magick::CompassKernel,edgeWidth.str());
         break;
-    case 13:
+    case 7:
         image.morphology(Magick::EdgeMorphology,Magick::KirschKernel,edgeWidth.str());
         break;
-    case 14:
+    case 8:
         image.morphology(Magick::EdgeMorphology,Magick::DiamondKernel,edgeWidth.str());
         break;
-    case 15:
+    case 9:
         image.morphology(Magick::EdgeMorphology,Magick::SquareKernel,edgeWidth.str());
         break;
-    case 16:
+    case 10:
         image.morphology(Magick::EdgeMorphology,Magick::RectangleKernel,edgeWidth.str());
         break;
-    case 17:
+    case 11:
         image.morphology(Magick::EdgeMorphology,Magick::OctagonKernel,edgeWidth.str());
         break;
-    case 18:
+    case 12:
         image.morphology(Magick::EdgeMorphology,Magick::DiskKernel,edgeWidth.str());
         break;
-    case 19:
+    case 13:
         image.morphology(Magick::EdgeMorphology,Magick::PlusKernel,edgeWidth.str());
         break;
-    case 20:
+    case 14:
         image.morphology(Magick::EdgeMorphology,Magick::CrossKernel,edgeWidth.str());
         break;
-    case 21:
+    case 15:
         image.morphology(Magick::EdgeMorphology,Magick::RingKernel,edgeWidth.str());
         break;
-    case 22:
-        image.morphology(Magick::EdgeMorphology,Magick::PeaksKernel,edgeWidth.str());
-        break;
-    case 23:
+    case 16:
         image.morphology(Magick::EdgeMorphology,Magick::EdgesKernel,edgeWidth.str());
         break;
-    case 24:
+    case 17:
         image.morphology(Magick::EdgeMorphology,Magick::CornersKernel,edgeWidth.str());
         break;
-    case 25:
+    case 18:
         image.morphology(Magick::EdgeMorphology,Magick::DiagonalsKernel,edgeWidth.str());
         break;
-    case 26:
+    case 19:
         image.morphology(Magick::EdgeMorphology,Magick::LineEndsKernel,edgeWidth.str());
         break;
-    case 27:
+    case 20:
         image.morphology(Magick::EdgeMorphology,Magick::LineJunctionsKernel,edgeWidth.str());
         break;
-    case 28:
+    case 21:
         image.morphology(Magick::EdgeMorphology,Magick::RidgesKernel,edgeWidth.str());
         break;
-    case 29:
+    case 22:
         image.morphology(Magick::EdgeMorphology,Magick::ConvexHullKernel,edgeWidth.str());
         break;
-    case 30:
+    case 23:
         image.morphology(Magick::EdgeMorphology,Magick::ThinSEKernel,edgeWidth.str());
         break;
-    case 31:
+    case 24:
         image.morphology(Magick::EdgeMorphology,Magick::SkeletonKernel,edgeWidth.str());
         break;
-    case 32:
+    case 25:
         image.morphology(Magick::EdgeMorphology,Magick::ChebyshevKernel,edgeWidth.str());
         break;
-    case 33:
+    case 26:
         image.morphology(Magick::EdgeMorphology,Magick::ManhattanKernel,edgeWidth.str());
         break;
-    case 34:
+    case 27:
         image.morphology(Magick::EdgeMorphology,Magick::OctagonalKernel,edgeWidth.str());
         break;
-    case 35:
+    case 28:
         image.morphology(Magick::EdgeMorphology,Magick::EuclideanKernel,edgeWidth.str());
         break;
     }
@@ -421,8 +400,8 @@ void EdgesPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, Con
         DoubleParamDescriptor *param = desc.defineDoubleParam(kParamWidth);
         param->setLabel(kParamWidthLabel);
         param->setHint(kParamWidthHint);
-        param->setRange(0.1, 1000);
-        param->setDisplayRange(0.1, 50);
+        param->setRange(0, 1000);
+        param->setDisplayRange(0, 50);
         param->setDefault(kParamWidthDefault);
         page->addChild(*param);
     }
@@ -456,12 +435,6 @@ void EdgesPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, Con
         param->setLabel(kParamKernelLabel);
         param->setHint(kParamKernelHint);
         param->setDefault(kParamKernelDefault);
-        param->appendOption("UnityKernel");
-        param->appendOption("GaussianKernel");
-        param->appendOption("DoGKernel");
-        param->appendOption("LoGKernel");
-        param->appendOption("BlurKernel");
-        param->appendOption("CometKernel");
         param->appendOption("BinomialKernel");
         param->appendOption("LaplacianKernel");
         param->appendOption("SobelKernel");
@@ -478,7 +451,6 @@ void EdgesPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, Con
         param->appendOption("PlusKernel");
         param->appendOption("CrossKernel");
         param->appendOption("RingKernel");
-        param->appendOption("PeaksKernel");
         param->appendOption("EdgesKernel");
         param->appendOption("CornersKernel");
         param->appendOption("DiagonalsKernel");
