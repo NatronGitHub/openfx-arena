@@ -28,7 +28,7 @@ Plugins
 Requirements
 ============
 
- * ImageMagick 7.0.1-10+ with Q32, HDRI, lcms(2), zlib, freetype
+ * ImageMagick 6.9.2+/7.0.1+ with Q32, HDRI, lcms(2), zlib, freetype
  * LittleCMS 2.0+
  * OpenColorIO 1.0.9
 
