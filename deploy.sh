@@ -12,10 +12,10 @@
 
 CWD=$(pwd)
 
-MAGICK=6.9.4-6
+MAGICK=7.0.1-10
 OCIO=1.0.9
 OCIO_URL=https://github.com/imageworks/OpenColorIO/archive/v${OCIO}.tar.gz
-MAGICK_URL=https://github.com/olear/openfx-arena/releases/download/Natron-2.0.4/ImageMagick-${MAGICK}.tar.xz
+MAGICK_URL=https://github.com/olear/openfx-arena/releases/download/Natron-2.0.5/ImageMagick-${MAGICK}.tar.xz
 if [ -z "$QUANTUM" ]; then
   Q=32
 else
@@ -171,11 +171,11 @@ if [ "$TRAVIS" = "1" ]; then
   TRAVIS_FLAGS="-DLEGACY"
 fi
 if [ "$PKGOS" != "Windows" ]; then
-  $MAKE FREEBSD=$USE_FREEBSD BITS=$BIT LDFLAGS_ADD="$GCC_LINK" CXXFLAGS_ADD="$TRAVIS_FLAGS" CONFIG=$TAG clean
-  $MAKE FREEBSD=$USE_FREEBSD BITS=$BIT LDFLAGS_ADD="$GCC_LINK" CXXFLAGS_ADD="$TRAVIS_FLAGS" CONFIG=$TAG || exit 1
+  $MAKE IM=7 FREEBSD=$USE_FREEBSD BITS=$BIT LDFLAGS_ADD="$GCC_LINK" CXXFLAGS_ADD="$TRAVIS_FLAGS" CONFIG=$TAG clean
+  $MAKE IM=7 FREEBSD=$USE_FREEBSD BITS=$BIT LDFLAGS_ADD="$GCC_LINK" CXXFLAGS_ADD="$TRAVIS_FLAGS" CONFIG=$TAG || exit 1
 else
-  make MINGW=1 BIT=$BIT CONFIG=$TAG clean
-  make MINGW=1 BIT=$BIT CONFIG=$TAG || exit 1
+  make IM=7 MINGW=1 BIT=$BIT CONFIG=$TAG clean
+  make IM=7 MINGW=1 BIT=$BIT CONFIG=$TAG || exit 1
 fi
 
 cd $CWD || exit 1

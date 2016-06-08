@@ -172,10 +172,6 @@ void RollPlugin::render(const OFX::RenderArguments &args)
 
     Magick::ResourceLimits::thread(threads);
 
-#ifdef DEBUG
-    std::cout << "Roll threads: " << threads << std::endl;
-#endif
-
     // read image
     Magick::Image image(Magick::Geometry(width,height),Magick::Color("rgba(0,0,0,0)"));
     Magick::Image output(Magick::Geometry(width,height),Magick::Color("rgba(0,0,0,1)"));
@@ -188,7 +184,11 @@ void RollPlugin::render(const OFX::RenderArguments &args)
     // return image
     if (dstClip_ && dstClip_->isConnected()) {
         output.composite(image, 0, 0, Magick::OverCompositeOp);
+#ifdef IM7
+        output.composite(image, 0, 0, Magick::CopyAlphaCompositeOp);
+#else
         output.composite(image, 0, 0, Magick::CopyOpacityCompositeOp);
+#endif
         output.write(0,0,args.renderWindow.x2 - args.renderWindow.x1,args.renderWindow.y2 - args.renderWindow.y1,"RGBA",Magick::FloatPixel,(float*)dstImg->getPixelData());
     }
 }

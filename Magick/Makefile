@@ -70,3 +70,7 @@ include ../Makefile.io
 CXXFLAGS  += $(MAGICK_CXXFLAGS) $(LCMS_CXXFLAGS)
 LINKFLAGS += $(MAGICK_LINKFLAGS) $(LCMS_LINKFLAGS)
 
+ifeq ($(IM),7)
+	CXXFLAGS += -DIM7
+endif
+

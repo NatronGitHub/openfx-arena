@@ -28,7 +28,7 @@ Plugins
 Requirements
 ============
 
- * ImageMagick 6.9.2+ with Q32, HDRI, lcms(2), zlib, fontconfig, freetype
+ * ImageMagick 7.0.1-10+ with Q32, HDRI, lcms(2), zlib, freetype
  * LittleCMS 2.0+
  * OpenColorIO 1.0.9
 
@@ -51,8 +51,8 @@ cd openfx-arena
 git submodule update -i --recursive
 cd Magick
 
-export PKG_CONFIG_PATH=/usr/local/magick6/lib/pkgconfig:$PKG_CONFIG_PATH
-export LD_LIBRARY_PATH=/usr/local/magick6/lib:$LD_LIBRARY_PATH
+export PKG_CONFIG_PATH=/usr/local/magick7/lib/pkgconfig:$PKG_CONFIG_PATH
+export LD_LIBRARY_PATH=/usr/local/magick7/lib:$LD_LIBRARY_PATH
 
 make CONFIG=release
 sudo cp -a Linux-*-*/Magick.ofx.bundle /usr/OFX/Plugins/
