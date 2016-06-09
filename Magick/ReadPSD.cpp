@@ -29,7 +29,7 @@
 #define kPluginGrouping "Image/Readers"
 #define kPluginIdentifier "net.fxarena.openfx.ReadPSD"
 #define kPluginVersionMajor 2
-#define kPluginVersionMinor 5
+#define kPluginVersionMinor 6
 #define kPluginEvaluation 92
 
 #define kSupportsRGBA true
@@ -543,13 +543,8 @@ void ReadPSDPlugin::decodePlane(const std::string& filename, OfxTime time, int /
     }
 
     // Return image
-    Magick::Image container(Magick::Geometry(width,height),Magick::Color("rgba(0,0,0,1)"));
+    Magick::Image container(Magick::Geometry(width,height),Magick::Color("rgba(0,0,0,0)"));
     container.composite(image,offsetX,offsetY,Magick::OverCompositeOp);
-#ifdef IM7
-    container.composite(image,offsetX,offsetY,Magick::CopyAlphaCompositeOp);
-#else
-    container.composite(image,offsetX,offsetY,Magick::CopyOpacityCompositeOp);
-#endif
     container.flip();
     container.write(0,0,renderWindow.x2 - renderWindow.x1,renderWindow.y2 - renderWindow.y1,"RGBA",Magick::FloatPixel,pixelData);
 }
@@ -675,7 +670,7 @@ void ReadPSDPlugin::onInputFileChanged(const std::string& newFile,
     # endif // OFX_IO_USING_OCIO
     }
     *components = OFX::ePixelComponentRGBA;
-    *premult = OFX::eImageOpaque;
+    *premult = OFX::eImageUnPreMultiplied;
 }
 
 using namespace OFX;
