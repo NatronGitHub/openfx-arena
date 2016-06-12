@@ -41,7 +41,7 @@
 #define kPluginGrouping "Image/Readers"
 #define kPluginIdentifier "net.fxarena.openfx.ReadSVG"
 #define kPluginVersionMajor 3
-#define kPluginVersionMinor 0
+#define kPluginVersionMinor 1
 #define kPluginEvaluation 50
 
 #define kParamDpi "dpi"
@@ -119,6 +119,16 @@ ReadSVGPlugin::getLayers(xmlNode *node, std::vector<std::string> *layers)
     for (cur_node = node; cur_node; cur_node = cur_node->next) {
         if (cur_node->type == XML_ELEMENT_NODE) {
             if ((!xmlStrcmp(cur_node->name, (const xmlChar *)"g"))) {
+                xmlChar *xmlID;
+                xmlID = xmlGetProp(cur_node, (const xmlChar *)"id");
+                if (xmlID!=NULL) {
+                    std::string layerName;
+                    layerName = (reinterpret_cast<char*>(xmlID));
+                    layers->push_back(layerName);
+                }
+                xmlFree(xmlID);
+            }
+            else if ((!xmlStrcmp(cur_node->name, (const xmlChar *)"path"))) {
                 xmlChar *xmlID;
                 xmlID = xmlGetProp(cur_node, (const xmlChar *)"id");
                 if (xmlID!=NULL) {
