@@ -22,8 +22,15 @@
 #include "librsvg/rsvg-cairo.h"
 #endif
 
+#include <libxml/xmlmemory.h>
+#include <libxml/parser.h>
+
+#include <iostream>
+
+#include "ofxNatron.h"
 #include "GenericReader.h"
 #include "GenericOCIO.h"
+#include "ofxsMacros.h"
 #include "ofxsImageEffect.h"
 
 #ifdef OFX_IO_USING_OCIO
@@ -33,7 +40,7 @@
 #define kPluginName "ReadSVG"
 #define kPluginGrouping "Image/Readers"
 #define kPluginIdentifier "net.fxarena.openfx.ReadSVG"
-#define kPluginVersionMajor 2
+#define kPluginVersionMajor 3
 #define kPluginVersionMinor 0
 #define kPluginEvaluation 50
 
@@ -46,6 +53,9 @@
 #define kSupportsRGB false
 #define kSupportsAlpha false
 #define kSupportsTiles false
+#define kIsMultiPlanar true
+
+static bool gHostIsNatron = false;
 
 class ReadSVGPlugin : public GenericReaderPlugin
 {
@@ -54,14 +64,44 @@ public:
     virtual ~ReadSVGPlugin();
 private:
     virtual bool isVideoStream(const std::string& /*filename*/) OVERRIDE FINAL { return false; }
-    virtual void decode(const std::string& filename, OfxTime time, int view, bool isPlayback, const OfxRectI& renderWindow, float *pixelData, const OfxRectI& bounds, OFX::PixelComponentEnum pixelComponents, int pixelComponentCount, int rowBytes) OVERRIDE FINAL;
-    virtual bool getFrameBounds(const std::string& filename, OfxTime time, OfxRectI *bounds, double *par, std::string *error,int *tile_width, int *tile_height) OVERRIDE FINAL;
+    virtual void decode(const std::string& filename, OfxTime time, int view, bool isPlayback, const OfxRectI& renderWindow, float *pixelData, const OfxRectI& bounds,
+                             OFX::PixelComponentEnum pixelComponents, int pixelComponentCount, int rowBytes) OVERRIDE FINAL
+    {
+        std::string rawComps;
+        switch (pixelComponents) {
+            case OFX::ePixelComponentAlpha:
+                rawComps = kOfxImageComponentAlpha;
+                break;
+            case OFX::ePixelComponentRGB:
+                rawComps = kOfxImageComponentRGB;
+                break;
+            case OFX::ePixelComponentRGBA:
+                rawComps = kOfxImageComponentRGBA;
+                break;
+            default:
+                OFX::throwSuiteStatusException(kOfxStatFailed);
+                return;
+        }
+        decodePlane(filename, time, view, isPlayback, renderWindow, pixelData, bounds, pixelComponents, pixelComponentCount, rawComps, rowBytes);
+    }
+    virtual void decodePlane(const std::string& filename, OfxTime time, int view, bool isPlayback, const OfxRectI& renderWindow, float *pixelData, const OfxRectI& bounds, OFX::PixelComponentEnum pixelComponents, int pixelComponentCount, const std::string& rawComponents, int rowBytes) OVERRIDE FINAL;
+    virtual void getClipComponents(const OFX::ClipComponentsArguments& args, OFX::ClipComponentsSetter& clipComponents) OVERRIDE FINAL;
+    virtual bool getFrameBounds(const std::string& filename, OfxTime time, OfxRectI *bounds, double *par, std::string *error, int *tile_width, int *tile_height) OVERRIDE FINAL;
+    virtual void restoreState(const std::string& filename) OVERRIDE FINAL;
     virtual void onInputFileChanged(const std::string& newFile, bool setColorSpace, OFX::PreMultiplicationEnum *premult, OFX::PixelComponentEnum *components, int *componentCount) OVERRIDE FINAL;
+    void getLayers(xmlNode *node, std::vector<std::string> *layers);
     OFX::IntParam *_dpi;
+    std::vector<std::string> imageLayers;
 };
 
 ReadSVGPlugin::ReadSVGPlugin(OfxImageEffectHandle handle, const std::vector<std::string>& extensions)
-: GenericReaderPlugin(handle, extensions, kSupportsRGBA, kSupportsRGB, kSupportsAlpha, kSupportsTiles, false)
+: GenericReaderPlugin(handle, extensions, kSupportsRGBA, kSupportsRGB, kSupportsAlpha, kSupportsTiles,
+#ifdef OFX_EXTENSIONS_NUKE
+(OFX::getImageEffectHostDescription() && OFX::getImageEffectHostDescription()->isMultiPlanar) ? kIsMultiPlanar : false
+#else
+false
+#endif
+)
 ,_dpi(0)
 {
     _dpi = fetchIntParam(kParamDpi);
@@ -73,16 +113,54 @@ ReadSVGPlugin::~ReadSVGPlugin()
 }
 
 void
-ReadSVGPlugin::decode(const std::string& filename,
-                      OfxTime time,
-                      int /*view*/,
-                      bool /*isPlayback*/,
-                      const OfxRectI& renderWindow,
-                      float *pixelData,
-                      const OfxRectI& /*bounds*/,
-                      OFX::PixelComponentEnum /*pixelComponents*/,
-                      int pixelComponentCount,
-                      int /*rowBytes*/)
+ReadSVGPlugin::getLayers(xmlNode *node, std::vector<std::string> *layers)
+{
+    xmlNode *cur_node = NULL;
+    for (cur_node = node; cur_node; cur_node = cur_node->next) {
+        if (cur_node->type == XML_ELEMENT_NODE) {
+            if ((!xmlStrcmp(cur_node->name, (const xmlChar *)"g"))) {
+                xmlChar *xmlID;
+                xmlID = xmlGetProp(cur_node, (const xmlChar *)"id");
+                if (xmlID!=NULL) {
+                    std::string layerName;
+                    layerName = (reinterpret_cast<char*>(xmlID));
+                    layers->push_back(layerName);
+                }
+                xmlFree(xmlID);
+            }
+        }
+        getLayers(cur_node->children,layers);
+    }
+}
+
+void
+ReadSVGPlugin::getClipComponents(const OFX::ClipComponentsArguments& args, OFX::ClipComponentsSetter& clipComponents)
+{
+    assert(isMultiPlanar());
+    clipComponents.addClipComponents(*_outputClip, getOutputComponents());
+    clipComponents.setPassThroughClip(NULL, args.time, args.view);
+    if (imageLayers.size()>0 && gHostIsNatron) {
+        for (int i = 0; i < (int)imageLayers.size(); i++) {
+            if (!imageLayers[i].empty()) {
+                std::string component(kNatronOfxImageComponentsPlane);
+                component.append(imageLayers[i]);
+                component.append(kNatronOfxImageComponentsPlaneChannel);
+                component.append("R");
+                component.append(kNatronOfxImageComponentsPlaneChannel);
+                component.append("G");
+                component.append(kNatronOfxImageComponentsPlaneChannel);
+                component.append("B");
+                component.append(kNatronOfxImageComponentsPlaneChannel);
+                component.append("A");
+                clipComponents.addClipComponents(*_outputClip, component);
+            }
+        }
+    }
+}
+
+void
+ReadSVGPlugin::decodePlane(const std::string& filename, OfxTime time, int /*view*/, bool /*isPlayback*/, const OfxRectI& renderWindow, float *pixelData, const OfxRectI& /*bounds*/,
+                                 OFX::PixelComponentEnum /*pixelComponents*/, int pixelComponentCount, const std::string& rawComponents, int /*rowBytes*/)
 {
     if (pixelComponentCount != 4) {
         setPersistentMessage(OFX::Message::eMessageError, "", "Wrong pixel components");
@@ -92,6 +170,18 @@ ReadSVGPlugin::decode(const std::string& filename,
     if (filename.empty()) {
         setPersistentMessage(OFX::Message::eMessageError, "", "No filename");
         OFX::throwSuiteStatusException(kOfxStatErrFormat);
+    }
+
+    std::string layerID;
+    if (gHostIsNatron) {
+        std::string layerName;
+        std::vector<std::string> layerChannels = OFX::mapPixelComponentCustomToLayerChannels(rawComponents);
+        int numChannels = layerChannels.size();
+        if (numChannels==5) // layer+R+G+B+A
+            layerName=layerChannels[0];
+        if (!layerName.empty()) {
+            layerID = layerName;
+        }
     }
 
     GError *error = NULL;
@@ -141,11 +231,19 @@ ReadSVGPlugin::decode(const std::string& filename,
 
     cairo_scale(cr, scaleWidth, scaleHeight);
 
-    rsvg_handle_render_cairo(handle, cr);
+    if (layerID.empty()) {
+        rsvg_handle_render_cairo(handle, cr);
+    }
+    else {
+        std::ostringstream layerSub;
+        layerSub << "#" << layerID;
+        rsvg_handle_render_cairo_sub(handle, cr, layerSub.str().c_str());
+    }
+
     status = cairo_status(cr);
 
     if (status) {
-        setPersistentMessage(OFX::Message::eMessageError, "", "Render failed");
+        setPersistentMessage(OFX::Message::eMessageError, "", "Cairo Render failed");
         OFX::throwSuiteStatusException(kOfxStatErrFormat);
     }
 
@@ -237,31 +335,42 @@ bool ReadSVGPlugin::getFrameBounds(const std::string& filename,
     return true;
 }
 
+void
+ReadSVGPlugin::restoreState(const std::string& filename)
+{
+    if (!filename.empty()) {
+        imageLayers.clear();
+        xmlDocPtr doc;
+        doc = xmlParseFile(filename.c_str());
+        xmlNode *root_element = NULL;
+        root_element = xmlDocGetRootElement(doc);
+        getLayers(root_element,&imageLayers);
+        xmlFreeDoc(doc);
+
+        GError *error = NULL;
+        RsvgHandle *handle;
+
+        handle=rsvg_handle_new_from_file(filename.c_str(), &error);
+
+        if (error != NULL) {
+            setPersistentMessage(OFX::Message::eMessageError, "", "Failed to read SVG");
+        }
+
+        g_object_unref(handle);
+        error = NULL;
+    }
+    else {
+        setPersistentMessage(OFX::Message::eMessageError, "", "Empty and/or corrupt image");
+    }
+}
+
 void ReadSVGPlugin::onInputFileChanged(const std::string& newFile,
                                   bool setColorSpace,
                                   OFX::PreMultiplicationEnum *premult,
                                   OFX::PixelComponentEnum *components,int */*componentCount*/)
 {
     assert(premult && components);
-
-    if (newFile.empty()) {
-        setPersistentMessage(OFX::Message::eMessageError, "", "No filename");
-        OFX::throwSuiteStatusException(kOfxStatErrFormat);
-    }
-
-    GError *error = NULL;
-    RsvgHandle *handle;
-
-    handle=rsvg_handle_new_from_file(newFile.c_str(), &error);
-
-    if (error != NULL) {
-        setPersistentMessage(OFX::Message::eMessageError, "", "Failed to read SVG");
-        OFX::throwSuiteStatusException(kOfxStatErrFormat);
-    }
-
-    g_object_unref(handle);
-    error = NULL;
-
+    restoreState(newFile);
     if (setColorSpace) {
 # ifdef OFX_IO_USING_OCIO
         _ocio->setInputColorspace("sRGB");
@@ -269,7 +378,7 @@ void ReadSVGPlugin::onInputFileChanged(const std::string& newFile,
     }
 
     *components = OFX::ePixelComponentRGBA;
-    *premult = OFX::eImagePreMultiplied;
+    *premult = OFX::eImageUnPreMultiplied;
 }
 
 using namespace OFX;
@@ -288,7 +397,7 @@ ReadSVGPluginFactory::load()
 /** @brief The basic describe function, passed a plugin descriptor */
 void ReadSVGPluginFactory::describe(OFX::ImageEffectDescriptor &desc)
 {
-    GenericReaderDescribe(desc, _extensions, kPluginEvaluation, kSupportsTiles, false);
+    GenericReaderDescribe(desc, _extensions, kPluginEvaluation, kSupportsTiles, kIsMultiPlanar);
     desc.setLabel(kPluginName);
     desc.setPluginDescription("Fast SVG (Scalable Vector Graphics) reader using librsvg and Cairo.");
 }
@@ -296,6 +405,8 @@ void ReadSVGPluginFactory::describe(OFX::ImageEffectDescriptor &desc)
 /** @brief The describe in context function, passed a plugin descriptor and a context */
 void ReadSVGPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, ContextEnum context)
 {
+    gHostIsNatron = (OFX::getImageEffectHostDescription()->isNatron);
+
     PageParamDescriptor *page = GenericReaderDescribeInContextBegin(desc, context, isVideoStreamPlugin(), kSupportsRGBA, kSupportsRGB, kSupportsAlpha, kSupportsTiles, false);
     {
         IntParamDescriptor* param = desc.defineIntParam(kParamDpi);
