@@ -90,11 +90,8 @@ ReadMiscPlugin::decode(const std::string& filename,
     if (!filename.empty())
         image.read(filename);
     if (image.columns()>0 && image.rows()>0) {
-        Magick::Image container(Magick::Geometry(bounds.x2,bounds.y2),Magick::Color("rgba(0,0,0,1)"));
-        container.composite(image,0,0,Magick::OverCompositeOp);
-        container.composite(image,0,0,Magick::CopyOpacityCompositeOp);
-        container.flip();
-        container.write(0,0,renderWindow.x2 - renderWindow.x1,renderWindow.y2 - renderWindow.y1,"RGBA",Magick::FloatPixel,pixelData);
+        image.flip();
+        image.write(0,0,renderWindow.x2 - renderWindow.x1,renderWindow.y2 - renderWindow.y1,"RGBA",Magick::FloatPixel,pixelData);
     }
     else {
         setPersistentMessage(OFX::Message::eMessageError, "", "Unable to read image");
@@ -157,7 +154,7 @@ void ReadMiscPlugin::onInputFileChanged(const std::string& newFile,
         OFX::throwSuiteStatusException(kOfxStatErrFormat);
     }
     *components = OFX::ePixelComponentRGBA;
-    *premult = OFX::eImageOpaque;
+    *premult = OFX::eImageUnPreMultiplied;
 }
 
 using namespace OFX;

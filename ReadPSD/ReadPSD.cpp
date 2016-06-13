@@ -543,9 +543,8 @@ void ReadPSDPlugin::decodePlane(const std::string& filename, OfxTime time, int /
     }
 
     // Return image
-    Magick::Image container(Magick::Geometry(width,height),Magick::Color("rgba(0,0,0,1)"));
+    Magick::Image container(Magick::Geometry(width,height),Magick::Color("rgba(0,0,0,0)"));
     container.composite(image,offsetX,offsetY,Magick::OverCompositeOp);
-    container.composite(image,offsetX,offsetY,Magick::CopyOpacityCompositeOp);
     container.flip();
     container.write(0,0,renderWindow.x2 - renderWindow.x1,renderWindow.y2 - renderWindow.y1,"RGBA",Magick::FloatPixel,pixelData);
 }
@@ -671,7 +670,7 @@ void ReadPSDPlugin::onInputFileChanged(const std::string& newFile,
     # endif // OFX_IO_USING_OCIO
     }
     *components = OFX::ePixelComponentRGBA;
-    *premult = OFX::eImageOpaque;
+    *premult = OFX::eImageUnPreMultiplied;
 }
 
 using namespace OFX;
