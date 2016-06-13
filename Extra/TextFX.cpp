@@ -126,7 +126,11 @@
 #define kParamFontAA "antialiasing"
 #define kParamFontAALabel "Antialiasing"
 #define kParamFontAAHint "This specifies the type of antialiasing to do when rendering text."
+#if defined(_WIN32) || defined(__WIN32__) || defined(WIN32)
+#define kParamFontAADefault 2
+#else
 #define kParamFontAADefault 0
+#endif
 
 #define kParamSubpixel "subpixel"
 #define kParamSubpixelLabel "Subpixel"
