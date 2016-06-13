@@ -14,7 +14,7 @@
 #include <iostream>
 
 #define kPluginName "TileOFX"
-#define kPluginGrouping "Extra/Transform"
+#define kPluginGrouping "Magick/Transform"
 #define kPluginIdentifier "net.fxarena.openfx.Tile"
 #define kPluginVersionMajor 3
 #define kPluginVersionMinor 2

@@ -16,7 +16,7 @@
 #include <cmath>
 
 #define kPluginName "OilpaintOFX"
-#define kPluginGrouping "Extra/Filter"
+#define kPluginGrouping "Magick/Filter"
 #define kPluginIdentifier "net.fxarena.openfx.Oilpaint"
 #define kPluginVersionMajor 2
 #define kPluginVersionMinor 1

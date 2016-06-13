@@ -16,7 +16,7 @@
 #include <cmath>
 
 #define kPluginName "ImplodeOFX"
-#define kPluginGrouping "Extra/Distort"
+#define kPluginGrouping "Magick/Distort"
 #define kPluginIdentifier "net.fxarena.openfx.Implode"
 #define kPluginVersionMajor 2
 #define kPluginVersionMinor 3

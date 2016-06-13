@@ -16,7 +16,7 @@
 #include <cmath>
 
 #define kPluginName "WaveOFX"
-#define kPluginGrouping "Extra/Distort"
+#define kPluginGrouping "Magick/Distort"
 #define kPluginIdentifier "net.fxarena.openfx.Wave"
 #define kPluginVersionMajor 2
 #define kPluginVersionMinor 2
