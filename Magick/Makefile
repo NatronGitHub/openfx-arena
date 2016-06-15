@@ -25,8 +25,8 @@ PLUGINOBJECTS = \
 PLUGINNAME = Magick
 
 RESOURCES = \
-Magick.png \
-Magick.svg \
+Extra.png \
+Extra.svg \
 net.fxarena.openfx.Texture.png \
 net.fxarena.openfx.Texture.svg \
 net.fxarena.openfx.Tile.png \

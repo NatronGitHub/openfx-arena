@@ -16,7 +16,7 @@
 #include <cmath>
 
 #define kPluginName "EdgesOFX"
-#define kPluginGrouping "Magick/Filter"
+#define kPluginGrouping "Extra/Filter"
 #define kPluginIdentifier "net.fxarena.openfx.Edges"
 #define kPluginVersionMajor 2
 #define kPluginVersionMinor 0

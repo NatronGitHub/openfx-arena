@@ -6,7 +6,7 @@ PLUGINOBJECTS = \
         ReadKrita.o \
         OpenRaster.o
 
-ifneq ($(LICENSE),COMMERCIAL)
+ifeq ($(LICENSE),GPL)
         PLUGINOBJECTS += ReadPDF.o
 endif
 
@@ -28,7 +28,7 @@ fr.inria.openfx.ReadKrita.svg \
 fr.inria.openfx.OpenRaster.png \
 fr.inria.openfx.OpenRaster.svg
 
-ifneq ($(LICENSE),COMMERCIAL)
+ifeq ($(LICENSE),GPL)
         RESOURCES += fr.inria.openfx.ReadPDF.png fr.inria.openfx.ReadPDF.svg
 endif
 
@@ -38,7 +38,7 @@ include ../Makefile.io
 CXXFLAGS  += $(FCONFIG_CXXFLAGS) $(PANGO_CXXFLAGS) $(SVG_CXXFLAGS) $(CDR_CXXFLAGS) $(XML_CXXFLAGS) $(ZIP_CXXFLAGS)
 LINKFLAGS += $(FCONFIG_LINKFLAGS) $(PANGO_LINKFLAGS) $(SVG_LINKFLAGS) $(CDR_LINKFLAGS) $(XML_LINKFLAGS) $(ZIP_LINKFLAGS)
 
-ifneq ($(LICENSE),COMMERCIAL)
+ifeq ($(LICENSE),GPL)
         CXXFLAGS += $(POPPLER_CXXFLAGS)
         LINKFLAGS += $(POPPLER_LINKFLAGS)
 endif

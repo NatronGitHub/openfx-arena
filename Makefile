@@ -1,4 +1,4 @@
-SUBDIRS = Extra Magick
+SUBDIRS = Bundle
 
 all: subdirs
 
