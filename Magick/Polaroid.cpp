@@ -18,7 +18,7 @@
 #include <cstring>
 
 #define kPluginName "PolaroidOFX"
-#define kPluginGrouping "Magick/Misc"
+#define kPluginGrouping "Extra/Misc"
 #define kPluginIdentifier "net.fxarena.openfx.Polaroid"
 #define kPluginVersionMajor 1
 #define kPluginVersionMinor 4

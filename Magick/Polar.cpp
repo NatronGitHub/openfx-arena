@@ -16,7 +16,7 @@
 #include <cmath>
 
 #define kPluginName "PolarOFX"
-#define kPluginGrouping "Magick/Distort"
+#define kPluginGrouping "Extra/Distort"
 #define kPluginIdentifier "net.fxarena.openfx.Polar"
 #define kPluginVersionMajor 4
 #define kPluginVersionMinor 3

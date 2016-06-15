@@ -16,7 +16,7 @@
 #include <cmath>
 
 #define kPluginName "SketchOFX"
-#define kPluginGrouping "Magick/Filter"
+#define kPluginGrouping "Extra/Filter"
 #define kPluginIdentifier "net.fxarena.openfx.Sketch"
 #define kPluginVersionMajor 2
 #define kPluginVersionMinor 2

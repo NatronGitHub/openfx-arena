@@ -16,7 +16,7 @@
 #include <cmath>
 
 #define kPluginName "ArcOFX"
-#define kPluginGrouping "Magick/Distort"
+#define kPluginGrouping "Extra/Distort"
 #define kPluginIdentifier "net.fxarena.openfx.Arc"
 #define kPluginVersionMajor 4
 #define kPluginVersionMinor 1
