@@ -47,7 +47,7 @@ RESOURCES = \
 ../Extra/fr.inria.openfx.OpenRaster.svg
 
 ifeq ($(LICENSE),GPL)
-        RESOURCES += fr.inria.openfx.ReadPDF.png fr.inria.openfx.ReadPDF.svg
+        RESOURCES += ../Extra/fr.inria.openfx.ReadPDF.png ../Extra/fr.inria.openfx.ReadPDF.svg
 endif
 
 RESOURCES += \
