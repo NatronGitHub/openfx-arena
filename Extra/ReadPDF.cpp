@@ -21,6 +21,7 @@
 #include <cairo.h>
 
 #include <iostream>
+#include <stdlib.h>
 
 #include <sys/types.h>
 #include <sys/stat.h>
@@ -38,8 +39,10 @@
 #include <Shlwapi.h>
 #endif
 
+#include <ofxNatron.h>
 #include "GenericReader.h"
 #include "GenericOCIO.h"
+#include "ofxsMacros.h"
 #include "ofxsImageEffect.h"
 
 #ifdef OFX_IO_USING_OCIO
@@ -50,7 +53,7 @@
 #define kPluginGrouping "Image/Readers"
 #define kPluginIdentifier "fr.inria.openfx.ReadPDF"
 #define kPluginVersionMajor 1
-#define kPluginVersionMinor 1
+#define kPluginVersionMinor 2
 #define kPluginEvaluation 50
 #define kPluginDPI 72.0
 
@@ -59,14 +62,11 @@
 #define kParamDpiHint "Dots-per-inch (150 is default)"
 #define kParamDpiDefault 150.0
 
-#define kParamPage "page"
-#define kParamPageLabel "Page"
-#define kParamPageHint "Document page"
-
 #define kSupportsRGBA true
 #define kSupportsRGB false
 #define kSupportsAlpha false
 #define kSupportsTiles false
+#define kIsMultiPlanar true
 
 static bool gHostIsNatron = false;
 
@@ -77,29 +77,53 @@ public:
     virtual ~ReadPDFPlugin();
 private:
     virtual bool isVideoStream(const std::string& /*filename*/) OVERRIDE FINAL { return false; }
-    virtual void decode(const std::string& filename, OfxTime time, int view, bool isPlayback, const OfxRectI& renderWindow, float *pixelData, const OfxRectI& bounds, OFX::PixelComponentEnum pixelComponents, int pixelComponentCount, int rowBytes) OVERRIDE FINAL;
+    virtual void decode(const std::string& filename, OfxTime time, int view, bool isPlayback, const OfxRectI& renderWindow, float *pixelData, const OfxRectI& bounds,
+                             OFX::PixelComponentEnum pixelComponents, int pixelComponentCount, int rowBytes) OVERRIDE FINAL
+    {
+        std::string rawComps;
+        switch (pixelComponents) {
+            case OFX::ePixelComponentAlpha:
+                rawComps = kOfxImageComponentAlpha;
+                break;
+            case OFX::ePixelComponentRGB:
+                rawComps = kOfxImageComponentRGB;
+                break;
+            case OFX::ePixelComponentRGBA:
+                rawComps = kOfxImageComponentRGBA;
+                break;
+            default:
+                OFX::throwSuiteStatusException(kOfxStatFailed);
+                return;
+        }
+        decodePlane(filename, time, view, isPlayback, renderWindow, pixelData, bounds, pixelComponents, pixelComponentCount, rawComps, rowBytes);
+    }
+    virtual void decodePlane(const std::string& filename, OfxTime time, int view, bool isPlayback, const OfxRectI& renderWindow, float *pixelData, const OfxRectI& bounds, OFX::PixelComponentEnum pixelComponents, int pixelComponentCount, const std::string& rawComponents, int rowBytes) OVERRIDE FINAL;
+    virtual void getClipComponents(const OFX::ClipComponentsArguments& args, OFX::ClipComponentsSetter& clipComponents) OVERRIDE FINAL;
     virtual bool getFrameBounds(const std::string& filename, OfxTime time, OfxRectI *bounds, double *par, std::string *error,int *tile_width, int *tile_height) OVERRIDE FINAL;
     virtual void restoreState(const std::string& filename) OVERRIDE FINAL;
     virtual void onInputFileChanged(const std::string& newFile, bool setColorSpace, OFX::PreMultiplicationEnum *premult, OFX::PixelComponentEnum *components, int *componentCount) OVERRIDE FINAL;
     std::string getResourcesPath();
-    void getPageNum(std::string filename);
+    std::vector<std::string> imageLayers;
     OFX::DoubleParam *_dpi;
-    OFX::ChoiceParam *_page;
 };
 
 ReadPDFPlugin::ReadPDFPlugin(OfxImageEffectHandle handle, const std::vector<std::string>& extensions)
-: GenericReaderPlugin(handle, extensions, kSupportsRGBA, kSupportsRGB, kSupportsAlpha, kSupportsTiles, false)
+: GenericReaderPlugin(handle, extensions, kSupportsRGBA, kSupportsRGB, kSupportsAlpha, kSupportsTiles,
+#ifdef OFX_EXTENSIONS_NUKE
+(OFX::getImageEffectHostDescription() && OFX::getImageEffectHostDescription()->isMultiPlanar) ? kIsMultiPlanar : false
+#else
+false
+#endif
+)
 ,_dpi(0)
 {
     _dpi = fetchDoubleParam(kParamDpi);
-    _page = fetchChoiceParam(kParamPage);
-    assert(_dpi && _page);
+    assert(_dpi);
 
     // When we deploy the plugin we need access to the poppler data folder,
     // we asume that the path is OFX_HOST_BINARY/../Resources/poppler.
     // If not found, whatever poppler has as default will be used (may or may not work).
     std::string popplerData = getResourcesPath();
-    std::cout << popplerData << std::endl;
     if (!popplerData.empty()) {
         struct stat sb;
         if (stat(popplerData.c_str(), &sb) == 0 && S_ISDIR(sb.st_mode)) {
@@ -148,16 +172,33 @@ ReadPDFPlugin::getResourcesPath() {
 }
 
 void
-ReadPDFPlugin::decode(const std::string& filename,
-                      OfxTime time,
-                      int /*view*/,
-                      bool /*isPlayback*/,
-                      const OfxRectI& renderWindow,
-                      float *pixelData,
-                      const OfxRectI& /*bounds*/,
-                      OFX::PixelComponentEnum /*pixelComponents*/,
-                      int pixelComponentCount,
-                      int /*rowBytes*/)
+ReadPDFPlugin::getClipComponents(const OFX::ClipComponentsArguments& args, OFX::ClipComponentsSetter& clipComponents)
+{
+    assert(isMultiPlanar());
+    clipComponents.addClipComponents(*_outputClip, getOutputComponents());
+    clipComponents.setPassThroughClip(NULL, args.time, args.view);
+    if (imageLayers.size()>0 && gHostIsNatron) {
+        for (int i = 0; i < (int)imageLayers.size(); i++) {
+            std::ostringstream layerName;
+            layerName << imageLayers[i];
+            std::string component(kNatronOfxImageComponentsPlane);
+            component.append(layerName.str());
+            component.append(kNatronOfxImageComponentsPlaneChannel);
+            component.append("R");
+            component.append(kNatronOfxImageComponentsPlaneChannel);
+            component.append("G");
+            component.append(kNatronOfxImageComponentsPlaneChannel);
+            component.append("B");
+            component.append(kNatronOfxImageComponentsPlaneChannel);
+            component.append("A");
+            clipComponents.addClipComponents(*_outputClip, component);
+        }
+    }
+}
+
+void
+ReadPDFPlugin::decodePlane(const std::string& filename, OfxTime time, int /*view*/, bool /*isPlayback*/, const OfxRectI& renderWindow, float *pixelData, const OfxRectI& /*bounds*/,
+                                 OFX::PixelComponentEnum /*pixelComponents*/, int pixelComponentCount, const std::string& rawComponents, int /*rowBytes*/)
 {
     if (pixelComponentCount != 4) {
         setPersistentMessage(OFX::Message::eMessageError, "", "Wrong pixel components");
@@ -176,9 +217,20 @@ ReadPDFPlugin::decode(const std::string& filename,
     cairo_t *cr;
     cairo_status_t status;
     double dpi, imageWidth, imageHeight, scaleWidth, scaleHeight;
-    int width, height, renderWidth, renderHeight, pageNum;
+    int width, height, renderWidth, renderHeight;
     _dpi->getValueAtTime(time, dpi);
-    _page->getValueAtTime(time, pageNum);
+
+    int layer = 0;
+    if (gHostIsNatron) {
+        std::string layerName;
+        std::vector<std::string> layerChannels = OFX::mapPixelComponentCustomToLayerChannels(rawComponents);
+        int numChannels = layerChannels.size();
+        if (numChannels==5) // layer+R+G+B+A
+            layerName=layerChannels[0];
+        if (!layerName.empty()) {
+            layer = atoi(layerName.c_str());
+        }
+    }
 
     gchar *absolute, *uri;
     absolute = g_strdup(filename.c_str());
@@ -192,7 +244,7 @@ ReadPDFPlugin::decode(const std::string& filename,
         OFX::throwSuiteStatusException(kOfxStatErrFormat);
     }
 
-    page = poppler_document_get_page(document, pageNum);
+    page = poppler_document_get_page(document, layer);
     if (page == NULL) {
         setPersistentMessage(OFX::Message::eMessageError, "", "Failed to read page");
         OFX::throwSuiteStatusException(kOfxStatErrFormat);
@@ -275,9 +327,7 @@ bool ReadPDFPlugin::getFrameBounds(const std::string& filename,
     }
 
     double dpi;
-    int pageNum;
     _dpi->getValueAtTime(time, dpi);
-    _page->getValueAtTime(time, pageNum);
 
     GError *error = NULL;
     PopplerDocument *document = NULL;
@@ -298,7 +348,7 @@ bool ReadPDFPlugin::getFrameBounds(const std::string& filename,
         OFX::throwSuiteStatusException(kOfxStatErrFormat);
     }
 
-    page = poppler_document_get_page(document, pageNum);
+    page = poppler_document_get_page(document, 0);
     poppler_page_get_size(page, &imageWidth, &imageHeight);
     if (page !=NULL) {
         width = dpi * imageWidth / kPluginDPI;
@@ -323,17 +373,11 @@ bool ReadPDFPlugin::getFrameBounds(const std::string& filename,
 
 void ReadPDFPlugin::restoreState(const std::string& filename)
 {
-    getPageNum(filename);
-}
-
-void ReadPDFPlugin::getPageNum(std::string filename)
-{
-    if (!filename.empty() && gHostIsNatron) {
-        _page->resetOptions();
-
+    if (filename.empty()) {
+        setPersistentMessage(OFX::Message::eMessageError, "", "No filename");
+    } else {
         GError *error = NULL;
         PopplerDocument *document = NULL;
-        int pages = 0;
 
         gchar *absolute, *uri;
         absolute = g_strdup(filename.c_str());
@@ -344,17 +388,18 @@ void ReadPDFPlugin::getPageNum(std::string filename)
 
         if (error != NULL) {
             setPersistentMessage(OFX::Message::eMessageError, "", "Failed to read PDF");
-            OFX::throwSuiteStatusException(kOfxStatErrFormat);
-        }
+        } else {
+            imageLayers.clear();
+            int pages = 0;
+            pages = poppler_document_get_n_pages(document);
+            if (pages<0)
+                pages=0;
 
-        pages = poppler_document_get_n_pages(document)-1;
-        if (pages<0)
-            pages=0;
-
-        for (int i = 0; i < pages; i++) {
-            std::ostringstream pageName;
-            pageName << "Page " << i;
-            _page->appendOption(pageName.str());
+            for (int i = 0; i < pages; i++) {
+                std::ostringstream pageName;
+                pageName << i;
+                imageLayers.push_back(pageName.str());
+            }
         }
 
         g_object_unref(document);
@@ -368,32 +413,7 @@ void ReadPDFPlugin::onInputFileChanged(const std::string& newFile,
                                   OFX::PixelComponentEnum *components,int */*componentCount*/)
 {
     assert(premult && components);
-
-    if (newFile.empty()) {
-        setPersistentMessage(OFX::Message::eMessageError, "", "No filename");
-        OFX::throwSuiteStatusException(kOfxStatErrFormat);
-    }
-
-    GError *error = NULL;
-    PopplerDocument *document = NULL;
-
-    gchar *absolute, *uri;
-    absolute = g_strdup(newFile.c_str());
-    uri = g_filename_to_uri(absolute, NULL, &error);
-    free(absolute);
-
-    document = poppler_document_new_from_file(uri, NULL, &error);
-
-    if (error != NULL) {
-        setPersistentMessage(OFX::Message::eMessageError, "", "Failed to read PDF");
-        OFX::throwSuiteStatusException(kOfxStatErrFormat);
-    }
-
-    getPageNum(newFile);
-
-    g_object_unref(document);
-    error = NULL;
-
+    restoreState(newFile);
     if (setColorSpace) {
 # ifdef OFX_IO_USING_OCIO
         _ocio->setInputColorspace("sRGB");
@@ -419,7 +439,7 @@ ReadPDFPluginFactory::load()
 /** @brief The basic describe function, passed a plugin descriptor */
 void ReadPDFPluginFactory::describe(OFX::ImageEffectDescriptor &desc)
 {
-    GenericReaderDescribe(desc, _extensions, kPluginEvaluation, kSupportsTiles, false);
+    GenericReaderDescribe(desc, _extensions, kPluginEvaluation, kSupportsTiles, kIsMultiPlanar);
     desc.setLabel(kPluginName);
     desc.setPluginDescription("Read PDF documents using poppler.");
 }
@@ -438,14 +458,6 @@ void ReadPDFPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, C
         param->setDisplayRange(1, 500);
         param->setDefault(kParamDpiDefault);
         param->setAnimates(false);
-        page->addChild(*param);
-    }
-    {
-        ChoiceParamDescriptor* param = desc.defineChoiceParam(kParamPage);
-        param->setLabel(kParamPageLabel);
-        param->setHint(kParamPageHint);
-        param->appendOption("Default");
-        param->setLayoutHint(OFX::eLayoutHintDivider);
         page->addChild(*param);
     }
 
