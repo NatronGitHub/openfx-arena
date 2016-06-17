@@ -83,7 +83,6 @@ private:
     OFX::IntParam *fontSize_;
     OFX::ChoiceParam *fontName_;
     OFX::StringParam *font_;
-    bool has_fontconfig;
     bool has_freetype;
     OFX::BooleanParam *enableOpenMP_;
 };
@@ -92,14 +91,11 @@ PolaroidPlugin::PolaroidPlugin(OfxImageEffectHandle handle)
 : OFX::ImageEffect(handle)
 , dstClip_(0)
 , srcClip_(0)
-,has_fontconfig(false)
 ,has_freetype(false)
 {
     Magick::InitializeMagick(NULL);
 
     std::string delegates = MagickCore::GetMagickDelegates();
-    if (delegates.find("fontconfig") != std::string::npos)
-        has_fontconfig = true;
     if (delegates.find("freetype") != std::string::npos)
         has_freetype = true;
 
@@ -198,8 +194,8 @@ void PolaroidPlugin::render(const OFX::RenderArguments &args)
     }
 
     // font support?
-    if (!has_fontconfig||!has_freetype) {
-        setPersistentMessage(OFX::Message::eMessageError, "", "Fontconfig and/or Freetype missing");
+    if (!has_freetype) {
+        setPersistentMessage(OFX::Message::eMessageError, "", "Freetype missing");
         OFX::throwSuiteStatusException(kOfxStatFailed);
         return;
     }
