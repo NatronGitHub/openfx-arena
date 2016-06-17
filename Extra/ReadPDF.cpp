@@ -17,9 +17,26 @@
 */
 
 #include <poppler.h>
+#include <poppler/GlobalParams.h>
 #include <cairo.h>
 
 #include <iostream>
+
+#include <sys/types.h>
+#include <sys/stat.h>
+
+#ifdef __linux__
+#include <unistd.h>
+#include <libgen.h>
+#include <cstring>
+#elif __APPLE__
+#include <mach-o/dyld.h>
+#include <libgen.h>
+#include <cstring>
+#elif _WIN32
+#include <windows.h>
+#include <Shlwapi.h>
+#endif
 
 #include "GenericReader.h"
 #include "GenericOCIO.h"
@@ -33,14 +50,14 @@
 #define kPluginGrouping "Image/Readers"
 #define kPluginIdentifier "fr.inria.openfx.ReadPDF"
 #define kPluginVersionMajor 1
-#define kPluginVersionMinor 0
+#define kPluginVersionMinor 1
 #define kPluginEvaluation 50
-#define kPluginDPI 72
+#define kPluginDPI 72.0
 
 #define kParamDpi "dpi"
 #define kParamDpiLabel "DPI"
 #define kParamDpiHint "Dots-per-inch (150 is default)"
-#define kParamDpiDefault 150
+#define kParamDpiDefault 150.0
 
 #define kParamPage "page"
 #define kParamPageLabel "Page"
@@ -64,8 +81,9 @@ private:
     virtual bool getFrameBounds(const std::string& filename, OfxTime time, OfxRectI *bounds, double *par, std::string *error,int *tile_width, int *tile_height) OVERRIDE FINAL;
     virtual void restoreState(const std::string& filename) OVERRIDE FINAL;
     virtual void onInputFileChanged(const std::string& newFile, bool setColorSpace, OFX::PreMultiplicationEnum *premult, OFX::PixelComponentEnum *components, int *componentCount) OVERRIDE FINAL;
+    std::string getResourcesPath();
     void getPageNum(std::string filename);
-    OFX::IntParam *_dpi;
+    OFX::DoubleParam *_dpi;
     OFX::ChoiceParam *_page;
 };
 
@@ -73,13 +91,60 @@ ReadPDFPlugin::ReadPDFPlugin(OfxImageEffectHandle handle, const std::vector<std:
 : GenericReaderPlugin(handle, extensions, kSupportsRGBA, kSupportsRGB, kSupportsAlpha, kSupportsTiles, false)
 ,_dpi(0)
 {
-    _dpi = fetchIntParam(kParamDpi);
+    _dpi = fetchDoubleParam(kParamDpi);
     _page = fetchChoiceParam(kParamPage);
     assert(_dpi && _page);
+
+    // When we deploy the plugin we need access to the poppler data folder,
+    // we asume that the path is OFX_HOST_BINARY/../Resources/poppler.
+    // If not found, whatever poppler has as default will be used (may or may not work).
+    std::string popplerData = getResourcesPath();
+    std::cout << popplerData << std::endl;
+    if (!popplerData.empty()) {
+        struct stat sb;
+        if (stat(popplerData.c_str(), &sb) == 0 && S_ISDIR(sb.st_mode)) {
+            globalParams = new GlobalParams(popplerData.c_str());
+        }
+    }
 }
 
 ReadPDFPlugin::~ReadPDFPlugin()
 {
+}
+
+std::string
+ReadPDFPlugin::getResourcesPath() {
+    std::string result;
+    char path[PATH_MAX];
+
+#ifdef __linux__
+    char tmp[PATH_MAX];
+    if (readlink("/proc/self/exe", tmp, sizeof(tmp)) != -1) {
+        strcpy(path,dirname(tmp));
+    }
+#elif __APPLE__
+    char tmp[PATH_MAX];
+    uint32_t size = sizeof(tmp);
+    _NSGetExecutablePath(tmp, &size);
+    strcpy(path,dirname(tmp));
+#elif _WIN32
+    HMODULE hModule = GetModuleHandle(NULL);
+    if (hModule != NULL) {
+        GetModuleFileName(hModule,path, (sizeof(path)));
+        PathRemoveFileSpec(path);
+    }
+#endif
+
+    result = path;
+    if (!result.empty()) {
+#ifdef _WIN32
+        result += "\\..\\Resources\\poppler";
+#else
+        result += "/../Resources/poppler";
+#endif
+    }
+
+    return result;
 }
 
 void
@@ -110,8 +175,8 @@ ReadPDFPlugin::decode(const std::string& filename,
     cairo_surface_t *surface;
     cairo_t *cr;
     cairo_status_t status;
-    double imageWidth, imageHeight, scaleWidth, scaleHeight;
-    int dpi, width, height, renderWidth, renderHeight, pageNum;
+    double dpi, imageWidth, imageHeight, scaleWidth, scaleHeight;
+    int width, height, renderWidth, renderHeight, pageNum;
     _dpi->getValueAtTime(time, dpi);
     _page->getValueAtTime(time, pageNum);
 
@@ -155,6 +220,11 @@ ReadPDFPlugin::decode(const std::string& filename,
     cairo_scale(cr, scaleWidth, scaleHeight);
 
     poppler_page_render(page, cr);
+
+    cairo_set_operator(cr, CAIRO_OPERATOR_DEST_OVER);
+    cairo_set_source_rgb(cr, 1, 1, 1);
+    cairo_paint(cr);
+
     status = cairo_status(cr);
 
     if (status) {
@@ -204,7 +274,8 @@ bool ReadPDFPlugin::getFrameBounds(const std::string& filename,
         OFX::throwSuiteStatusException(kOfxStatErrFormat);
     }
 
-    int dpi, pageNum;
+    double dpi;
+    int pageNum;
     _dpi->getValueAtTime(time, dpi);
     _page->getValueAtTime(time, pageNum);
 
@@ -330,7 +401,7 @@ void ReadPDFPlugin::onInputFileChanged(const std::string& newFile,
     }
 
     *components = OFX::ePixelComponentRGBA;
-    *premult = OFX::eImagePreMultiplied;
+    *premult = OFX::eImageUnPreMultiplied;
 }
 
 using namespace OFX;
@@ -350,7 +421,7 @@ void ReadPDFPluginFactory::describe(OFX::ImageEffectDescriptor &desc)
 {
     GenericReaderDescribe(desc, _extensions, kPluginEvaluation, kSupportsTiles, false);
     desc.setLabel(kPluginName);
-    desc.setPluginDescription("Read PDF");
+    desc.setPluginDescription("Read PDF documents using poppler.");
 }
 
 /** @brief The describe in context function, passed a plugin descriptor and a context */
@@ -360,7 +431,7 @@ void ReadPDFPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, C
 
     PageParamDescriptor *page = GenericReaderDescribeInContextBegin(desc, context, isVideoStreamPlugin(), kSupportsRGBA, kSupportsRGB, kSupportsAlpha, kSupportsTiles, false);
     {
-        IntParamDescriptor* param = desc.defineIntParam(kParamDpi);
+        DoubleParamDescriptor* param = desc.defineDoubleParam(kParamDpi);
         param->setLabel(kParamDpiLabel);
         param->setHint(kParamDpiHint);
         param->setRange(1, 10000);
