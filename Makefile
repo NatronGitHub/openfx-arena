@@ -1,31 +1,8 @@
 SUBDIRS = Bundle
 
-SUBDIRS_NOMULTI = \
-Arc \
-Charcoal \
-Edges \
-Emboss \
-Implode \
-Modulate \
-Oilpaint \
-Polar \
-Polaroid \
-ReadPSD \
-Reflection \
-Roll \
-Sketch \
-Swirl \
-Text \
-TextPango \
-Texture \
-Tile \
-Wave \
-PovRay \
-ReadMisc
-
 all: subdirs
 
-.PHONY: nomulti subdirs clean install install-nomulti uninstall uninstall-nomulti $(SUBDIRS)
+.PHONY: subdirs clean install uninstall $(SUBDIRS)
 
 nomulti:
 	$(MAKE) SUBDIRS="$(SUBDIRS_NOMULTI)"
@@ -47,15 +24,9 @@ install:
 	  (cd $$i && $(MAKE) $@); \
 	done
 
-install-nomulti:
-	$(MAKE) SUBDIRS="$(SUBDIRS_NOMULTI)" install
-
 uninstall:
 	@for i in $(SUBDIRS) ; do \
 	  echo "(cd $$i && $(MAKE) $@)"; \
 	  (cd $$i && $(MAKE) $@); \
 	done
-
-uninstall-nomulti:
-	$(MAKE) SUBDIRS="$(SUBDIRS_NOMULTI)" uninstall
 

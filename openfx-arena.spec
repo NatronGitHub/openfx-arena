@@ -12,12 +12,12 @@ Packager: Ole-André Rodlie, <ole-andre.rodlie@inria.fr>
 URL: https://github.com/olear/openfx-arena
 
 Source: %{version}/%{name}-%{version}.tar.gz
-Source1: ImageMagick-6.9.3-5.tar.xz
+Source1: ImageMagick-6.9.4-6.tar.xz
 Source2: OpenColorIO-1.0.9.tar.gz
 BuildRoot: %{_tmppath}/%{name}-%{version}-%{release}-root
 
-BuildRequires: freetype-devel fontconfig-devel libxml2-devel librsvg2-devel pango-devel zlib-devel libpng-devel cmake gcc-c++ mesa-libGL-devel expat-devel libstdc++-static libzip-devel libselinux-devel libcdr-devel
-Requires: freetype fontconfig libxml2 librsvg2 pango zlib libpng mesa-libGL expat libzip libcdr
+BuildRequires: freetype-devel fontconfig-devel libxml2-devel librsvg2-devel pango-devel zlib-devel cmake gcc-c++ mesa-libGL-devel expat-devel libstdc++-static libzip-devel libselinux-devel libcdr-devel poppler-glib-devel
+Requires: freetype fontconfig libxml2 librsvg2 pango zlib mesa-libGL expat libzip libcdr poppler-glib
 
 %description
 A set of extra OpenFX plugins for Natron/Nuke.
@@ -51,15 +51,14 @@ cp COPYING LICENSE.lcms
 cd ..
 
 # No distro has the IM version/build we want, so include it
-cd ImageMagick-6.9.3-5
+cd ImageMagick-6.9.4-6
 CFLAGS="-fPIC -O3 " CXXFLAGS="-fPIC -O3" ./configure --prefix=$ARENA_TMP --disable-docs --disable-deprecated --with-magick-plus-plus=yes --with-quantum-depth=32 --without-dps --without-djvu --without-fftw --without-fpx --without-gslib --without-gvc --without-jbig --without-jpeg --with-lcms --without-openjp2 --without-lqr --without-lzma --without-openexr --without-pango --without-png --without-rsvg --without-tiff --without-webp --without-xml --without-zlib --without-bzlib --enable-static --disable-shared --enable-hdri --with-freetype --with-fontconfig --without-x --without-modules
 make %{?_smp_mflags} install
 cp LICENSE LICENSE.ImageMagick
 cd ..
 
 # Build plugins (link static for nuke compat)
-make -C Extra CONFIG=release LDFLAGS_ADD="-static-libgcc -static-libstdc++"
-make -C Magick CONFIG=release LDFLAGS_ADD="-static-libgcc -static-libstdc++"
+make CONFIG=release LDFLAGS_ADD="-static-libgcc -static-libstdc++"
 cp OpenFX/Support/LICENSE OpenFX/Support/LICENSE.OpenFX
 cp OpenFX-IO/LICENSE OpenFX-IO/LICENSE.OpenFX-IO
 cp SupportExt/LICENSE SupportExt/LICENSE.SupportExt
@@ -75,6 +74,6 @@ strip -s %{buildroot}/usr/OFX/Plugins/*/*/*/*.ofx
 %files
 %defattr(-,root,root,-)
 /usr/OFX/Plugins/*.ofx.bundle
-%doc README.md COPYING LICENSE OpenFX/Support/LICENSE.OpenFX OpenFX-IO/LICENSE.OpenFX-IO SupportExt/LICENSE.SupportExt ImageMagick-6.9.3-5/LICENSE.ImageMagick OpenColorIO-1.0.9/LICENSE.OpenColorIO lcms2-2.1/LICENSE.lcms
+%doc README.md COPYING LICENSE OpenFX/Support/LICENSE.OpenFX OpenFX-IO/LICENSE.OpenFX-IO SupportExt/LICENSE.SupportExt ImageMagick-6.9.4-6/LICENSE.ImageMagick OpenColorIO-1.0.9/LICENSE.OpenColorIO lcms2-2.1/LICENSE.lcms
 
 %changelog

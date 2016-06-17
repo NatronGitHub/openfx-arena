@@ -4,7 +4,13 @@ PLUGINOBJECTS = \
         ReadCDR.o \
         ReadSVG.o \
         ReadKrita.o \
-        OpenRaster.o \
+        OpenRaster.o
+
+ifeq ($(LICENSE),GPL)
+        PLUGINOBJECTS += ReadPDF.o
+endif
+
+PLUGINOBJECTS += \
         ofxsOGLTextRenderer.o ofxsOGLFontData.o ofxsRectangleInteract.o \
         GenericReader.o GenericOCIO.o SequenceParsing.o
 
@@ -22,11 +28,20 @@ fr.inria.openfx.ReadKrita.svg \
 fr.inria.openfx.OpenRaster.png \
 fr.inria.openfx.OpenRaster.svg
 
+ifeq ($(LICENSE),GPL)
+        RESOURCES += fr.inria.openfx.ReadPDF.png fr.inria.openfx.ReadPDF.svg
+endif
+
 include ../Makefile.master
 include ../Makefile.io
 
 CXXFLAGS  += $(FCONFIG_CXXFLAGS) $(PANGO_CXXFLAGS) $(SVG_CXXFLAGS) $(CDR_CXXFLAGS) $(XML_CXXFLAGS) $(ZIP_CXXFLAGS)
 LINKFLAGS += $(FCONFIG_LINKFLAGS) $(PANGO_LINKFLAGS) $(SVG_LINKFLAGS) $(CDR_LINKFLAGS) $(XML_LINKFLAGS) $(ZIP_LINKFLAGS)
+
+ifeq ($(LICENSE),GPL)
+        CXXFLAGS += $(POPPLER_CXXFLAGS)
+        LINKFLAGS += $(POPPLER_LINKFLAGS)
+endif
 
 PNGVERSION = a70c086077c0eaecbae3845e4da4424de5f43361
 

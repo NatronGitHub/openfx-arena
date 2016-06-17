@@ -47,14 +47,17 @@ SVG_LINKFLAGS = $(shell pkg-config librsvg-2.0 --libs --static)
 PANGO_CXXFLAGS = $(shell pkg-config pangocairo --cflags)
 PANGO_LINKFLAGS = $(shell pkg-config pangocairo --libs --static)
 
+# cairo
+CAIRO_CXXFLAGS = $(shell pkg-config cairo --cflags)
+CAIRO_LINKFLAGS += $(shell pkg-config cairo --libs --static)
+
+# poppler
+POPPLER_CXXFLAGS += $(shell pkg-config poppler-glib --cflags)
+POPPLER_LINKFLAGS += $(shell pkg-config poppler-glib --libs --static)
+
 # mingw
 ifeq ($(MINGW),1)
-  MAGICK_CXXFLAGS = $(shell Magick++-config --cppflags --cxxflags)
-  MAGICK_LINKFLAGS = $(shell Magick++-config --ldflags --libs)
-  MAGICK_LINKFLAGS += -lgdi32 -lfontconfig -lfreetype -lexpat -lpng -lz -lm -lgomp -lpthread
-  MAGICK_LINKFLAGS += $(shell pkg-config pangocairo --libs --static)
-  MAGICK_LINKFLAGS += $(shell pkg-config librsvg-2.0 --libs --static)
-  MAGICK_LINKFLAGS += $(shell pkg-config libxml-2.0 --libs --static)
+  MAGICK_LINKFLAGS += -lgdi32 -lfreetype -lexpat -lz -lws2_32
 endif
 
 # FreeBSD
@@ -63,9 +66,3 @@ ifeq ($(FREEBSD),1)
   LDFLAGS += -L/usr/local/lib
 endif
 
-# Static
-ifeq ($(STATIC_LIBS),1)
-  MAGICK_LINKFLAGS += $(shell pkg-config pangocairo --libs --static)
-  MAGICK_LINKFLAGS += $(shell pkg-config librsvg-2.0 --libs --static)
-  MAGICK_LINKFLAGS += $(shell pkg-config libxml-2.0 --libs --static)
-endif

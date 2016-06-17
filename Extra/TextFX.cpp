@@ -126,7 +126,11 @@
 #define kParamFontAA "antialiasing"
 #define kParamFontAALabel "Antialiasing"
 #define kParamFontAAHint "This specifies the type of antialiasing to do when rendering text."
+#if defined(_WIN32) || defined(__WIN32__) || defined(WIN32)
+#define kParamFontAADefault 2
+#else
 #define kParamFontAADefault 0
+#endif
 
 #define kParamSubpixel "subpixel"
 #define kParamSubpixelLabel "Subpixel"
@@ -735,13 +739,22 @@ void TextFXPlugin::render(const OFX::RenderArguments &args)
                 cairo_fill(cr);
             }
             else {
+#if defined(_WIN32) || defined(__WIN32__) || defined(WIN32)
                 cairo_new_path(cr);
-                if (!autoSize && move) {
+                if (move) {
                     cairo_move_to(cr, xtext, ytext);
                 }
                 pango_cairo_layout_path(cr, layout);
                 cairo_set_source_rgba(cr, r, g, b, a);
                 cairo_fill(cr);
+#else
+                if (!autoSize && move) {
+                    cairo_move_to(cr, xtext, ytext);
+                }
+                cairo_set_source_rgba(cr, r, g, b, a);
+                pango_cairo_update_layout(cr, layout);
+                pango_cairo_show_layout(cr, layout);
+#endif
             }
         }
     }
