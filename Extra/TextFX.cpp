@@ -248,6 +248,8 @@ private:
     OFX::Double2DParam *position_;
     OFX::BooleanParam *move_;
     OFX::StringParam *txt_;
+    OFX::DoubleParam *skewX_;
+    OFX::DoubleParam *skewY_;
 };
 
 TextFXPlugin::TextFXPlugin(OfxImageEffectHandle handle)
@@ -289,12 +291,15 @@ TextFXPlugin::TextFXPlugin(OfxImageEffectHandle handle)
     position_ = fetchDouble2DParam(kParamTransformCenterOld);
     move_ = fetchBooleanParam(kParamPositionMove);
     txt_ = fetchStringParam(kParamTextFile);
+    skewX_ = fetchDoubleParam(kParamTransformSkewXOld);
+    skewY_ = fetchDoubleParam(kParamTransformSkewYOld);
 
     assert(text_ && fontSize_ && fontName_ && textColor_ && font_ && wrap_
            && justify_ && align_ && markup_ && style_ && auto_ && stretch_ && weight_ && strokeColor_
            && strokeWidth_ && strokeDash_ && strokeDashPattern_ && fontAA_ && subpixel_ && hintStyle_
            && hintMetrics_ && circleRadius_ && circleWords_ && letterSpace_ && canvas_
-           && arcRadius_ && arcAngle_ && rotate_ && scale_ && position_ && move_ && txt_);
+           && arcRadius_ && arcAngle_ && rotate_ && scale_ && position_ && move_ && txt_
+           && skewX_ && skewY_);
 
     // Setup selected font
     std::string fontString, fontCombo;
@@ -399,7 +404,7 @@ void TextFXPlugin::render(const OFX::RenderArguments &args)
     }
 
     // Get params
-    double x, y, r, g, b, a, s_r, s_g, s_b, s_a, strokeWidth, strokeDashX, strokeDashY, strokeDashZ, circleRadius, arcRadius, arcAngle, rotate, scaleX, scaleY;
+    double x, y, r, g, b, a, s_r, s_g, s_b, s_a, strokeWidth, strokeDashX, strokeDashY, strokeDashZ, circleRadius, arcRadius, arcAngle, rotate, scaleX, scaleY, skewX, skewY;
     int fontSize, fontID, cwidth, cheight, wrap, align, style, stretch, weight, strokeDash, fontAA, subpixel, hintStyle, hintMetrics, circleWords, letterSpace;
     std::string text, fontName, font, txt;
     bool justify = false;
@@ -440,6 +445,8 @@ void TextFXPlugin::render(const OFX::RenderArguments &args)
     position_->getValueAtTime(args.time, x, y);
     move_->getValueAtTime(args.time, move);
     txt_->getValueAtTime(args.time, txt);
+    skewX_->getValueAtTime(args.time, skewX);
+    skewY_->getValueAtTime(args.time, skewY);
 
     double ytext = y*args.renderScale.y;
     double xtext = x*args.renderScale.x;
@@ -695,6 +702,28 @@ void TextFXPlugin::render(const OFX::RenderArguments &args)
     if (scaleX!=1.0||scaleY!=1.0) {
         cairo_translate(cr, xtext, ytext);
         cairo_scale(cr, scaleX, scaleY);
+        cairo_translate(cr, -xtext, -ytext);
+    }
+
+    if (skewX!=0.0) {
+        cairo_matrix_t matrixSkewX = {
+            1.0, 0.0,
+            -skewX, 1.0,
+            0.0, 0.0
+        };
+        cairo_translate(cr, xtext, ytext);
+        cairo_transform(cr, &matrixSkewX);
+        cairo_translate(cr, -xtext, -ytext);
+    }
+
+    if (skewY!=0.0) {
+        cairo_matrix_t matrixSkewY = {
+            1.0, -skewY,
+            0.0, 1.0,
+            0.0, 0.0
+        };
+        cairo_translate(cr, xtext, ytext);
+        cairo_transform(cr, &matrixSkewY);
         cairo_translate(cr, -xtext, -ytext);
     }
 
