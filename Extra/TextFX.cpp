@@ -28,6 +28,7 @@
 #include <cmath>
 #include <cstring>
 #include <algorithm>
+#include <fstream>
 
 #include "fx.h"
 
@@ -35,7 +36,7 @@
 #define kPluginGrouping "Draw"
 #define kPluginIdentifier "fr.inria.openfx.TextFX"
 #define kPluginVersionMajor 1
-#define kPluginVersionMinor 7
+#define kPluginVersionMinor 8
 
 #define kSupportsTiles 0
 #define kSupportsMultiResolution 0
@@ -196,6 +197,10 @@
 #define kParamPositionMoveHint "Enable custom position. Auto size and a transform node is recommended. Will not work if auto size or markup is enabled. Will also disable text align, wrap and other features."
 #define kParamPositionMoveDefault false
 
+#define kParamTextFile "file"
+#define kParamTextFileLabel "File"
+#define kParamTextFileHint "Add text from filename"
+
 using namespace OFX;
 static bool gHostIsNatron = false;
 
@@ -217,6 +222,8 @@ public:
 
     // override the rod call
     virtual bool getRegionOfDefinition(const OFX::RegionOfDefinitionArguments &args, OfxRectD &rod) OVERRIDE FINAL;
+
+    std::string textFromFile(std::string filename);
 
 private:
     // do not need to delete these, the ImageEffect is managing them for us
@@ -252,6 +259,7 @@ private:
     OFX::DoubleParam *scale_;
     OFX::Double2DParam *position_;
     OFX::BooleanParam *move_;
+    OFX::StringParam *txt_;
 };
 
 TextFXPlugin::TextFXPlugin(OfxImageEffectHandle handle)
@@ -292,12 +300,13 @@ TextFXPlugin::TextFXPlugin(OfxImageEffectHandle handle)
     scale_ = fetchDoubleParam(kParamScale);
     position_ = fetchDouble2DParam(kParamPosition);
     move_ = fetchBooleanParam(kParamPositionMove);
+    txt_ = fetchStringParam(kParamTextFile);
 
     assert(text_ && fontSize_ && fontName_ && textColor_ && font_ && wrap_
            && justify_ && align_ && markup_ && style_ && auto_ && stretch_ && weight_ && strokeColor_
            && strokeWidth_ && strokeDash_ && strokeDashPattern_ && fontAA_ && subpixel_ && hintStyle_
            && hintMetrics_ && circleRadius_ && circleWords_ && letterSpace_ && canvas_
-           && arcRadius_ && arcAngle_ && rotate_ && scale_ && position_ && move_);
+           && arcRadius_ && arcAngle_ && rotate_ && scale_ && position_ && move_ && txt_);
 
     // Setup selected font
     std::string fontString, fontCombo;
@@ -329,6 +338,21 @@ TextFXPlugin::TextFXPlugin(OfxImageEffectHandle handle)
 
 TextFXPlugin::~TextFXPlugin()
 {
+}
+
+std::string TextFXPlugin::textFromFile(std::string filename) {
+    std::string result;
+    if (!filename.empty()) {
+        std::ifstream f;
+        f.open(filename.c_str());
+        std::ostringstream s;
+        s << f.rdbuf();
+        f.close();
+        if (!s.str().empty()) {
+            result = s.str();
+        }
+    }
+    return result;
 }
 
 /* Override the render */
@@ -389,7 +413,7 @@ void TextFXPlugin::render(const OFX::RenderArguments &args)
     // Get params
     double x, y, r, g, b, a, s_r, s_g, s_b, s_a, strokeWidth, strokeDashX, strokeDashY, strokeDashZ, circleRadius, arcRadius, arcAngle, rotate, scale;
     int fontSize, fontID, cwidth, cheight, wrap, align, style, stretch, weight, strokeDash, fontAA, subpixel, hintStyle, hintMetrics, circleWords, letterSpace;
-    std::string text, fontName, font;
+    std::string text, fontName, font, txt;
     bool justify = false;
     bool markup = false;
     bool autoSize = false;
@@ -427,6 +451,7 @@ void TextFXPlugin::render(const OFX::RenderArguments &args)
     scale_->getValueAtTime(args.time, scale);
     position_->getValueAtTime(args.time, x, y);
     move_->getValueAtTime(args.time, move);
+    txt_->getValueAtTime(args.time, txt);
 
     double ytext = y*args.renderScale.y;
     double xtext = x*args.renderScale.x;
@@ -443,6 +468,13 @@ void TextFXPlugin::render(const OFX::RenderArguments &args)
 
     if (gHostIsNatron)
         fontName.erase(0,2);
+
+    if (!txt.empty()) {
+        std::string txt_tmp = textFromFile(txt);
+        if (!txt_tmp.empty()) {
+            text = txt_tmp;
+        }
+    }
 
     std::ostringstream pangoFont;
     pangoFont << fontName;
@@ -856,7 +888,7 @@ bool TextFXPlugin::getRegionOfDefinition(const OFX::RegionOfDefinitionArguments 
     if (autoSize) {
         int fontSize, fontID, style, stretch, weight, letterSpace;
         double strokeWidth;
-        std::string text, fontName, font;
+        std::string text, fontName, font, txt;
         bool markup = false;
 
         text_->getValueAtTime(args.time, text);
@@ -870,6 +902,14 @@ bool TextFXPlugin::getRegionOfDefinition(const OFX::RegionOfDefinitionArguments 
         weight_->getValueAtTime(args.time, weight);
         strokeWidth_->getValueAtTime(args.time, strokeWidth);
         letterSpace_->getValueAtTime(args.time, letterSpace);
+        txt_->getValueAtTime(args.time, txt);
+
+        if (!txt.empty()) {
+            std::string txt_tmp = textFromFile(txt);
+            if (!txt_tmp.empty()) {
+                text = txt_tmp;
+            }
+        }
 
         if (!font.empty()) {
             fontName=font;
@@ -1114,6 +1154,15 @@ void TextFXPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, Co
         param->setLabel(kParamMarkupLabel);
         param->setHint(kParamMarkupHint);
         param->setDefault(kParamMarkupDefault);
+        param->setAnimates(false);
+        page->addChild(*param);
+    }
+    {
+        StringParamDescriptor* param = desc.defineStringParam(kParamTextFile);
+        param->setLabel(kParamTextFileLabel);
+        param->setHint(kParamTextFileHint);
+        param->setStringType(eStringTypeFilePath);
+        param->setFilePathExists(true);
         param->setAnimates(false);
         page->addChild(*param);
     }
