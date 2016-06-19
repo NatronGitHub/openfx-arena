@@ -19,7 +19,6 @@
 #include <pango/pangocairo.h>
 #include <fontconfig/fontconfig.h>
 
-#include "ofxsPositionInteract.h"
 #include "ofxsMacros.h"
 #include "ofxsImageEffect.h"
 #include "ofxNatron.h"
@@ -95,7 +94,7 @@
 
 #define kParamAutoSize "autoSize"
 #define kParamAutoSizeLabel "Auto size"
-#define kParamAutoSizeHint "Set canvas sized based on text. This will disable word wrap, custom canvas size and circle effect."
+#define kParamAutoSizeHint "Set canvas sized based on text. This will disable word wrap, custom canvas size and circle effect. Transform functions should also not be used in combination with this feature."
 #define kParamAutoSizeDefault false
 
 #define kParamStretch "stretch"
@@ -180,9 +179,9 @@
 #define kParamArcAngleHint "Arc Angle, set to 360 for a full circle."
 #define kParamArcAngleDefault 0
 
-#define kParamPositionMove "custom"
-#define kParamPositionMoveLabel "Custom"
-#define kParamPositionMoveHint "Enable custom position. Auto size and a transform node is recommended. Will not work if auto size or markup is enabled. Will also disable text align, wrap and other features."
+#define kParamPositionMove "transform"
+#define kParamPositionMoveLabel "Transform"
+#define kParamPositionMoveHint "Use transform overlay for text position."
 #define kParamPositionMoveDefault true
 
 #define kParamTextFile "file"
@@ -212,6 +211,7 @@ public:
     virtual bool getRegionOfDefinition(const OFX::RegionOfDefinitionArguments &args, OfxRectD &rod) OVERRIDE FINAL;
 
     std::string textFromFile(std::string filename);
+    void resetCenter(double time);
 
 private:
     // do not need to delete these, the ImageEffect is managing them for us
@@ -250,6 +250,7 @@ private:
     OFX::StringParam *txt_;
     OFX::DoubleParam *skewX_;
     OFX::DoubleParam *skewY_;
+    OFX::BooleanParam *scaleUniform_;
 };
 
 TextFXPlugin::TextFXPlugin(OfxImageEffectHandle handle)
@@ -293,13 +294,14 @@ TextFXPlugin::TextFXPlugin(OfxImageEffectHandle handle)
     txt_ = fetchStringParam(kParamTextFile);
     skewX_ = fetchDoubleParam(kParamTransformSkewXOld);
     skewY_ = fetchDoubleParam(kParamTransformSkewYOld);
+    scaleUniform_ = fetchBooleanParam(kParamTransformScaleUniformOld);
 
     assert(text_ && fontSize_ && fontName_ && textColor_ && font_ && wrap_
            && justify_ && align_ && markup_ && style_ && auto_ && stretch_ && weight_ && strokeColor_
            && strokeWidth_ && strokeDash_ && strokeDashPattern_ && fontAA_ && subpixel_ && hintStyle_
            && hintMetrics_ && circleRadius_ && circleWords_ && letterSpace_ && canvas_
            && arcRadius_ && arcAngle_ && rotate_ && scale_ && position_ && move_ && txt_
-           && skewX_ && skewY_);
+           && skewX_ && skewY_ && scaleUniform_);
 
     // Setup selected font
     std::string fontString, fontCombo;
@@ -331,6 +333,23 @@ TextFXPlugin::TextFXPlugin(OfxImageEffectHandle handle)
 
 TextFXPlugin::~TextFXPlugin()
 {
+}
+
+void TextFXPlugin::resetCenter(double time) {
+    if (!dstClip_) {
+        return;
+    }
+    OfxRectD rod = dstClip_->getRegionOfDefinition(time);
+    if ( (rod.x1 <= kOfxFlagInfiniteMin) || (kOfxFlagInfiniteMax <= rod.x2) ||
+         ( rod.y1 <= kOfxFlagInfiniteMin) || ( kOfxFlagInfiniteMax <= rod.y2) ) {
+        return;
+    }
+    OfxPointD newCenter;
+    newCenter.x = (rod.x1 + rod.x2) / 2;
+    newCenter.y = (rod.y1 + rod.y2) / 2;
+    if (position_) {
+        position_->setValue(newCenter.x, newCenter.y);
+    }
 }
 
 std::string TextFXPlugin::textFromFile(std::string filename) {
@@ -411,6 +430,7 @@ void TextFXPlugin::render(const OFX::RenderArguments &args)
     bool markup = false;
     bool autoSize = false;
     bool move = false;
+    bool scaleUniform = false;
 
     text_->getValueAtTime(args.time, text);
     fontSize_->getValueAtTime(args.time, fontSize);
@@ -447,6 +467,7 @@ void TextFXPlugin::render(const OFX::RenderArguments &args)
     txt_->getValueAtTime(args.time, txt);
     skewX_->getValueAtTime(args.time, skewX);
     skewY_->getValueAtTime(args.time, skewY);
+    scaleUniform_->getValueAtTime(args.time, scaleUniform);
 
     double ytext = y*args.renderScale.y;
     double xtext = x*args.renderScale.x;
@@ -701,7 +722,11 @@ void TextFXPlugin::render(const OFX::RenderArguments &args)
 
     if (scaleX!=1.0||scaleY!=1.0) {
         cairo_translate(cr, xtext, ytext);
-        cairo_scale(cr, scaleX, scaleY);
+        if (scaleUniform) {
+            cairo_scale(cr, scaleX, scaleX);
+        } else {
+            cairo_scale(cr, scaleX, scaleY);
+        }
         cairo_translate(cr, -xtext, -ytext);
     }
 
@@ -880,7 +905,9 @@ void TextFXPlugin::changedParam(const OFX::InstanceChangedArgs &args, const std:
         return;
     }
 
-    if (paramName == kParamFontName) {
+    if (paramName == kParamTransformResetCenterOld) {
+        resetCenter(args.time);
+    } else if (paramName == kParamFontName) {
         std::string font;
         int fontID;
         fontName_->getValueAtTime(args.time, fontID);
@@ -1107,7 +1134,7 @@ void TextFXPluginFactory::describe(OFX::ImageEffectDescriptor &desc)
 }
 
 /** @brief The describe in context function, passed a plugin descriptor and a context */
-void TextFXPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, ContextEnum context)
+void TextFXPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, ContextEnum /*context*/)
 {
     // natron?
     gHostIsNatron = (OFX::getImageEffectHostDescription()->isNatron);
