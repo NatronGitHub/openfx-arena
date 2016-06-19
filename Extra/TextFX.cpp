@@ -19,10 +19,11 @@
 #include <pango/pangocairo.h>
 #include <fontconfig/fontconfig.h>
 
-#include "ofxsPositionInteract.h"
 #include "ofxsMacros.h"
 #include "ofxsImageEffect.h"
 #include "ofxNatron.h"
+#include "ofxsTransform3x3.h"
+#include "ofxsTransformInteract.h"
 
 #include <iostream>
 #include <cmath>
@@ -35,8 +36,8 @@
 #define kPluginName "TextFX"
 #define kPluginGrouping "Draw"
 #define kPluginIdentifier "fr.inria.openfx.TextFX"
-#define kPluginVersionMajor 1
-#define kPluginVersionMinor 8
+#define kPluginVersionMajor 2
+#define kPluginVersionMinor 0
 
 #define kSupportsTiles 0
 #define kSupportsMultiResolution 0
@@ -93,8 +94,8 @@
 
 #define kParamAutoSize "autoSize"
 #define kParamAutoSizeLabel "Auto size"
-#define kParamAutoSizeHint "Set canvas sized based on text. This will disable word wrap, custom canvas size and circle effect."
-#define kParamAutoSizeDefault true
+#define kParamAutoSizeHint "Set canvas sized based on text. This will disable word wrap, custom canvas size and circle effect. Transform functions should also not be used in combination with this feature."
+#define kParamAutoSizeDefault false
 
 #define kParamStretch "stretch"
 #define kParamStretchLabel "Stretch"
@@ -178,24 +179,10 @@
 #define kParamArcAngleHint "Arc Angle, set to 360 for a full circle."
 #define kParamArcAngleDefault 0
 
-#define kParamRotate "rotate"
-#define kParamRotateLabel "Rotate"
-#define kParamRotateHint "Rotate canvas."
-#define kParamRotateDefault 0
-
-#define kParamScale "scale"
-#define kParamScaleLabel "Scale"
-#define kParamScaleHint "Scale the text. Should be used during animation instead of font size."
-#define kParamScaleDefault 0
-
-#define kParamPosition "position"
-#define kParamPositionLabel "Position"
-#define kParamPositionHint "The position of the first character on the first line. Auto size and a transform node is recommended. Will not work if auto size or markup is enabled. Will also disable text align, wrap and other features."
-
-#define kParamPositionMove "custom"
-#define kParamPositionMoveLabel "Custom"
-#define kParamPositionMoveHint "Enable custom position. Auto size and a transform node is recommended. Will not work if auto size or markup is enabled. Will also disable text align, wrap and other features."
-#define kParamPositionMoveDefault false
+#define kParamPositionMove "transform"
+#define kParamPositionMoveLabel "Transform"
+#define kParamPositionMoveHint "Use transform overlay for text position."
+#define kParamPositionMoveDefault true
 
 #define kParamTextFile "file"
 #define kParamTextFileLabel "File"
@@ -224,6 +211,7 @@ public:
     virtual bool getRegionOfDefinition(const OFX::RegionOfDefinitionArguments &args, OfxRectD &rod) OVERRIDE FINAL;
 
     std::string textFromFile(std::string filename);
+    void resetCenter(double time);
 
 private:
     // do not need to delete these, the ImageEffect is managing them for us
@@ -256,10 +244,13 @@ private:
     OFX::DoubleParam *arcRadius_;
     OFX::DoubleParam *arcAngle_;
     OFX::DoubleParam *rotate_;
-    OFX::DoubleParam *scale_;
+    OFX::Double2DParam *scale_;
     OFX::Double2DParam *position_;
     OFX::BooleanParam *move_;
     OFX::StringParam *txt_;
+    OFX::DoubleParam *skewX_;
+    OFX::DoubleParam *skewY_;
+    OFX::BooleanParam *scaleUniform_;
 };
 
 TextFXPlugin::TextFXPlugin(OfxImageEffectHandle handle)
@@ -296,17 +287,21 @@ TextFXPlugin::TextFXPlugin(OfxImageEffectHandle handle)
     canvas_ = fetchInt2DParam(kParamCanvas);
     arcRadius_ = fetchDoubleParam(kParamArcRadius);
     arcAngle_ = fetchDoubleParam(kParamArcAngle);
-    rotate_ = fetchDoubleParam(kParamRotate);
-    scale_ = fetchDoubleParam(kParamScale);
-    position_ = fetchDouble2DParam(kParamPosition);
+    rotate_ = fetchDoubleParam(kParamTransformRotateOld);
+    scale_ = fetchDouble2DParam(kParamTransformScaleOld);
+    position_ = fetchDouble2DParam(kParamTransformCenterOld);
     move_ = fetchBooleanParam(kParamPositionMove);
     txt_ = fetchStringParam(kParamTextFile);
+    skewX_ = fetchDoubleParam(kParamTransformSkewXOld);
+    skewY_ = fetchDoubleParam(kParamTransformSkewYOld);
+    scaleUniform_ = fetchBooleanParam(kParamTransformScaleUniformOld);
 
     assert(text_ && fontSize_ && fontName_ && textColor_ && font_ && wrap_
            && justify_ && align_ && markup_ && style_ && auto_ && stretch_ && weight_ && strokeColor_
            && strokeWidth_ && strokeDash_ && strokeDashPattern_ && fontAA_ && subpixel_ && hintStyle_
            && hintMetrics_ && circleRadius_ && circleWords_ && letterSpace_ && canvas_
-           && arcRadius_ && arcAngle_ && rotate_ && scale_ && position_ && move_ && txt_);
+           && arcRadius_ && arcAngle_ && rotate_ && scale_ && position_ && move_ && txt_
+           && skewX_ && skewY_ && scaleUniform_);
 
     // Setup selected font
     std::string fontString, fontCombo;
@@ -338,6 +333,23 @@ TextFXPlugin::TextFXPlugin(OfxImageEffectHandle handle)
 
 TextFXPlugin::~TextFXPlugin()
 {
+}
+
+void TextFXPlugin::resetCenter(double time) {
+    if (!dstClip_) {
+        return;
+    }
+    OfxRectD rod = dstClip_->getRegionOfDefinition(time);
+    if ( (rod.x1 <= kOfxFlagInfiniteMin) || (kOfxFlagInfiniteMax <= rod.x2) ||
+         ( rod.y1 <= kOfxFlagInfiniteMin) || ( kOfxFlagInfiniteMax <= rod.y2) ) {
+        return;
+    }
+    OfxPointD newCenter;
+    newCenter.x = (rod.x1 + rod.x2) / 2;
+    newCenter.y = (rod.y1 + rod.y2) / 2;
+    if (position_) {
+        position_->setValue(newCenter.x, newCenter.y);
+    }
 }
 
 std::string TextFXPlugin::textFromFile(std::string filename) {
@@ -411,13 +423,14 @@ void TextFXPlugin::render(const OFX::RenderArguments &args)
     }
 
     // Get params
-    double x, y, r, g, b, a, s_r, s_g, s_b, s_a, strokeWidth, strokeDashX, strokeDashY, strokeDashZ, circleRadius, arcRadius, arcAngle, rotate, scale;
+    double x, y, r, g, b, a, s_r, s_g, s_b, s_a, strokeWidth, strokeDashX, strokeDashY, strokeDashZ, circleRadius, arcRadius, arcAngle, rotate, scaleX, scaleY, skewX, skewY;
     int fontSize, fontID, cwidth, cheight, wrap, align, style, stretch, weight, strokeDash, fontAA, subpixel, hintStyle, hintMetrics, circleWords, letterSpace;
     std::string text, fontName, font, txt;
     bool justify = false;
     bool markup = false;
     bool autoSize = false;
     bool move = false;
+    bool scaleUniform = false;
 
     text_->getValueAtTime(args.time, text);
     fontSize_->getValueAtTime(args.time, fontSize);
@@ -448,10 +461,13 @@ void TextFXPlugin::render(const OFX::RenderArguments &args)
     arcRadius_->getValueAtTime(args.time, arcRadius);
     arcAngle_->getValueAtTime(args.time, arcAngle);
     rotate_->getValueAtTime(args.time, rotate);
-    scale_->getValueAtTime(args.time, scale);
+    scale_->getValueAtTime(args.time, scaleX, scaleY);
     position_->getValueAtTime(args.time, x, y);
     move_->getValueAtTime(args.time, move);
     txt_->getValueAtTime(args.time, txt);
+    skewX_->getValueAtTime(args.time, skewX);
+    skewY_->getValueAtTime(args.time, skewY);
+    scaleUniform_->getValueAtTime(args.time, scaleUniform);
 
     double ytext = y*args.renderScale.y;
     double xtext = x*args.renderScale.x;
@@ -704,8 +720,36 @@ void TextFXPlugin::render(const OFX::RenderArguments &args)
         cairo_move_to(cr, xtext, ytext);
     }
 
-    if (scale>0) {
-        cairo_scale(cr, scale, scale);
+    if (scaleX!=1.0||scaleY!=1.0) {
+        cairo_translate(cr, xtext, ytext);
+        if (scaleUniform) {
+            cairo_scale(cr, scaleX, scaleX);
+        } else {
+            cairo_scale(cr, scaleX, scaleY);
+        }
+        cairo_translate(cr, -xtext, -ytext);
+    }
+
+    if (skewX!=0.0) {
+        cairo_matrix_t matrixSkewX = {
+            1.0, 0.0,
+            -skewX, 1.0,
+            0.0, 0.0
+        };
+        cairo_translate(cr, xtext, ytext);
+        cairo_transform(cr, &matrixSkewX);
+        cairo_translate(cr, -xtext, -ytext);
+    }
+
+    if (skewY!=0.0) {
+        cairo_matrix_t matrixSkewY = {
+            1.0, -skewY,
+            0.0, 1.0,
+            0.0, 0.0
+        };
+        cairo_translate(cr, xtext, ytext);
+        cairo_transform(cr, &matrixSkewY);
+        cairo_translate(cr, -xtext, -ytext);
     }
 
     if (rotate!=0) {
@@ -716,7 +760,7 @@ void TextFXPlugin::render(const OFX::RenderArguments &args)
             rotateY = ytext;
         }
         cairo_translate(cr, rotateX, rotateY);
-        cairo_rotate(cr, rotate * (M_PI/180.0));
+        cairo_rotate(cr, -rotate * (M_PI/180.0));
         cairo_translate(cr, -rotateX, -rotateY);
     }
 
@@ -861,7 +905,9 @@ void TextFXPlugin::changedParam(const OFX::InstanceChangedArgs &args, const std:
         return;
     }
 
-    if (paramName == kParamFontName) {
+    if (paramName == kParamTransformResetCenterOld) {
+        resetCenter(args.time);
+    } else if (paramName == kParamFontName) {
         std::string font;
         int fontID;
         fontName_->getValueAtTime(args.time, fontID);
@@ -1082,6 +1128,9 @@ void TextFXPluginFactory::describe(OFX::ImageEffectDescriptor &desc)
     desc.setSupportsTiles(kSupportsTiles);
     desc.setSupportsMultiResolution(kSupportsMultiResolution);
     desc.setRenderThreadSafety(kRenderThreadSafety);
+
+    Transform3x3Describe(desc, true);
+    desc.setOverlayInteractDescriptor(new TransformOverlayDescriptorOldParams);
 }
 
 /** @brief The describe in context function, passed a plugin descriptor and a context */
@@ -1101,7 +1150,7 @@ void TextFXPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, Co
 
     // make some pages
     PageParamDescriptor *page = desc.definePageParam(kPluginName);
-    bool hostHasNativeOverlayForPosition;
+    ofxsTransformDescribeParams(desc, page, NULL, /*isOpen=*/ true, /*oldParams=*/ true, /*noTranslate=*/ true);
     {
         BooleanParamDescriptor *param = desc.defineBooleanParam(kParamPositionMove);
         param->setLabel(kParamPositionMoveLabel);
@@ -1112,24 +1161,10 @@ void TextFXPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, Co
         page->addChild(*param);
     }
     {
-        Double2DParamDescriptor* param = desc.defineDouble2DParam(kParamPosition);
-        param->setLabel(kParamPositionLabel);
-        param->setHint(kParamPositionHint);
-        param->setDoubleType(eDoubleTypeXYAbsolute);
-        param->setDefaultCoordinateSystem(eCoordinatesNormalised);
-        param->setDefault(0.5, 0.5);
-        param->setAnimates(true);
-        hostHasNativeOverlayForPosition = param->getHostHasNativeOverlayHandle();
-        if (hostHasNativeOverlayForPosition)
-            param->setUseHostNativeOverlayHandle(true);
-        page->addChild(*param);
-    }
-    {
         BooleanParamDescriptor *param = desc.defineBooleanParam(kParamAutoSize);
         param->setLabel(kParamAutoSizeLabel);
         param->setHint(kParamAutoSizeHint);
         param->setAnimates(false);
-        param->setLayoutHint(eLayoutHintNoNewLine, 1);
 #if defined(_WIN32) || defined(__WIN32__) || defined(WIN32)
         param->setEnabled(false);
         param->setDefault(false);
@@ -1486,27 +1521,6 @@ void TextFXPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, Co
         param->setRange(0, 360);
         param->setDisplayRange(0, 360);
         param->setDefault(kParamArcAngleDefault);
-        param->setAnimates(true);
-        param->setLayoutHint(OFX::eLayoutHintDivider);
-        page->addChild(*param);
-    }
-    {
-        DoubleParamDescriptor* param = desc.defineDoubleParam(kParamRotate);
-        param->setLabel(kParamRotateLabel);
-        param->setHint(kParamRotateHint);
-        param->setRange(-360, 360);
-        param->setDisplayRange(-360, 360);
-        param->setDefault(kParamRotateDefault);
-        param->setAnimates(true);
-        page->addChild(*param);
-    }
-    {
-        DoubleParamDescriptor* param = desc.defineDoubleParam(kParamScale);
-        param->setLabel(kParamScaleLabel);
-        param->setHint(kParamScaleHint);
-        param->setRange(0, 10000);
-        param->setDisplayRange(0, 100);
-        param->setDefault(kParamScaleDefault);
         param->setAnimates(true);
         param->setLayoutHint(OFX::eLayoutHintDivider);
         page->addChild(*param);
