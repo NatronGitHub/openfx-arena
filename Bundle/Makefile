@@ -30,7 +30,7 @@ PLUGINOBJECTS += \
         ReadMisc.o \
         Text.o \
         ofxsOGLTextRenderer.o ofxsOGLFontData.o ofxsRectangleInteract.o \
-        ofxsTransform3x3.o ofxsTransformInteract.o \
+        ofxsTransform3x3.o ofxsTransformInteract.o ofxsShutter.o \
         GenericReader.o GenericOCIO.o SequenceParsing.o
 
 PLUGINNAME = Arena

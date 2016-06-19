@@ -11,7 +11,7 @@ ifeq ($(LICENSE),GPL)
 endif
 
 PLUGINOBJECTS += \
-        ofxsTransform3x3.o ofxsTransformInteract.o \
+        ofxsTransform3x3.o ofxsTransformInteract.o ofxsShutter.o \
         GenericReader.o GenericOCIO.o SequenceParsing.o
 
 PLUGINNAME = Extra
