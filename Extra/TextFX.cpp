@@ -79,7 +79,7 @@
 
 #define kParamWrap "wrap"
 #define kParamWrapLabel "Wrap"
-#define kParamWrapHint "Word wrap. Disabled if auto size or custom position is enabled."
+#define kParamWrapHint "Word wrap. Disabled if auto size or custom (transform) position is enabled."
 #define kParamWrapDefault 0
 
 #define kParamAlign "align"
@@ -89,7 +89,7 @@
 
 #define kParamMarkup "markup"
 #define kParamMarkupLabel "Markup"
-#define kParamMarkupHint "Pango Text Attribute Markup Language, https://developer.gnome.org/pango/stable/PangoMarkupFormat.html"
+#define kParamMarkupHint "Pango Text Attribute Markup Language, https://developer.gnome.org/pango/stable/PangoMarkupFormat.html . Colors don't work if Circle/Arc effect is used, colors are also not supported on Windows at the moment."
 #define kParamMarkupDefault false
 
 #define kParamAutoSize "autoSize"
@@ -171,12 +171,12 @@
 
 #define kParamArcRadius "arcRadius"
 #define kParamArcRadiusLabel "Arc Radius"
-#define kParamArcRadiusHint "Arc path radius (size of the path)."
+#define kParamArcRadiusHint "Arc path radius (size of the path). The Arc effect is an experimental feature. Effect only works if auto size is disabled."
 #define kParamArcRadiusDefault 100.0
 
 #define kParamArcAngle "arcAngle"
 #define kParamArcAngleLabel "Arc Angle"
-#define kParamArcAngleHint "Arc Angle, set to 360 for a full circle."
+#define kParamArcAngleHint "Arc Angle, set to 360 for a full circle. The Arc effect is an experimental feature. Effect only works if auto size is disabled."
 #define kParamArcAngleDefault 0
 
 #define kParamPositionMove "transform"
@@ -186,7 +186,7 @@
 
 #define kParamTextFile "file"
 #define kParamTextFileLabel "File"
-#define kParamTextFileHint "Add text from filename"
+#define kParamTextFileHint "Use text from filename."
 
 using namespace OFX;
 static bool gHostIsNatron = false;
