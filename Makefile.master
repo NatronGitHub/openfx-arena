@@ -58,6 +58,9 @@ POPPLER_LINKFLAGS += $(shell pkg-config poppler-glib --libs --static)
 # mingw
 ifeq ($(MINGW),1)
   MAGICK_LINKFLAGS += -lgdi32 -lfreetype -lexpat -lz -lws2_32
+  ifeq ($(IM), 7)
+    MAGICK_LINKFLAGS += -loleaut32
+  endif
 endif
 
 # FreeBSD
