@@ -108,14 +108,12 @@ fi
 if [ "$CLEAN" = "1" ]; then
   rm -rf $CWD/3rdparty/ImageMagick-$MAGICK
 fi
-if [ ! -f ${PREFIX}/lib/libMagick++-6.Q${Q}HDRI.a ]; then
+if [ ! -f ${PREFIX}/lib/libMagick++-7.Q${Q}HDRI.a ]; then
   if [ "$MAGICK_GIT" = "1" ]; then
-    rm -rf $CWD/3rdparty/ImageMagick-6
+    rm -rf $CWD/3rdparty/ImageMagick
     cd $CWD/3rdparty || exit 1
-    git clone https://github.com/ImageMagick/ImageMagick ImageMagick-6 || exit 1
-    cd ImageMagick-6 || exit 1
-    git checkout ImageMagick-6 || exit 1
-    MAGICK=6
+    git clone https://github.com/ImageMagick/ImageMagick ImageMagick || exit 1
+    cd ImageMagick || exit 1
   else
     if [ ! -f $CWD/3rdparty/ImageMagick-$MAGICK.tar.xz ]; then
       wget $MAGICK_URL -O $CWD/3rdparty/ImageMagick-$MAGICK.tar.xz || exit 1
@@ -126,8 +124,9 @@ if [ ! -f ${PREFIX}/lib/libMagick++-6.Q${Q}HDRI.a ]; then
     cd $CWD/3rdparty/ImageMagick-$MAGICK || exit 1
   fi
   if [ "$PKGOS" = "Windows" ]; then
-    patch -p1 < $CWD/Magick/mingw.patch || exit 1
-    patch -p0 < $CWD/Magick/mingw-utf8.diff || exit 1
+    patch -p1 < $CWD/Magick/im7-mingw.patch || exit 1
+    patch -p0 < $CWD/Magick/imt7-mingw-utf8.diff || exit 1
+    autoreconf -fi
   fi
   $MAKE distclean
   CFLAGS="-m${BIT} ${BF}" CXXFLAGS="-m${BIT} ${BF} ${BSD} -I${PREFIX}/include" CPPFLAGS="-I${PREFIX}/include -L${PREFIX}/lib" ./configure --libdir=${PREFIX}/lib --prefix=${PREFIX} $MAGICK_OPT || exit 1
@@ -136,7 +135,7 @@ if [ ! -f ${PREFIX}/lib/libMagick++-6.Q${Q}HDRI.a ]; then
   cp LICENSE $PREFIX/share/doc/ImageMagick/ || exit 1
   cd .. || exit 1
   if [ "$MAGICK_GIT" != "1" ]; then
-    rm -rf ImageMagick-$MAGICK || exit 1
+    rm -rf ImageMagick || exit 1
   fi
 fi
 
