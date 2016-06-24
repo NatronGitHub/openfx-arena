@@ -46,7 +46,7 @@ Build
 git clone https://github.com/olear/openfx-arena
 cd openfx-arena
 git submodule update -i --recursive
-make LICENSE=GPL CONFIG=release IM=7
+make CONFIG=release IM=7
 sudo make install
 ```
 
