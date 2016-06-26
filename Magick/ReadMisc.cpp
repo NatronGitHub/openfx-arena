@@ -36,6 +36,7 @@
 
 #define kSupportsRGBA true
 #define kSupportsRGB false
+#define kSupportsXY false
 #define kSupportsAlpha false
 #define kSupportsTiles false
 
@@ -190,7 +191,7 @@ void ReadMiscPluginFactory::describe(OFX::ImageEffectDescriptor &desc)
 /** @brief The describe in context function, passed a plugin descriptor and a context */
 void ReadMiscPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, ContextEnum context)
 {
-    PageParamDescriptor *page = GenericReaderDescribeInContextBegin(desc, context, isVideoStreamPlugin(), kSupportsRGBA, kSupportsRGB, kSupportsAlpha, kSupportsTiles, true);
+    PageParamDescriptor *page = GenericReaderDescribeInContextBegin(desc, context, isVideoStreamPlugin(), kSupportsRGBA, kSupportsRGB, kSupportsXY,kSupportsAlpha, kSupportsTiles, true);
     GenericReaderDescribeInContextEnd(desc, context, page, "reference", "reference");
 }
 
