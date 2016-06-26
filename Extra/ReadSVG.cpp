@@ -51,6 +51,7 @@
 
 #define kSupportsRGBA true
 #define kSupportsRGB false
+#define kSupportsXY false
 #define kSupportsAlpha false
 #define kSupportsTiles false
 #define kIsMultiPlanar true
@@ -417,7 +418,7 @@ void ReadSVGPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, C
 {
     gHostIsNatron = (OFX::getImageEffectHostDescription()->isNatron);
 
-    PageParamDescriptor *page = GenericReaderDescribeInContextBegin(desc, context, isVideoStreamPlugin(), kSupportsRGBA, kSupportsRGB, kSupportsAlpha, kSupportsTiles, false);
+    PageParamDescriptor *page = GenericReaderDescribeInContextBegin(desc, context, isVideoStreamPlugin(), kSupportsRGBA, kSupportsRGB, kSupportsXY,kSupportsAlpha, kSupportsTiles, false);
     {
         IntParamDescriptor* param = desc.defineIntParam(kParamDpi);
         param->setLabel(kParamDpiLabel);

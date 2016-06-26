@@ -41,6 +41,7 @@
 
 #define kSupportsRGBA true
 #define kSupportsRGB false
+#define kSupportsXY false
 #define kSupportsAlpha false
 #define kSupportsTiles false
 #define kIsMultiPlanar true
@@ -467,7 +468,7 @@ void OpenRasterPluginFactory::describe(OFX::ImageEffectDescriptor &desc)
 void OpenRasterPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, ContextEnum context)
 {
     gHostIsNatron = (OFX::getImageEffectHostDescription()->isNatron);
-    PageParamDescriptor *page = GenericReaderDescribeInContextBegin(desc, context, isVideoStreamPlugin(), kSupportsRGBA, kSupportsRGB, kSupportsAlpha, kSupportsTiles, true);
+    PageParamDescriptor *page = GenericReaderDescribeInContextBegin(desc, context, isVideoStreamPlugin(), kSupportsRGBA, kSupportsRGB, kSupportsXY,kSupportsAlpha, kSupportsTiles, true);
     GenericReaderDescribeInContextEnd(desc, context, page, "reference", "reference");
 }
 

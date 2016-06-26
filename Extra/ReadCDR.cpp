@@ -51,6 +51,7 @@
 
 #define kSupportsRGBA true
 #define kSupportsRGB false
+#define kSupportsXY false
 #define kSupportsAlpha false
 #define kSupportsTiles false
 
@@ -368,7 +369,7 @@ void ReadCDRPluginFactory::describe(OFX::ImageEffectDescriptor &desc)
 /** @brief The describe in context function, passed a plugin descriptor and a context */
 void ReadCDRPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, ContextEnum context)
 {
-    PageParamDescriptor *page = GenericReaderDescribeInContextBegin(desc, context, isVideoStreamPlugin(), kSupportsRGBA, kSupportsRGB, kSupportsAlpha, kSupportsTiles, false);
+    PageParamDescriptor *page = GenericReaderDescribeInContextBegin(desc, context, isVideoStreamPlugin(), kSupportsRGBA, kSupportsRGB, kSupportsXY kSupportsAlpha, kSupportsTiles, false);
     {
         IntParamDescriptor* param = desc.defineIntParam(kParamDpi);
         param->setLabel(kParamDpiLabel);
