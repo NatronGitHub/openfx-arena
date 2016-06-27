@@ -39,6 +39,7 @@
 #define kSupportsXY false
 #define kSupportsAlpha false
 #define kSupportsTiles false
+#define kIsMultiPlanar false
 
 class ReadMiscPlugin : public GenericReaderPlugin
 {
@@ -53,7 +54,7 @@ private:
 };
 
 ReadMiscPlugin::ReadMiscPlugin(OfxImageEffectHandle handle, const std::vector<std::string>& extensions)
-: GenericReaderPlugin(handle, extensions, kSupportsRGBA, kSupportsRGB, kSupportsAlpha, kSupportsTiles, false)
+: GenericReaderPlugin(handle, extensions, kSupportsTiles, kSupportsRGBA, kSupportsRGB, kSupportsXY, kSupportsAlpha, kIsMultiPlanar)
 {
     Magick::InitializeMagick(NULL);
 }

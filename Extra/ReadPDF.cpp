@@ -109,7 +109,7 @@ private:
 };
 
 ReadPDFPlugin::ReadPDFPlugin(OfxImageEffectHandle handle, const std::vector<std::string>& extensions)
-: GenericReaderPlugin(handle, extensions, kSupportsRGBA, kSupportsRGB, kSupportsAlpha, kSupportsTiles,
+: GenericReaderPlugin(handle, extensions, kSupportsTiles, kSupportsRGBA, kSupportsRGB, kSupportsXY, kSupportsAlpha,
 #ifdef OFX_EXTENSIONS_NUKE
 (OFX::getImageEffectHostDescription() && OFX::getImageEffectHostDescription()->isMultiPlanar) ? kIsMultiPlanar : false
 #else
