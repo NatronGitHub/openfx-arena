@@ -96,7 +96,7 @@ private:
 };
 
 ReadSVGPlugin::ReadSVGPlugin(OfxImageEffectHandle handle, const std::vector<std::string>& extensions)
-: GenericReaderPlugin(handle, extensions, kSupportsTiles, kSupportsRGBA, kSupportsRGB, kSupportsXY, kSupportsAlpha,
+: GenericReaderPlugin(handle, extensions, kSupportsRGBA, kSupportsRGB, kSupportsXY, kSupportsAlpha, kSupportsTiles,
 #ifdef OFX_EXTENSIONS_NUKE
 (OFX::getImageEffectHostDescription() && OFX::getImageEffectHostDescription()->isMultiPlanar) ? kIsMultiPlanar : false
 #else

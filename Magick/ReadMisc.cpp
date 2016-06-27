@@ -54,7 +54,7 @@ private:
 };
 
 ReadMiscPlugin::ReadMiscPlugin(OfxImageEffectHandle handle, const std::vector<std::string>& extensions)
-: GenericReaderPlugin(handle, extensions, kSupportsTiles, kSupportsRGBA, kSupportsRGB, kSupportsXY, kSupportsAlpha, kIsMultiPlanar)
+: GenericReaderPlugin(handle, extensions, kSupportsRGBA, kSupportsRGB, kSupportsXY, kSupportsAlpha, kSupportsTiles, kIsMultiPlanar)
 {
     Magick::InitializeMagick(NULL);
 }
