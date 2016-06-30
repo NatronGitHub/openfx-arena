@@ -1,8 +1,6 @@
 #
 # Project file for use with qt-creator
 #
-# 1) Build Steps: remove qmake and set make to 'deploy.sh'
-# 2) Build Enviroment: add 'DEBUG=1', you can also add PACKAGE=<plugin_name> if you only want to build one plugin
 
 OTHER_FILES += \
             .travis.yml \
@@ -15,8 +13,6 @@ OTHER_FILES += \
             LICENSE \
             COPYING \
             README.md \
-            deploy.sh \
-            openfx-arena.spec \
             Magick/Info.plist \
             Extra/Info.plist
 INCLUDEPATH += . \
