@@ -11,7 +11,7 @@ Extra.ofx
  * ReadKrita
  * ReadSVG
  * ReadPDF
- * TextFX
+ * Text
 
 [Read more](Extra/README.md)
 
@@ -32,7 +32,7 @@ Magick.ofx
  * Roll
  * Sketch
  * Swirl
- * Text
+ * Text (Deprecated)
  * Texture
  * Tile
  * Wave
