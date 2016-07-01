@@ -592,6 +592,8 @@ void TextPluginFactory::describe(OFX::ImageEffectDescriptor &desc)
     desc.setRenderThreadSafety(kRenderThreadSafety);
     desc.setHostFrameThreading(kHostFrameThreading);
     desc.setOverlayInteractDescriptor(new PositionOverlayDescriptor<PositionInteractParam>);
+
+    desc.setIsDeprecated(true);
 }
 
 /** @brief The describe in context function, passed a plugin descriptor and a context */

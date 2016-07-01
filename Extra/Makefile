@@ -17,8 +17,8 @@ PLUGINOBJECTS += \
 PLUGINNAME = Extra
 
 RESOURCES = \
-fr.inria.openfx.TextFX.png \
-fr.inria.openfx.TextFX.svg \
+net.fxarena.openfx.Text.png \
+net.fxarena.openfx.Text.svg \
 fr.inria.openfx.ReadCDR.png \
 fr.inria.openfx.ReadCDR.svg \
 net.fxarena.openfx.ReadSVG.png \

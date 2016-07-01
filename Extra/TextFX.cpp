@@ -33,10 +33,10 @@
 
 #include "fx.h"
 
-#define kPluginName "TextFX"
+#define kPluginName "TextOFX"
 #define kPluginGrouping "Draw"
-#define kPluginIdentifier "fr.inria.openfx.TextFX"
-#define kPluginVersionMajor 2
+#define kPluginIdentifier "net.fxarena.openfx.Text"
+#define kPluginVersionMajor 6
 #define kPluginVersionMinor 0
 
 #define kSupportsTiles 0

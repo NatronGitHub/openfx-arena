@@ -36,8 +36,8 @@ PLUGINOBJECTS += \
 PLUGINNAME = Arena
 
 RESOURCES = \
-../Extra/fr.inria.openfx.TextFX.png \
-../Extra/fr.inria.openfx.TextFX.svg \
+../Extra/net.fxarena.openfx.Text.png \
+../Extra/net.fxarena.openfx.Text.svg \
 ../Extra/fr.inria.openfx.ReadCDR.png \
 ../Extra/fr.inria.openfx.ReadCDR.svg \
 ../Extra/net.fxarena.openfx.ReadSVG.png \
@@ -88,8 +88,8 @@ RESOURCES += \
 ../Magick/net.fxarena.openfx.Modulate.svg \
 ../Magick/fr.inria.openfx.ReadMisc.png \
 ../Magick/fr.inria.openfx.ReadMisc.svg \
-../Magick/net.fxarena.openfx.Text.png \
-../Magick/net.fxarena.openfx.Text.svg
+#../Magick/net.fxarena.openfx.Text.png \
+#../Magick/net.fxarena.openfx.Text.svg
 
 VPATH += \
 ../Extra \
