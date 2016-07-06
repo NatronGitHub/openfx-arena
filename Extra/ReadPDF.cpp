@@ -53,7 +53,7 @@
 #define kPluginGrouping "Image/Readers"
 #define kPluginIdentifier "fr.inria.openfx.ReadPDF"
 #define kPluginVersionMajor 1
-#define kPluginVersionMinor 2
+#define kPluginVersionMinor 3
 #define kPluginEvaluation 50
 #define kPluginDPI 72.0
 
@@ -214,6 +214,7 @@ ReadPDFPlugin::decodePlane(const std::string& filename, OfxTime time, int /*view
     GError *error = NULL;
     PopplerDocument *document = NULL;
     PopplerPage *page = NULL;
+    PopplerPage *fpage = NULL;
     cairo_surface_t *surface;
     cairo_t *cr;
     cairo_status_t status;
@@ -246,12 +247,13 @@ ReadPDFPlugin::decodePlane(const std::string& filename, OfxTime time, int /*view
     }
 
     page = poppler_document_get_page(document, layer);
-    if (page == NULL) {
+    fpage = poppler_document_get_page(document, 0);
+    if (page == NULL || fpage == NULL) {
         setPersistentMessage(OFX::Message::eMessageError, "", "Failed to read page");
         OFX::throwSuiteStatusException(kOfxStatErrFormat);
     }
 
-    poppler_page_get_size(page, &imageWidth, &imageHeight);
+    poppler_page_get_size(fpage, &imageWidth, &imageHeight);
 
     renderWidth= renderWindow.x2 - renderWindow.x1;
     renderHeight= renderWindow.y2 - renderWindow.y1;
@@ -308,6 +310,7 @@ ReadPDFPlugin::decodePlane(const std::string& filename, OfxTime time, int /*view
     }
 
     g_object_unref(page);
+    g_object_unref(fpage);
     g_object_unref(document);
     cairo_destroy(cr);
     cairo_surface_destroy(surface);
