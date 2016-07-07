@@ -14,7 +14,9 @@ OTHER_FILES += \
             COPYING \
             README.md \
             Magick/Info.plist \
-            Extra/Info.plist
+            Extra/Info.plist \
+            OCL/Info.plist \
+            OCL/Makefile
 INCLUDEPATH += . \
             SupportExt \
             OpenFX/Support/include \
@@ -32,7 +34,9 @@ INCLUDEPATH += . \
             /usr/include/cairo \
             /usr/include/glib-2.0 \
             /usr/include/pango-1.0 \
-            /usr/include/poppler/glib
+            /usr/include/poppler/glib \
+            /opt/AMDAPPSDK-3.0/include \
+            OCL/lib
 HEADERS += \
             SupportExt/ofxsCoords.h \
             SupportExt/ofxsCopier.h \
@@ -135,4 +139,5 @@ SOURCES += \
             Magick/ReadMisc.cpp \
             Extra/ReadCDR.cpp \
             Extra/TextFX.cpp \
-            Extra/ReadPDF.cpp
+            Extra/ReadPDF.cpp \
+            OCL/CLSobel.cpp
