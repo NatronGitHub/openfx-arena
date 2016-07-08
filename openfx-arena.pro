@@ -35,8 +35,8 @@ INCLUDEPATH += . \
             /usr/include/glib-2.0 \
             /usr/include/pango-1.0 \
             /usr/include/poppler/glib \
-            /opt/AMDAPPSDK-3.0/include \
-            OCL/lib
+            OCL/lib \
+            OCL/OpenCL \
 HEADERS += \
             SupportExt/ofxsCoords.h \
             SupportExt/ofxsCopier.h \
@@ -140,4 +140,4 @@ SOURCES += \
             Extra/ReadCDR.cpp \
             Extra/TextFX.cpp \
             Extra/ReadPDF.cpp \
-            OCL/CLSobel.cpp
+            OCL/EdgeCL.cpp
