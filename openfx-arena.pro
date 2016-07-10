@@ -16,7 +16,10 @@ OTHER_FILES += \
             Magick/Info.plist \
             Extra/Info.plist \
             OCL/Info.plist \
-            OCL/Makefile
+            OCL/Makefile \
+            Extra/README.md \
+            Magick/README.md \
+            OCL/README.md
 INCLUDEPATH += . \
             SupportExt \
             OpenFX/Support/include \
@@ -37,6 +40,7 @@ INCLUDEPATH += . \
             /usr/include/poppler/glib \
             OCL/lib \
             OCL/OpenCL \
+            /opt/AMDAPPSDK-3.0/include
 HEADERS += \
             SupportExt/ofxsCoords.h \
             SupportExt/ofxsCopier.h \
@@ -140,4 +144,5 @@ SOURCES += \
             Extra/ReadCDR.cpp \
             Extra/TextFX.cpp \
             Extra/ReadPDF.cpp \
-            OCL/EdgeCL.cpp
+            OCL/EdgeCL.cpp \
+            OCL/SharpenCL.cpp

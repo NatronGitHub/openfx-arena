@@ -1,6 +1,8 @@
 PLUGINOBJECTS = \
         EdgeCL.o \
+        SharpenCL.o \
         openCLUtilities.o
+        #openCLGLUtilities.o
 
 PLUGINNAME = OCL
 
@@ -14,3 +16,5 @@ VPATH += lib
 CXXFLAGS += -Ilib -IOpenCL
 LINKFLAGS += -lOpenCL
 
+#CXXFLAGS += -I/opt/AMDAPPSDK-3.0/include
+#LINKFLAGS += -L/opt/AMDAPPSDK-3.0/lib/x86_64/sdk

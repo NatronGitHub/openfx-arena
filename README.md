@@ -39,6 +39,14 @@ Magick.ofx
 
 [Read more](Magick/README.md)
 
+OCL.ofx
+=======
+
+ * EdgeCL
+ * SharpenCL
+
+[Read more](OCL/README.md)
+
 Build
 =====
 
