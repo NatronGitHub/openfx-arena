@@ -5,9 +5,10 @@ Experimental OpenCL plugins.
 
  * EdgeCL
  * SharpenCL
+ * RippleCL
 
 Requirements
 ============
 
- * OpenCL 1.2 compatible NVIDIA/AMD/Intel driver
+ * OpenCL compatible NVIDIA/AMD/Intel driver
 

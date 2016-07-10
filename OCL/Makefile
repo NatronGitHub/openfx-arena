@@ -1,14 +1,16 @@
 PLUGINOBJECTS = \
         EdgeCL.o \
         SharpenCL.o \
+        RippleCL.o \
         openCLUtilities.o
-        #openCLGLUtilities.o
 
 PLUGINNAME = OCL
 
 RESOURCES = \
 fr.inria.openfx.EdgeCL.png \
-fr.inria.openfx.EdgeCL.svg
+fr.inria.openfx.EdgeCL.svg \
+fr.inria.openfx.RippleCL.png \
+fr.inria.openfx.RippleCL.svg
 
 include ../Makefile.master
 

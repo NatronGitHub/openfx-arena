@@ -145,4 +145,5 @@ SOURCES += \
             Extra/TextFX.cpp \
             Extra/ReadPDF.cpp \
             OCL/EdgeCL.cpp \
-            OCL/SharpenCL.cpp
+            OCL/SharpenCL.cpp \
+            OCL/RippleCL.cpp

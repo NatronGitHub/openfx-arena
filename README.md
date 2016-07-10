@@ -44,6 +44,7 @@ OCL.ofx
 
  * EdgeCL
  * SharpenCL
+ * RippleCL
 
 [Read more](OCL/README.md)
 
