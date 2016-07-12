@@ -24,7 +24,7 @@
 #define kPluginName "RippleCL"
 #define kPluginGrouping "Extra/Distort"
 #define kPluginIdentifier "fr.inria.openfx.RippleCL"
-#define kPluginDescription "OpenCL Sharpen Filter"
+#define kPluginDescription "OpenCL Ripple Filter"
 #define kPluginVersionMajor 1
 #define kPluginVersionMinor 0
 
@@ -38,12 +38,12 @@
 
 #define kParamWaveAmp "amp"
 #define kParamWaveAmpLabel "Amplitude"
-#define kParamWaveAmpHint "Adjust wave amplitude"
+#define kParamWaveAmpHint "Adjust amplitude"
 #define kParamWaveAmpDefault 25
 
 #define kParamWaveLength "length"
 #define kParamWaveLengthLabel "Length"
-#define kParamWaveLengthHint "Adjust wave length"
+#define kParamWaveLengthHint "Adjust length"
 #define kParamWaveLengthDefault 150
 
 #define kParamKernel \
