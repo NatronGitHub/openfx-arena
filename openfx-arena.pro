@@ -146,4 +146,5 @@ SOURCES += \
             Extra/ReadPDF.cpp \
             OCL/EdgeCL.cpp \
             OCL/SharpenCL.cpp \
-            OCL/RippleCL.cpp
+            OCL/RippleCL.cpp \
+            OCL/SwirlCL.cpp
