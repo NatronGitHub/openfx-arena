@@ -39,14 +39,77 @@
 #define kParamAmount "amount"
 #define kParamAmountLabel "Amount"
 #define kParamAmountHint "Adjust swirl amount"
-#define kParamAmountDefault 45
+#define kParamAmountDefault 3
 
 #define kParamRadius "radius"
 #define kParamRadiusLabel "Radius"
 #define kParamRadiusHint "Adjust swirl radius"
 #define kParamRadiusDefault 100
 
-#define kParamKernel
+#define kParamKernel \
+"const sampler_t sampler = CLK_NORMALIZED_COORDS_FALSE;\n" \
+"\n" \
+"float clampRGB( float x ) {\n" \
+"    return x > 1.f ? 1.f\n" \
+"         : x < 0.f   ? 0.f\n" \
+"         : x;\n" \
+"}\n" \
+"\n" \
+"kernel void swirl (read_only image2d_t in, write_only image2d_t out/*, int centerW, int centerH*/, double amount, double radius) {\n" \
+"\n" \
+"    int2 d = get_image_dim(in);\n" \
+"    int2 pos = (int2)(get_global_id(0),get_global_id(1));\n" \
+"    // get from plugin\n" \
+"    int centerW=d.x/2;\n" \
+"    int centerH=d.y/2;\n" \
+"    int x = pos.x - centerW;\n" \
+"    int y = pos.y - centerH;\n" \
+"\n" \
+"    float a = amount*exp(-(x*x+y*y)/(radius*radius));\n" \
+"    float u = (cos(a)*x + sin(a)*y);\n" \
+"    float v = (-sin(a)*x + cos(a)*y);\n" \
+"\n" \
+"    u += (float)centerW;\n" \
+"    v += (float)centerH;\n" \
+"\n" \
+"    float4 fp = read_imagef(in,sampler,(int2)((int)u,(int)v));\n" \
+"\n" \
+"    // Interpolation\n" \
+"    int2 p11 = (int2)(floor(u),floor(v));\n" \
+"    float dx = u-(float)p11.x;\n" \
+"    float dy = v-(float)p11.y;\n" \
+"\n" \
+"    float4 C[5];\n" \
+"    float4 d0,d2,d3,a0,a1,a2,a3;\n" \
+"\n" \
+"    for (int i = 0; i < 4; i++) {\n" \
+"        d0 = read_imagef(in,sampler,(int2)((int)u-1,(int)v+i)) - read_imagef(in,sampler,(int2)((int)u,(int)v+i));\n" \
+"        d2 = read_imagef(in,sampler,(int2)((int)u+1,(int)v+i)) - read_imagef(in,sampler,(int2)((int)u,(int)v+i));\n" \
+"        d3 = read_imagef(in,sampler,(int2)((int)u+2,(int)v+i)) - read_imagef(in,sampler,(int2)((int)u,(int)v+i));\n" \
+"        a0 = read_imagef(in,sampler,(int2)((int)u,  (int)v+i));\n" \
+"        a1 =  -1.0/3*d0 + d2 - 1.0/6*d3;\n" \
+"        a2 = 1.0/2*d0 + 1.0/2*d2;\n" \
+"        a3 = -1.0/6*d0 - 1.0/2*d2 + 1.0/6*d3;\n" \
+"\n" \
+"        C[i] = a0 + a1*dx + a2*dx*dx + a3*dx*dx*dx;\n" \
+"    }\n" \
+"\n" \
+"    d0 = C[0]-C[1];\n" \
+"    d2 = C[2]-C[1];\n" \
+"    d3 = C[3]-C[1];\n" \
+"    a0 = C[1];\n" \
+"    a1 = -1.0/3*d0 + d2 -1.0/6*d3;\n" \
+"    a2 = 1.0/2*d0 + 1.0/2*d2;\n" \
+"    a3 = -1.0/6*d0 - 1.0/2*d2 + 1.0/6*d3;\n" \
+"    fp = (float4)(a0 + a1*dy + a2*dy*dy + a3*dy*dy*dy);\n" \
+"    fp.x = clampRGB(fp.x);\n" \
+"    fp.y = clampRGB(fp.y);\n" \
+"    fp.z = clampRGB(fp.z);\n" \
+"    fp.w = clampRGB(fp.w);\n" \
+"\n" \
+"    write_imagef(out,(int2)(pos.x,pos.y),fp);\n" \
+"}"
+
 
 using namespace OFX;
 
@@ -84,7 +147,7 @@ SwirlCLPlugin::SwirlCLPlugin(OfxImageEffectHandle handle)
 
     // setup opencl context and build kernel
     context_ = createCLContext();
-    program_ = buildProgramFromSource(context_, "test.cl"); // still testing kernel
+    program_ = buildProgramFromString(context_, kParamKernel);
 }
 
 SwirlCLPlugin::~SwirlCLPlugin()
