@@ -16,6 +16,7 @@
  * along with openfx-arena.  If not, see <http://www.gnu.org/licenses/gpl-2.0.html>
 */
 
+#include "ofxsPositionInteract.h"
 #include "ofxsMacros.h"
 #include "ofxsImageEffect.h"
 #include "openCLUtilities.hpp"
@@ -46,6 +47,10 @@
 #define kParamRadiusHint "Adjust swirl radius"
 #define kParamRadiusDefault 100
 
+#define kParamPosition "center"
+#define kParamPositionLabel "Center"
+#define kParamPositionHint "Swirl center"
+
 #define kParamKernel \
 "const sampler_t sampler = CLK_NORMALIZED_COORDS_FALSE;\n" \
 "\n" \
@@ -55,13 +60,10 @@
 "         : x;\n" \
 "}\n" \
 "\n" \
-"kernel void swirl (read_only image2d_t in, write_only image2d_t out/*, int centerW, int centerH*/, double amount, double radius) {\n" \
+"kernel void swirl (read_only image2d_t in, write_only image2d_t out, double centerW, double centerH, double amount, double radius) {\n" \
 "\n" \
 "    int2 d = get_image_dim(in);\n" \
 "    int2 pos = (int2)(get_global_id(0),get_global_id(1));\n" \
-"    // get from plugin\n" \
-"    int centerW=d.x/2;\n" \
-"    int centerH=d.y/2;\n" \
 "    int x = pos.x - centerW;\n" \
 "    int y = pos.y - centerH;\n" \
 "\n" \
@@ -127,6 +129,7 @@ private:
     cl::Program program_;
     DoubleParam *amount_;
     DoubleParam *radius_;
+    Double2DParam *position_;
 };
 
 SwirlCLPlugin::SwirlCLPlugin(OfxImageEffectHandle handle)
@@ -143,7 +146,8 @@ SwirlCLPlugin::SwirlCLPlugin(OfxImageEffectHandle handle)
 
     amount_ = fetchDoubleParam(kParamAmount);
     radius_ = fetchDoubleParam(kParamRadius);
-    assert(amount_ && radius_);
+    position_ = fetchDouble2DParam(kParamPosition);
+    assert(amount_ && radius_ && position_);
 
     // setup opencl context and build kernel
     context_ = createCLContext();
@@ -227,15 +231,22 @@ void SwirlCLPlugin::render(const RenderArguments &args)
     }
 
     // get params
-    double amount, radius;
+    double amount, radius, x, y;
     amount_->getValueAtTime(args.time, amount);
     radius_->getValueAtTime(args.time, radius);
+    position_->getValueAtTime(args.time, x, y);
+
+    // Position x y
+    double ypos = y*args.renderScale.y;
+    double xpos = x*args.renderScale.x;
 
     // setup kernel
     cl::Kernel kernel(program_, "swirl");
     // kernel arg 0 & 1 is reserved for input & output
-    kernel.setArg(2, std::floor(amount * args.renderScale.x + 0.5));
-    kernel.setArg(3, std::floor(radius * args.renderScale.x + 0.5));
+    kernel.setArg(2, xpos);
+    kernel.setArg(3, ypos);
+    kernel.setArg(4, amount);
+    kernel.setArg(5, std::floor(radius * args.renderScale.x + 0.5));
 
     // get available devices
     VECTOR_CLASS<cl::Device> devices = context_.getInfo<CL_CONTEXT_DEVICES>();
@@ -302,11 +313,26 @@ void SwirlCLPluginFactory::describeInContext(ImageEffectDescriptor &desc, Contex
 
     // create param(s)
     PageParamDescriptor *page = desc.definePageParam(kPluginName);
+    bool hostHasNativeOverlayForPosition;
+    {
+        Double2DParamDescriptor* param = desc.defineDouble2DParam(kParamPosition);
+        param->setLabel(kParamPositionLabel);
+        param->setHint(kParamPositionHint);
+        param->setDoubleType(eDoubleTypeXYAbsolute);
+        param->setDefaultCoordinateSystem(eCoordinatesNormalised);
+        param->setDefault(0.5, 0.5);
+        param->setAnimates(true);
+        hostHasNativeOverlayForPosition = param->getHostHasNativeOverlayHandle();
+        if (hostHasNativeOverlayForPosition) {
+            param->setUseHostNativeOverlayHandle(true);
+        }
+        page->addChild(*param);
+    }
     {
         DoubleParamDescriptor *param = desc.defineDoubleParam(kParamAmount);
         param->setLabel(kParamAmountLabel);
         param->setHint(kParamAmountHint);
-        param->setRange(-360, 360);
+        param->setRange(-100, 100);
         param->setDisplayRange(-10, 10);
         param->setDefault(kParamAmountDefault);
         page->addChild(*param);
