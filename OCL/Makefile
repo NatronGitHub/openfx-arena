@@ -3,6 +3,7 @@ PLUGINOBJECTS = \
         SharpenCL.o \
         RippleCL.o \
         SwirlCL.o \
+        TestCL.o \
         openCLUtilities.o
 
 PLUGINNAME = OCL

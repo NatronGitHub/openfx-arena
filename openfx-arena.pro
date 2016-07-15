@@ -147,4 +147,5 @@ SOURCES += \
             OCL/EdgeCL.cpp \
             OCL/SharpenCL.cpp \
             OCL/RippleCL.cpp \
-            OCL/SwirlCL.cpp
+            OCL/SwirlCL.cpp \
+            OCL/TestCL.cpp
