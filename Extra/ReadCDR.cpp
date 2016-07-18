@@ -345,7 +345,7 @@ void ReadCDRPlugin::onInputFileChanged(const std::string& newFile,
     }
 
     if (throwErrors) {
-        throwSuiteStatusException(kOfxStatFailed);
+        OFX::throwSuiteStatusException(kOfxStatFailed);
     }
 
     *components = OFX::ePixelComponentRGBA;
