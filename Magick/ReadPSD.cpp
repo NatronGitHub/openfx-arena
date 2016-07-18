@@ -654,7 +654,7 @@ void ReadPSDPlugin::restoreState(const std::string& filename)
 }
 
 void ReadPSDPlugin::onInputFileChanged(const std::string& newFile,
-                                  bool throwErrors,
+                                  bool /*throwErrors*/,
                                   bool setColorSpace,
                                   OFX::PreMultiplicationEnum *premult,
                                   OFX::PixelComponentEnum *components,int */*componentCount*/)
@@ -670,10 +670,6 @@ void ReadPSDPlugin::onInputFileChanged(const std::string& newFile,
     # ifdef OFX_IO_USING_OCIO
         _ocio->setInputColorspace("sRGB");
     # endif // OFX_IO_USING_OCIO
-    }
-
-    if (throwErrors) {
-        OFX::throwSuiteStatusException(kOfxStatFailed);
     }
 
     *components = OFX::ePixelComponentRGBA;
