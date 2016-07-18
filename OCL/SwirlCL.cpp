@@ -89,9 +89,9 @@
 "        d2 = read_imagef(in,sampler,(int2)((int)u+1,(int)v+i)) - read_imagef(in,sampler,(int2)((int)u,(int)v+i));\n" \
 "        d3 = read_imagef(in,sampler,(int2)((int)u+2,(int)v+i)) - read_imagef(in,sampler,(int2)((int)u,(int)v+i));\n" \
 "        a0 = read_imagef(in,sampler,(int2)((int)u,  (int)v+i));\n" \
-"        a1 =  -1.0/3*d0 + d2 - 1.0/6*d3;\n" \
-"        a2 = 1.0/2*d0 + 1.0/2*d2;\n" \
-"        a3 = -1.0/6*d0 - 1.0/2*d2 + 1.0/6*d3;\n" \
+"        a1 =  -1.0f/3.f*d0 + d2 - 1.0f/6.f*d3;\n" \
+"        a2 = 1.0f/2.f*d0 + 1.0f/2.f*d2;\n" \
+"        a3 = -1.0f/6.f*d0 - 1.0f/2.f*d2 + 1.0f/6.f*d3;\n" \
 "\n" \
 "        C[i] = a0 + a1*dx + a2*dx*dx + a3*dx*dx*dx;\n" \
 "    }\n" \
@@ -100,9 +100,9 @@
 "    d2 = C[2]-C[1];\n" \
 "    d3 = C[3]-C[1];\n" \
 "    a0 = C[1];\n" \
-"    a1 = -1.0/3*d0 + d2 -1.0/6*d3;\n" \
-"    a2 = 1.0/2*d0 + 1.0/2*d2;\n" \
-"    a3 = -1.0/6*d0 - 1.0/2*d2 + 1.0/6*d3;\n" \
+"    a1 = -1.0f/3.f*d0 + d2 -1.0f/6.f*d3;\n" \
+"    a2 = 1.0f/2.f*d0 + 1.0f/2.f*d2;\n" \
+"    a3 = -1.0f/6.f*d0 - 1.0f/2.f*d2 + 1.0f/6.f*d3;\n" \
 "    fp = (float4)(a0 + a1*dy + a2*dy*dy + a3*dy*dy*dy);\n" \
 "    fp.x = clampRGB(fp.x);\n" \
 "    fp.y = clampRGB(fp.y);\n" \
