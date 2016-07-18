@@ -48,7 +48,7 @@
 "    float4 value = 0.f;\n" \
 "    for (int j = -1; j <= 1; j++) {\n" \
 "        for (int i = -1; i <= 1; i++) {\n" \
-"            value += read_imagef(input, sampler, (int2)(p.x+i, p.y+j)) * m[i+1][j+1] * factor;\n" \
+"            value += read_imagef(input, sampler, (int2)(p.x+i, p.y+j)) * m[i+1][j+1] * (float)factor;\n" \
 "        }\n" \
 "    }\n" \
 "  float4 orig = read_imagef(input, sampler, (int2)(p.x, p.y));\n" \
