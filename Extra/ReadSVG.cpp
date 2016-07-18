@@ -89,7 +89,7 @@ private:
     virtual void getClipComponents(const OFX::ClipComponentsArguments& args, OFX::ClipComponentsSetter& clipComponents) OVERRIDE FINAL;
     virtual bool getFrameBounds(const std::string& filename, OfxTime time, OfxRectI *bounds, double *par, std::string *error, int *tile_width, int *tile_height) OVERRIDE FINAL;
     virtual void restoreState(const std::string& filename) OVERRIDE FINAL;
-    virtual void onInputFileChanged(const std::string& newFile, bool setColorSpace, OFX::PreMultiplicationEnum *premult, OFX::PixelComponentEnum *components, int *componentCount) OVERRIDE FINAL;
+    virtual void onInputFileChanged(const std::string& newFile, bool throwErrors, bool setColorSpace, OFX::PreMultiplicationEnum *premult, OFX::PixelComponentEnum *components, int *componentCount) OVERRIDE FINAL;
     void getLayers(xmlNode *node, std::vector<std::string> *layers);
     OFX::IntParam *_dpi;
     std::vector<std::string> imageLayers;
@@ -376,6 +376,7 @@ ReadSVGPlugin::restoreState(const std::string& filename)
 }
 
 void ReadSVGPlugin::onInputFileChanged(const std::string& newFile,
+                                  bool throwErrors,
                                   bool setColorSpace,
                                   OFX::PreMultiplicationEnum *premult,
                                   OFX::PixelComponentEnum *components,int */*componentCount*/)
@@ -386,6 +387,10 @@ void ReadSVGPlugin::onInputFileChanged(const std::string& newFile,
 # ifdef OFX_IO_USING_OCIO
         _ocio->setInputColorspace("sRGB");
 # endif
+    }
+
+    if (throwErrors) {
+        throwSuiteStatusException(kOfxStatFailed);
     }
 
     *components = OFX::ePixelComponentRGBA;
