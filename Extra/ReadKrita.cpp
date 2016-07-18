@@ -235,7 +235,7 @@ bool ReadKritaPlugin::getFrameBounds(const std::string& filename,
 }
 
 void ReadKritaPlugin::onInputFileChanged(const std::string& newFile,
-                                  bool throwErrors,
+                                  bool /*throwErrors*/,
                                   bool setColorSpace,
                                   OFX::PreMultiplicationEnum *premult,
                                   OFX::PixelComponentEnum *components,int */*componentCount*/)
@@ -254,10 +254,6 @@ void ReadKritaPlugin::onInputFileChanged(const std::string& newFile,
     else {
         setPersistentMessage(OFX::Message::eMessageError, "", "Unable to read image");
         OFX::throwSuiteStatusException(kOfxStatErrFormat);
-    }
-
-    if (throwErrors) {
-        OFX::throwSuiteStatusException(kOfxStatFailed);
     }
 
     *components = OFX::ePixelComponentRGBA;

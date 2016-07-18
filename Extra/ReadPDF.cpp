@@ -412,7 +412,7 @@ void ReadPDFPlugin::restoreState(const std::string& filename)
 }
 
 void ReadPDFPlugin::onInputFileChanged(const std::string& newFile,
-                                  bool throwErrors,
+                                  bool /*throwErrors*/,
                                   bool setColorSpace,
                                   OFX::PreMultiplicationEnum *premult,
                                   OFX::PixelComponentEnum *components,int */*componentCount*/)
@@ -423,10 +423,6 @@ void ReadPDFPlugin::onInputFileChanged(const std::string& newFile,
 # ifdef OFX_IO_USING_OCIO
         _ocio->setInputColorspace("sRGB");
 # endif
-    }
-
-    if (throwErrors) {
-        OFX::throwSuiteStatusException(kOfxStatFailed);
     }
 
     *components = OFX::ePixelComponentRGBA;
