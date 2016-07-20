@@ -51,7 +51,22 @@
 #define kParamPositionLabel "Center"
 #define kParamPositionHint "Swirl center"
 
+#define kParamCLType "CLType"
+#define kParamCLTypeLabel "Device"
+#define kParamCLTypeHint "Switch between OpenCL on GPU, CPU, or all."
+#define kParamCLTypeDefault 0
+
+#define kParamCLVendor "CLVendor"
+#define kParamCLVendorLabel "Vendor"
+#define kParamCLVendorHint "Select OpenCL vendor. Currently any (select the 'best' alternative), NVIDIA, AMD or Intel."
+#define kParamCLVendorDefault 0
+
 #define kParamKernel \
+"#ifdef cl_khr_fp64\n" \
+"#pragma OPENCL EXTENSION cl_khr_fp64 : enable\n" \
+"#elif defined(cl_amd_fp64)\n" \
+"#pragma OPENCL EXTENSION cl_amd_fp64 : enable\n" \
+"#endif\n" \
 "const sampler_t sampler = CLK_NORMALIZED_COORDS_FALSE;\n" \
 "\n" \
 "float clampRGB( float x ) {\n" \
@@ -122,6 +137,8 @@ public:
     virtual ~SwirlCLPlugin();
     virtual void render(const RenderArguments &args) OVERRIDE FINAL;
     virtual bool getRegionOfDefinition(const RegionOfDefinitionArguments &args, OfxRectD &rod) OVERRIDE FINAL;
+    virtual void changedParam(const OFX::InstanceChangedArgs &args, const std::string &paramName) OVERRIDE FINAL;
+    void setupCL();
 private:
     Clip *dstClip_;
     Clip *srcClip_;
@@ -130,6 +147,8 @@ private:
     DoubleParam *amount_;
     DoubleParam *radius_;
     Double2DParam *position_;
+    ChoiceParam *clType_;
+    ChoiceParam *clVendor_;
 };
 
 SwirlCLPlugin::SwirlCLPlugin(OfxImageEffectHandle handle)
@@ -147,15 +166,55 @@ SwirlCLPlugin::SwirlCLPlugin(OfxImageEffectHandle handle)
     amount_ = fetchDoubleParam(kParamAmount);
     radius_ = fetchDoubleParam(kParamRadius);
     position_ = fetchDouble2DParam(kParamPosition);
-    assert(amount_ && radius_ && position_);
+    clType_ = fetchChoiceParam(kParamCLType);
+    clVendor_ = fetchChoiceParam(kParamCLVendor);
+    assert(amount_ && radius_ && position_ && clType_ && clVendor_);
 
-    // setup opencl context and build kernel
-    context_ = createCLContext();
-    program_ = buildProgramFromString(context_, kParamKernel);
+    setupCL();
 }
 
 SwirlCLPlugin::~SwirlCLPlugin()
 {
+
+}
+
+void SwirlCLPlugin::setupCL()
+{
+    int type, vendor;
+    cl_device_type CLtype;
+    cl_vendor CLvendor;
+    clType_->getValue(type);
+    clVendor_->getValue(vendor);
+
+    switch(vendor) {
+    case 1:
+        CLvendor = VENDOR_NVIDIA;
+        break;
+    case 2:
+        CLvendor = VENDOR_AMD;
+        break;
+    case 3:
+        CLvendor = VENDOR_INTEL;
+        break;
+    default:
+        CLvendor = VENDOR_ANY;
+        break;
+    }
+
+    switch(type) {
+    case 1:
+        CLtype = CL_DEVICE_TYPE_GPU;
+        break;
+    case 2:
+        CLtype = CL_DEVICE_TYPE_CPU;
+        break;
+    default:
+        CLtype = CL_DEVICE_TYPE_ALL;
+        break;
+    }
+
+    context_ = createCLContext(CLtype, CLvendor);
+    program_ = buildProgramFromString(context_, kParamKernel);
 }
 
 void SwirlCLPlugin::render(const RenderArguments &args)
@@ -255,6 +314,20 @@ void SwirlCLPlugin::render(const RenderArguments &args)
     renderCL((float*)dstImg->getPixelData(), (float*)srcImg->getPixelData(), args.renderWindow.x2 - args.renderWindow.x1, args.renderWindow.y2 - args.renderWindow.y1, context_, devices[0], kernel);
 }
 
+void SwirlCLPlugin::changedParam(const OFX::InstanceChangedArgs &args, const std::string &paramName)
+{
+    if (!kSupportsRenderScale && (args.renderScale.x != 1. || args.renderScale.y != 1.)) {
+        OFX::throwSuiteStatusException(kOfxStatFailed);
+        return;
+    }
+
+    if (paramName == kParamCLType || paramName == kParamCLVendor) {
+        setupCL();
+    }
+
+    clearPersistentMessage();
+}
+
 bool SwirlCLPlugin::getRegionOfDefinition(const RegionOfDefinitionArguments &args, OfxRectD &rod)
 {
     if (!kSupportsRenderScale && (args.renderScale.x != 1. || args.renderScale.y != 1.)) {
@@ -313,7 +386,6 @@ void SwirlCLPluginFactory::describeInContext(ImageEffectDescriptor &desc, Contex
 
     // create param(s)
     PageParamDescriptor *page = desc.definePageParam(kPluginName);
-    bool hostHasNativeOverlayForPosition;
     {
         Double2DParamDescriptor* param = desc.defineDouble2DParam(kParamPosition);
         param->setLabel(kParamPositionLabel);
@@ -322,10 +394,6 @@ void SwirlCLPluginFactory::describeInContext(ImageEffectDescriptor &desc, Contex
         param->setDefaultCoordinateSystem(eCoordinatesNormalised);
         param->setDefault(0.5, 0.5);
         param->setAnimates(true);
-        hostHasNativeOverlayForPosition = param->getHostHasNativeOverlayHandle();
-        if (hostHasNativeOverlayForPosition) {
-            param->setUseHostNativeOverlayHandle(true);
-        }
         page->addChild(*param);
     }
     {
@@ -344,6 +412,30 @@ void SwirlCLPluginFactory::describeInContext(ImageEffectDescriptor &desc, Contex
         param->setRange(0, 10000);
         param->setDisplayRange(0, 1000);
         param->setDefault(kParamRadiusDefault);
+        param->setLayoutHint(eLayoutHintDivider);
+        page->addChild(*param);
+    }
+    {
+        ChoiceParamDescriptor* param = desc.defineChoiceParam(kParamCLType);
+        param->setLabel(kParamCLTypeLabel);
+        param->setHint(kParamCLTypeHint);
+        param->setAnimates(false);
+        param->setDefault(kParamCLTypeDefault);
+        param->appendOption("All");
+        param->appendOption("GPU");
+        param->appendOption("CPU");
+        page->addChild(*param);
+    }
+    {
+        ChoiceParamDescriptor* param = desc.defineChoiceParam(kParamCLVendor);
+        param->setLabel(kParamCLVendorLabel);
+        param->setHint(kParamCLVendorHint);
+        param->setAnimates(false);
+        param->setDefault(kParamCLVendorDefault);
+        param->appendOption("Any");
+        param->appendOption("NVIDIA");
+        param->appendOption("AMD");
+        param->appendOption("Intel");
         page->addChild(*param);
     }
 }
