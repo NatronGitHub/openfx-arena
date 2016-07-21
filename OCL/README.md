@@ -6,6 +6,7 @@ Experimental OpenCL plugins.
  * EdgeCL
  * SharpenCL
  * RippleCL
+ * SwirlCL
 
 Requirements
 ============
