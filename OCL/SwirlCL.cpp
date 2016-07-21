@@ -19,6 +19,8 @@
 #include "ofxsPositionInteract.h"
 #include "ofxsMacros.h"
 #include "ofxsImageEffect.h"
+#include "ofxsTransform3x3.h"
+#include "ofxsTransformInteract.h"
 #include "openCLUtilities.hpp"
 #include <cmath>
 
@@ -36,20 +38,6 @@
 #define kHostFrameThreading false
 #define kHostMasking true
 #define kHostMixing true
-
-#define kParamAmount "amount"
-#define kParamAmountLabel "Amount"
-#define kParamAmountHint "Adjust swirl amount"
-#define kParamAmountDefault 3
-
-#define kParamRadius "radius"
-#define kParamRadiusLabel "Radius"
-#define kParamRadiusHint "Adjust swirl radius"
-#define kParamRadiusDefault 100
-
-#define kParamPosition "center"
-#define kParamPositionLabel "Center"
-#define kParamPositionHint "Swirl center"
 
 #define kParamCLType "CLType"
 #define kParamCLTypeLabel "Device"
@@ -138,6 +126,7 @@ public:
     virtual void render(const RenderArguments &args) OVERRIDE FINAL;
     virtual bool getRegionOfDefinition(const RegionOfDefinitionArguments &args, OfxRectD &rod) OVERRIDE FINAL;
     virtual void changedParam(const OFX::InstanceChangedArgs &args, const std::string &paramName) OVERRIDE FINAL;
+    void resetCenter(double time);
     void setupCL();
 private:
     Clip *dstClip_;
@@ -145,7 +134,7 @@ private:
     cl::Context context_;
     cl::Program program_;
     DoubleParam *amount_;
-    DoubleParam *radius_;
+    Double2DParam *radius_;
     Double2DParam *position_;
     ChoiceParam *clType_;
     ChoiceParam *clVendor_;
@@ -163,9 +152,9 @@ SwirlCLPlugin::SwirlCLPlugin(OfxImageEffectHandle handle)
     srcClip_ = fetchClip(kOfxImageEffectSimpleSourceClipName);
     assert(srcClip_ && srcClip_->getPixelComponents() == ePixelComponentRGBA);
 
-    amount_ = fetchDoubleParam(kParamAmount);
-    radius_ = fetchDoubleParam(kParamRadius);
-    position_ = fetchDouble2DParam(kParamPosition);
+    amount_ = fetchDoubleParam(kParamTransformRotateOld);
+    radius_ = fetchDouble2DParam(kParamTransformScaleOld);
+    position_ = fetchDouble2DParam(kParamTransformCenterOld);
     clType_ = fetchChoiceParam(kParamCLType);
     clVendor_ = fetchChoiceParam(kParamCLVendor);
     assert(amount_ && radius_ && position_ && clType_ && clVendor_);
@@ -176,6 +165,23 @@ SwirlCLPlugin::SwirlCLPlugin(OfxImageEffectHandle handle)
 SwirlCLPlugin::~SwirlCLPlugin()
 {
 
+}
+
+void SwirlCLPlugin::resetCenter(double time) {
+    if (!dstClip_) {
+        return;
+    }
+    OfxRectD rod = dstClip_->getRegionOfDefinition(time);
+    if ( (rod.x1 <= kOfxFlagInfiniteMin) || (kOfxFlagInfiniteMax <= rod.x2) ||
+         ( rod.y1 <= kOfxFlagInfiniteMin) || ( kOfxFlagInfiniteMax <= rod.y2) ) {
+        return;
+    }
+    OfxPointD newCenter;
+    newCenter.x = (rod.x1 + rod.x2) / 2;
+    newCenter.y = (rod.y1 + rod.y2) / 2;
+    if (position_) {
+        position_->setValue(newCenter.x, newCenter.y);
+    }
 }
 
 void SwirlCLPlugin::setupCL()
@@ -290,10 +296,15 @@ void SwirlCLPlugin::render(const RenderArguments &args)
     }
 
     // get params
-    double amount, radius, x, y;
+    double amount, radius, radiusX, radiusY, x, y;
     amount_->getValueAtTime(args.time, amount);
-    radius_->getValueAtTime(args.time, radius);
+    radius_->getValueAtTime(args.time, radiusX, radiusY);
     position_->getValueAtTime(args.time, x, y);
+
+    radius = radiusX*100;
+    if (amount != 0) {
+        amount = amount/10;
+    }
 
     // Position x y
     double ypos = y*args.renderScale.y;
@@ -321,7 +332,10 @@ void SwirlCLPlugin::changedParam(const OFX::InstanceChangedArgs &args, const std
         return;
     }
 
-    if (paramName == kParamCLType || paramName == kParamCLVendor) {
+    if (paramName == kParamTransformResetCenterOld) {
+        resetCenter(args.time);
+    }
+    else if (paramName == kParamCLType || paramName == kParamCLVendor) {
         setupCL();
     }
 
@@ -367,6 +381,9 @@ void SwirlCLPluginFactory::describe(ImageEffectDescriptor &desc)
     desc.setHostFrameThreading(kHostFrameThreading);
     desc.setHostMaskingEnabled(kHostMasking);
     desc.setHostMixingEnabled(kHostMixing);
+
+    Transform3x3Describe(desc, true);
+    desc.setOverlayInteractDescriptor(new TransformOverlayDescriptorOldParams);
 }
 
 /** @brief The describe in context function, passed a plugin descriptor and a context */
@@ -386,35 +403,7 @@ void SwirlCLPluginFactory::describeInContext(ImageEffectDescriptor &desc, Contex
 
     // create param(s)
     PageParamDescriptor *page = desc.definePageParam(kPluginName);
-    {
-        Double2DParamDescriptor* param = desc.defineDouble2DParam(kParamPosition);
-        param->setLabel(kParamPositionLabel);
-        param->setHint(kParamPositionHint);
-        param->setDoubleType(eDoubleTypeXYAbsolute);
-        param->setDefaultCoordinateSystem(eCoordinatesNormalised);
-        param->setDefault(0.5, 0.5);
-        param->setAnimates(true);
-        page->addChild(*param);
-    }
-    {
-        DoubleParamDescriptor *param = desc.defineDoubleParam(kParamAmount);
-        param->setLabel(kParamAmountLabel);
-        param->setHint(kParamAmountHint);
-        param->setRange(-100, 100);
-        param->setDisplayRange(-10, 10);
-        param->setDefault(kParamAmountDefault);
-        page->addChild(*param);
-    }
-    {
-        DoubleParamDescriptor *param = desc.defineDoubleParam(kParamRadius);
-        param->setLabel(kParamRadiusLabel);
-        param->setHint(kParamRadiusHint);
-        param->setRange(0, 10000);
-        param->setDisplayRange(0, 1000);
-        param->setDefault(kParamRadiusDefault);
-        param->setLayoutHint(eLayoutHintDivider);
-        page->addChild(*param);
-    }
+    ofxsTransformDescribeParams(desc, page, NULL, /*isOpen=*/ true, /*oldParams=*/ true, /*noTranslate=*/ true);
     {
         ChoiceParamDescriptor* param = desc.defineChoiceParam(kParamCLType);
         param->setLabel(kParamCLTypeLabel);
