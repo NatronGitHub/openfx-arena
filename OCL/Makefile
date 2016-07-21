@@ -5,7 +5,7 @@ PLUGINOBJECTS = \
         SwirlCL.o \
         TestCL.o \
         openCLUtilities.o \
-        ofxsTransform3x3.o ofxsTransformInteract.o ofxsShutter.o
+        ofxsTransform3x3.o ofxsTransformInteractCustom.o ofxsShutter.o
 
 PLUGINNAME = OCL
 

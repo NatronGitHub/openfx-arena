@@ -20,7 +20,7 @@
 #include "ofxsMacros.h"
 #include "ofxsImageEffect.h"
 #include "ofxsTransform3x3.h"
-#include "ofxsTransformInteract.h"
+#include "ofxsTransformInteractCustom.h"
 #include "openCLUtilities.hpp"
 #include <cmath>
 
