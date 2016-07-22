@@ -10,6 +10,7 @@ PLUGINOBJECTS = \
 PLUGINNAME = OCL
 
 RESOURCES = \
+OCL.png \
 fr.inria.openfx.EdgeCL.png \
 fr.inria.openfx.EdgeCL.svg \
 fr.inria.openfx.RippleCL.png \

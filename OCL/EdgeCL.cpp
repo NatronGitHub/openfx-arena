@@ -21,7 +21,7 @@
 #include "openCLUtilities.hpp"
 
 #define kPluginName "EdgeCL"
-#define kPluginGrouping "Extra/Filter"
+#define kPluginGrouping "OCL"
 #define kPluginIdentifier "fr.inria.openfx.EdgeCL"
 #define kPluginDescription "OpenCL Edge Filter"
 #define kPluginVersionMajor 1

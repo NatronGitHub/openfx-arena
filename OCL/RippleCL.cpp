@@ -22,7 +22,7 @@
 #include <cmath>
 
 #define kPluginName "RippleCL"
-#define kPluginGrouping "Extra/Distort"
+#define kPluginGrouping "OCL"
 #define kPluginIdentifier "fr.inria.openfx.RippleCL"
 #define kPluginDescription "OpenCL Ripple Filter"
 #define kPluginVersionMajor 1

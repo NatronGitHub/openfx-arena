@@ -21,7 +21,7 @@
 #include "openCLUtilities.hpp"
 
 #define kPluginName "TestCL"
-#define kPluginGrouping "Extra/Tests"
+#define kPluginGrouping "OCL"
 #define kPluginIdentifier "fr.inria.openfx.TestCL"
 #define kPluginDescription "OpenCL Test Filter"
 #define kPluginVersionMajor 1

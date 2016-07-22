@@ -21,7 +21,7 @@
 #include "openCLUtilities.hpp"
 
 #define kPluginName "SharpenCL"
-#define kPluginGrouping "Extra/Filter"
+#define kPluginGrouping "OCL"
 #define kPluginIdentifier "fr.inria.openfx.SharpenCL"
 #define kPluginDescription "OpenCL Sharpen Filter"
 #define kPluginVersionMajor 1

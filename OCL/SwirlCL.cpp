@@ -24,7 +24,7 @@
 #include <cmath>
 
 #define kPluginName "SwirlCL"
-#define kPluginGrouping "Extra/Distort"
+#define kPluginGrouping "OCL"
 #define kPluginIdentifier "fr.inria.openfx.SwirlCL"
 #define kPluginDescription "OpenCL Swirl Filter"
 #define kPluginVersionMajor 1
