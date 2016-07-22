@@ -37,12 +37,6 @@
 #define kParamTransformScaleUniform "transformScaleUniform"
 #define kParamTransformScaleUniformLabel "Uniform"
 #define kParamTransformScaleUniformHint "Use the X scale for both directions"
-/*#define kParamTransformSkewX "transformSkewX"
-#define kParamTransformSkewXLabel "Skew X"
-#define kParamTransformSkewY "transformSkewY"
-#define kParamTransformSkewYLabel "Skew Y"
-#define kParamTransformSkewOrder "transformSkewOrder"
-#define kParamTransformSkewOrderLabel "Skew Order"*/
 #define kParamTransformCenter "transformCenter"
 #define kParamTransformCenterLabel "Center"
 #define kParamTransformResetCenter "transformResetCenter"
@@ -60,9 +54,6 @@
 #define kParamTransformRotateOld "rotate"
 #define kParamTransformScaleOld "scale"
 #define kParamTransformScaleUniformOld "uniform"
-/*#define kParamTransformSkewXOld "skewX"
-#define kParamTransformSkewYOld "skewY"
-#define kParamTransformSkewOrderOld "skewOrder"*/
 #define kParamTransformCenterOld "center"
 #define kParamTransformResetCenterOld "resetCenter"
 #define kParamTransformInteractCustomiveOld "interactive"
@@ -90,7 +81,7 @@ ofxsTransformGetScale(const OfxPointD &scaleParam,
 }
 
 /// add Transform params. page and group are optional
-void ofxsTransformDescribeParams(OFX::ImageEffectDescriptor &desc, OFX::PageParamDescriptor *page, OFX::GroupParamDescriptor *group, bool isOpen, bool oldParams, bool noTranslate = false);
+void ofxsTransformDescribeParams(OFX::ImageEffectDescriptor &desc, OFX::PageParamDescriptor *page, OFX::GroupParamDescriptor *group, bool isOpen, bool oldParams, bool noTranslate = false, bool uniform = false, double rotateDefault = 0);
 
 class TransformInteractCustomHelper
     : private OFX::InteractAbstract
@@ -106,8 +97,6 @@ protected:
         eTopPointHovered, //< the top point of the circle is hovered
         eCenterPointHovered, //< the center point of the circle is hovered
         eRotationBarHovered, //< the rotation bar is hovered
-        //eSkewXBarHoverered, //< the skew bar is hovered
-        //eSkewYBarHoverered //< the skew bar is hovered
     };
 
     enum MouseStateEnum
@@ -121,8 +110,6 @@ protected:
         eDraggingTranslation,
         eDraggingCenter,
         eDraggingRotationBar,
-        //eDraggingSkewXBar,
-        //eDraggingSkewYBar
     };
 
     enum OrientationEnum
@@ -146,9 +133,6 @@ protected:
     OfxPointD _scaleParamDrag;
     bool _scaleUniformDrag;
     double _rotateDrag;
-    /*double _skewXDrag;
-    double _skewYDrag;
-    int _skewOrderDrag;*/
     bool _invertedDrag;
     bool _interactiveDrag;
 
@@ -180,9 +164,6 @@ private:
     OFX::DoubleParam* _rotate;
     OFX::Double2DParam* _scale;
     OFX::BooleanParam* _scaleUniform;
-    /*OFX::DoubleParam* _skewX;
-    OFX::DoubleParam* _skewY;
-    OFX::ChoiceParam* _skewOrder;*/
     OFX::Double2DParam* _center;
     OFX::BooleanParam* _invert;
     OFX::BooleanParam* _interactOpen;

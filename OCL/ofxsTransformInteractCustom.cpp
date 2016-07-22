@@ -18,6 +18,9 @@
 
 /*
  * OFX TransformInteractCustom.
+ *
+ * Based on ofxTransformInteract from openfx-supportext, modified for OCL.ofx
+ *
  */
 
 #include "ofxsTransformInteractCustom.h"
@@ -52,7 +55,9 @@ ofxsTransformDescribeParams(OFX::ImageEffectDescriptor &desc,
                             OFX::GroupParamDescriptor *group,
                             bool isOpen,
                             bool oldParams,
-                            bool noTranslate)
+                            bool noTranslate,
+                            bool uniform,
+                            double rotateDefault)
 {
     // translate
     if (!noTranslate) {
@@ -79,7 +84,7 @@ ofxsTransformDescribeParams(OFX::ImageEffectDescriptor &desc,
         DoubleParamDescriptor* param = desc.defineDoubleParam(oldParams ? kParamTransformRotateOld : kParamTransformRotate);
         param->setLabel(kParamTransformRotateLabel);
         param->setDoubleType(eDoubleTypeAngle);
-        param->setDefault(0);
+        param->setDefault(rotateDefault);
         param->setRange(-DBL_MAX, DBL_MAX); // Resolve requires range and display range or values are clamped to (-1,1)
         param->setDisplayRange(-180, 180);
         param->setIncrement(0.1);
@@ -115,8 +120,7 @@ ofxsTransformDescribeParams(OFX::ImageEffectDescriptor &desc,
         BooleanParamDescriptor* param = desc.defineBooleanParam(oldParams ? kParamTransformScaleUniformOld : kParamTransformScaleUniform);
         param->setLabel(kParamTransformScaleUniformLabel);
         param->setHint(kParamTransformScaleUniformHint);
-        // don't check it by default: it is easy to obtain Uniform scaling using the slider or the interact
-        param->setDefault(true);
+        param->setDefault(uniform);
         param->setAnimates(true);
         if (group) {
             param->setParent(*group);
@@ -125,56 +129,6 @@ ofxsTransformDescribeParams(OFX::ImageEffectDescriptor &desc,
             page->addChild(*param);
         }
     }
-
-/*
-    // skewX
-    {
-        DoubleParamDescriptor* param = desc.defineDoubleParam(oldParams ? kParamTransformSkewXOld : kParamTransformSkewX);
-        param->setLabel(kParamTransformSkewXLabel);
-        param->setDefault(0);
-        param->setRange(-DBL_MAX, DBL_MAX); // Resolve requires range and display range or values are clamped to (-1,1)
-        param->setDisplayRange(-1., 1.);
-        param->setIncrement(0.01);
-        if (group) {
-            param->setParent(*group);
-        }
-        if (page) {
-            page->addChild(*param);
-        }
-    }
-
-    // skewY
-    {
-        DoubleParamDescriptor* param = desc.defineDoubleParam(oldParams ? kParamTransformSkewYOld : kParamTransformSkewY);
-        param->setLabel(kParamTransformSkewYLabel);
-        param->setDefault(0);
-        param->setRange(-DBL_MAX, DBL_MAX); // Resolve requires range and display range or values are clamped to (-1,1)
-        param->setDisplayRange(-1., 1.);
-        param->setIncrement(0.01);
-        if (group) {
-            param->setParent(*group);
-        }
-        if (page) {
-            page->addChild(*param);
-        }
-    }
-
-    // skewOrder
-    {
-        ChoiceParamDescriptor* param = desc.defineChoiceParam(oldParams ? kParamTransformSkewOrderOld : kParamTransformSkewOrder);
-        param->setLabel(kParamTransformSkewOrderLabel);
-        param->setDefault(0);
-        param->appendOption("XY");
-        param->appendOption("YX");
-        param->setAnimates(true);
-        if (group) {
-            param->setParent(*group);
-        }
-        if (page) {
-            page->addChild(*param);
-        }
-    }*/
-
 
     // center
     {
@@ -232,6 +186,7 @@ ofxsTransformDescribeParams(OFX::ImageEffectDescriptor &desc,
         param->setLabel(kParamTransformInteractCustomiveLabel);
         param->setHint(kParamTransformInteractCustomiveHint);
         param->setEvaluateOnChange(false);
+        param->setLayoutHint(OFX::eLayoutHintDivider);
         if (group) {
             param->setParent(*group);
         }
@@ -257,18 +212,12 @@ TransformInteractCustomHelper::TransformInteractCustomHelper(OFX::ImageEffect* e
     , _lastMousePos()
     , _scaleUniformDrag(0)
     , _rotateDrag(0)
-    /*, _skewXDrag(0)
-    , _skewYDrag(0)
-    , _skewOrderDrag(0)*/
     , _invertedDrag(0)
     , _interactiveDrag(false)
     , _translate(0)
     , _rotate(0)
     , _scale(0)
     , _scaleUniform(0)
-    /*, _skewX(0)
-    , _skewY(0)
-    , _skewOrder(0)*/
     , _center(0)
     , _invert(0)
     , _interactOpen(0)
@@ -285,9 +234,6 @@ TransformInteractCustomHelper::TransformInteractCustomHelper(OFX::ImageEffect* e
         _rotate = _effect->fetchDoubleParam(kParamTransformRotateOld);
         _scale = _effect->fetchDouble2DParam(kParamTransformScaleOld);
         _scaleUniform = _effect->fetchBooleanParam(kParamTransformScaleUniformOld);
-        /*_skewX = _effect->fetchDoubleParam(kParamTransformSkewXOld);
-        _skewY = _effect->fetchDoubleParam(kParamTransformSkewYOld);
-        _skewOrder = _effect->fetchChoiceParam(kParamTransformSkewOrderOld);*/
         _center = _effect->fetchDouble2DParam(kParamTransformCenterOld);
         _interactive = _effect->fetchBooleanParam(kParamTransformInteractCustomiveOld);
     } else {
@@ -298,9 +244,6 @@ TransformInteractCustomHelper::TransformInteractCustomHelper(OFX::ImageEffect* e
         _rotate = _effect->fetchDoubleParam(kParamTransformRotate);
         _scale = _effect->fetchDouble2DParam(kParamTransformScale);
         _scaleUniform = _effect->fetchBooleanParam(kParamTransformScaleUniform);
-        /*_skewX = _effect->fetchDoubleParam(kParamTransformSkewX);
-        _skewY = _effect->fetchDoubleParam(kParamTransformSkewY);
-        _skewOrder = _effect->fetchChoiceParam(kParamTransformSkewOrder);*/
         _center = _effect->fetchDouble2DParam(kParamTransformCenter);
         _interactive = _effect->fetchBooleanParam(kParamTransformInteractCustomive);
     }
@@ -308,7 +251,7 @@ TransformInteractCustomHelper::TransformInteractCustomHelper(OFX::ImageEffect* e
     if ( _effect->paramExists(kParamTransform3x3Invert) ) {
         _invert = _effect->fetchBooleanParam(kParamTransform3x3Invert);
     }
-    assert(_rotate && _scale && _scaleUniform && /*_skewX && _skewY && _skewOrder &&*/ _center && _interactive);
+    assert(_rotate && _scale && _scaleUniform && _center && _interactive);
     if (_translate) {
         _interact->addParamToSlaveTo(_translate);
     }
@@ -318,15 +261,6 @@ TransformInteractCustomHelper::TransformInteractCustomHelper(OFX::ImageEffect* e
     if (_scale) {
         _interact->addParamToSlaveTo(_scale);
     }
-    /*if (_skewX) {
-        _interact->addParamToSlaveTo(_skewX);
-    }
-    if (_skewY) {
-        _interact->addParamToSlaveTo(_skewY);
-    }
-    if (_skewOrder) {
-        _interact->addParamToSlaveTo(_skewOrder);
-    }*/
     if (_center) {
         _interact->addParamToSlaveTo(_center);
     }
@@ -476,61 +410,6 @@ drawEllipse(const OfxRGBColourD& color,
     glPopMatrix();
 }
 
-/*static void
-drawSkewBar(const OfxRGBColourD& color,
-            const OfxPointD &center,
-            const OfxPointD& pixelScale,
-            double targetRadiusY,
-            bool hovered,
-            double angle,
-            int l)
-{
-    if (hovered) {
-        glColor3f(1.f * l, 0.f * l, 0.f * l);
-    } else {
-        glColor3f( (float)color.r * l, (float)color.g * l, (float)color.b * l );
-    }
-
-    // we are not axis-aligned: use the mean pixel scale
-    double meanPixelScale = (pixelScale.x + pixelScale.y) / 2.;
-    double barHalfSize = targetRadiusY + 20. * meanPixelScale;
-
-    glPushMatrix();
-    glTranslatef( (float)center.x, (float)center.y, 0.f );
-    glRotated(angle, 0, 0, 1);
-
-    glBegin(GL_LINES);
-    glVertex2d(0., -barHalfSize);
-    glVertex2d(0., +barHalfSize);
-
-    if (hovered) {
-        double arrowYPosition = targetRadiusY + 10. * meanPixelScale;
-        double arrowXHalfSize = 10 * meanPixelScale;
-        double arrowHeadOffsetX = 3 * meanPixelScale;
-        double arrowHeadOffsetY = 3 * meanPixelScale;
-
-        ///draw the central bar
-        glVertex2d(-arrowXHalfSize, -arrowYPosition);
-        glVertex2d(+arrowXHalfSize, -arrowYPosition);
-
-        ///left triangle
-        glVertex2d(-arrowXHalfSize, -arrowYPosition);
-        glVertex2d(-arrowXHalfSize + arrowHeadOffsetX, -arrowYPosition + arrowHeadOffsetY);
-
-        glVertex2d(-arrowXHalfSize, -arrowYPosition);
-        glVertex2d(-arrowXHalfSize + arrowHeadOffsetX, -arrowYPosition - arrowHeadOffsetY);
-
-        ///right triangle
-        glVertex2d(+arrowXHalfSize, -arrowYPosition);
-        glVertex2d(+arrowXHalfSize - arrowHeadOffsetX, -arrowYPosition + arrowHeadOffsetY);
-
-        glVertex2d(+arrowXHalfSize, -arrowYPosition);
-        glVertex2d(+arrowXHalfSize - arrowHeadOffsetX, -arrowYPosition - arrowHeadOffsetY);
-    }
-    glEnd();
-    glPopMatrix();
-}*/
-
 static void
 drawRotationBar(const OfxRGBColourD& color,
                 const OfxPointD& pixelScale,
@@ -671,8 +550,6 @@ TransformInteractCustomHelper::draw(const OFX::DrawArgs &args)
     OfxPointD scaleParam = { 1., 1. };
     bool scaleUniform = false;
     double rotate = 0.;
-    /*double skewX = 0., skewY = 0.;
-    int skewOrder = 0;*/
     bool inverted = false;
 
     if (_mouseState == eReleased) {
@@ -691,15 +568,6 @@ TransformInteractCustomHelper::draw(const OFX::DrawArgs &args)
         if (_rotate) {
             _rotate->getValueAtTime(time, rotate);
         }
-        /*if (_skewX) {
-            _skewX->getValueAtTime(time, skewX);
-        }
-        if (_skewY) {
-            _skewY->getValueAtTime(time, skewY);
-        }
-        if (_skewOrder) {
-            _skewOrder->getValueAtTime(time, skewOrder);
-        }*/
         if (_invert) {
             _invert->getValueAtTime(time, inverted);
         }
@@ -709,9 +577,6 @@ TransformInteractCustomHelper::draw(const OFX::DrawArgs &args)
         scaleParam = _scaleParamDrag;
         scaleUniform = _scaleUniformDrag;
         rotate = _rotateDrag;
-        /*skewX = _skewXDrag;
-        skewY = _skewYDrag;
-        skewOrder = _skewOrderDrag;*/
         inverted = _invertedDrag;
     }
 
@@ -727,13 +592,6 @@ TransformInteractCustomHelper::draw(const OFX::DrawArgs &args)
     OfxPointD left, right, bottom, top;
     getTargetPoints(targetCenter, targetRadius, &left, &bottom, &top, &right);
 
-/*
-    GLdouble skewMatrix[16];
-    skewMatrix[0] = ( skewOrder ? 1. : (1. + skewX * skewY) ); skewMatrix[1] = skewY; skewMatrix[2] = 0.; skewMatrix[3] = 0;
-    skewMatrix[4] = skewX; skewMatrix[5] = (skewOrder ? (1. + skewX * skewY) : 1.); skewMatrix[6] = 0.; skewMatrix[7] = 0;
-    skewMatrix[8] = 0.; skewMatrix[9] = 0.; skewMatrix[10] = 1.; skewMatrix[11] = 0;
-    skewMatrix[12] = 0.; skewMatrix[13] = 0.; skewMatrix[14] = 0.; skewMatrix[15] = 1.;
-*/
     //glPushAttrib(GL_ALL_ATTRIB_BITS); // caller is responsible for protecting attribs
 
     glDisable(GL_LINE_STIPPLE);
@@ -767,37 +625,7 @@ TransformInteractCustomHelper::draw(const OFX::DrawArgs &args)
 
         drawEllipse(color, targetCenter, targetRadius, _mouseState == eDraggingCircle || _drawState == eCircleHovered, l);
 
-        // add 180 to the angle to draw the arrows on the other side. unfortunately, this requires knowing
-        // the mouse position in the ellipse frame
-        /*double flip = 0.;
-        if ( (_drawState == eSkewXBarHoverered) || (_drawState == eSkewYBarHoverered) ) {
-            double rot = OFX::ofxsToRadians(rotate);
-            OFX::Matrix3x3 transformscale;
-            transformscale = OFX::ofxsMatInverseTransformCanonical(0., 0., scale.x, scale.y, skewX, skewY, (bool)skewOrder, rot, targetCenter.x, targetCenter.y);
-
-            OFX::Point3D previousPos;
-            previousPos.x = _lastMousePos.x;
-            previousPos.y = _lastMousePos.y;
-            previousPos.z = 1.;
-            previousPos = transformscale * previousPos;
-            if (previousPos.z != 0) {
-                previousPos.x /= previousPos.z;
-                previousPos.y /= previousPos.z;
-            }
-            if ( ( (_drawState == eSkewXBarHoverered) && (previousPos.y > targetCenter.y) ) ||
-                 ( ( _drawState == eSkewYBarHoverered) && ( previousPos.x > targetCenter.x) ) ) {
-                flip = 180.;
-            }
-        }*/
-        //drawSkewBar(color, targetCenter, pscale, targetRadius.y, _mouseState == eDraggingSkewXBar || _drawState == eSkewXBarHoverered, flip, l);
-        //drawSkewBar(color, targetCenter, pscale, targetRadius.x, _mouseState == eDraggingSkewYBar || _drawState == eSkewYBarHoverered, flip - 90., l);
-
-
         drawSquare(color, targetCenter, pscale, _mouseState == eDraggingTranslation || _mouseState == eDraggingCenter || _drawState == eCenterPointHovered, (!_translate || _modifierStateCtrl), l);
-        /*drawSquare(color, left, pscale, _mouseState == eDraggingLeftPoint || _drawState == eLeftPointHovered, false, l);
-        drawSquare(color, right, pscale, _mouseState == eDraggingRightPoint || _drawState == eRightPointHovered, false, l);
-        drawSquare(color, top, pscale, _mouseState == eDraggingTopPoint || _drawState == eTopPointHovered, false, l);
-        drawSquare(color, bottom, pscale, _mouseState == eDraggingBottomPoint || _drawState == eBottomPointHovered, false, l);*/
 
         glPopMatrix();
     }
@@ -831,44 +659,6 @@ isOnEllipseBorder(const OFX::Point3D& pos,
 
     return false;
 }
-
-/*static bool
-isOnSkewXBar(const OFX::Point3D& pos,
-             double targetRadiusY,
-             const OfxPointD& center,
-             const OfxPointD& pixelScale,
-             double tolerance)
-{
-    // we are not axis-aligned
-    double meanPixelScale = (pixelScale.x + pixelScale.y) / 2.;
-    double barHalfSize = targetRadiusY + (20. * meanPixelScale);
-
-    if ( ( pos.x >= (center.x - tolerance) ) && ( pos.x <= (center.x + tolerance) ) &&
-         ( pos.y >= (center.y - barHalfSize - tolerance) ) && ( pos.y <= (center.y + barHalfSize + tolerance) ) ) {
-        return true;
-    }
-
-    return false;
-}
-
-static bool
-isOnSkewYBar(const OFX::Point3D& pos,
-             double targetRadiusX,
-             const OfxPointD& center,
-             const OfxPointD& pixelScale,
-             double tolerance)
-{
-    // we are not axis-aligned
-    double meanPixelScale = (pixelScale.x + pixelScale.y) / 2.;
-    double barHalfSize = targetRadiusX + (20. * meanPixelScale);
-
-    if ( ( pos.y >= (center.y - tolerance) ) && ( pos.y <= (center.y + tolerance) ) &&
-         ( pos.x >= (center.x - barHalfSize - tolerance) ) && ( pos.x <= (center.x + barHalfSize + tolerance) ) ) {
-        return true;
-    }
-
-    return false;
-}*/
 
 static bool
 isOnRotationBar(const OFX::Point3D& pos,
@@ -932,8 +722,6 @@ TransformInteractCustomHelper::penMotion(const OFX::PenArgs &args)
     OfxPointD scaleParam = { 1., 1. };
     bool scaleUniform = false;
     double rotate = 0.;
-    /*double skewX = 0., skewY = 0.;
-    int skewOrder = 0;*/
     bool inverted = false;
 
     if (_mouseState == eReleased) {
@@ -952,15 +740,6 @@ TransformInteractCustomHelper::penMotion(const OFX::PenArgs &args)
         if (_rotate) {
             _rotate->getValueAtTime(time, rotate);
         }
-        /*if (_skewX) {
-            _skewX->getValueAtTime(time, skewX);
-        }
-        if (_skewY) {
-            _skewY->getValueAtTime(time, skewY);
-        }
-        if (_skewOrder) {
-            _skewOrder->getValueAtTime(time, skewOrder);
-        }*/
         if (_invert) {
             _invert->getValueAtTime(time, inverted);
         }
@@ -970,9 +749,6 @@ TransformInteractCustomHelper::penMotion(const OFX::PenArgs &args)
         scaleParam = _scaleParamDrag;
         scaleUniform = _scaleUniformDrag;
         rotate = _rotateDrag;
-        /*skewX = _skewXDrag;
-        skewY = _skewYDrag;
-        skewOrder = _skewOrderDrag;*/
         inverted = _invertedDrag;
     }
 
@@ -981,8 +757,7 @@ TransformInteractCustomHelper::penMotion(const OFX::PenArgs &args)
     bool translateChanged = false;
     bool scaleChanged = false;
     bool rotateChanged = false;
-    /*bool skewXChanged = false;
-    bool skewYChanged = false;*/
+
     OfxPointD targetCenter;
     getTargetCenter(center, translate, &targetCenter);
 
@@ -1018,12 +793,12 @@ TransformInteractCustomHelper::penMotion(const OFX::PenArgs &args)
     if ( (_mouseState != eDraggingTranslation) && (_mouseState != eDraggingCenter) ) {
         ///undo skew + rotation to the current position
         rotation = OFX::ofxsMatInverseTransformCanonical(0., 0., 1., 1., 0., 0., false, rot, targetCenter.x, targetCenter.y);
-        transform = OFX::ofxsMatInverseTransformCanonical(0., 0., 1., 1., /*skewX*/0, /*skewY*/0, /*(bool)skewOrder*/false, rot, targetCenter.x, targetCenter.y);
-        transformscale = OFX::ofxsMatInverseTransformCanonical(0., 0., scale.x, scale.y, /*skewX*/0, /*skewY*/0, /*(bool)skewOrder*/false, rot, targetCenter.x, targetCenter.y);
+        transform = OFX::ofxsMatInverseTransformCanonical(0., 0., 1., 1., 0, 0, false, rot, targetCenter.x, targetCenter.y);
+        transformscale = OFX::ofxsMatInverseTransformCanonical(0., 0., scale.x, scale.y, 0, 0, false, rot, targetCenter.x, targetCenter.y);
     } else {
         rotation = OFX::ofxsMatInverseTransformCanonical(0., 0., 1., 1., 0., 0., false, 0., targetCenter.x, targetCenter.y);
-        transform = OFX::ofxsMatInverseTransformCanonical(0., 0., 1., 1., /*skewX*/0, /*skewY*/0, /*(bool)skewOrder*/false, 0., targetCenter.x, targetCenter.y);
-        transformscale = OFX::ofxsMatInverseTransformCanonical(0., 0., scale.x, scale.y, /*skewX*/0, /*skewY*/0, /*(bool)skewOrder*/false, 0., targetCenter.x, targetCenter.y);
+        transform = OFX::ofxsMatInverseTransformCanonical(0., 0., 1., 1., 0, 0, false, 0., targetCenter.x, targetCenter.y);
+        transformscale = OFX::ofxsMatInverseTransformCanonical(0., 0., scale.x, scale.y, 0, 0, false, 0., targetCenter.x, targetCenter.y);
     }
 
     rotationPos = rotation * penPos;
@@ -1075,13 +850,7 @@ TransformInteractCustomHelper::penMotion(const OFX::PenArgs &args)
         } else if ( isOnRotationBar(rotationPos, targetRadius.x, targetCenter, pscale, hoverTolerance) ) {
             _drawState = eRotationBarHovered;
             didSomething = true;
-        }/* else if ( isOnSkewXBar(transformedPos, targetRadius.y, targetCenter, pscale, hoverTolerance) ) {
-            _drawState = eSkewXBarHoverered;
-            didSomething = true;
-        } else if ( isOnSkewYBar(transformedPos, targetRadius.x, targetCenter, pscale, hoverTolerance) ) {
-            _drawState = eSkewYBarHoverered;
-            didSomething = true;
-        }*/ else {
+        } else {
             _drawState = eInActive;
         }
     } else if (_mouseState == eDraggingCircle) {
@@ -1150,7 +919,7 @@ TransformInteractCustomHelper::penMotion(const OFX::PenArgs &args)
         translateChanged = true;
     } else if (_mouseState == eDraggingCenter) {
         OfxPointD currentCenter = center;
-        OFX::Matrix3x3 R = ofxsMatScale(1. / scale.x, 1. / scale.y) /* * ofxsMatSkewXY(-skewX, -skewY, !skewOrder)*/ * ofxsMatRotation(rot);
+        OFX::Matrix3x3 R = ofxsMatScale(1. / scale.x, 1. / scale.y) * ofxsMatRotation(rot);
         double dx = args.penPosition.x - _lastMousePos.x;
         double dy = args.penPosition.y - _lastMousePos.y;
 
@@ -1236,23 +1005,7 @@ TransformInteractCustomHelper::penMotion(const OFX::PenArgs &args)
         rotate = angledegrees;
         //_rotate->setValue(rotate);
         rotateChanged = true;
-    } /*else if (_mouseState == eDraggingSkewXBar) {
-        // avoid division by zero
-        if ( (scale.y != 0.) && (targetCenter.y != previousPos.y) ) {
-            const double addSkew = (scale.x / scale.y) * (currentPos.x - previousPos.x) / (currentPos.y - targetCenter.y);
-            skewX = skewX + addSkew;
-            //_skewX->setValue(skewX);
-            skewXChanged = true;
-        }
-    } else if (_mouseState == eDraggingSkewYBar) {
-        // avoid division by zero
-        if ( (scale.x != 0.) && (targetCenter.x != previousPos.x) ) {
-            const double addSkew = (scale.y / scale.x) * (currentPos.y - previousPos.y) / (currentPos.x - targetCenter.x);
-            skewY = skewY + addSkew;
-            //_skewY->setValue(skewY + addSkew);
-            skewYChanged = true;
-        }
-    } */else {
+    } else {
         assert(false);
     }
 
@@ -1261,12 +1014,9 @@ TransformInteractCustomHelper::penMotion(const OFX::PenArgs &args)
     _scaleParamDrag = scale;
     _scaleUniformDrag = scaleUniform;
     _rotateDrag = rotate;
-    /*_skewXDrag = skewX;
-    _skewYDrag = skewY;
-    _skewOrderDrag = skewOrder;*/
     _invertedDrag = inverted;
 
-    bool valuesChanged = (centerChanged || translateChanged || scaleChanged || rotateChanged /*|| skewXChanged || skewYChanged*/);
+    bool valuesChanged = (centerChanged || translateChanged || scaleChanged || rotateChanged);
 
     if ( (_mouseState != eReleased) && _interactiveDrag && valuesChanged ) {
         // no need to redraw overlay since it is slave to the paramaters
@@ -1283,12 +1033,6 @@ TransformInteractCustomHelper::penMotion(const OFX::PenArgs &args)
         if (rotateChanged) {
             _rotate->setValue(rotate);
         }
-        /*if (skewXChanged) {
-            _skewX->setValue(skewX);
-        }
-        if (skewYChanged) {
-            _skewY->setValue(skewY);
-        }*/
         _effect->endEditBlock();
     } else if (didSomething || valuesChanged) {
         _interact->requestRedraw();
@@ -1314,8 +1058,6 @@ TransformInteractCustomHelper::penDown(const OFX::PenArgs &args)
     OfxPointD scaleParam = { 1., 1. };
     bool scaleUniform = false;
     double rotate = 0.;
-    /*double skewX = 0., skewY = 0.;
-    int skewOrder = 0;*/
     bool inverted = false;
 
     if (_mouseState == eReleased) {
@@ -1334,15 +1076,6 @@ TransformInteractCustomHelper::penDown(const OFX::PenArgs &args)
         if (_rotate) {
             _rotate->getValueAtTime(time, rotate);
         }
-        /*if (_skewX) {
-            _skewX->getValueAtTime(time, skewX);
-        }
-        if (_skewY) {
-            _skewY->getValueAtTime(time, skewY);
-        }
-        if (_skewOrder) {
-            _skewOrder->getValueAtTime(time, skewOrder);
-        }*/
         if (_invert) {
             _invert->getValueAtTime(time, inverted);
         }
@@ -1355,9 +1088,6 @@ TransformInteractCustomHelper::penDown(const OFX::PenArgs &args)
         scaleParam = _scaleParamDrag;
         scaleUniform = _scaleUniformDrag;
         rotate = _rotateDrag;
-        /*skewX = _skewXDrag;
-        skewY = _skewYDrag;
-        skewOrder = _skewOrderDrag;*/
         inverted = _invertedDrag;
     }
 
@@ -1388,7 +1118,7 @@ TransformInteractCustomHelper::penDown(const OFX::PenArgs &args)
     ///now undo skew + rotation to the current position
     OFX::Matrix3x3 rotation, transform;
     rotation = OFX::ofxsMatInverseTransformCanonical(0., 0., 1., 1., 0., 0., false, rot, targetCenter.x, targetCenter.y);
-    transform = OFX::ofxsMatInverseTransformCanonical(0., 0., 1., 1., /*skewX*/0, /*skewY*/0, /*(bool)skewOrder*/false, rot, targetCenter.x, targetCenter.y);
+    transform = OFX::ofxsMatInverseTransformCanonical(0., 0., 1., 1., 0, 0, false, rot, targetCenter.x, targetCenter.y);
 
     rotationPos = rotation * transformedPos;
     if (rotationPos.z != 0) {
@@ -1430,13 +1160,7 @@ TransformInteractCustomHelper::penDown(const OFX::PenArgs &args)
     } else if ( isOnRotationBar(rotationPos, targetRadius.x, targetCenter, pscale, pressToleranceY) ) {
         _mouseState = eDraggingRotationBar;
         didSomething = true;
-    } /*else if ( isOnSkewXBar(transformedPos, targetRadius.y, targetCenter, pscale, pressToleranceY) ) {
-        _mouseState = eDraggingSkewXBar;
-        didSomething = true;
-    } else if ( isOnSkewYBar(transformedPos, targetRadius.x, targetCenter, pscale, pressToleranceX) ) {
-        _mouseState = eDraggingSkewYBar;
-        didSomething = true;
-    } */else {
+    } else {
         _mouseState = eReleased;
     }
 
@@ -1447,9 +1171,6 @@ TransformInteractCustomHelper::penDown(const OFX::PenArgs &args)
     _scaleParamDrag = scaleParam;
     _scaleUniformDrag = scaleUniform;
     _rotateDrag = rotate;
-    /*_skewXDrag = skewX;
-    _skewYDrag = skewY;
-    _skewOrderDrag = skewOrder;*/
     _invertedDrag = inverted;
 
     if (didSomething) {
@@ -1482,12 +1203,6 @@ TransformInteractCustomHelper::penUp(const OFX::PenArgs &args)
         if (_rotate) {
             _rotate->setValue(_rotateDrag);
         }
-        /*if (_skewX) {
-            _skewX->setValue(_skewXDrag);
-        }
-        if (_skewY) {
-            _skewY->setValue(_skewYDrag);
-        }*/
         _effect->endEditBlock();
     } else if (_mouseState != eReleased) {
         _interact->requestRedraw();

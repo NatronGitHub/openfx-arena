@@ -16,7 +16,6 @@
  * along with openfx-arena.  If not, see <http://www.gnu.org/licenses/gpl-2.0.html>
 */
 
-#include "ofxsPositionInteract.h"
 #include "ofxsMacros.h"
 #include "ofxsImageEffect.h"
 #include "ofxsTransform3x3.h"
@@ -48,6 +47,8 @@
 #define kParamCLVendorLabel "Vendor"
 #define kParamCLVendorHint "Select OpenCL vendor. Currently any (select the 'best' alternative), NVIDIA, AMD or Intel."
 #define kParamCLVendorDefault 0
+
+#define kParamSwirlDefault 15
 
 #define kParamKernel \
 "#ifdef cl_khr_fp64\n" \
@@ -403,13 +404,14 @@ void SwirlCLPluginFactory::describeInContext(ImageEffectDescriptor &desc, Contex
 
     // create param(s)
     PageParamDescriptor *page = desc.definePageParam(kPluginName);
-    ofxsTransformDescribeParams(desc, page, NULL, /*isOpen=*/ true, /*oldParams=*/ true, /*noTranslate=*/ true);
+    ofxsTransformDescribeParams(desc, page, NULL, /*isOpen=*/ true, /*oldParams=*/ true, /*noTranslate=*/ true, /*uniform=*/ true, /*rotateDefault*/ kParamSwirlDefault);
     {
         ChoiceParamDescriptor* param = desc.defineChoiceParam(kParamCLType);
         param->setLabel(kParamCLTypeLabel);
         param->setHint(kParamCLTypeHint);
         param->setAnimates(false);
         param->setDefault(kParamCLTypeDefault);
+        param->setLayoutHint(eLayoutHintNoNewLine, 1);
         param->appendOption("All");
         param->appendOption("GPU");
         param->appendOption("CPU");
