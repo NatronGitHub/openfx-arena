@@ -38,6 +38,11 @@
 #define kHostMasking true
 #define kHostMixing true
 
+#define kParamIP "interpolation"
+#define kParamIPLabel "Interpolation"
+#define kParamIPHint "Interpolation"
+#define kParamIPDefault 0
+
 #define kParamCLType "CLType"
 #define kParamCLTypeLabel "Device"
 #define kParamCLTypeHint "Switch between OpenCL on GPU, CPU, or all."
@@ -64,7 +69,7 @@
 "         : x;\n" \
 "}\n" \
 "\n" \
-"kernel void swirl (read_only image2d_t in, write_only image2d_t out, double centerW, double centerH, double amount, double radius) {\n" \
+"kernel void swirl (read_only image2d_t in, write_only image2d_t out, double centerW, double centerH, double amount, double radius, int interpolation) {\n" \
 "\n" \
 "    int2 d = get_image_dim(in);\n" \
 "    int2 pos = (int2)(get_global_id(0),get_global_id(1));\n" \
@@ -139,6 +144,7 @@ private:
     Double2DParam *position_;
     ChoiceParam *clType_;
     ChoiceParam *clVendor_;
+    ChoiceParam *interpolation_;
 };
 
 SwirlCLPlugin::SwirlCLPlugin(OfxImageEffectHandle handle)
@@ -156,9 +162,12 @@ SwirlCLPlugin::SwirlCLPlugin(OfxImageEffectHandle handle)
     amount_ = fetchDoubleParam(kParamTransformRotateOld);
     radius_ = fetchDouble2DParam(kParamTransformScaleOld);
     position_ = fetchDouble2DParam(kParamTransformCenterOld);
+    interpolation_ = fetchChoiceParam(kParamIP);
+
     clType_ = fetchChoiceParam(kParamCLType);
     clVendor_ = fetchChoiceParam(kParamCLVendor);
-    assert(amount_ && radius_ && position_ && clType_ && clVendor_);
+
+    assert(amount_ && radius_ && position_ && interpolation_ && clType_ && clVendor_);
 
     setupCL();
 }
@@ -298,9 +307,11 @@ void SwirlCLPlugin::render(const RenderArguments &args)
 
     // get params
     double amount, radius, radiusX, radiusY, x, y;
+    int interpolation;
     amount_->getValueAtTime(args.time, amount);
     radius_->getValueAtTime(args.time, radiusX, radiusY);
     position_->getValueAtTime(args.time, x, y);
+    interpolation_->getValueAtTime(args.time, interpolation);
 
     radius = radiusX*100;
     if (amount != 0) {
@@ -318,6 +329,7 @@ void SwirlCLPlugin::render(const RenderArguments &args)
     kernel.setArg(3, ypos);
     kernel.setArg(4, amount);
     kernel.setArg(5, std::floor(radius * args.renderScale.x + 0.5));
+    kernel.setArg(6, interpolation);
 
     // get available devices
     VECTOR_CLASS<cl::Device> devices = context_.getInfo<CL_CONTEXT_DEVICES>();
@@ -405,6 +417,18 @@ void SwirlCLPluginFactory::describeInContext(ImageEffectDescriptor &desc, Contex
     // create param(s)
     PageParamDescriptor *page = desc.definePageParam(kPluginName);
     ofxsTransformDescribeParams(desc, page, NULL, /*isOpen=*/ true, /*oldParams=*/ true, /*noTranslate=*/ true, /*uniform=*/ true, /*rotateDefault*/ kParamSwirlDefault);
+    {
+        ChoiceParamDescriptor* param = desc.defineChoiceParam(kParamIP);
+        param->setLabel(kParamIPLabel);
+        param->setHint(kParamIPHint);
+        param->setAnimates(false);
+        param->setDefault(kParamIPDefault);
+        param->setLayoutHint(eLayoutHintDivider);
+        param->appendOption("Bilinear");
+        param->appendOption("Bicubic");
+        param->appendOption("None");
+        page->addChild(*param);
+    }
     {
         ChoiceParamDescriptor* param = desc.defineChoiceParam(kParamCLType);
         param->setLabel(kParamCLTypeLabel);
