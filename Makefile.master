@@ -1,9 +1,9 @@
-PATHTOROOT = ../OpenFX/Support
+PATHTOROOT = $(SRCDIR)/OpenFX/Support
 
 include $(PATHTOROOT)/Plugins/Makefile.master
 
-CXXFLAGS += -DOFX_EXTENSIONS_VEGAS -DOFX_EXTENSIONS_NUKE -DOFX_EXTENSIONS_TUTTLE -DOFX_EXTENSIONS_NATRON -DOFX_SUPPORTS_OPENGLRENDER -I../SupportExt
-VPATH += ../SupportExt
+CXXFLAGS += -DOFX_EXTENSIONS_VEGAS -DOFX_EXTENSIONS_NUKE -DOFX_EXTENSIONS_TUTTLE -DOFX_EXTENSIONS_NATRON -DOFX_SUPPORTS_OPENGLRENDER -I$(SRCDIR)/SupportExt
+VPATH += $(SRCDIR)/SupportExt
 
 # ImageMagick
 MAGICK_CXXFLAGS = $(shell pkg-config Magick++ --cflags)
@@ -54,6 +54,14 @@ CAIRO_LINKFLAGS += $(shell pkg-config cairo --libs --static)
 # poppler
 POPPLER_CXXFLAGS += $(shell pkg-config poppler-glib --cflags)
 POPPLER_LINKFLAGS += $(shell pkg-config poppler-glib --libs --static)
+
+# opencl
+OS := $(shell uname -s)
+ifeq ($(OS),Darwin)
+OPENCL_LINKFLAGS += -framework OpenCL
+else
+OPENCL_LINKFLAGS += -lOpenCL
+endif
 
 # mingw
 ifeq ($(MINGW),1)
