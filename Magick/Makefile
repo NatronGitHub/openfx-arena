@@ -64,8 +64,9 @@ fr.inria.openfx.ReadMisc.svg \
 net.fxarena.openfx.Text.png \
 net.fxarena.openfx.Text.svg
 
-include ../Makefile.master
-include ../Makefile.io
+SRCDIR = ..
+include $(SRCDIR)/Makefile.master
+include $(SRCDIR)/Makefile.io
 
 CXXFLAGS  += $(MAGICK_CXXFLAGS) $(LCMS_CXXFLAGS)
 LINKFLAGS += $(MAGICK_LINKFLAGS) $(LCMS_LINKFLAGS)
