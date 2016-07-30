@@ -32,8 +32,9 @@ ifneq ($(LICENSE),COMMERCIAL)
         RESOURCES += fr.inria.openfx.ReadPDF.png fr.inria.openfx.ReadPDF.svg
 endif
 
-include ../Makefile.master
-include ../Makefile.io
+SRCDIR = ..
+include $(SRCDIR)/Makefile.master
+include $(SRCDIR)/Makefile.io
 
 CXXFLAGS  += $(FCONFIG_CXXFLAGS) $(PANGO_CXXFLAGS) $(SVG_CXXFLAGS) $(CDR_CXXFLAGS) $(XML_CXXFLAGS) $(ZIP_CXXFLAGS)
 LINKFLAGS += $(FCONFIG_LINKFLAGS) $(PANGO_LINKFLAGS) $(SVG_LINKFLAGS) $(CDR_LINKFLAGS) $(XML_LINKFLAGS) $(ZIP_LINKFLAGS)

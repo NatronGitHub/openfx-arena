@@ -91,16 +91,18 @@ RESOURCES += \
 #../Magick/net.fxarena.openfx.Text.png \
 #../Magick/net.fxarena.openfx.Text.svg
 
+SRCDIR = ..
+
 VPATH += \
-../Extra \
-../Magick
+$(SRCDIR)/Extra \
+$(SRCDIR)/Magick
 
 CXXFLAGS += \
--I../Extra \
--I../Magick
+-I$(SRCDIR)/Extra \
+-I$(SRCDIR)/Magick
 
-include ../Makefile.master
-include ../Makefile.io
+include $(SRCDIR)/Makefile.master
+include $(SRCDIR)/Makefile.io
 
 CXXFLAGS  += $(FCONFIG_CXXFLAGS) $(PANGO_CXXFLAGS) $(SVG_CXXFLAGS) $(CDR_CXXFLAGS) $(XML_CXXFLAGS) $(ZIP_CXXFLAGS) $(MAGICK_CXXFLAGS) $(LCMS_CXXFLAGS)
 LINKFLAGS += $(FCONFIG_LINKFLAGS) $(PANGO_LINKFLAGS) $(SVG_LINKFLAGS) $(CDR_LINKFLAGS) $(XML_LINKFLAGS) $(ZIP_LINKFLAGS) $(MAGICK_LINKFLAGS) $(LCMS_LINKFLAGS)
