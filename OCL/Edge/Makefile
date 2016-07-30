@@ -6,8 +6,8 @@ PLUGINNAME = Edge
 
 RESOURCES = \
 ../OpenCL.png \
-fr.inria.openfx.Edge.png \
-fr.inria.openfx.Edge.svg
+net.fxarena.opencl.Edge.png \
+net.fxarena.opencl.Edge.svg
 
 SRCDIR = ../..
 
