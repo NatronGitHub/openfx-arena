@@ -122,7 +122,7 @@ OCLPluginHelperBase::describeInContextEnd(OFX::ImageEffectDescriptor &desc, OFX:
         param->setHint(kParamCLTypeHint);
         param->setAnimates(false);
         param->setDefault(kParamCLTypeDefault);
-        param->appendOption("All");
+        param->appendOption("Any");
         param->appendOption("GPU");
         param->appendOption("CPU");
         if (page) {

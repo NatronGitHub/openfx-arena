@@ -1,11 +1,13 @@
 PLUGINOBJECTS = \
-        Duotone.o \
+        Ripple.o \
         OCLPlugin.o openCLUtilities.o
 
-PLUGINNAME = Duotone
+PLUGINNAME = Ripple
 
 RESOURCES = \
-../OpenCL.png
+../OpenCL.png \
+net.fxarena.opencl.Ripple.png \
+net.fxarena.opencl.Ripple.svg
 
 SRCDIR = ../..
 
