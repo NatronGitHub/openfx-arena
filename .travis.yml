@@ -30,3 +30,4 @@ install:
 script:
   - git submodule update -i --recursive
   - make IM=7 CXXFLAGS_ADD="-DLEGACY"
+  - make -C OCL
