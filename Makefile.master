@@ -56,11 +56,15 @@ POPPLER_CXXFLAGS += $(shell pkg-config poppler-glib --cflags)
 POPPLER_LINKFLAGS += $(shell pkg-config poppler-glib --libs --static)
 
 # opencl
+OPENCL_CXXFLAGS += -I$(SRCDIR)/OCL
+OPENCL_CXXFLAGS += -I$(SRCDIR)/OCL/lib
+
 OS := $(shell uname -s)
 ifeq ($(OS),Darwin)
 OPENCL_LINKFLAGS += -framework OpenCL
 else
-OPENCL_LINKFLAGS += -lOpenCL
+OPENCL_CXXFLAGS += -I$(SRCDIR)/OCL/OpenCL
+OPENCL_LINKFLAGS += -lOpenCL -L$(SRCDIR)/OCL/OpenCL/lib
 endif
 
 # mingw
