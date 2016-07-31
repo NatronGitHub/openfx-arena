@@ -67,6 +67,7 @@ const std::string kernelSource = \
 "   float kodachrome[20] = {1.1285582396593525f,-0.3967382283601348f,-0.03992559172921793f,0,63.72958762196502f,-0.16404339962244616f,1.0835251566291304f,-0.05498805115633132f,0,24.732407896706203f,-0.16786010706155763f,-0.5603416277695248f,1.6014850761964943f,0,35.62982807460946f,0,0,0,1,0};\n"
 "   float technicolor[20] = {1.9125277891456083f,-0.8545344976951645f,-0.09155508482755585f,0,11.793603434377337f,-0.3087833385928097f,1.7658908555458428f,-0.10601743074722245f,0,-70.35205161461398f,-0.231103377548616f,-0.7501899197440212f,1.847597816108189f,0,30.950940869491138f,0,0,0,1,0}; \n"
 "   float vintage[20] = {0.6279345635605994f,0.3202183420819367f,-0.03965408211312453f,0.0f,9.3651285835294123f,0.02578397704808868f,0.6441188644374771f,0.03259127616149294f,0.0f,7.462829176470591f,0.0466055556782719f,-0.0851232987247891f,0.5241648018700465f,0.0f,5.159190588235296f,0.0f,0.0f,0.0f,1.0f,0.0f};\n"
+"   float sepia[20] = {0.393f, 0.7689999f, 0.18899999f,0.0f,0.0f,0.349f, 0.6859999f, 0.16799999f,0.0f,0.0f,0.272f, 0.5339999f, 0.13099999f,0.0f,0.0f,0.0f,0.0f,0.0f,1.0f,0.0f};\n"
 "\n"
 "   switch(preset) {\n"
 "   case 0:\n"
@@ -83,6 +84,9 @@ const std::string kernelSource = \
 "       break;\n"
 "   case 4:\n"
 "       color_matrix_4x5(input, output, vintage);\n"
+"       break;\n"
+"   case 5:\n"
+"       color_matrix_4x5(input, output, sepia);\n"
 "       break;\n"
 "   }\n"
 "}\n";
@@ -142,6 +146,7 @@ void LooksCLPluginFactory::describeInContext(ImageEffectDescriptor &desc, Contex
         param->appendOption("Kodachrome");
         param->appendOption("Technicolor");
         param->appendOption("Vintage");
+        param->appendOption("Sepia");
         if (page) {
             page->addChild(*param);
         }
