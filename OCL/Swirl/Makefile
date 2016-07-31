@@ -3,7 +3,7 @@ PLUGINOBJECTS = \
         OCLPlugin.o openCLUtilities.o \
         ofxsTransform3x3.o ofxsTransformInteractCustom.o ofxsShutter.o
 
-PLUGINNAME = Bulge
+PLUGINNAME = Swirl
 
 RESOURCES = \
 ../OpenCL.png
