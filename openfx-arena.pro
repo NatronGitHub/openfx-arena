@@ -40,7 +40,8 @@ INCLUDEPATH += . \
             /usr/include/poppler/glib \
             OCL/lib \
             OCL/OpenCL \
-            /opt/AMDAPPSDK-3.0/include
+            OCL/OpenCL/CL \
+            OCL
 HEADERS += \
             SupportExt/ofxsCoords.h \
             SupportExt/ofxsCopier.h \
@@ -118,7 +119,9 @@ HEADERS += \
             /usr/local/magick7/include/ImageMagick-7/Magick++/ResourceLimits.h \
             /usr/local/magick7/include/ImageMagick-7/Magick++/STL.h \
             /usr/local/magick7/include/ImageMagick-7/Magick++/TypeMetric.h \
-            /usr/local/magick7/include/ImageMagick-7/Magick++.h
+            /usr/local/magick7/include/ImageMagick-7/Magick++.h \
+            OCL/ofxsTransformInteractCustom.h \
+            OCL/OCLPlugin.h
 SOURCES += \
             Magick/Arc.cpp \
             Magick/Charcoal.cpp \
@@ -144,8 +147,20 @@ SOURCES += \
             Extra/ReadCDR.cpp \
             Extra/TextFX.cpp \
             Extra/ReadPDF.cpp \
-            OCL/EdgeCL.cpp \
-            OCL/SharpenCL.cpp \
-            OCL/RippleCL.cpp \
-            OCL/SwirlCL.cpp \
-            OCL/TestCL.cpp
+            OCL/Edge/Edge.cpp \
+            OCL/Sharpen/Sharpen.cpp \
+            OCL/Ripple/Ripple.cpp \
+            OCL/Swirl/Swirl.cpp \
+            OCL/ImplodeCL.cpp \
+            OCL/TestCL.cpp \
+            OCL/Looks.cpp \
+            OCL/ofxsTransformInteractCustom.cpp \
+            OCL/OCLPlugin.cpp \
+            OCL/Looks/Looks.cpp \
+            OCL/Glow/Glow.cpp \
+            OCL/Duotone/Duotone.cpp \
+            OCL/Cartoon/Cartoon.cpp \
+            OCL/VideoDots/VideoDots.cpp \
+            OCL/Emboss/Emboss.cpp \
+            OCL/Bulge/Bulge.cpp \
+            OCL/FishEye/FishEye.cpp
