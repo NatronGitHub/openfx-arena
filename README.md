@@ -42,11 +42,6 @@ Magick.ofx
 OCL.ofx
 =======
 
- * EdgeCL
- * SharpenCL
- * RippleCL
- * SwirlCL
-
 [Read more](OCL/README.md)
 
 Build
@@ -56,7 +51,7 @@ Build
 git clone https://github.com/olear/openfx-arena
 cd openfx-arena
 git submodule update -i --recursive
-make CONFIG=release IM=7
+make CONFIG=release
 sudo make install
 ```
 
