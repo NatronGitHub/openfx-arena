@@ -28,7 +28,7 @@
 #define kParamCLType "CLType"
 #define kParamCLTypeLabel "Device Type"
 #define kParamCLTypeHint "Select OpenCL device type. Default is to select the first avaiable device type."
-#define kParamCLTypeDefault 0
+#define kParamCLTypeDefault 2
 
 #define kParamCLVendor "CLVendor"
 #define kParamCLVendorLabel "Platform Vendor"
