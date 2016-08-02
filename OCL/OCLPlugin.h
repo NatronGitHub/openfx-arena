@@ -24,9 +24,9 @@
 #include <iostream>
 
 #if defined(__APPLE__) || defined(__MACOSX)
-    #include "OpenCL/cl.hpp"
+#include "OpenCL/mac/cl.hpp"
 #else
-    #include <CL/cl.hpp>
+#include <CL/cl.hpp>
 #endif
 
 #define kParamOCLDevice "device"

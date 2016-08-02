@@ -46,7 +46,11 @@ OCLPluginHelperBase::setupContext(bool build)
     std::vector<cl::Device> devices = getDevices();
     if (devices.size()!=0) {
         if (!_source.empty()) {
+#if defined(__APPLE__) || defined(__MACOSX)
+            _context = cl::Context();
+#else
             _context = cl::Context(devices[device]);
+#endif
             if (build) {
                 cl::Program::Sources sources(1, std::make_pair(_source.c_str(), _source.length()+1));
                 _program = cl::Program(_context,sources);
