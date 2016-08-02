@@ -22,8 +22,7 @@ OCLPluginHelperBase::OCLPluginHelperBase(OfxImageEffectHandle handle, const std:
     : ImageEffect(handle)
     , _dstClip(0)
     , _srcClip(0)
-    , _clType(0)
-    , _clVendor(0)
+    , _device(0)
     , _renderscale(0)
 {
     _dstClip = fetchClip(kOfxImageEffectOutputClipName);
@@ -31,57 +30,54 @@ OCLPluginHelperBase::OCLPluginHelperBase(OfxImageEffectHandle handle, const std:
     _srcClip = fetchClip(kOfxImageEffectSimpleSourceClipName);
     assert(_srcClip && _srcClip->getPixelComponents() == OFX::ePixelComponentRGBA);
 
-    _clType = fetchChoiceParam(kParamCLType);
-    _clVendor = fetchChoiceParam(kParamCLVendor);
-
+    _device = fetchChoiceParam(kParamOCLDevice);
     _source = kernelSource;
 
-    assert(_clType && _clVendor);
+    assert(_device);
 
-    setupContext();
+    setupContext(/*build kernel*/ true);
 }
 
 void
-OCLPluginHelperBase::setupContext()
+OCLPluginHelperBase::setupContext(bool build)
 {
-    int type, vendor;
-    cl_device_type CLtype;
-    cl_vendor CLvendor;
-
-    _clType->getValue(type);
-    _clVendor->getValue(vendor);
-
-    switch(vendor) {
-    case 1:
-        CLvendor = VENDOR_NVIDIA;
-        break;
-    case 2:
-        CLvendor = VENDOR_AMD;
-        break;
-    case 3:
-        CLvendor = VENDOR_INTEL;
-        break;
-    default:
-        CLvendor = VENDOR_ANY;
-        break;
+    int device;
+    _device->getValue(device);
+    std::vector<cl::Device> devices = getDevices();
+    if (devices.size()!=0) {
+        if (!_source.empty()) {
+            _context = cl::Context(devices[device]);
+            if (build) {
+                cl::Program::Sources sources(1, std::make_pair(_source.c_str(), _source.length()+1));
+                _program = cl::Program(_context,sources);
+                std::string buildOptions;
+                if(_program.build(devices, buildOptions.c_str()) == CL_BUILD_PROGRAM_FAILURE){
+                    setPersistentMessage(OFX::Message::eMessageError, "", "Failed to build OpenCL kernel, see terminal for log");
+                    std::cout << "Failed to build OpenCL kernel: "<< _program.getBuildInfo<CL_PROGRAM_BUILD_LOG>(devices[device]) << std::endl;
+                }
+            }
+        } else {
+            setPersistentMessage(OFX::Message::eMessageError, "", "OpenCL kernel source is empty!");
+        }
+    } else {
+        setPersistentMessage(OFX::Message::eMessageError, "", "No OpenCL devices found!");
     }
+}
 
-    switch(type) {
-    case 1:
-        CLtype = CL_DEVICE_TYPE_GPU;
-        break;
-    case 2:
-        CLtype = CL_DEVICE_TYPE_CPU;
-        break;
-    default:
-        CLtype = CL_DEVICE_TYPE_ALL;
-        break;
+std::vector<cl::Device>
+OCLPluginHelperBase::getDevices()
+{
+    std::vector<cl::Platform> platforms;
+    std::vector<cl::Device> devices;
+    cl::Platform::get(&platforms);
+    for (size_t i=0; i < platforms.size(); i++) {
+        std::vector<cl::Device> platformDevices;
+        platforms[i].getDevices(CL_DEVICE_TYPE_ALL, &platformDevices);
+        for (size_t i=0; i < platformDevices.size(); i++) {
+            devices.push_back(platformDevices[i]);
+        }
     }
-
-    _context = createCLContext(CLtype, CLvendor);
-    if (!_source.empty()) {
-        _program = buildProgramFromString(_context, _source);
-    }
+    return devices;
 }
 
 void
@@ -91,11 +87,9 @@ OCLPluginHelperBase::changedParam(const OFX::InstanceChangedArgs &args, const st
         OFX::throwSuiteStatusException(kOfxStatFailed);
         return;
     }
-
-    if (paramName == kParamCLType || paramName == kParamCLVendor) {
-        setupContext();
+    if (paramName == kParamOCLDevice) {
+        setupContext(/*build kernel*/ false);
     }
-
     clearPersistentMessage();
 }
 
@@ -117,28 +111,16 @@ void
 OCLPluginHelperBase::describeInContextEnd(OFX::ImageEffectDescriptor &desc, OFX::ContextEnum /*context*/, OFX::PageParamDescriptor* page)
 {
     {
-        OFX::ChoiceParamDescriptor* param = desc.defineChoiceParam(kParamCLType);
-        param->setLabel(kParamCLTypeLabel);
-        param->setHint(kParamCLTypeHint);
+        OFX::ChoiceParamDescriptor* param = desc.defineChoiceParam(kParamOCLDevice);
+        param->setLabel(kParamOCLDeviceLabel);
+        param->setHint(kParamOCLDeviceHint);
         param->setAnimates(false);
-        param->setDefault(kParamCLTypeDefault);
-        param->appendOption("Any");
-        param->appendOption("GPU");
-        param->appendOption("CPU");
-        if (page) {
-            page->addChild(*param);
+
+        std::vector<cl::Device> devices = getDevices();
+        for (size_t i=0; i < devices.size(); i++) {
+            param->appendOption(devices[i].getInfo<CL_DEVICE_NAME>());
         }
-    }
-    {
-        OFX::ChoiceParamDescriptor* param = desc.defineChoiceParam(kParamCLVendor);
-        param->setLabel(kParamCLVendorLabel);
-        param->setHint(kParamCLVendorHint);
-        param->setAnimates(false);
-        param->setDefault(kParamCLVendorDefault);
-        param->appendOption("Any");
-        param->appendOption("NVIDIA");
-        param->appendOption("AMD");
-        param->appendOption("Intel");
+
         if (page) {
             page->addChild(*param);
         }

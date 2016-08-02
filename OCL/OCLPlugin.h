@@ -21,19 +21,17 @@
 
 #include "ofxsImageEffect.h"
 #include "ofxsMacros.h"
+#include <iostream>
 
-// OpenCL helper functions, should probably just make my own functions and put them here, but for now this is "good enough"
-#include "openCLUtilities.hpp"
+#if defined(__APPLE__) || defined(__MACOSX)
+    #include "OpenCL/cl.hpp"
+#else
+    #include <CL/cl.hpp>
+#endif
 
-#define kParamCLType "CLType"
-#define kParamCLTypeLabel "Device Type"
-#define kParamCLTypeHint "Select OpenCL device type. Default is to select the first avaiable device type."
-#define kParamCLTypeDefault 2
-
-#define kParamCLVendor "CLVendor"
-#define kParamCLVendorLabel "Platform Vendor"
-#define kParamCLVendorHint "Select OpenCL vendor type. Default is to select the first available vendor."
-#define kParamCLVendorDefault 0
+#define kParamOCLDevice "device"
+#define kParamOCLDeviceLabel "OpenCL Device"
+#define kParamOCLDeviceHint "OpenCL Device used for this plugin."
 
 class OCLPluginHelperBase
     : public OFX::ImageEffect
@@ -44,15 +42,15 @@ public:
     virtual void changedParam(const OFX::InstanceChangedArgs &args, const std::string &paramName) OVERRIDE;
     static OFX::PageParamDescriptor* describeInContextBegin(OFX::ImageEffectDescriptor &desc, OFX::ContextEnum context);
     static void describeInContextEnd(OFX::ImageEffectDescriptor &desc, OFX::ContextEnum context, OFX::PageParamDescriptor* page);
-    void setupContext();
+    void setupContext(bool build);
+    static std::vector<cl::Device> getDevices();
 
 protected:
     OFX::Clip *_dstClip;
     OFX::Clip *_srcClip;
     cl::Context _context;
     cl::Program _program;
-    OFX::ChoiceParam *_clType;
-    OFX::ChoiceParam *_clVendor;
+    OFX::ChoiceParam *_device;
     std::string _source;
     int _renderscale;
 };
@@ -155,10 +153,10 @@ void OCLPluginHelper<SupportsRenderScale>::render(const OFX::RenderArguments &ar
     int width = args.renderWindow.x2 - args.renderWindow.x1;
     int height = args.renderWindow.y2 - args.renderWindow.y1;
 
-    // setup device
-    // Currently we just take the first device available,
-    // make it possible to select actual device in the future
-    VECTOR_CLASS<cl::Device> devices = _context.getInfo<CL_CONTEXT_DEVICES>();
+    // get device
+    int device;
+    _device->getValue(device);
+    std::vector<cl::Device> devices = getDevices();
 
     // setup kernel
     // Notice we hardcode the main void as 'filter', this just simplify things
@@ -172,8 +170,7 @@ void OCLPluginHelper<SupportsRenderScale>::render(const OFX::RenderArguments &ar
     cl::ImageFormat format(CL_RGBA, CL_FLOAT);
     cl::Image2D in(_context, CL_MEM_READ_ONLY | CL_MEM_COPY_HOST_PTR, format, width, height, 0, (float*)srcImg->getPixelData());
     cl::Image2D out(_context, CL_MEM_WRITE_ONLY, format, width, height, 0, NULL);
-    cl::CommandQueue queue = cl::CommandQueue(_context, devices[0]);
-    cl::Event timer;
+    cl::CommandQueue queue = cl::CommandQueue(_context, devices[device]);
     cl::size_t<3> origin;
     cl::size_t<3> size;
     origin[0] = 0;
@@ -186,9 +183,7 @@ void OCLPluginHelper<SupportsRenderScale>::render(const OFX::RenderArguments &ar
     kernel.setArg(0, in);
     kernel.setArg(1, out);
 
-    queue.enqueueNDRangeKernel(kernel, cl::NullRange, cl::NDRange(width, height), cl::NullRange, NULL, &timer);
-    timer.wait();
-
+    queue.enqueueNDRangeKernel(kernel, cl::NullRange, cl::NDRange(width, height), cl::NullRange, NULL);
     queue.enqueueReadImage(out, CL_TRUE, origin, size, 0, 0, (float*)dstImg->getPixelData());
     queue.finish();
 }

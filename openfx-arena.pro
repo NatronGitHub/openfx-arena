@@ -38,9 +38,7 @@ INCLUDEPATH += . \
             /usr/include/glib-2.0 \
             /usr/include/pango-1.0 \
             /usr/include/poppler/glib \
-            OCL/lib \
             OCL/OpenCL \
-            OCL/OpenCL/CL \
             OCL
 HEADERS += \
             SupportExt/ofxsCoords.h \

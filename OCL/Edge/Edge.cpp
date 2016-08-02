@@ -93,7 +93,7 @@ void EdgeCLPluginFactory::describeInContext(ImageEffectDescriptor &desc, Context
 }
 
 OFX::ImageEffect*
-EdgeCLPluginFactory::createInstance(OfxImageEffectHandle handle, OFX::ContextEnum /*context*/)
+EdgeCLPluginFactory::createInstance(OfxImageEffectHandle handle, ContextEnum /*context*/)
 {
     return new EdgeCLPlugin(handle);
 }
