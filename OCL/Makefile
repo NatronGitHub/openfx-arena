@@ -22,7 +22,6 @@ Swirl/net.fxarena.opencl.Swirl.png \
 Swirl/net.fxarena.opencl.Swirl.svg
 
 VPATH += \
-lib \
 Bulge \
 Cartoon \
 Duotone \
@@ -33,7 +32,6 @@ Sharpen \
 Swirl
 
 CXXFLAGS += \
--I. \
 -IBulge \
 -ICartoon \
 -IDuotone \
@@ -49,4 +47,13 @@ include $(SRCDIR)/Makefile.master
 
 CXXFLAGS += $(OPENCL_CXXFLAGS)
 LINKFLAGS += $(OPENCL_LINKFLAGS)
+
+$(OBJECTPATH)/Bulge.o: Bulge.cpp OCLPlugin.h
+$(OBJECTPATH)/Cartoon.o: Cartoon.cpp OCLPlugin.h
+$(OBJECTPATH)/Duotone.o: Duotone.cpp OCLPlugin.h
+$(OBJECTPATH)/Edge.o: Edge.cpp OCLPlugin.h
+$(OBJECTPATH)/Looks.o: Looks.cpp OCLPlugin.h
+$(OBJECTPATH)/Ripple.o: Ripple.cpp OCLPlugin.h
+$(OBJECTPATH)/Sharpen.o: Sharpen.cpp OCLPlugin.h
+$(OBJECTPATH)/Swirl.o: Swirl.cpp OCLPlugin.h
 
