@@ -129,8 +129,8 @@ void BulgeCLPlugin::changedParam(const OFX::InstanceChangedArgs &args, const std
         return;
     }
 
-    if (paramName == kParamCLType || paramName == kParamCLVendor) {
-        setupContext();
+    if (paramName == kParamOCLDevice) {
+        setupContext(false);
     }
     else if (paramName == kParamTransformResetCenterOld) {
         resetCenter(args.time);

@@ -57,7 +57,6 @@ POPPLER_LINKFLAGS += $(shell pkg-config poppler-glib --libs --static)
 
 # opencl
 OPENCL_CXXFLAGS += -I$(SRCDIR)/OCL
-OPENCL_CXXFLAGS += -I$(SRCDIR)/OCL/lib
 
 OS := $(shell uname -s)
 ifeq ($(OS),Darwin)

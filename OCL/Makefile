@@ -7,7 +7,7 @@ PLUGINOBJECTS = \
         Ripple.o \
         Sharpen.o \
         Swirl.o \
-        OCLPlugin.o openCLUtilities.o \
+        OCLPlugin.o \
         ofxsTransform3x3.o ofxsTransformInteractCustom.o ofxsShutter.o
 
 PLUGINNAME = OCL

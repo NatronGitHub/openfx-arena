@@ -1,6 +1,6 @@
 PLUGINOBJECTS = \
         Ripple.o \
-        OCLPlugin.o openCLUtilities.o
+        OCLPlugin.o
 
 PLUGINNAME = Ripple
 
@@ -14,7 +14,6 @@ SRCDIR = ../..
 include $(SRCDIR)/Makefile.master
 
 VPATH += $(SRCDIR)/OCL
-VPATH += $(SRCDIR)/OCL/lib
 
 CXXFLAGS += $(OPENCL_CXXFLAGS)
 LINKFLAGS += $(OPENCL_LINKFLAGS)
