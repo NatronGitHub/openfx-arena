@@ -38,7 +38,7 @@ OFXS_NAMESPACE_ANONYMOUS_ENTER
 
 const std::string kernelSource = \
 "const sampler_t sampler = CLK_NORMALIZED_COORDS_FALSE | CLK_ADDRESS_CLAMP_TO_EDGE | CLK_FILTER_NEAREST;\n"
-"kernel void filter(read_only image2d_t input, write_only image2d_t output, int type) {\n"
+"kernel void filter(read_only image2d_t input, write_only image2d_t output) {\n"
 "   const int2 p = {get_global_id(0), get_global_id(1)};\n"
 "   float m[3][3] = { {-1, -2, -1}, {0, 0, 0}, {1, 2, 1} };\n"
 "   float2 t = {0.f, 0.f};\n"
@@ -62,9 +62,8 @@ public:
     {
     }
 
-    virtual void render(const OFX::RenderArguments &args, cl::Kernel kernel) OVERRIDE FINAL
+    virtual void render(const OFX::RenderArguments &/*args*/, cl::Kernel /*kernel*/) OVERRIDE FINAL
     {
-        kernel.setArg(2, 0);
     }
 };
 

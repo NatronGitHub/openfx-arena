@@ -177,7 +177,7 @@ void SwirlCLPlugin::changedParam(const OFX::InstanceChangedArgs &args, const std
     }
 
     if (paramName == kParamOCLDevice) {
-        setupContext(false);
+        setupContext();
     }
     else if (paramName == kParamTransformResetCenterOld) {
         resetCenter(args.time);

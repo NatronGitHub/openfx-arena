@@ -104,7 +104,7 @@ public:
     {
     }
 
-    virtual void render(const OFX::RenderArguments &args, cl::Kernel kernel) OVERRIDE FINAL
+    virtual void render(const OFX::RenderArguments &/*args*/, cl::Kernel /*kernel*/) OVERRIDE FINAL
     {
     }
 };

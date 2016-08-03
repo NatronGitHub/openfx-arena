@@ -35,34 +35,32 @@ OCLPluginHelperBase::OCLPluginHelperBase(OfxImageEffectHandle handle, const std:
 
     assert(_device);
 
-    setupContext(/*build kernel*/ true);
+    setupContext();
 }
 
 void
-OCLPluginHelperBase::setupContext(bool build)
+OCLPluginHelperBase::setupContext()
 {
     int device;
     _device->getValue(device);
     std::vector<cl::Device> devices = getDevices();
     if (devices.size()!=0) {
-        if (!_source.empty()) {
-#if defined(__APPLE__) || defined(__MACOSX)
-            _context = cl::Context();
-#else
-            _context = cl::Context(devices[device]);
+       cl::Platform platform(devices[device].getInfo<CL_DEVICE_PLATFORM>());
+       cl_context_properties properties[] = { CL_CONTEXT_PLATFORM, (cl_context_properties)(platform)(), 0};
+       _context = cl::Context(CL_DEVICE_TYPE_ALL, properties);
+       std::vector<cl::Device> platformDevices = _context.getInfo<CL_CONTEXT_DEVICES>();
+       cl::Program::Sources sources(1, std::make_pair(_source.c_str(), _source.length()+1));
+       _program = cl::Program(_context,sources);
+       std::string buildOptions;
+
+#ifdef DEBUG
+       std::cout << "setup OpenCL context for: " << platform.getInfo<CL_PLATFORM_VENDOR>() << std::endl;
 #endif
-            if (build) {
-                cl::Program::Sources sources(1, std::make_pair(_source.c_str(), _source.length()+1));
-                _program = cl::Program(_context,sources);
-                std::string buildOptions;
-                if(_program.build(devices, buildOptions.c_str()) == CL_BUILD_PROGRAM_FAILURE){
-                    setPersistentMessage(OFX::Message::eMessageError, "", "Failed to build OpenCL kernel, see terminal for log");
-                    std::cout << "Failed to build OpenCL kernel: "<< _program.getBuildInfo<CL_PROGRAM_BUILD_LOG>(devices[device]) << std::endl;
-                }
-            }
-        } else {
-            setPersistentMessage(OFX::Message::eMessageError, "", "OpenCL kernel source is empty!");
-        }
+
+       if(_program.build(platformDevices, buildOptions.c_str()) == CL_BUILD_PROGRAM_FAILURE){
+            setPersistentMessage(OFX::Message::eMessageError, "", "Failed to build OpenCL kernel, see terminal for log");
+            std::cout << "Failed to build OpenCL kernel: "<< _program.getBuildInfo<CL_PROGRAM_BUILD_LOG>(devices[device]) << std::endl;
+       }
     } else {
         setPersistentMessage(OFX::Message::eMessageError, "", "No OpenCL devices found!");
     }
@@ -92,13 +90,13 @@ OCLPluginHelperBase::changedParam(const OFX::InstanceChangedArgs &args, const st
         return;
     }
     if (paramName == kParamOCLDevice) {
-        setupContext(/*build kernel*/ false);
+        setupContext();
     }
     clearPersistentMessage();
 }
 
 OFX::PageParamDescriptor*
-OCLPluginHelperBase::describeInContextBegin(OFX::ImageEffectDescriptor &desc, OFX::ContextEnum context)
+OCLPluginHelperBase::describeInContextBegin(OFX::ImageEffectDescriptor &desc, OFX::ContextEnum /*context*/)
 {
     OFX::ClipDescriptor *srcClip = desc.defineClip(kOfxImageEffectSimpleSourceClipName);
     srcClip->addSupportedComponent(OFX::ePixelComponentRGBA);
@@ -109,24 +107,33 @@ OCLPluginHelperBase::describeInContextBegin(OFX::ImageEffectDescriptor &desc, OF
     OFX::ClipDescriptor *dstClip = desc.defineClip(kOfxImageEffectOutputClipName);
     dstClip->addSupportedComponent(OFX::ePixelComponentRGBA);
     dstClip->setSupportsTiles(false);
-}
 
-void
-OCLPluginHelperBase::describeInContextEnd(OFX::ImageEffectDescriptor &desc, OFX::ContextEnum /*context*/, OFX::PageParamDescriptor* page)
-{
+    OFX::PageParamDescriptor *page = desc.definePageParam("Controls");
     {
         OFX::ChoiceParamDescriptor* param = desc.defineChoiceParam(kParamOCLDevice);
         param->setLabel(kParamOCLDeviceLabel);
         param->setHint(kParamOCLDeviceHint);
         param->setAnimates(false);
+        param->setLayoutHint(OFX::eLayoutHintDivider);
 
         std::vector<cl::Device> devices = getDevices();
         for (size_t i=0; i < devices.size(); i++) {
-            param->appendOption(devices[i].getInfo<CL_DEVICE_NAME>());
+            std::string device = devices[i].getInfo<CL_DEVICE_NAME>();
+            cl::Platform platform(devices[i].getInfo<CL_DEVICE_PLATFORM>());
+            device.append(" [");
+            device.append(platform.getInfo<CL_PLATFORM_VENDOR>());
+            device.append("]");
+            param->appendOption(device);
         }
 
         if (page) {
             page->addChild(*param);
         }
     }
+    return page;
+}
+
+void
+OCLPluginHelperBase::describeInContextEnd(OFX::ImageEffectDescriptor &/*desc*/, OFX::ContextEnum /*context*/, OFX::PageParamDescriptor* /*page*/)
+{
 }

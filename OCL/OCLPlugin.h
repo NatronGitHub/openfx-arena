@@ -24,8 +24,10 @@
 #include <iostream>
 
 #if defined(__APPLE__) || defined(__MACOSX)
+// OpenCL 1.0/1.1 for Snow Leopard
 #include "OpenCL/mac/cl.hpp"
 #else
+// OpenCL 1.2 for Windows and Linux
 #include <CL/cl.hpp>
 #endif
 
@@ -42,7 +44,7 @@ public:
     virtual void changedParam(const OFX::InstanceChangedArgs &args, const std::string &paramName) OVERRIDE;
     static OFX::PageParamDescriptor* describeInContextBegin(OFX::ImageEffectDescriptor &desc, OFX::ContextEnum context);
     static void describeInContextEnd(OFX::ImageEffectDescriptor &desc, OFX::ContextEnum context, OFX::PageParamDescriptor* page);
-    void setupContext(bool build);
+    void setupContext();
     static std::vector<cl::Device> getDevices();
 
 protected:
@@ -154,9 +156,13 @@ void OCLPluginHelper<SupportsRenderScale>::render(const OFX::RenderArguments &ar
     int height = args.renderWindow.y2 - args.renderWindow.y1;
 
     // get device
-    int device;
+    int device = 0;
     _device->getValue(device);
     std::vector<cl::Device> devices = getDevices();
+
+#ifdef DEBUG
+    std::cout << "rendering using OpenCL device: " << devices[device].getInfo<CL_DEVICE_NAME>() << std::endl;
+#endif
 
     // setup kernel
     // Notice we hardcode the main void as 'filter', this just simplify things
@@ -171,6 +177,7 @@ void OCLPluginHelper<SupportsRenderScale>::render(const OFX::RenderArguments &ar
     cl::Image2D in(_context, CL_MEM_READ_ONLY | CL_MEM_COPY_HOST_PTR, format, width, height, 0, (float*)srcImg->getPixelData());
     cl::Image2D out(_context, CL_MEM_WRITE_ONLY, format, width, height, 0, NULL);
     cl::CommandQueue queue = cl::CommandQueue(_context, devices[device]);
+    cl::Event timer;
     cl::size_t<3> origin;
     cl::size_t<3> size;
     origin[0] = 0;
@@ -183,7 +190,8 @@ void OCLPluginHelper<SupportsRenderScale>::render(const OFX::RenderArguments &ar
     kernel.setArg(0, in);
     kernel.setArg(1, out);
 
-    queue.enqueueNDRangeKernel(kernel, cl::NullRange, cl::NDRange(width, height), cl::NullRange, NULL);
+    queue.enqueueNDRangeKernel(kernel, cl::NullRange, cl::NDRange(width, height), cl::NullRange, NULL, &timer);
+    timer.wait();
     queue.enqueueReadImage(out, CL_TRUE, origin, size, 0, 0, (float*)dstImg->getPixelData());
     queue.finish();
 }
