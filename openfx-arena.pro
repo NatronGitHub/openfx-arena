@@ -7,19 +7,23 @@ OTHER_FILES += \
             Makefile \
             Makefile.master \
             Makefile.io \
-            Bundle/Makefile \
-            Extra/Makefile \
-            Magick/Makefile \
             LICENSE \
             COPYING \
             README.md \
-            Magick/Info.plist \
+            Bundle/Info.plist \
+            Bundle/Makefile \
             Extra/Info.plist \
+            Extra/Makefile \
+            Extra/README.md \
+            Magick/Info.plist \
+            Magick/Makefile \
+            Magick/README.md \
             OCL/Info.plist \
             OCL/Makefile \
-            Extra/README.md \
-            Magick/README.md \
-            OCL/README.md
+            OCL/README.md \
+            OCL/Twirl/net.fxarena.opencl.Twirl.cl \
+            OCL/Twirl/Makefile \
+            OCL/Twirl/Info.plist
 INCLUDEPATH += . \
             SupportExt \
             OpenFX/Support/include \
@@ -39,6 +43,7 @@ INCLUDEPATH += . \
             /usr/include/pango-1.0 \
             /usr/include/poppler/glib \
             OCL/OpenCL \
+            OCL/OpenCL/CL \
             OCL
 HEADERS += \
             SupportExt/ofxsCoords.h \
@@ -121,6 +126,12 @@ HEADERS += \
             OCL/ofxsTransformInteractCustom.h \
             OCL/OCLPlugin.h
 SOURCES += \
+            Extra/OpenRaster.cpp \
+            Extra/ReadSVG.cpp \
+            Extra/ReadKrita.cpp \
+            Extra/ReadCDR.cpp \
+            Extra/TextFX.cpp \
+            Extra/ReadPDF.cpp \
             Magick/Arc.cpp \
             Magick/Charcoal.cpp \
             Magick/Edges.cpp \
@@ -129,9 +140,6 @@ SOURCES += \
             Magick/Oilpaint.cpp \
             Magick/Polar.cpp \
             Magick/Polaroid.cpp \
-            Extra/OpenRaster.cpp \
-            Magick/ReadPSD.cpp \
-            Extra/ReadSVG.cpp \
             Magick/Reflection.cpp \
             Magick/Roll.cpp \
             Magick/Sketch.cpp \
@@ -140,25 +148,21 @@ SOURCES += \
             Magick/Texture.cpp \
             Magick/Tile.cpp \
             Magick/Wave.cpp \
-            Extra/ReadKrita.cpp \
             Magick/ReadMisc.cpp \
-            Extra/ReadCDR.cpp \
-            Extra/TextFX.cpp \
-            Extra/ReadPDF.cpp \
+            Magick/ReadPSD.cpp \
+            OCL/ofxsTransformInteractCustom.cpp \
+            OCL/OCLPlugin.cpp \
             OCL/Edge/Edge.cpp \
             OCL/Sharpen/Sharpen.cpp \
             OCL/Ripple/Ripple.cpp \
-            OCL/Swirl/Swirl.cpp \
-            OCL/ImplodeCL.cpp \
-            OCL/TestCL.cpp \
-            OCL/Looks.cpp \
-            OCL/ofxsTransformInteractCustom.cpp \
-            OCL/OCLPlugin.cpp \
+            OCL/Twirl/Twirl.cpp \
+            OCL/TestCL/TestCL.cpp \
             OCL/Looks/Looks.cpp \
             OCL/Glow/Glow.cpp \
             OCL/Duotone/Duotone.cpp \
             OCL/Cartoon/Cartoon.cpp \
-            OCL/VideoDots/VideoDots.cpp \
             OCL/Emboss/Emboss.cpp \
             OCL/Bulge/Bulge.cpp \
-            OCL/FishEye/FishEye.cpp
+            OCL/FishEye/FishEye.cpp \
+            OCL/Warp/Warp.cpp \
+            OCL/Bokeh/Bokeh.cpp
