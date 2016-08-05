@@ -24,10 +24,8 @@
 #include <iostream>
 
 #if defined(__APPLE__) || defined(__MACOSX)
-// OpenCL 1.0/1.1 for Snow Leopard
 #include "OpenCL/mac/cl.hpp"
 #else
-// OpenCL 1.2 for Windows and Linux
 #include <CL/cl.hpp>
 #endif
 
@@ -40,7 +38,7 @@ class OCLPluginHelperBase
 {
 public:
 
-    OCLPluginHelperBase(OfxImageEffectHandle handle, const std::string &kernelSource);
+    OCLPluginHelperBase(OfxImageEffectHandle handle, const std::string &kernelSource, const std::string &pluginID);
     virtual void changedParam(const OFX::InstanceChangedArgs &args, const std::string &paramName) OVERRIDE;
     static OFX::PageParamDescriptor* describeInContextBegin(OFX::ImageEffectDescriptor &desc, OFX::ContextEnum context);
     static void describeInContextEnd(OFX::ImageEffectDescriptor &desc, OFX::ContextEnum context, OFX::PageParamDescriptor* page);
@@ -54,6 +52,7 @@ protected:
     cl::Program _program;
     OFX::ChoiceParam *_device;
     std::string _source;
+    std::string _plugin;
     int _renderscale;
 };
 
@@ -63,8 +62,8 @@ class OCLPluginHelper
 {
 public:
 
-    OCLPluginHelper(OfxImageEffectHandle handle, const std::string &kernelSource)
-        : OCLPluginHelperBase(handle, kernelSource)
+    OCLPluginHelper(OfxImageEffectHandle handle, const std::string &kernelSource, const std::string &pluginID)
+        : OCLPluginHelperBase(handle, kernelSource, pluginID)
     {
         _renderscale = SupportsRenderScale;
     }
@@ -164,19 +163,16 @@ void OCLPluginHelper<SupportsRenderScale>::render(const OFX::RenderArguments &ar
     std::cout << "rendering using OpenCL device: " << devices[device].getInfo<CL_DEVICE_NAME>() << std::endl;
 #endif
 
-    // setup kernel
-    // Notice we hardcode the main void as 'filter', this just simplify things
-    cl::Kernel kernel(_program, "filter");
-
-    // setup extra kernel args
-    // Notice that 0/1 is reserved for input/output, don't override them!
-    render(args, kernel);
-
-    // setup and run queue
+    // render
     cl::ImageFormat format(CL_RGBA, CL_FLOAT);
     cl::Image2D in(_context, CL_MEM_READ_ONLY | CL_MEM_COPY_HOST_PTR, format, width, height, 0, (float*)srcImg->getPixelData());
     cl::Image2D out(_context, CL_MEM_WRITE_ONLY, format, width, height, 0, NULL);
-    cl::CommandQueue queue = cl::CommandQueue(_context, devices[device]);
+
+    cl::Kernel kernel(_program, "filter");
+    kernel.setArg(0, in);
+    kernel.setArg(1, out);
+    render(args, kernel);
+
     cl::Event timer;
     cl::size_t<3> origin;
     cl::size_t<3> size;
@@ -187,9 +183,7 @@ void OCLPluginHelper<SupportsRenderScale>::render(const OFX::RenderArguments &ar
     size[1] = height;
     size[2] = 1;
 
-    kernel.setArg(0, in);
-    kernel.setArg(1, out);
-
+    cl::CommandQueue queue = cl::CommandQueue(_context, devices[device]);
     queue.enqueueNDRangeKernel(kernel, cl::NullRange, cl::NDRange(width, height), cl::NullRange, NULL, &timer);
     timer.wait();
     queue.enqueueReadImage(out, CL_TRUE, origin, size, 0, 0, (float*)dstImg->getPixelData());

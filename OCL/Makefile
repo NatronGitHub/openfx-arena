@@ -6,9 +6,11 @@ PLUGINOBJECTS = \
         Looks.o \
         Ripple.o \
         Sharpen.o \
-        Swirl.o \
+        Twirl.o \
         OCLPlugin.o \
-        ofxsTransform3x3.o ofxsTransformInteractCustom.o ofxsShutter.o
+        ofxsTransform3x3.o \
+        ofxsTransformInteractCustom.o \
+        ofxsShutter.o
 
 PLUGINNAME = OCL
 
@@ -18,8 +20,9 @@ Edge/net.fxarena.opencl.Edge.png \
 Edge/net.fxarena.opencl.Edge.svg \
 Ripple/net.fxarena.opencl.Ripple.png \
 Ripple/net.fxarena.opencl.Ripple.svg \
-Swirl/net.fxarena.opencl.Swirl.png \
-Swirl/net.fxarena.opencl.Swirl.svg
+Twirl/net.fxarena.opencl.Twirl.png \
+Twirl/net.fxarena.opencl.Twirl.svg \
+Twirl/net.fxarena.opencl.Twirl.cl
 
 VPATH += \
 Bulge \
@@ -29,7 +32,7 @@ Edge \
 Looks \
 Ripple \
 Sharpen \
-Swirl
+Twirl
 
 CXXFLAGS += \
 -IBulge \
@@ -39,7 +42,7 @@ CXXFLAGS += \
 -ILooks \
 -IRipple \
 -ISharpen \
--ISwirl
+-ITwirl
 
 SRCDIR = ..
 
@@ -55,5 +58,5 @@ $(OBJECTPATH)/Edge.o: Edge.cpp OCLPlugin.h
 $(OBJECTPATH)/Looks.o: Looks.cpp OCLPlugin.h
 $(OBJECTPATH)/Ripple.o: Ripple.cpp OCLPlugin.h
 $(OBJECTPATH)/Sharpen.o: Sharpen.cpp OCLPlugin.h
-$(OBJECTPATH)/Swirl.o: Swirl.cpp OCLPlugin.h
+$(OBJECTPATH)/Twirl.o: Twirl.cpp OCLPlugin.h
 

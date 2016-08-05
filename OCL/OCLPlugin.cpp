@@ -18,7 +18,10 @@
 
 #include "OCLPlugin.h"
 
-OCLPluginHelperBase::OCLPluginHelperBase(OfxImageEffectHandle handle, const std::string &kernelSource)
+#include <fstream>
+#include <iostream>
+
+OCLPluginHelperBase::OCLPluginHelperBase(OfxImageEffectHandle handle, const std::string &kernelSource, const std::string &pluginID)
     : ImageEffect(handle)
     , _dstClip(0)
     , _srcClip(0)
@@ -32,6 +35,7 @@ OCLPluginHelperBase::OCLPluginHelperBase(OfxImageEffectHandle handle, const std:
 
     _device = fetchChoiceParam(kParamOCLDevice);
     _source = kernelSource;
+    _plugin = pluginID;
 
     assert(_device);
 
@@ -49,7 +53,31 @@ OCLPluginHelperBase::setupContext()
        cl_context_properties properties[] = { CL_CONTEXT_PLATFORM, (cl_context_properties)(platform)(), 0};
        _context = cl::Context(CL_DEVICE_TYPE_ALL, properties);
        std::vector<cl::Device> platformDevices = _context.getInfo<CL_CONTEXT_DEVICES>();
-       cl::Program::Sources sources(1, std::make_pair(_source.c_str(), _source.length()+1));
+
+       std::string kSource;
+       if (!_source.empty()) {
+           kSource = _source;
+       } else if (!_plugin.empty()) {
+           std::string kSourcePath;
+           kSourcePath.append(getPropertySet().propGetString(kOfxPluginPropFilePath, false));
+           kSourcePath.append("/Contents/Resources/");
+           kSourcePath.append(_plugin);
+           kSourcePath.append(".cl");
+           std::ifstream f;
+           f.open(kSourcePath.c_str());
+           std::ostringstream s;
+           s << f.rdbuf();
+           f.close();
+           if (!s.str().empty()) {
+               kSource = s.str();
+           } else {
+               std::cout << "Failed to read OpenCL kernel!" << std::endl;
+           }
+       } else {
+           std::cout << "Failed to find any OpenCL kernel!" << std::endl;
+       }
+
+       cl::Program::Sources sources(1, std::make_pair(kSource.c_str(), kSource.length()+1));
        _program = cl::Program(_context,sources);
        std::string buildOptions;
 
@@ -58,11 +86,10 @@ OCLPluginHelperBase::setupContext()
 #endif
 
        if(_program.build(platformDevices, buildOptions.c_str()) == CL_BUILD_PROGRAM_FAILURE){
-            setPersistentMessage(OFX::Message::eMessageError, "", "Failed to build OpenCL kernel, see terminal for log");
             std::cout << "Failed to build OpenCL kernel: "<< _program.getBuildInfo<CL_PROGRAM_BUILD_LOG>(devices[device]) << std::endl;
        }
     } else {
-        setPersistentMessage(OFX::Message::eMessageError, "", "No OpenCL devices found!");
+        std::cout << "No OpenCL devices found!" << std::endl;
     }
 }
 
