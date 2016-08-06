@@ -32,7 +32,10 @@ OTHER_FILES += \
             OCL/Ripple/Info.plist \
             OCL/Sharpen/net.fxarena.opencl.Sharpen.cl \
             OCL/Sharpen/Makefile \
-            OCL/Sharpen/Info.plist
+            OCL/Sharpen/Info.plist \
+            OCL/Cartoon/net.fxarena.opencl.Cartoon.cl \
+            OCL/Cartoon/Makefile \
+            OCL/Cartoon/Info.plist
 INCLUDEPATH += . \
             SupportExt \
             OpenFX/Support/include \

@@ -1,3 +1,5 @@
+SRCDIR = ../..
+
 PLUGINOBJECTS = \
         Cartoon.o \
         OCLPlugin.o
@@ -5,9 +7,10 @@ PLUGINOBJECTS = \
 PLUGINNAME = Cartoon
 
 RESOURCES = \
-../OpenCL.png
-
-SRCDIR = ../..
+$(SRCDIR)/LICENSE \
+net.fxarena.opencl.Cartoon.png \
+net.fxarena.opencl.Cartoon.svg \
+net.fxarena.opencl.Cartoon.cl
 
 include $(SRCDIR)/Makefile.master
 

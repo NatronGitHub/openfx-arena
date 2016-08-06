@@ -28,7 +28,13 @@ Twirl/net.fxarena.opencl.Twirl.svg \
 Twirl/net.fxarena.opencl.Twirl.cl \
 Bulge/net.fxarena.opencl.Bulge.png \
 Bulge/net.fxarena.opencl.Bulge.svg \
-Bulge/net.fxarena.opencl.Bulge.cl
+Bulge/net.fxarena.opencl.Bulge.cl \
+Sharpen/net.fxarena.opencl.Sharpen.png \
+Sharpen/net.fxarena.opencl.Sharpen.svg \
+Sharpen/net.fxarena.opencl.Sharpen.cl \
+Cartoon/net.fxarena.opencl.Cartoon.png \
+Cartoon/net.fxarena.opencl.Cartoon.svg \
+Cartoon/net.fxarena.opencl.Cartoon.cl
 
 VPATH += \
 Bulge \

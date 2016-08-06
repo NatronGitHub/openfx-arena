@@ -24,7 +24,7 @@ OFXS_NAMESPACE_ANONYMOUS_ENTER
 #define kPluginName "SharpenOCL"
 #define kPluginGrouping "Filter"
 #define kPluginIdentifier "net.fxarena.opencl.Sharpen"
-#define kPluginDescription "Sharpen Filter using OpenCL."
+#define kPluginDescription "Sharpen filter using OpenCL."
 #define kPluginVersionMajor 1
 #define kPluginVersionMinor 0
 

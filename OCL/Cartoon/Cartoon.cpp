@@ -21,10 +21,10 @@
 using namespace OFX;
 OFXS_NAMESPACE_ANONYMOUS_ENTER
 
-#define kPluginName "CartoonOCL"
-#define kPluginGrouping "OpenCL"
+#define kPluginName "Cartoon"
+#define kPluginGrouping "Filter"
 #define kPluginIdentifier "net.fxarena.opencl.Cartoon"
-#define kPluginDescription "OpenCL Cartoon Filter"
+#define kPluginDescription "Cartoon filter using OpenCL."
 #define kPluginVersionMajor 1
 #define kPluginVersionMinor 0
 
@@ -36,71 +36,12 @@ OFXS_NAMESPACE_ANONYMOUS_ENTER
 #define kHostMasking true
 #define kHostMixing true
 
-const std::string kernelSource = \
-"const sampler_t sampler = CLK_FILTER_NEAREST | CLK_NORMALIZED_COORDS_FALSE | CLK_ADDRESS_CLAMP_TO_EDGE;\n"
-"\n"
-"float3 gray_internal(float4 color) {\n"
-"  float y = dot(color.xyz, (float3)(0.2126f, 0.7152f, 0.0722f));\n"
-"  return (float3)(y,y,y);\n"
-"}\n"
-"\n"
-"__kernel void filter(__read_only image2d_t input, __write_only image2d_t output){\n"
-"\n"
-"   const int2 size = get_image_dim(input);\n"
-"   int2 coord = (int2)(get_global_id(0),get_global_id(1));\n"
-"   float4 color = read_imagef(input,sampler,convert_float2(coord));\n"
-"   float dx = 1.0f / size.x;\n"
-"   float dy = 1.0f / size.y;\n"
-"\n"
-"  float3 upperLeft   = gray_internal(read_imagef(input,sampler, convert_float2(coord) + (float2)(0.0f, -dy)));\n"
-"  float3 upperCenter = gray_internal(read_imagef(input,sampler, convert_float2(coord) + (float2)(0.0f, -dy)));\n"
-"  float3 upperRight  = gray_internal(read_imagef(input,sampler, convert_float2(coord) + (float2)( dx, -dy)));\n"
-"  float3 left        = gray_internal(read_imagef(input,sampler, convert_float2(coord) + (float2)(-dx, 0.0f)));\n"
-"  float3 center      = gray_internal(read_imagef(input,sampler, convert_float2(coord) + (float2)(0.0f, 0.0f)));\n"
-"  float3 right       = gray_internal(read_imagef(input,sampler, convert_float2(coord) + (float2)( dx, 0.0f)));\n"
-"  float3 lowerLeft   = gray_internal(read_imagef(input,sampler, convert_float2(coord) + (float2)(-dx,  dy)));\n"
-"  float3 lowerCenter = gray_internal(read_imagef(input,sampler, convert_float2(coord) + (float2)(0.0f,  dy)));\n"
-"  float3 lowerRight  = gray_internal(read_imagef(input,sampler, convert_float2(coord) + (float2)( dx,  dy)));\n"
-"  \n"
-"   float3 vertical  = upperLeft   * -1.0f\n"
-"                 + upperCenter *  0.0f\n"
-"                 + upperRight  *  1.0f\n"
-"                 + left        * -2.0f\n"
-"                 + center      *  0.0f\n"
-"                 + right       *  2.0f\n"
-"                 + lowerLeft   * -1.0f\n"
-"                 + lowerCenter *  0.0f\n"
-"                 + lowerRight  *  1.0f;\n"
-"\n"
-"  float3 horizontal = upperLeft   * -1.0f\n"
-"                  + upperCenter * -2.0f\n"
-"                  + upperRight  * -1.0f\n"
-"                  + left        *  0.0f\n"
-"                  + center      *  0.0f\n"
-"                  + right       *  0.0f\n"
-"                  + lowerLeft   *  1.0f\n"
-"                  + lowerCenter *  2.0f\n"
-"                  + lowerRight  *  1.0f;\n"
-"\n"
-"  float r = (vertical.x > 0 ? vertical.x : -vertical.x) + (horizontal.x > 0 ? horizontal.x : -horizontal.x);\n"
-"  float g = (vertical.y > 0 ? vertical.x : -vertical.y) + (horizontal.y > 0 ? horizontal.y : -horizontal.y);\n"
-"  float b = (vertical.z > 0 ? vertical.x : -vertical.z) + (horizontal.z > 0 ? horizontal.z : -horizontal.z);\n"
-"  if (r > 1.0f) r = 1.0f;\n"
-"  if (g > 1.0f) g = 1.0f;\n"
-"  if (b > 1.0f) b = 1.0f;\n"
-"  \n"
-"  float4 edged = (float4)(color.xyz - (float3)(r, g, b), color.w);\n"
-"  float arg = 1.0f;\n"
-"\n"
-"   write_imagef(output,coord,(float4)(mix(color.xyz, edged.xyz, arg), color.w));\n"
-"}\n";
-
 class CartoonCLPlugin
     : public OCLPluginHelper<kSupportsRenderScale>
 {
 public:
     CartoonCLPlugin(OfxImageEffectHandle handle)
-        : OCLPluginHelper<kSupportsRenderScale>(handle,kernelSource)
+        : OCLPluginHelper<kSupportsRenderScale>(handle, "", kPluginIdentifier)
     {
     }
 
