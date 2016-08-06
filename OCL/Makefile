@@ -34,7 +34,10 @@ Sharpen/net.fxarena.opencl.Sharpen.svg \
 Sharpen/net.fxarena.opencl.Sharpen.cl \
 Cartoon/net.fxarena.opencl.Cartoon.png \
 Cartoon/net.fxarena.opencl.Cartoon.svg \
-Cartoon/net.fxarena.opencl.Cartoon.cl
+Cartoon/net.fxarena.opencl.Cartoon.cl \
+Duotone/net.fxarena.opencl.Duotone.png \
+Duotone/net.fxarena.opencl.Duotone.svg \
+Duotone/net.fxarena.opencl.Duotone.cl
 
 VPATH += \
 Bulge \

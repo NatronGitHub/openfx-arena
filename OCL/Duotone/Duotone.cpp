@@ -21,10 +21,10 @@
 using namespace OFX;
 OFXS_NAMESPACE_ANONYMOUS_ENTER
 
-#define kPluginName "DuotoneOCL"
-#define kPluginGrouping "OpenCL"
+#define kPluginName "Duotone"
+#define kPluginGrouping "Color"
 #define kPluginIdentifier "net.fxarena.opencl.Duotone"
-#define kPluginDescription "OpenCL Duotone Filter"
+#define kPluginDescription "Duotone color filter using OpenCL."
 #define kPluginVersionMajor 1
 #define kPluginVersionMinor 0
 
@@ -44,28 +44,12 @@ OFXS_NAMESPACE_ANONYMOUS_ENTER
 #define kParamLightColorLabel "Light Color"
 #define kParamLightColorHint "Light Color."
 
-const std::string kernelSource = \
-"   const sampler_t sampler = CLK_FILTER_NEAREST | CLK_NORMALIZED_COORDS_FALSE | CLK_ADDRESS_CLAMP_TO_EDGE;\n"
-"__kernel void filter(__read_only image2d_t input, __write_only image2d_t output, double dr, double dg, double db, double lr, double lg, double lb){\n"
-"   const int2 dim = get_image_dim(input);\n"
-"   int2 coord = (int2)(get_global_id(0),get_global_id(1));\n"
-"   float4 color = read_imagef(input,sampler,coord);\n"
-"\n"
-"   float3 dark_color = (float3)(dr,dg,db);\n"
-"   float3 light_color = (float3)(lr,lg,lb);\n"
-"   float gray = dot(color.xyz, (float3)(0.2126f, 0.7152f, 0.0722f));\n"
-"   float luminance = dot(color.xyz,gray);\n"
-"\n"
-"   color.xyz = clamp(mix(dark_color,light_color,luminance),0.0f,1.0f);\n"
-"   write_imagef(output,coord,color);\n"
-"}\n";
-
 class DuotoneCLPlugin
     : public OCLPluginHelper<kSupportsRenderScale>
 {
 public:
     DuotoneCLPlugin(OfxImageEffectHandle handle)
-        : OCLPluginHelper<kSupportsRenderScale>(handle,kernelSource)
+        : OCLPluginHelper<kSupportsRenderScale>(handle, "", kPluginIdentifier)
         , _darkColor(0)
         , _lightColor(0)
     {
@@ -117,7 +101,7 @@ void DuotoneCLPluginFactory::describeInContext(ImageEffectDescriptor &desc, Cont
         RGBParamDescriptor* param = desc.defineRGBParam(kParamDarkColor);
         param->setLabel(kParamDarkColorLabel);
         param->setHint(kParamDarkColorHint);
-        param->setDefault(1.0, 0.0, 0.0);
+        param->setDefault(0.2345506, 0.0, 0.0);
         param->setAnimates(true);
         if (page) {
             page->addChild(*param);
