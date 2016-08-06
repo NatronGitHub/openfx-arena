@@ -1,3 +1,5 @@
+SRCDIR = ../..
+
 PLUGINOBJECTS = \
         Edge.o \
         OCLPlugin.o
@@ -5,11 +7,10 @@ PLUGINOBJECTS = \
 PLUGINNAME = Edge
 
 RESOURCES = \
-../OpenCL.png \
+$(SRCDIR)/LICENSE \
 net.fxarena.opencl.Edge.png \
-net.fxarena.opencl.Edge.svg
-
-SRCDIR = ../..
+net.fxarena.opencl.Edge.svg \
+net.fxarena.opencl.Edge.cl
 
 include $(SRCDIR)/Makefile.master
 

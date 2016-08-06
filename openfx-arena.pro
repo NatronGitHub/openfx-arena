@@ -38,7 +38,10 @@ OTHER_FILES += \
             OCL/Cartoon/Info.plist \
             OCL/Duotone/net.fxarena.opencl.Duotone.cl \
             OCL/Duotone/Makefile \
-            OCL/Duotone/Info.plist
+            OCL/Duotone/Info.plist \
+            OCL/Edge/net.fxarena.opencl.Edge.cl \
+            OCL/Edge/Makefile \
+            OCL/Edge/Info.plist
 INCLUDEPATH += . \
             SupportExt \
             OpenFX/Support/include \

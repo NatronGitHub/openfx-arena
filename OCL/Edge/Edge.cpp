@@ -21,10 +21,10 @@
 using namespace OFX;
 OFXS_NAMESPACE_ANONYMOUS_ENTER
 
-#define kPluginName "EdgeOCL"
-#define kPluginGrouping "OpenCL"
+#define kPluginName "Edge"
+#define kPluginGrouping "Filter"
 #define kPluginIdentifier "net.fxarena.opencl.Edge"
-#define kPluginDescription "OpenCL Edge Filter"
+#define kPluginDescription "Edge filter effect using OpenCL."
 #define kPluginVersionMajor 1
 #define kPluginVersionMinor 0
 
@@ -36,29 +36,12 @@ OFXS_NAMESPACE_ANONYMOUS_ENTER
 #define kHostMasking true
 #define kHostMixing true
 
-const std::string kernelSource = \
-"const sampler_t sampler = CLK_NORMALIZED_COORDS_FALSE | CLK_ADDRESS_CLAMP_TO_EDGE | CLK_FILTER_NEAREST;\n"
-"kernel void filter(read_only image2d_t input, write_only image2d_t output) {\n"
-"   const int2 p = {get_global_id(0), get_global_id(1)};\n"
-"   float m[3][3] = { {-1, -2, -1}, {0, 0, 0}, {1, 2, 1} };\n"
-"   float2 t = {0.f, 0.f};\n"
-"   for (int j = -1; j <= 1; j++) {\n"
-"      for (int i = -1; i <= 1; i++) {\n"
-"          float4 pix = read_imagef(input, sampler, (int2)(p.x+i, p.y+j));\n"
-"          t.x += (pix.x*0.299f + pix.y*0.587f + pix.z*0.114f) * m[i+1][j+1];\n"
-"          t.y += (pix.x*0.299f + pix.y*0.587f + pix.z*0.114f) * m[j+1][i+1];\n"
-"      }\n"
-"   }\n"
-"   float o = sqrt(t.x*t.x + t.y*t.y);\n"
-"   write_imagef(output, p, (float4)(o, o, o, 1.0f));\n"
-"}";
-
 class EdgeCLPlugin
     : public OCLPluginHelper<kSupportsRenderScale>
 {
 public:
     EdgeCLPlugin(OfxImageEffectHandle handle)
-        : OCLPluginHelper<kSupportsRenderScale>(handle,kernelSource)
+        : OCLPluginHelper<kSupportsRenderScale>(handle, "", kPluginIdentifier)
     {
     }
 

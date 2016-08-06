@@ -5,7 +5,6 @@ PLUGINOBJECTS = \
         Cartoon.o \
         Duotone.o \
         Edge.o \
-        Looks.o \
         Ripple.o \
         Sharpen.o \
         Twirl.o \
@@ -20,6 +19,7 @@ RESOURCES = \
 OpenCL.png \
 Edge/net.fxarena.opencl.Edge.png \
 Edge/net.fxarena.opencl.Edge.svg \
+Edge/net.fxarena.opencl.Edge.cl \
 Ripple/net.fxarena.opencl.Ripple.png \
 Ripple/net.fxarena.opencl.Ripple.svg \
 Ripple/net.fxarena.opencl.Ripple.cl \
@@ -44,7 +44,6 @@ Bulge \
 Cartoon \
 Duotone \
 Edge \
-Looks \
 Ripple \
 Sharpen \
 Twirl
@@ -54,7 +53,6 @@ CXXFLAGS += \
 -ICartoon \
 -IDuotone \
 -IEdge \
--ILooks \
 -IRipple \
 -ISharpen \
 -ITwirl
@@ -68,7 +66,6 @@ $(OBJECTPATH)/Bulge.o: Bulge.cpp OCLPlugin.h
 $(OBJECTPATH)/Cartoon.o: Cartoon.cpp OCLPlugin.h
 $(OBJECTPATH)/Duotone.o: Duotone.cpp OCLPlugin.h
 $(OBJECTPATH)/Edge.o: Edge.cpp OCLPlugin.h
-$(OBJECTPATH)/Looks.o: Looks.cpp OCLPlugin.h
 $(OBJECTPATH)/Ripple.o: Ripple.cpp OCLPlugin.h
 $(OBJECTPATH)/Sharpen.o: Sharpen.cpp OCLPlugin.h
 $(OBJECTPATH)/Twirl.o: Twirl.cpp OCLPlugin.h
