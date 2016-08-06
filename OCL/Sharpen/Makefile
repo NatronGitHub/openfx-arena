@@ -1,3 +1,5 @@
+SRCDIR = ../..
+
 PLUGINOBJECTS = \
         Sharpen.o \
         OCLPlugin.o
@@ -5,9 +7,10 @@ PLUGINOBJECTS = \
 PLUGINNAME = Sharpen
 
 RESOURCES = \
-../OpenCL.png
-
-SRCDIR = ../..
+$(SRCDIR)/LICENSE \
+net.fxarena.opencl.Sharpen.png \
+net.fxarena.opencl.Sharpen.svg \
+net.fxarena.opencl.Sharpen.cl
 
 include $(SRCDIR)/Makefile.master
 
@@ -15,4 +18,3 @@ VPATH += $(SRCDIR)/OCL
 
 CXXFLAGS += $(OPENCL_CXXFLAGS)
 LINKFLAGS += $(OPENCL_LINKFLAGS)
-

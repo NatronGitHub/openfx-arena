@@ -22,9 +22,9 @@ using namespace OFX;
 OFXS_NAMESPACE_ANONYMOUS_ENTER
 
 #define kPluginName "SharpenOCL"
-#define kPluginGrouping "OpenCL"
+#define kPluginGrouping "Filter"
 #define kPluginIdentifier "net.fxarena.opencl.Sharpen"
-#define kPluginDescription "OpenCL Sharpen Filter"
+#define kPluginDescription "Sharpen Filter using OpenCL."
 #define kPluginVersionMajor 1
 #define kPluginVersionMinor 0
 
@@ -41,27 +41,12 @@ OFXS_NAMESPACE_ANONYMOUS_ENTER
 #define kParamFactorHint "Adjust the factor."
 #define kParamFactorDefault 1.0
 
-const std::string kernelSource = \
-"const sampler_t sampler = CLK_NORMALIZED_COORDS_FALSE | CLK_ADDRESS_CLAMP_TO_EDGE | CLK_FILTER_NEAREST;\n"
-"kernel void filter(read_only image2d_t input, write_only image2d_t output, double factor) {\n"
-"    const int2 p = {get_global_id(0), get_global_id(1)};\n"
-"    float m[3][3] = { {-1, -1, -1}, {-1,  8, -1}, {-1, -1, -1} };\n"
-"    float4 value = 0.f;\n"
-"    for (int j = -1; j <= 1; j++) {\n"
-"        for (int i = -1; i <= 1; i++) {\n"
-"            value += read_imagef(input, sampler, (int2)(p.x+i, p.y+j)) * m[i+1][j+1] * (float)factor;\n"
-"        }\n"
-"    }\n"
-"  float4 orig = read_imagef(input, sampler, (int2)(p.x, p.y));\n"
-"  write_imagef(output, (int2)(p.x, p.y), orig+value/m[1][1]);\n"
-"}";
-
 class SharpenCLPlugin
     : public OCLPluginHelper<kSupportsRenderScale>
 {
 public:
     SharpenCLPlugin(OfxImageEffectHandle handle)
-        : OCLPluginHelper<kSupportsRenderScale>(handle,kernelSource)
+        : OCLPluginHelper<kSupportsRenderScale>(handle, "", kPluginIdentifier)
         , _factor(0)
     {
         _factor = fetchDoubleParam(kParamFactor);
@@ -72,7 +57,6 @@ public:
     {
         double factor = 0.0;
         _factor->getValueAtTime(args.time, factor);
-        //std::cout << factor << std::endl;
         kernel.setArg(2, factor);
     }
 private:

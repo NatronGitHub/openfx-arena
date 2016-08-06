@@ -29,7 +29,10 @@ OTHER_FILES += \
             OCL/Bulge/Info.plist \
             OCL/Ripple/net.fxarena.opencl.Ripple.cl \
             OCL/Ripple/Makefile \
-            OCL/Ripple/Info.plist
+            OCL/Ripple/Info.plist \
+            OCL/Sharpen/net.fxarena.opencl.Sharpen.cl \
+            OCL/Sharpen/Makefile \
+            OCL/Sharpen/Info.plist
 INCLUDEPATH += . \
             SupportExt \
             OpenFX/Support/include \
