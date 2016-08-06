@@ -45,7 +45,7 @@ class TwirlCLPlugin
 {
 public:
     TwirlCLPlugin(OfxImageEffectHandle handle)
-        : OCLPluginHelper<kSupportsRenderScale>(handle,"",kPluginIdentifier)
+        : OCLPluginHelper<kSupportsRenderScale>(handle, "", kPluginIdentifier)
         , _position(0)
         , _radius(0)
         , _strength(0)

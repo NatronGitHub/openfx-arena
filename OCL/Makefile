@@ -1,3 +1,5 @@
+SRCDIR = ..
+
 PLUGINOBJECTS = \
         Bulge.o \
         Cartoon.o \
@@ -22,7 +24,10 @@ Ripple/net.fxarena.opencl.Ripple.png \
 Ripple/net.fxarena.opencl.Ripple.svg \
 Twirl/net.fxarena.opencl.Twirl.png \
 Twirl/net.fxarena.opencl.Twirl.svg \
-Twirl/net.fxarena.opencl.Twirl.cl
+Twirl/net.fxarena.opencl.Twirl.cl \
+Bulge/net.fxarena.opencl.Bulge.png \
+Bulge/net.fxarena.opencl.Bulge.svg \
+Bulge/net.fxarena.opencl.Bulge.cl
 
 VPATH += \
 Bulge \
@@ -43,8 +48,6 @@ CXXFLAGS += \
 -IRipple \
 -ISharpen \
 -ITwirl
-
-SRCDIR = ..
 
 include $(SRCDIR)/Makefile.master
 

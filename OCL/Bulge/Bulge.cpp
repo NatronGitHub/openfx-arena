@@ -23,10 +23,10 @@
 using namespace OFX;
 OFXS_NAMESPACE_ANONYMOUS_ENTER
 
-#define kPluginName "BulgeOCL"
-#define kPluginGrouping "OpenCL"
+#define kPluginName "Bulge"
+#define kPluginGrouping "Transform"
 #define kPluginIdentifier "net.fxarena.opencl.Bulge"
-#define kPluginDescription "OpenCL Bulge Filter"
+#define kPluginDescription "Bulge (implode/explode) transform effect using OpenCL."
 #define kPluginVersionMajor 1
 #define kPluginVersionMinor 0
 
@@ -40,36 +40,12 @@ OFXS_NAMESPACE_ANONYMOUS_ENTER
 
 #define kParamStrengthDefault 4.0
 
-const std::string kernelSource = \
-"const sampler_t sampler = CLK_FILTER_NEAREST | CLK_NORMALIZED_COORDS_FALSE | CLK_ADDRESS_CLAMP_TO_EDGE;\n"
-"__kernel void filter(__read_only image2d_t input, __write_only image2d_t output, double centerX, double centerY, double r, double effect){\n"
-"   const int2 size = get_image_dim(input);\n"
-"   int2 coord = (int2)(get_global_id(0),get_global_id(1));\n"
-"   int2 center = (int2)((int)centerX,(int)centerY);\n"
-"   float2 coord_center = convert_float2(coord - center);\n"
-"   float radius = r / 2.0f;\n"
-"   float strength = (float)effect;\n"
-"   float dist = length(convert_float2(coord_center));\n"
-"\n"
-"   if (dist < radius) {\n"
-"         float percent = dist / radius;\n"
-"         if (strength > 0.0f) {\n"
-"              coord_center *= mix(1.0f, smoothstep(0.0f, radius / dist, percent), strength * 0.75f);\n"
-"         } else {\n"
-"              coord_center *= mix(1.0f, pow(percent, 1.0f + strength * 0.75f) * radius / dist, 1.0f - percent);\n"
-"         }\n"
-"    }\n"
-"    coord_center += convert_float2(center);\n"
-"    float4 color = read_imagef(input,sampler,convert_int2(coord_center));\n"
-"    write_imagef(output,convert_int2(coord),color);\n"
-"}";
-
 class BulgeCLPlugin
     : public OCLPluginHelper<kSupportsRenderScale>
 {
 public:
     BulgeCLPlugin(OfxImageEffectHandle handle)
-        : OCLPluginHelper<kSupportsRenderScale>(handle,kernelSource)
+        : OCLPluginHelper<kSupportsRenderScale>(handle, "", kPluginIdentifier)
         , _position(0)
         , _radius(0)
         , _strength(0)
