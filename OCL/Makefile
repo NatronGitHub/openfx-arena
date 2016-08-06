@@ -22,6 +22,7 @@ Edge/net.fxarena.opencl.Edge.png \
 Edge/net.fxarena.opencl.Edge.svg \
 Ripple/net.fxarena.opencl.Ripple.png \
 Ripple/net.fxarena.opencl.Ripple.svg \
+Ripple/net.fxarena.opencl.Ripple.cl \
 Twirl/net.fxarena.opencl.Twirl.png \
 Twirl/net.fxarena.opencl.Twirl.svg \
 Twirl/net.fxarena.opencl.Twirl.cl \

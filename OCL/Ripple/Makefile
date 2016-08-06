@@ -1,3 +1,5 @@
+SRCDIR = ../..
+
 PLUGINOBJECTS = \
         Ripple.o \
         OCLPlugin.o
@@ -5,11 +7,10 @@ PLUGINOBJECTS = \
 PLUGINNAME = Ripple
 
 RESOURCES = \
-../OpenCL.png \
+$(SRCDIR)/LICENSE \
 net.fxarena.opencl.Ripple.png \
-net.fxarena.opencl.Ripple.svg
-
-SRCDIR = ../..
+net.fxarena.opencl.Ripple.svg \
+net.fxarena.opencl.Ripple.cl
 
 include $(SRCDIR)/Makefile.master
 

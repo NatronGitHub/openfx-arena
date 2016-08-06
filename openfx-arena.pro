@@ -26,7 +26,10 @@ OTHER_FILES += \
             OCL/Twirl/Info.plist \
             OCL/Bulge/net.fxarena.opencl.Bulge.cl \
             OCL/Bulge/Makefile \
-        OCL/Bulge/Info.plist
+            OCL/Bulge/Info.plist \
+            OCL/Ripple/net.fxarena.opencl.Ripple.cl \
+            OCL/Ripple/Makefile \
+            OCL/Ripple/Info.plist
 INCLUDEPATH += . \
             SupportExt \
             OpenFX/Support/include \

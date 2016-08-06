@@ -22,10 +22,10 @@
 using namespace OFX;
 OFXS_NAMESPACE_ANONYMOUS_ENTER
 
-#define kPluginName "RippleOCL"
-#define kPluginGrouping "OpenCL"
+#define kPluginName "Ripple"
+#define kPluginGrouping "Transform"
 #define kPluginIdentifier "net.fxarena.opencl.Ripple"
-#define kPluginDescription "OpenCL Ripple Filter"
+#define kPluginDescription "Ripple transform effect using OpenCL."
 #define kPluginVersionMajor 1
 #define kPluginVersionMinor 0
 
@@ -47,42 +47,12 @@ OFXS_NAMESPACE_ANONYMOUS_ENTER
 #define kParamWaveLengthHint "Adjust length"
 #define kParamWaveLengthDefault 150
 
-const std::string kernelSource = \
-"const sampler_t sampler = CLK_NORMALIZED_COORDS_FALSE | CLK_FILTER_NEAREST | CLK_ADDRESS_CLAMP_TO_EDGE;\n"
-"int2 effect(float x, float y, float a, float w) {\n"
-"        float m = sqrt(x*x + y*y);\n"
-"        float s = sin(w*m);\n"
-"        float x1 = a*y*m*s;\n"
-"        float y1 = -a*x*m*s;\n"
-"        return (int2)(x1, y1);\n"
-"}\n"
-"int2 displacement(int xi, int yi, int width, int height, double waveAmp, double waveLength) {\n"
-"        float aspect = ((float) height) / ((float) width);\n"
-"        float x = ((float) xi) / ((float) width), y = ((float) yi) / ((float) height);\n"
-"        return effect(x - 0.5, aspect*(y - 0.5 + 0.35), waveAmp, waveLength)\n"
-"             - effect(x - 0.5, aspect*(y - 0.5 - 0.35), waveAmp, waveLength)\n"
-"             + effect(x - 0.5, aspect*(y), 2, 5000);\n"
-"}\n"
-"__kernel void filter(read_only image2d_t inputImage, write_only image2d_t outputImage, double waveAmp, double waveLength) {\n"
-"   int2 dimensions = get_image_dim(inputImage);\n"
-"   int width = dimensions.x, height = dimensions.y;\n"
-"   int channelDataType = get_image_channel_data_type(inputImage);\n"
-"   int channelOrder = get_image_channel_order(inputImage);\n"
-"   int x = get_global_id(0), y = get_global_id(1);\n"
-"   int2 coordinates = (int2)(x, y);\n"
-"   int2 disp = displacement(x, y, width, height, waveAmp, waveLength);\n"
-"   int2 fromCoordinates = coordinates + disp;\n"
-"   float4 pixel = read_imagef(inputImage, sampler, fromCoordinates);\n"
-"   float4 transformedPixel = pixel;\n"
-"   write_imagef(outputImage, coordinates, transformedPixel);\n"
-"}";
-
 class RippleCLPlugin
     : public OCLPluginHelper<kSupportsRenderScale>
 {
 public:
     RippleCLPlugin(OfxImageEffectHandle handle)
-        : OCLPluginHelper<kSupportsRenderScale>(handle,kernelSource)
+        : OCLPluginHelper<kSupportsRenderScale>(handle, "", kPluginIdentifier)
         , _waveAmp(0)
         , _waveLength(0)
     {
