@@ -39,55 +39,58 @@ OCLPluginHelperBase::OCLPluginHelperBase(OfxImageEffectHandle handle, const std:
 
     assert(_device);
 
-    setupContext();
+    setupContext(true, "");
 }
 
 void
-OCLPluginHelperBase::setupContext()
+OCLPluginHelperBase::setupContext(bool context, std::string kernelString)
 {
     int device;
     _device->getValue(device);
     std::vector<cl::Device> devices = getDevices();
     if (devices.size()!=0) {
-       cl::Platform platform(devices[device].getInfo<CL_DEVICE_PLATFORM>());
-       cl_context_properties properties[] = { CL_CONTEXT_PLATFORM, (cl_context_properties)(platform)(), 0};
-       _context = cl::Context(CL_DEVICE_TYPE_ALL, properties);
-       std::vector<cl::Device> platformDevices = _context.getInfo<CL_CONTEXT_DEVICES>();
-
-       std::string kSource;
-       if (!_source.empty()) {
-           kSource = _source;
-       } else if (!_plugin.empty()) {
-           std::string kSourcePath;
-           kSourcePath.append(getPropertySet().propGetString(kOfxPluginPropFilePath, false));
-           kSourcePath.append("/Contents/Resources/");
-           kSourcePath.append(_plugin);
-           kSourcePath.append(".cl");
-           std::ifstream f;
-           f.open(kSourcePath.c_str());
-           std::ostringstream s;
-           s << f.rdbuf();
-           f.close();
-           if (!s.str().empty()) {
-               kSource = s.str();
-           } else {
-               std::cout << "Failed to read OpenCL kernel!" << std::endl;
-           }
-       } else {
-           std::cout << "Failed to find any OpenCL kernel!" << std::endl;
-       }
-
-       cl::Program::Sources sources(1, std::make_pair(kSource.c_str(), kSource.length()+1));
-       _program = cl::Program(_context,sources);
-       std::string buildOptions;
-
+        if (context) {
+            cl::Platform platform(devices[device].getInfo<CL_DEVICE_PLATFORM>());
+            cl_context_properties properties[] = { CL_CONTEXT_PLATFORM, (cl_context_properties)(platform)(), 0};
+            _context = cl::Context(CL_DEVICE_TYPE_ALL, properties);
 #ifdef DEBUG
-       std::cout << "setup OpenCL context for: " << platform.getInfo<CL_PLATFORM_VENDOR>() << std::endl;
+            std::cout << "setup OpenCL context for: " << platform.getInfo<CL_PLATFORM_VENDOR>() << std::endl;
 #endif
+        }
 
-       if(_program.build(platformDevices, buildOptions.c_str()) == CL_BUILD_PROGRAM_FAILURE){
-            std::cout << "Failed to build OpenCL kernel: "<< _program.getBuildInfo<CL_PROGRAM_BUILD_LOG>(devices[device]) << std::endl;
-       }
+        std::string kSource;
+        if (!kernelString.empty()) {
+            kSource = kernelString;
+        } else if (!_source.empty()) {
+           kSource = _source;
+        } else if (!_plugin.empty()) {
+            std::string kSourcePath;
+            kSourcePath.append(getPropertySet().propGetString(kOfxPluginPropFilePath, false));
+            kSourcePath.append("/Contents/Resources/");
+            kSourcePath.append(_plugin);
+            kSourcePath.append(".cl");
+            std::ifstream f;
+            f.open(kSourcePath.c_str());
+            std::ostringstream s;
+            s << f.rdbuf();
+            f.close();
+            if (!s.str().empty()) {
+                kSource = s.str();
+            } else {
+                std::cout << "Failed to read OpenCL kernel!" << std::endl;
+            }
+        }
+        if (!kSource.empty()) {
+            cl::Program::Sources sources(1, std::make_pair(kSource.c_str(), kSource.length()+1));
+            _program = cl::Program(_context,sources);
+            std::string buildOptions;
+
+            std::vector<cl::Device> platformDevices = _context.getInfo<CL_CONTEXT_DEVICES>();
+            if(_program.build(platformDevices, buildOptions.c_str()) == CL_BUILD_PROGRAM_FAILURE){
+                setPersistentMessage(OFX::Message::eMessageError, "", "Failed to build kernel, see terminal for log");
+                std::cout << "Failed to build OpenCL kernel: "<< _program.getBuildInfo<CL_PROGRAM_BUILD_LOG>(devices[device]) << std::endl;
+            }
+        }
     } else {
         std::cout << "No OpenCL devices found!" << std::endl;
     }
@@ -117,7 +120,7 @@ OCLPluginHelperBase::changedParam(const OFX::InstanceChangedArgs &args, const st
         return;
     }
     if (paramName == kParamOCLDevice) {
-        setupContext();
+        setupContext(true, "");
     }
     clearPersistentMessage();
 }

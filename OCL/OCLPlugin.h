@@ -42,7 +42,7 @@ public:
     virtual void changedParam(const OFX::InstanceChangedArgs &args, const std::string &paramName) OVERRIDE;
     static OFX::PageParamDescriptor* describeInContextBegin(OFX::ImageEffectDescriptor &desc, OFX::ContextEnum context);
     static void describeInContextEnd(OFX::ImageEffectDescriptor &desc, OFX::ContextEnum context, OFX::PageParamDescriptor* page);
-    void setupContext();
+    void setupContext(bool context, std::string kernelString);
     static std::vector<cl::Device> getDevices();
 
 protected:

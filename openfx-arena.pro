@@ -41,7 +41,9 @@ OTHER_FILES += \
             OCL/Duotone/Info.plist \
             OCL/Edge/net.fxarena.opencl.Edge.cl \
             OCL/Edge/Makefile \
-            OCL/Edge/Info.plist
+            OCL/Edge/Info.plist \
+            OCL/CLFilter/Makefile \
+            OCL/CLFilter/Info.plist
 INCLUDEPATH += . \
             SupportExt \
             OpenFX/Support/include \
@@ -183,4 +185,5 @@ SOURCES += \
             OCL/Bulge/Bulge.cpp \
             OCL/FishEye/FishEye.cpp \
             OCL/Warp/Warp.cpp \
-            OCL/Bokeh/Bokeh.cpp
+            OCL/Bokeh/Bokeh.cpp \
+            OCL/CLFilter/CLFilter.cpp

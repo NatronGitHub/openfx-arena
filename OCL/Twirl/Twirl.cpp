@@ -106,7 +106,7 @@ void TwirlCLPlugin::changedParam(const OFX::InstanceChangedArgs &args, const std
     }
 
     if (paramName == kParamOCLDevice) {
-        setupContext();
+        setupContext(true, "");
     }
     else if (paramName == kParamTransformResetCenterOld) {
         resetCenter(args.time);
