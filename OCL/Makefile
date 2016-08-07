@@ -8,7 +8,6 @@ PLUGINOBJECTS = \
         Ripple.o \
         Sharpen.o \
         Twirl.o \
-        CLFilter.o \
         OCLPlugin.o \
         ofxsTransform3x3.o \
         ofxsTransformInteractCustom.o \
@@ -38,8 +37,7 @@ Cartoon/net.fxarena.opencl.Cartoon.svg \
 Cartoon/net.fxarena.opencl.Cartoon.cl \
 Duotone/net.fxarena.opencl.Duotone.png \
 Duotone/net.fxarena.opencl.Duotone.svg \
-Duotone/net.fxarena.opencl.Duotone.cl \
-CLFilter/net.fxarena.opencl.CLFilter.png
+Duotone/net.fxarena.opencl.Duotone.cl 
 
 VPATH += \
 Bulge \
@@ -48,8 +46,7 @@ Duotone \
 Edge \
 Ripple \
 Sharpen \
-Twirl \
-CLFilter
+Twirl
 
 CXXFLAGS += \
 -IBulge \
@@ -58,8 +55,7 @@ CXXFLAGS += \
 -IEdge \
 -IRipple \
 -ISharpen \
--ITwirl \
--ICLFilter
+-ITwirl
 
 include $(SRCDIR)/Makefile.master
 
