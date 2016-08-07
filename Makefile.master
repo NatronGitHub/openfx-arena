@@ -63,7 +63,7 @@ ifeq ($(OS),Darwin)
 OPENCL_LINKFLAGS += -framework OpenCL
 else
 OPENCL_CXXFLAGS += -I$(SRCDIR)/OCL/OpenCL
-OPENCL_LINKFLAGS += -lOpenCL -L$(SRCDIR)/OCL/OpenCL/lib
+OPENCL_LINKFLAGS += -lOpenCL -L$(SRCDIR)/OCL/OpenCL/lib$(BITS)
 endif
 
 # mingw
