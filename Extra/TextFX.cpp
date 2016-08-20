@@ -37,7 +37,7 @@
 #define kPluginGrouping "Draw"
 #define kPluginIdentifier "net.fxarena.openfx.Text"
 #define kPluginVersionMajor 6
-#define kPluginVersionMinor 0
+#define kPluginVersionMinor 1
 
 #define kSupportsTiles 0
 #define kSupportsMultiResolution 0
@@ -83,9 +83,14 @@
 #define kParamWrapDefault 0
 
 #define kParamAlign "align"
-#define kParamAlignLabel "Align"
-#define kParamAlignHint "Text align. Disabled if custom position is enabled."
+#define kParamAlignLabel "Horizontal align"
+#define kParamAlignHint "Horizontal text align. Disabled if custom position is enabled."
 #define kParamAlignDefault 0
+
+#define kParamVAlign "valign"
+#define kParamVAlignLabel "Vertical align"
+#define kParamVAlignHint "Vertical text align. Disabled if custom position is enabled."
+#define kParamVAlignDefault 0
 
 #define kParamMarkup "markup"
 #define kParamMarkupLabel "Markup"
@@ -224,6 +229,7 @@ private:
     OFX::BooleanParam *justify_;
     OFX::ChoiceParam *wrap_;
     OFX::ChoiceParam *align_;
+    OFX::ChoiceParam *valign_;
     OFX::BooleanParam *markup_;
     OFX::ChoiceParam *style_;
     OFX::BooleanParam *auto_;
@@ -268,6 +274,7 @@ TextFXPlugin::TextFXPlugin(OfxImageEffectHandle handle)
     justify_ = fetchBooleanParam(kParamJustify);
     wrap_ = fetchChoiceParam(kParamWrap);
     align_ = fetchChoiceParam(kParamAlign);
+    valign_ = fetchChoiceParam(kParamVAlign);
     markup_ = fetchBooleanParam(kParamMarkup);
     style_ = fetchChoiceParam(kParamStyle);
     auto_ = fetchBooleanParam(kParamAutoSize);
@@ -297,7 +304,7 @@ TextFXPlugin::TextFXPlugin(OfxImageEffectHandle handle)
     scaleUniform_ = fetchBooleanParam(kParamTransformScaleUniformOld);
 
     assert(text_ && fontSize_ && fontName_ && textColor_ && font_ && wrap_
-           && justify_ && align_ && markup_ && style_ && auto_ && stretch_ && weight_ && strokeColor_
+           && justify_ && align_ && valign_ && markup_ && style_ && auto_ && stretch_ && weight_ && strokeColor_
            && strokeWidth_ && strokeDash_ && strokeDashPattern_ && fontAA_ && subpixel_ && hintStyle_
            && hintMetrics_ && circleRadius_ && circleWords_ && letterSpace_ && canvas_
            && arcRadius_ && arcAngle_ && rotate_ && scale_ && position_ && move_ && txt_
@@ -424,7 +431,7 @@ void TextFXPlugin::render(const OFX::RenderArguments &args)
 
     // Get params
     double x, y, r, g, b, a, s_r, s_g, s_b, s_a, strokeWidth, strokeDashX, strokeDashY, strokeDashZ, circleRadius, arcRadius, arcAngle, rotate, scaleX, scaleY, skewX, skewY;
-    int fontSize, fontID, cwidth, cheight, wrap, align, style, stretch, weight, strokeDash, fontAA, subpixel, hintStyle, hintMetrics, circleWords, letterSpace;
+    int fontSize, fontID, cwidth, cheight, wrap, align, valign, style, stretch, weight, strokeDash, fontAA, subpixel, hintStyle, hintMetrics, circleWords, letterSpace;
     std::string text, fontName, font, txt;
     bool justify = false;
     bool markup = false;
@@ -441,6 +448,7 @@ void TextFXPlugin::render(const OFX::RenderArguments &args)
     justify_->getValueAtTime(args.time, justify);
     wrap_->getValueAtTime(args.time, wrap);
     align_->getValueAtTime(args.time, align);
+    valign_->getValueAtTime(args.time, valign);
     markup_->getValueAtTime(args.time, markup);
     style_->getValueAtTime(args.time, style);
     auto_->getValueAtTime(args.time, autoSize);
@@ -702,6 +710,19 @@ void TextFXPlugin::render(const OFX::RenderArguments &args)
         case 2:
             pango_layout_set_alignment (layout, PANGO_ALIGN_CENTER);
             break;
+        }
+
+        if (valign != 0) {
+            int text_width, text_height;
+            pango_layout_get_pixel_size(layout, &text_width, &text_height);
+            switch (valign) {
+            case 1:
+                cairo_move_to(cr, 0, (height-text_height)/2);
+                break;
+            case 2:
+                cairo_move_to(cr, 0, height-text_height);
+                break;
+            }
         }
 
         if (justify) {
@@ -1228,7 +1249,6 @@ void TextFXPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, Co
         param->appendOption("Char");
         param->appendOption("Word-Char");
         param->setDefault(kParamWrapDefault);
-        param->setLayoutHint(eLayoutHintNoNewLine, 1);
         param->setAnimates(false);
         page->addChild(*param);
     }
@@ -1240,6 +1260,18 @@ void TextFXPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, Co
         param->appendOption("Right");
         param->appendOption("Center");
         param->setDefault(kParamAlignDefault);
+        param->setAnimates(false);
+        param->setLayoutHint(eLayoutHintNoNewLine, 1);
+        page->addChild(*param);
+    }
+    {
+        ChoiceParamDescriptor *param = desc.defineChoiceParam(kParamVAlign);
+        param->setLabel(kParamVAlignLabel);
+        param->setHint(kParamVAlignHint);
+        param->appendOption("Top");
+        param->appendOption("Center");
+        param->appendOption("Bottom");
+        param->setDefault(kParamVAlignDefault);
         param->setAnimates(false);
         param->setLayoutHint(OFX::eLayoutHintDivider);
         page->addChild(*param);
