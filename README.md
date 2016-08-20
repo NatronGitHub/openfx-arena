@@ -6,6 +6,8 @@ A set of [OpenFX](http://openfx.sf.net) plugins designed for [Natron](http://nat
 Extra.ofx
 =========
 
+Various plugins designed for Natron.
+
  * OpenRaster
  * ReadCDR
  * ReadKrita
@@ -17,6 +19,8 @@ Extra.ofx
 
 Magick.ofx
 ==========
+
+Various plugins using ImageMagick.
 
  * Arc
  * Charcoal
@@ -41,6 +45,8 @@ Magick.ofx
 
 OCL.ofx
 =======
+
+Various plugins using OpenCL.
 
 [Read more](OCL/README.md)
 
