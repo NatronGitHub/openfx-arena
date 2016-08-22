@@ -185,6 +185,7 @@ ofxsTransformDescribeParams(OFX::ImageEffectDescriptor &desc,
         BooleanParamDescriptor* param = desc.defineBooleanParam(oldParams ? kParamTransformInteractCustomiveOld : kParamTransformInteractCustomive);
         param->setLabel(kParamTransformInteractCustomiveLabel);
         param->setHint(kParamTransformInteractCustomiveHint);
+        param->setDefault(true);
         param->setEvaluateOnChange(false);
         param->setLayoutHint(OFX::eLayoutHintDivider);
         if (group) {
