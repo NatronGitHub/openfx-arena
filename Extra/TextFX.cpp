@@ -37,7 +37,7 @@
 #define kPluginGrouping "Draw"
 #define kPluginIdentifier "net.fxarena.openfx.Text"
 #define kPluginVersionMajor 6
-#define kPluginVersionMinor 1
+#define kPluginVersionMinor 2
 
 #define kSupportsTiles 0
 #define kSupportsMultiResolution 0
@@ -193,6 +193,11 @@
 #define kParamTextFileLabel "File"
 #define kParamTextFileHint "Use text from filename."
 
+#define kParamCenterInteract "centerInteract"
+#define kParamCenterInteractLabel "Center Interact"
+#define kParamCenterInteractHint "Center the text in the interact."
+#define kParamCenterInteractDefault false
+
 using namespace OFX;
 static bool gHostIsNatron = false;
 
@@ -257,6 +262,7 @@ private:
     OFX::DoubleParam *skewX_;
     OFX::DoubleParam *skewY_;
     OFX::BooleanParam *scaleUniform_;
+    OFX::BooleanParam *centerInteract_;
 };
 
 TextFXPlugin::TextFXPlugin(OfxImageEffectHandle handle)
@@ -302,13 +308,14 @@ TextFXPlugin::TextFXPlugin(OfxImageEffectHandle handle)
     skewX_ = fetchDoubleParam(kParamTransformSkewXOld);
     skewY_ = fetchDoubleParam(kParamTransformSkewYOld);
     scaleUniform_ = fetchBooleanParam(kParamTransformScaleUniformOld);
+    centerInteract_ = fetchBooleanParam(kParamCenterInteract);
 
     assert(text_ && fontSize_ && fontName_ && textColor_ && font_ && wrap_
            && justify_ && align_ && valign_ && markup_ && style_ && auto_ && stretch_ && weight_ && strokeColor_
            && strokeWidth_ && strokeDash_ && strokeDashPattern_ && fontAA_ && subpixel_ && hintStyle_
            && hintMetrics_ && circleRadius_ && circleWords_ && letterSpace_ && canvas_
            && arcRadius_ && arcAngle_ && rotate_ && scale_ && position_ && move_ && txt_
-           && skewX_ && skewY_ && scaleUniform_);
+           && skewX_ && skewY_ && scaleUniform_ && centerInteract_);
 
     // Setup selected font
     std::string fontString, fontCombo;
@@ -438,6 +445,7 @@ void TextFXPlugin::render(const OFX::RenderArguments &args)
     bool autoSize = false;
     bool move = false;
     bool scaleUniform = false;
+    bool centerInteract = false;
 
     text_->getValueAtTime(args.time, text);
     fontSize_->getValueAtTime(args.time, fontSize);
@@ -476,6 +484,7 @@ void TextFXPlugin::render(const OFX::RenderArguments &args)
     skewX_->getValueAtTime(args.time, skewX);
     skewY_->getValueAtTime(args.time, skewY);
     scaleUniform_->getValueAtTime(args.time, scaleUniform);
+    centerInteract_->getValueAtTime(args.time, centerInteract);
 
     double ytext = y*args.renderScale.y;
     double xtext = x*args.renderScale.x;
@@ -738,7 +747,17 @@ void TextFXPlugin::render(const OFX::RenderArguments &args)
         pango_layout_set_attributes(layout,alist);
 
     if (!autoSize && !markup && circleRadius==0 && arcAngle==0 && strokeWidth==0 && move) {
-        cairo_move_to(cr, xtext, ytext);
+        int moveX, moveY;
+        if (centerInteract) {
+            int text_width, text_height;
+            pango_layout_get_pixel_size(layout, &text_width, &text_height);
+            moveX=xtext-(text_width/2);
+            moveY=ytext-(text_height/2);
+        } else {
+            moveX=xtext;
+            moveY=ytext;
+        }
+        cairo_move_to(cr, moveX, moveY);
     }
 
     if (scaleX!=1.0||scaleY!=1.0) {
@@ -803,7 +822,17 @@ void TextFXPlugin::render(const OFX::RenderArguments &args)
             if (autoSize)
                 cairo_move_to(cr, std::floor((strokeWidth/2) * args.renderScale.x + 0.5), 0.0);
             else if (move) {
-                cairo_move_to(cr, xtext, ytext);
+                int moveX, moveY;
+                if (centerInteract) {
+                    int text_width, text_height;
+                    pango_layout_get_pixel_size(layout, &text_width, &text_height);
+                    moveX=xtext-(text_width/2);
+                    moveY=ytext-(text_height/2);
+                } else {
+                    moveX=xtext;
+                    moveY=ytext;
+                }
+                cairo_move_to(cr, moveX, moveY);
             }
 
             pango_cairo_layout_path(cr, layout);
@@ -839,14 +868,34 @@ void TextFXPlugin::render(const OFX::RenderArguments &args)
 #if defined(_WIN32) || defined(__WIN32__) || defined(WIN32)
                 cairo_new_path(cr);
                 if (move) {
-                    cairo_move_to(cr, xtext, ytext);
+                    int moveX, moveY;
+                    if (centerInteract) {
+                        int text_width, text_height;
+                        pango_layout_get_pixel_size(layout, &text_width, &text_height);
+                        moveX=xtext-(text_width/2);
+                        moveY=ytext-(text_height/2);
+                    } else {
+                        moveX=xtext;
+                        moveY=ytext;
+                    }
+                    cairo_move_to(cr, moveX, moveY);
                 }
                 pango_cairo_layout_path(cr, layout);
                 cairo_set_source_rgba(cr, r, g, b, a);
                 cairo_fill(cr);
 #else
                 if (!autoSize && move) {
-                    cairo_move_to(cr, xtext, ytext);
+                    int moveX, moveY;
+                    if (centerInteract) {
+                        int text_width, text_height;
+                        pango_layout_get_pixel_size(layout, &text_width, &text_height);
+                        moveX=xtext-(text_width/2);
+                        moveY=ytext-(text_height/2);
+                    } else {
+                        moveX=xtext;
+                        moveY=ytext;
+                    }
+                    cairo_move_to(cr, moveX, moveY);
                 }
                 cairo_set_source_rgba(cr, r, g, b, a);
                 pango_cairo_update_layout(cr, layout);
@@ -1192,6 +1241,15 @@ void TextFXPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, Co
 #else
         param->setDefault(kParamAutoSizeDefault);
 #endif
+        param->setLayoutHint(eLayoutHintNoNewLine, 1);
+        page->addChild(*param);
+    }
+    {
+        BooleanParamDescriptor *param = desc.defineBooleanParam(kParamCenterInteract);
+        param->setLabel(kParamCenterInteractLabel);
+        param->setHint(kParamCenterInteractHint);
+        param->setDefault(kParamCenterInteractDefault);
+        param->setAnimates(false);
         page->addChild(*param);
     }
     {
