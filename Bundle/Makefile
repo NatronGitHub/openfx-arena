@@ -10,8 +10,11 @@ ifneq ($(LICENSE),COMMERCIAL)
         PLUGINOBJECTS += ReadPDF.o
 endif
 
+ifneq ($(IM),68)
+        PLUGINOBJECTS += Texture.o
+endif
+
 PLUGINOBJECTS += \
-        Texture.o \
         Tile.o \
         Reflection.o \
         Arc.o \
@@ -54,8 +57,6 @@ endif
 RESOURCES += \
 ../Magick/Extra.png \
 ../Magick/Extra.svg \
-../Magick/net.fxarena.openfx.Texture.png \
-../Magick/net.fxarena.openfx.Texture.svg \
 ../Magick/net.fxarena.openfx.Tile.png \
 ../Magick/net.fxarena.openfx.Tile.svg \
 ../Magick/net.fxarena.openfx.Reflection.png \
@@ -90,6 +91,10 @@ RESOURCES += \
 ../Magick/fr.inria.openfx.ReadMisc.svg \
 #../Magick/net.fxarena.openfx.Text.png \
 #../Magick/net.fxarena.openfx.Text.svg
+
+ifneq ($(IM),68)
+        RESOURCES += ../Magick/net.fxarena.openfx.Texture.png ../Magick/net.fxarena.openfx.Texture.svg
+endif
 
 SRCDIR = ..
 

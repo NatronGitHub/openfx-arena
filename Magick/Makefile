@@ -1,5 +1,7 @@
+ifneq ($(IM),68)
+        PLUGINOBJECTS += Texture.o
+endif
 PLUGINOBJECTS = \
-        Texture.o \
         Tile.o \
         Reflection.o \
         Arc.o \
@@ -27,8 +29,6 @@ PLUGINNAME = Magick
 RESOURCES = \
 Extra.png \
 Extra.svg \
-net.fxarena.openfx.Texture.png \
-net.fxarena.openfx.Texture.svg \
 net.fxarena.openfx.Tile.png \
 net.fxarena.openfx.Tile.svg \
 net.fxarena.openfx.Reflection.png \
@@ -63,6 +63,10 @@ fr.inria.openfx.ReadMisc.png \
 fr.inria.openfx.ReadMisc.svg \
 net.fxarena.openfx.Text.png \
 net.fxarena.openfx.Text.svg
+
+ifneq ($(IM),68)
+        RESOURCES += ../Magick/net.fxarena.openfx.Texture.png ../Magick/net.fxarena.openfx.Texture.svg
+endif
 
 SRCDIR = ..
 include $(SRCDIR)/Makefile.master
