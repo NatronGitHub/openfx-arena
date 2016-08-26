@@ -185,11 +185,13 @@ void TexturePlugin::render(const OFX::RenderArguments &args)
     enableOpenMP_->getValueAtTime(args.time, enableOpenMP);
 
     // OpenMP
+#ifndef LEGACYIM
     unsigned int threads = 1;
     if (_hasOpenMP && enableOpenMP)
         threads = OFX::MultiThread::getNumCPUs();
 
     Magick::ResourceLimits::thread(threads);
+#endif
 
     // Generate empty image
     int width = dstRod.x2-dstRod.x1;

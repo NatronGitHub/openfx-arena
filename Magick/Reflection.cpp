@@ -201,11 +201,13 @@ void ReflectionPlugin::render(const OFX::RenderArguments &args)
     Magick::Image image4;
 
     // OpenMP
+#ifndef LEGACYIM
     unsigned int threads = 1;
     if (_hasOpenMP && enableOpenMP)
         threads = OFX::MultiThread::getNumCPUs();
 
     Magick::ResourceLimits::thread(threads);
+#endif
 
     // read source image
     Magick::Image container(Magick::Geometry(srcWidth,srcHeight),Magick::Color("rgba(0,0,0,0)"));

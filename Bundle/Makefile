@@ -11,7 +11,12 @@ ifneq ($(LICENSE),COMMERCIAL)
 endif
 
 ifneq ($(IM),68)
+ifneq ($(LEGACYIM),1)
         PLUGINOBJECTS += Texture.o
+endif
+endif
+ifneq ($(LEGACYIM),1)
+        PLUGINOBJECTS += Sketch.o Polaroid.o Edges.o
 endif
 
 PLUGINOBJECTS += \
@@ -26,9 +31,6 @@ PLUGINOBJECTS += \
         Charcoal.o \
         Oilpaint.o \
         ReadPSD.o \
-        Sketch.o \
-        Polaroid.o \
-        Edges.o \
         Modulate.o \
         ReadMisc.o \
         Text.o \
@@ -79,12 +81,6 @@ RESOURCES += \
 ../Magick/net.fxarena.openfx.Oilpaint.svg \
 ../Magick/net.fxarena.openfx.ReadPSD.png \
 ../Magick/net.fxarena.openfx.ReadPSD.svg \
-../Magick/net.fxarena.openfx.Sketch.png \
-../Magick/net.fxarena.openfx.Sketch.svg \
-../Magick/net.fxarena.openfx.Polaroid.png \
-../Magick/net.fxarena.openfx.Polaroid.svg \
-../Magick/net.fxarena.openfx.Edges.png \
-../Magick/net.fxarena.openfx.Edges.svg \
 ../Magick/net.fxarena.openfx.Modulate.png \
 ../Magick/net.fxarena.openfx.Modulate.svg \
 ../Magick/fr.inria.openfx.ReadMisc.png \
@@ -92,8 +88,22 @@ RESOURCES += \
 #../Magick/net.fxarena.openfx.Text.png \
 #../Magick/net.fxarena.openfx.Text.svg
 
+ifneq ($(LEGACYIM),1)
+        RESOURCES += \
+        ../Magick/net.fxarena.openfx.Sketch.png \
+        ../Magick/net.fxarena.openfx.Sketch.svg \
+        ../Magick/net.fxarena.openfx.Polaroid.png \
+        ../Magick/net.fxarena.openfx.Polaroid.svg \
+        ../Magick/net.fxarena.openfx.Edges.png \
+        ../Magick/net.fxarena.openfx.Edges.svg
+endif
+
 ifneq ($(IM),68)
-        RESOURCES += ../Magick/net.fxarena.openfx.Texture.png ../Magick/net.fxarena.openfx.Texture.svg
+ifneq ($(LEGACYIM),1)
+        RESOURCES += \
+        ../Magick/net.fxarena.openfx.Texture.png \
+        ../Magick/net.fxarena.openfx.Texture.svg
+endif
 endif
 
 SRCDIR = ..
@@ -121,6 +131,10 @@ endif
 
 ifeq ($(IM),7)
         CXXFLAGS += -DIM7
+endif
+
+ifeq ($(LEGACYIM),1)
+        CXXFLAGS += -DLEGACYIM
 endif
 
 PNGVERSION = a70c086077c0eaecbae3845e4da4424de5f43361

@@ -204,9 +204,11 @@ TextPlugin::TextPlugin(OfxImageEffectHandle handle)
 {
     Magick::InitializeMagick(NULL);
 
+#ifndef LEGACYIM
     std::string delegates = MagickCore::GetMagickDelegates();
     if (delegates.find("freetype") != std::string::npos)
         has_freetype = true;
+#endif
 
     srcClip_ = fetchClip(kOfxImageEffectSimpleSourceClipName);
     assert(!srcClip_ || srcClip_->getPixelComponents() == OFX::ePixelComponentRGB);
@@ -375,11 +377,13 @@ void TextPlugin::render(const OFX::RenderArguments &args)
         fontName=fontOverride;
 
     // OpenMP
+#ifndef LEGACYIM
     unsigned int threads = 1;
     if (_hasOpenMP && enableOpenMP)
         threads = OFX::MultiThread::getNumCPUs();
 
     Magick::ResourceLimits::thread(threads);
+#endif
 
     // Generate empty image
     int width = dstRod.x2-dstRod.x1;
@@ -452,9 +456,11 @@ void TextPlugin::render(const OFX::RenderArguments &args)
     draw.push_back(Magick::DrawableText(xtext, ytext, text));
     draw.push_back(Magick::DrawableFillColor(Magick::Color(textRGBA.str())));
 
+#ifndef LEGACYIM
     draw.push_back(Magick::DrawableTextInterlineSpacing(interlineSpacing * args.renderScale.x));
     draw.push_back(Magick::DrawableTextInterwordSpacing(interwordSpacing * args.renderScale.x));
     draw.push_back(Magick::DrawableTextKerning(textSpacing * args.renderScale.x));
+#endif
 
     if (strokeWidth>0) {
         draw.push_back(Magick::DrawableStrokeColor(Magick::Color(strokeRGBA.str())));

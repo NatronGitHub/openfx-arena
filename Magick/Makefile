@@ -1,5 +1,10 @@
 ifneq ($(IM),68)
+ifneq ($(LEGACYIM),1)
         PLUGINOBJECTS += Texture.o
+endif
+endif
+ifneq ($(LEGACYIM),1)
+        PLUGINOBJECTS += Sketch.o Polaroid.o Edges.o
 endif
 PLUGINOBJECTS = \
         Tile.o \
@@ -13,9 +18,6 @@ PLUGINOBJECTS = \
         Charcoal.o \
         Oilpaint.o \
         ReadPSD.o \
-        Sketch.o \
-        Polaroid.o \
-        Edges.o \
         Modulate.o \
         ReadMisc.o \
         Text.o \
@@ -51,12 +53,6 @@ net.fxarena.openfx.Oilpaint.png \
 net.fxarena.openfx.Oilpaint.svg \
 net.fxarena.openfx.ReadPSD.png \
 net.fxarena.openfx.ReadPSD.svg \
-net.fxarena.openfx.Sketch.png \
-net.fxarena.openfx.Sketch.svg \
-net.fxarena.openfx.Polaroid.png \
-net.fxarena.openfx.Polaroid.svg \
-net.fxarena.openfx.Edges.png \
-net.fxarena.openfx.Edges.svg \
 net.fxarena.openfx.Modulate.png \
 net.fxarena.openfx.Modulate.svg \
 fr.inria.openfx.ReadMisc.png \
@@ -64,8 +60,22 @@ fr.inria.openfx.ReadMisc.svg \
 net.fxarena.openfx.Text.png \
 net.fxarena.openfx.Text.svg
 
+ifneq ($(LEGACYIM),1)
+        RESOURCES += \
+        net.fxarena.openfx.Sketch.png \
+        net.fxarena.openfx.Sketch.svg \
+        net.fxarena.openfx.Polaroid.png \
+        net.fxarena.openfx.Polaroid.svg \
+        net.fxarena.openfx.Edges.png \
+        net.fxarena.openfx.Edges.svg
+endif
+
 ifneq ($(IM),68)
-        RESOURCES += net.fxarena.openfx.Texture.png net.fxarena.openfx.Texture.svg
+ifneq ($(LEGACYIM),1)
+        RESOURCES += \
+        net.fxarena.openfx.Texture.png \
+        net.fxarena.openfx.Texture.svg
+endif
 endif
 
 SRCDIR = ..
@@ -79,3 +89,6 @@ ifeq ($(IM),7)
 	CXXFLAGS += -DIM7
 endif
 
+ifeq ($(LEGACYIM),1)
+        CXXFLAGS += -DLEGACYIM
+endif

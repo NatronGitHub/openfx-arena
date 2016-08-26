@@ -261,9 +261,11 @@ false
 {
     Magick::InitializeMagick(NULL);
 
+#ifndef LEGACYIM
     std::string delegates = MagickCore::GetMagickDelegates();
     if (delegates.find("lcms") != std::string::npos)
         _hasLCMS = true;
+#endif
 
     _iccIn = fetchChoiceParam(kParamICCIn);
     _iccOut = fetchChoiceParam(kParamICCOut);
@@ -432,8 +434,10 @@ void ReadPSDPlugin::decodePlane(const std::string& filename, OfxTime time, int /
             iccProfileGRAY.erase(0,2);
         }
         // blackpoint
+#ifndef LEGACYIM
         if (iccBlack)
             image.blackPointCompensation(true);
+#endif
         // render intent
         switch (iccRender) {
         case 1: // SaturationIntent
@@ -465,10 +469,12 @@ void ReadPSDPlugin::decodePlane(const std::string& filename, OfxTime time, int /
                 if (!iccProfileRGB.empty())
                     _getProFiles(profileDef, false, iccProfileRGB,1);
                 break;
+#ifndef LEGACYIM
             case Magick::scRGBColorspace:
                 if (!iccProfileRGB.empty())
                     _getProFiles(profileDef, false, iccProfileRGB,1);
                 break;
+#endif
             case Magick::CMYKColorspace:
                 if (!iccProfileCMYK.empty())
                     _getProFiles(profileDef, false, iccProfileCMYK,2);

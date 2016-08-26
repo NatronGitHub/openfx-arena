@@ -182,13 +182,16 @@ void ModulatePlugin::render(const OFX::RenderArguments &args)
     int height = srcRod.y2-srcRod.y1;
 
     // OpenMP
+#ifndef LEGACYIM
     unsigned int threads = 1;
     if (_hasOpenMP && enableOpenMP)
         threads = OFX::MultiThread::getNumCPUs();
 
     Magick::ResourceLimits::thread(threads);
+#endif
 
     // OpenCL
+#ifndef LEGACYIM
     if (_hasOpenCL && enableOpenCL) {
 #ifdef IM7
         Magick::EnableOpenCL();
@@ -198,6 +201,7 @@ void ModulatePlugin::render(const OFX::RenderArguments &args)
     }
     else if (_hasOpenCL && !enableOpenCL)
         Magick::DisableOpenCL();
+#endif
 
     // read image
     Magick::Image image(Magick::Geometry(width,height),Magick::Color("rgba(0,0,0,0)"));

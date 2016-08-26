@@ -174,11 +174,13 @@ void WavePlugin::render(const OFX::RenderArguments &args)
     int height = srcRod.y2-srcRod.y1;
 
     // OpenMP
+#ifndef LEGACYIM
     unsigned int threads = 1;
     if (_hasOpenMP && enableOpenMP)
         threads = OFX::MultiThread::getNumCPUs();
 
     Magick::ResourceLimits::thread(threads);
+#endif
 
     // read image
     Magick::Image image(Magick::Geometry(width,height),Magick::Color("rgba(0,0,0,0)"));
