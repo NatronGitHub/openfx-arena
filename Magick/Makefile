@@ -65,7 +65,7 @@ net.fxarena.openfx.Text.png \
 net.fxarena.openfx.Text.svg
 
 ifneq ($(IM),68)
-        RESOURCES += ../Magick/net.fxarena.openfx.Texture.png ../Magick/net.fxarena.openfx.Texture.svg
+        RESOURCES += net.fxarena.openfx.Texture.png net.fxarena.openfx.Texture.svg
 endif
 
 SRCDIR = ..
