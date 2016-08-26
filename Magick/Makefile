@@ -1,12 +1,8 @@
-ifneq ($(IM),68)
-ifneq ($(LEGACYIM),1)
-        PLUGINOBJECTS += Texture.o
-endif
-endif
 ifneq ($(LEGACYIM),1)
         PLUGINOBJECTS += Sketch.o Polaroid.o Edges.o
 endif
 PLUGINOBJECTS = \
+        Texture.o \
         Tile.o \
         Reflection.o \
         Arc.o \
@@ -58,7 +54,9 @@ net.fxarena.openfx.Modulate.svg \
 fr.inria.openfx.ReadMisc.png \
 fr.inria.openfx.ReadMisc.svg \
 net.fxarena.openfx.Text.png \
-net.fxarena.openfx.Text.svg
+net.fxarena.openfx.Text.svg \
+net.fxarena.openfx.Texture.png \
+net.fxarena.openfx.Texture.svg
 
 ifneq ($(LEGACYIM),1)
         RESOURCES += \
@@ -68,14 +66,6 @@ ifneq ($(LEGACYIM),1)
         net.fxarena.openfx.Polaroid.svg \
         net.fxarena.openfx.Edges.png \
         net.fxarena.openfx.Edges.svg
-endif
-
-ifneq ($(IM),68)
-ifneq ($(LEGACYIM),1)
-        RESOURCES += \
-        net.fxarena.openfx.Texture.png \
-        net.fxarena.openfx.Texture.svg
-endif
 endif
 
 SRCDIR = ..
@@ -90,5 +80,9 @@ ifeq ($(IM),7)
 endif
 
 ifeq ($(LEGACYIM),1)
-        CXXFLAGS += -DLEGACYIM
+        CXXFLAGS += -DLEGACYIM -DNOMAGICKSEED
+endif
+
+ifeq ($(IM),68)
+        CXXFLAGS += -DNOMAGICKSEED
 endif

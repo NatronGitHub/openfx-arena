@@ -199,7 +199,9 @@ void TexturePlugin::render(const OFX::RenderArguments &args)
     Magick::Image image(Magick::Geometry(width,height),Magick::Color("rgba(0,0,0,0)"));
 
     // Set seed
+#ifndef NOMAGICKSEED
     Magick::SetRandomSeed(hash((unsigned)(args.time)^seed));
+#endif
 
     // generate background
     try {

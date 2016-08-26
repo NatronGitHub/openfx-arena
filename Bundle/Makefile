@@ -10,16 +10,12 @@ ifneq ($(LICENSE),COMMERCIAL)
         PLUGINOBJECTS += ReadPDF.o
 endif
 
-ifneq ($(IM),68)
-ifneq ($(LEGACYIM),1)
-        PLUGINOBJECTS += Texture.o
-endif
-endif
 ifneq ($(LEGACYIM),1)
         PLUGINOBJECTS += Sketch.o Polaroid.o Edges.o
 endif
 
 PLUGINOBJECTS += \
+        Texture.o \
         Tile.o \
         Reflection.o \
         Arc.o \
@@ -85,6 +81,8 @@ RESOURCES += \
 ../Magick/net.fxarena.openfx.Modulate.svg \
 ../Magick/fr.inria.openfx.ReadMisc.png \
 ../Magick/fr.inria.openfx.ReadMisc.svg \
+../Magick/net.fxarena.openfx.Texture.png \
+../Magick/net.fxarena.openfx.Texture.svg \
 #../Magick/net.fxarena.openfx.Text.png \
 #../Magick/net.fxarena.openfx.Text.svg
 
@@ -96,14 +94,6 @@ ifneq ($(LEGACYIM),1)
         ../Magick/net.fxarena.openfx.Polaroid.svg \
         ../Magick/net.fxarena.openfx.Edges.png \
         ../Magick/net.fxarena.openfx.Edges.svg
-endif
-
-ifneq ($(IM),68)
-ifneq ($(LEGACYIM),1)
-        RESOURCES += \
-        ../Magick/net.fxarena.openfx.Texture.png \
-        ../Magick/net.fxarena.openfx.Texture.svg
-endif
 endif
 
 SRCDIR = ..
@@ -134,7 +124,11 @@ ifeq ($(IM),7)
 endif
 
 ifeq ($(LEGACYIM),1)
-        CXXFLAGS += -DLEGACYIM
+        CXXFLAGS += -DLEGACYIM -DNOMAGICKSEED
+endif
+
+ifeq ($(IM),68)
+        CXXFLAGS += -DNOMAGICKSEED
 endif
 
 PNGVERSION = a70c086077c0eaecbae3845e4da4424de5f43361
