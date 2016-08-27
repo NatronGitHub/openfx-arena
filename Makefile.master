@@ -47,6 +47,10 @@ SVG_LINKFLAGS = $(shell pkg-config librsvg-2.0 --libs --static)
 PANGO_CXXFLAGS = $(shell pkg-config pangocairo --cflags)
 PANGO_LINKFLAGS = $(shell pkg-config pangocairo --libs --static)
 
+# glib
+GLIB_CXXFLAGS = $(shell pkg-config glib-2.0 --cflags)
+GLIB_LINKFLAGS = $(shell pkg-config glib-2.0 --libs --static)
+
 # cairo
 CAIRO_CXXFLAGS = $(shell pkg-config cairo --cflags)
 CAIRO_LINKFLAGS += $(shell pkg-config cairo --libs --static)
