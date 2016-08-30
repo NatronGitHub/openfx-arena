@@ -19,7 +19,7 @@
 #define kPluginGrouping "Extra/Distort"
 #define kPluginIdentifier "net.fxarena.openfx.Arc"
 #define kPluginVersionMajor 4
-#define kPluginVersionMinor 1
+#define kPluginVersionMinor 2
 
 #define kParamVPixel "pixel"
 #define kParamVPixelLabel "Virtual Pixel"
@@ -62,6 +62,11 @@
 #define kParamOpenMPHint "Enable/Disable OpenMP support. This will enable the plugin to use as many threads as allowed by host."
 #define kParamOpenMPDefault false
 
+#define kParamFlip "flip"
+#define kParamFlipLabel "Flip"
+#define kParamFlipHint "Flip image"
+#define kParamFlipDefault false
+
 using namespace OFX;
 
 static bool _hasOpenMP = false;
@@ -83,6 +88,7 @@ private:
     OFX::DoubleParam *arcBottomRadius_;
     OFX::BooleanParam *matte_;
     OFX::BooleanParam *enableOpenMP_;
+    OFX::BooleanParam *flip_;
 };
 
 ArcPlugin::ArcPlugin(OfxImageEffectHandle handle)
@@ -103,8 +109,9 @@ ArcPlugin::ArcPlugin(OfxImageEffectHandle handle)
     arcBottomRadius_ = fetchDoubleParam(kParamArcBottomRadius);
     matte_ = fetchBooleanParam(kParamMatte);
     enableOpenMP_ = fetchBooleanParam(kParamOpenMP);
+    flip_ = fetchBooleanParam(kParamFlip);
 
-    assert(vpixel_ && arcAngle_ && arcRotate_ && arcTopRadius_&& arcBottomRadius_ && matte_ && enableOpenMP_);
+    assert(vpixel_ && arcAngle_ && arcRotate_ && arcTopRadius_&& arcBottomRadius_ && matte_ && enableOpenMP_ && flip_);
 }
 
 ArcPlugin::~ArcPlugin()
@@ -187,6 +194,7 @@ void ArcPlugin::render(const OFX::RenderArguments &args)
     double arcAngle,arcRotate,arcTopRadius,arcBottomRadius;
     bool matte = false;
     bool enableOpenMP = false;
+    bool flip = false;
     vpixel_->getValueAtTime(args.time, vpixel);
     arcAngle_->getValueAtTime(args.time, arcAngle);
     arcRotate_->getValueAtTime(args.time, arcRotate);
@@ -194,6 +202,7 @@ void ArcPlugin::render(const OFX::RenderArguments &args)
     arcBottomRadius_->getValueAtTime(args.time, arcBottomRadius);
     matte_->getValueAtTime(args.time, matte);
     enableOpenMP_->getValueAtTime(args.time, enableOpenMP);
+    flip_->getValueAtTime(args.time, flip);
 
     // setup
     int width = srcRod.x2-srcRod.x1;
@@ -295,10 +304,14 @@ void ArcPlugin::render(const OFX::RenderArguments &args)
     }
 
     // distort
+    if (flip)
+        image.flip();
     if (numArgs==2)
         image.distort(Magick::ArcDistortion, numArgs, distortArgs1, Magick::MagickTrue);
     else if (numArgs==4)
         image.distort(Magick::ArcDistortion, numArgs, distortArgs2, Magick::MagickTrue);
+    if (flip)
+        image.flip();
 
     // scale
     std::ostringstream scaleW;
@@ -428,11 +441,19 @@ void ArcPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, Conte
         page->addChild(*param);
     }
     {
+        BooleanParamDescriptor *param = desc.defineBooleanParam(kParamFlip);
+        param->setLabel(kParamFlipLabel);
+        param->setHint(kParamFlipHint);
+        param->setDefault(kParamFlipDefault);
+        param->setAnimates(false);
+        page->addChild(*param);
+    }
+    {
         BooleanParamDescriptor *param = desc.defineBooleanParam(kParamMatte);
         param->setLabel(kParamMatteLabel);
         param->setHint(kParamMatteHint);
         param->setDefault(kParamMatteDefault);
-        param->setAnimates(true);
+        param->setAnimates(false);
         page->addChild(*param);
     }
     {
