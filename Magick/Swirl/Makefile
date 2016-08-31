@@ -1,13 +1,6 @@
-PLUGINOBJECTS = \
-        Swirl.o \
-	MagickPlugin.o
-
 PLUGINNAME = Swirl
-
-RESOURCES = \
-net.fxarena.openfx.Swirl.png \
-net.fxarena.openfx.Swirl.svg
-
+PLUGINOBJECTS = \
+        $(PLUGINNAME).o \
+        MagickPlugin.o
 SRCDIR = ../..
 include $(SRCDIR)/Magick/Makefile.Magick
-

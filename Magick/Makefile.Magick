@@ -1,4 +1,6 @@
-RESOURCES += \
+RESOURCES = \
+net.fxarena.openfx.$(PLUGINNAME).png \
+net.fxarena.openfx.$(PLUGINNAME).svg \
 $(SRCDIR)/Magick/Extra.png \
 $(SRCDIR)/Magick/Extra.svg
 
