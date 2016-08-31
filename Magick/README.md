@@ -29,6 +29,9 @@ Requirements
 ============
 
  * ImageMagick 6.9.2+/7.0.1+ with Q32, HDRI, lcms(2), zlib, freetype
+   * Will build on older versions, but some features may not be available
+   * Quantum depth under 32 will work, but it not recommended, note that most distros ship 16
+   * Will work without HDRI, but it's not recommended
  * LittleCMS 2.0+
  * OpenColorIO 1.0.9
 
