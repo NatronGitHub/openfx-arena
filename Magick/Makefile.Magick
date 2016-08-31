@@ -1,3 +1,7 @@
+RESOURCES += \
+$(SRCDIR)/Magick/Extra.png \
+$(SRCDIR)/Magick/Extra.svg
+
 include $(SRCDIR)/Makefile.master
 
 VPATH += $(SRCDIR)/Magick
