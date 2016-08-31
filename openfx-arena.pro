@@ -43,7 +43,10 @@ OTHER_FILES += \
             OCL/Edge/Makefile \
             OCL/Edge/Info.plist \
             OCL/CLFilter/Makefile \
-            OCL/CLFilter/Info.plist
+            OCL/CLFilter/Info.plist \
+            Magick/Makefile.Magick \
+            Magick/Swirl/Makefile \
+            Magick/Swirl/Info.plist
 INCLUDEPATH += . \
             SupportExt \
             OpenFX/Support/include \
@@ -64,7 +67,8 @@ INCLUDEPATH += . \
             /usr/include/poppler/glib \
             OCL/OpenCL \
             OCL/OpenCL/CL \
-            OCL
+            OCL \
+            Magick
 HEADERS += \
             SupportExt/ofxsCoords.h \
             SupportExt/ofxsCopier.h \
@@ -144,7 +148,8 @@ HEADERS += \
             /usr/local/magick7/include/ImageMagick-7/Magick++/TypeMetric.h \
             /usr/local/magick7/include/ImageMagick-7/Magick++.h \
             OCL/ofxsTransformInteractCustom.h \
-            OCL/OCLPlugin.h
+            OCL/OCLPlugin.h \
+            Magick/MagickPlugin.h
 SOURCES += \
             Extra/OpenRaster.cpp \
             Extra/ReadSVG.cpp \
@@ -186,4 +191,6 @@ SOURCES += \
             OCL/FishEye/FishEye.cpp \
             OCL/Warp/Warp.cpp \
             OCL/Bokeh/Bokeh.cpp \
-            OCL/CLFilter/CLFilter.cpp
+            OCL/CLFilter/CLFilter.cpp \
+            Magick/MagickPlugin.cpp \
+            Magick/Swirl/Swirl.cpp
