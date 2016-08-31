@@ -1,0 +1,19 @@
+include $(SRCDIR)/Makefile.master
+
+VPATH += $(SRCDIR)/Magick
+
+CXXFLAGS  += $(MAGICK_CXXFLAGS) -I$(SRCDIR)/Magick
+LINKFLAGS += $(MAGICK_LINKFLAGS)
+
+ifeq ($(IM),7)
+        CXXFLAGS += -DIM7
+endif
+
+ifeq ($(LEGACYIM),1)
+        CXXFLAGS += -DLEGACYIM -DNOMAGICKSEED
+endif
+
+ifeq ($(IM),68)
+        CXXFLAGS += -DNOMAGICKSEED
+endif
+
