@@ -23,6 +23,8 @@ MagickPluginHelperBase::MagickPluginHelperBase(OfxImageEffectHandle handle)
     , _dstClip(0)
     , _srcClip(0)
     , _enableMP(0)
+    , _matte(0)
+    , _vpixel(0)
 {
     _dstClip = fetchClip(kOfxImageEffectOutputClipName);
     assert(_dstClip && _dstClip->getPixelComponents() == OFX::ePixelComponentRGBA);
@@ -30,7 +32,9 @@ MagickPluginHelperBase::MagickPluginHelperBase(OfxImageEffectHandle handle)
     assert(_srcClip && _srcClip->getPixelComponents() == OFX::ePixelComponentRGBA);
 
     _enableMP = fetchBooleanParam(kParamOpenMP);
-    assert(_enableMP);
+    _matte = fetchBooleanParam(kParamMatte);
+    _vpixel = fetchChoiceParam(kParamVPixel);
+    assert(_enableMP && _matte && _vpixel);
 }
 
 void
@@ -71,6 +75,42 @@ MagickPluginHelperBase::describeInContextBegin(OFX::ImageEffectDescriptor &desc,
         if (!_hasMP) {
             param->setEnabled(false);
         }
+        if (page) {
+            page->addChild(*param);
+        }
+    }
+    {
+        OFX::BooleanParamDescriptor *param = desc.defineBooleanParam(kParamMatte);
+        param->setLabel(kParamMatteLabel);
+        param->setHint(kParamMatteHint);
+        param->setDefault(kParamMatteDefault);
+        param->setAnimates(false);
+        if (page) {
+            page->addChild(*param);
+        }
+    }
+    {
+        OFX::ChoiceParamDescriptor *param = desc.defineChoiceParam(kParamVPixel);
+        param->setLabel(kParamVPixelLabel);
+        param->setHint(kParamVPixelHint);
+        param->appendOption("Undefined");
+        param->appendOption("Background");
+        param->appendOption("Black");
+        param->appendOption("CheckerTile");
+        param->appendOption("Dither");
+        param->appendOption("Edge");
+        param->appendOption("Gray");
+        param->appendOption("HorizontalTile");
+        param->appendOption("HorizontalTileEdge");
+        param->appendOption("Mirror");
+        param->appendOption("Random");
+        param->appendOption("Tile");
+        param->appendOption("Transparent");
+        param->appendOption("VerticalTile");
+        param->appendOption("VerticalTileEdge");
+        param->appendOption("White");
+        param->setDefault(kParamVPixelDefault);
+        param->setAnimates(false);
         param->setLayoutHint(OFX::eLayoutHintDivider);
         if (page) {
             page->addChild(*param);

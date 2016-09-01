@@ -28,6 +28,16 @@
 #define kParamOpenMPHint "Enable/Disable OpenMP support. This will enable the plugin to use as many threads as allowed by host."
 #define kParamOpenMPDefault false
 
+#define kParamMatte "matte"
+#define kParamMatteLabel "Matte"
+#define kParamMatteHint "Merge Alpha before applying effect."
+#define kParamMatteDefault false
+
+#define kParamVPixel "vpixel"
+#define kParamVPixelLabel "Virtual Pixel"
+#define kParamVPixelHint "Virtual Pixel Method."
+#define kParamVPixelDefault 12
+
 static bool _hasMP = false;
 
 class MagickPluginHelperBase
@@ -44,6 +54,8 @@ protected:
     OFX::Clip *_dstClip;
     OFX::Clip *_srcClip;
     OFX::BooleanParam *_enableMP;
+    OFX::BooleanParam *_matte;
+    OFX::ChoiceParam *_vpixel;
     int _renderscale;
 };
 
@@ -145,10 +157,17 @@ void MagickPluginHelper<SupportsRenderScale>::render(const OFX::RenderArguments 
     int width = args.renderWindow.x2 - args.renderWindow.x1;
     int height = args.renderWindow.y2 - args.renderWindow.y1;
 
+    // params
+    bool enableMP, matte;
+    int vpixel;
+    _enableMP->getValueAtTime(args.time, enableMP);
+    _matte->getValueAtTime(args.time, matte);
+    _vpixel->getValueAtTime(args.time, vpixel);
+
     // OpenMP
-#ifndef LEGACYIM
+#ifndef DISABLE_OPENMP
     unsigned int threads = 1;
-    if (_hasMP && _enableMP) {
+    if (_hasMP && enableMP) {
         threads = OFX::MultiThread::getNumCPUs();
     }
     Magick::ResourceLimits::thread(threads);
@@ -160,6 +179,65 @@ void MagickPluginHelper<SupportsRenderScale>::render(const OFX::RenderArguments 
     if (_srcClip && _srcClip->isConnected()) {
         image.read(width,height,"RGBA",Magick::FloatPixel,(float*)srcImg->getPixelData());
         image.flip();
+        switch (vpixel) {
+        case 0:
+            image.virtualPixelMethod(Magick::UndefinedVirtualPixelMethod);
+            break;
+        case 1:
+            image.virtualPixelMethod(Magick::BackgroundVirtualPixelMethod);
+            break;
+        case 2:
+            image.virtualPixelMethod(Magick::BlackVirtualPixelMethod);
+            break;
+        case 3:
+            image.virtualPixelMethod(Magick::CheckerTileVirtualPixelMethod);
+            break;
+        case 4:
+            image.virtualPixelMethod(Magick::DitherVirtualPixelMethod);
+            break;
+        case 5:
+            image.virtualPixelMethod(Magick::EdgeVirtualPixelMethod);
+            break;
+        case 6:
+            image.virtualPixelMethod(Magick::GrayVirtualPixelMethod);
+            break;
+        case 7:
+            image.virtualPixelMethod(Magick::HorizontalTileVirtualPixelMethod);
+            break;
+        case 8:
+            image.virtualPixelMethod(Magick::HorizontalTileEdgeVirtualPixelMethod);
+            break;
+        case 9:
+            image.virtualPixelMethod(Magick::MirrorVirtualPixelMethod);
+            break;
+        case 10:
+            image.virtualPixelMethod(Magick::RandomVirtualPixelMethod);
+            break;
+        case 11:
+            image.virtualPixelMethod(Magick::TileVirtualPixelMethod);
+            break;
+        case 12:
+            image.virtualPixelMethod(Magick::TransparentVirtualPixelMethod);
+            break;
+        case 13:
+            image.virtualPixelMethod(Magick::VerticalTileVirtualPixelMethod);
+            break;
+        case 14:
+            image.virtualPixelMethod(Magick::VerticalTileEdgeVirtualPixelMethod);
+            break;
+        case 15:
+            image.virtualPixelMethod(Magick::WhiteVirtualPixelMethod);
+            break;
+        }
+        if (matte) {
+#ifdef IM7
+            image.alpha(false);
+            image.alpha(true);
+#else
+            image.matte(false);
+            image.matte(true);
+#endif
+        }
         render(args, image);
         image.flip();
     }
