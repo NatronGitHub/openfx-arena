@@ -1,0 +1,56 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<!-- Generator: Adobe Illustrator 16.0.0, SVG Export Plug-In . SVG Version: 6.00 Build 0)  -->
+
+<svg
+   xmlns:dc="http://purl.org/dc/elements/1.1/"
+   xmlns:cc="http://creativecommons.org/ns#"
+   xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#"
+   xmlns:svg="http://www.w3.org/2000/svg"
+   xmlns="http://www.w3.org/2000/svg"
+   xmlns:sodipodi="http://sodipodi.sourceforge.net/DTD/sodipodi-0.dtd"
+   xmlns:inkscape="http://www.inkscape.org/namespaces/inkscape"
+   version="1.1"
+   id="Layer_1"
+   x="0px"
+   y="0px"
+   width="512px"
+   height="512px"
+   viewBox="0 0 512 512"
+   enable-background="new 0 0 512 512"
+   xml:space="preserve"
+   inkscape:version="0.47 r22583"
+   sodipodi:docname="roll-film-1.svg"><metadata
+   id="metadata3767"><rdf:RDF><cc:Work
+       rdf:about=""><dc:format>image/svg+xml</dc:format><dc:type
+         rdf:resource="http://purl.org/dc/dcmitype/StillImage" /><dc:title></dc:title></cc:Work></rdf:RDF></metadata><defs
+   id="defs3765"><inkscape:perspective
+     sodipodi:type="inkscape:persp3d"
+     inkscape:vp_x="0 : 256 : 1"
+     inkscape:vp_y="0 : 1000 : 0"
+     inkscape:vp_z="512 : 256 : 1"
+     inkscape:persp3d-origin="256 : 170.66667 : 1"
+     id="perspective3769" /></defs><sodipodi:namedview
+   pagecolor="#ffffff"
+   bordercolor="#666666"
+   borderopacity="1"
+   objecttolerance="10"
+   gridtolerance="10"
+   guidetolerance="10"
+   inkscape:pageopacity="0"
+   inkscape:pageshadow="2"
+   inkscape:window-width="700"
+   inkscape:window-height="491"
+   id="namedview3763"
+   showgrid="false"
+   inkscape:zoom="0.4609375"
+   inkscape:cx="256"
+   inkscape:cy="256"
+   inkscape:window-x="0"
+   inkscape:window-y="25"
+   inkscape:window-maximized="0"
+   inkscape:current-layer="Layer_1" />
+<path
+   d="M224,32C100.281,32,0,132.281,0,256s100.281,224,224,224s224-100.281,224-224S347.719,32,224,32z M324.719,142.422  C347.688,129.156,377,137.031,390.281,160c13.25,22.938,5.406,52.313-17.563,65.563c-23,13.281-52.344,5.391-65.594-17.547  C293.875,185.031,301.719,155.703,324.719,142.422z M123.313,369.563c-23,13.281-52.344,5.406-65.594-17.563  c-13.281-22.969-5.406-52.313,17.594-65.563c22.969-13.281,52.281-5.406,65.563,17.563  C154.125,326.938,146.25,356.313,123.313,369.563z M140.875,208c-13.25,22.953-42.625,30.828-65.563,17.563  c-23-13.266-30.844-42.609-17.594-65.563c13.281-22.984,42.594-30.828,65.594-17.563C146.25,155.703,154.125,185.016,140.875,208z   M224,448c-26.5,0-48-21.469-48-48s21.5-48,48-48c26.531,0,48,21.469,48,48S250.531,448,224,448z M224,160c-26.5,0-48-21.469-48-48  s21.5-48,48-48c26.531,0,48,21.469,48,48S250.531,160,224,160z M390.281,352c-13.25,22.938-42.594,30.844-65.563,17.563  c-23-13.25-30.844-42.625-17.594-65.563c13.281-22.969,42.594-30.844,65.594-17.563C395.688,299.688,403.531,329.031,390.281,352z   M512,416v64H347.656c29.281-16.25,55.031-38.063,75.875-64H512z"
+   id="path3761"
+   style="fill:#ffffff;fill-opacity:1" />
+</svg>

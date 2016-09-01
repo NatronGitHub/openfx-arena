@@ -174,10 +174,10 @@ void MagickPluginHelper<SupportsRenderScale>::render(const OFX::RenderArguments 
 #endif
 
     // render
-    Magick::Image image(Magick::Geometry(width,height),Magick::Color("rgba(0,0,0,0)"));
-    Magick::Image output(Magick::Geometry(width,height),Magick::Color("rgba(0,0,0,1)"));
+    Magick::Image image(Magick::Geometry(width, height), Magick::Color("rgba(0,0,0,0)"));
+    Magick::Image output(Magick::Geometry(width, height), Magick::Color("rgba(0,0,0,1)"));
     if (_srcClip && _srcClip->isConnected()) {
-        image.read(width,height,"RGBA",Magick::FloatPixel,(float*)srcImg->getPixelData());
+        image.read(width, height, "RGBA", Magick::FloatPixel, (float*)srcImg->getPixelData());
         image.flip();
         switch (vpixel) {
         case 0:
@@ -248,7 +248,7 @@ void MagickPluginHelper<SupportsRenderScale>::render(const OFX::RenderArguments 
 #else
         output.composite(image, 0, 0, Magick::CopyOpacityCompositeOp);
 #endif
-        output.write(0,0,args.renderWindow.x2 - args.renderWindow.x1,args.renderWindow.y2 - args.renderWindow.y1,"RGBA",Magick::FloatPixel,(float*)dstImg->getPixelData());
+        output.write(0, 0, args.renderWindow.x2 - args.renderWindow.x1,args.renderWindow.y2 - args.renderWindow.y1, "RGBA", Magick::FloatPixel, (float*)dstImg->getPixelData());
     }
 
 }
