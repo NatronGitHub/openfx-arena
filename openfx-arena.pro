@@ -46,7 +46,11 @@ OTHER_FILES += \
             OCL/CLFilter/Info.plist \
             Magick/Makefile.Magick \
             Magick/Swirl/Makefile \
-            Magick/Swirl/Info.plist
+            Magick/Swirl/Info.plist \
+            Magick/Wave/Makefile \
+            Magick/Wave/Info.plist \
+            Magick/Roll/Makefile \
+            Magick/Roll/Info.plist
 INCLUDEPATH += . \
             SupportExt \
             OpenFX/Support/include \
@@ -193,4 +197,6 @@ SOURCES += \
             OCL/Bokeh/Bokeh.cpp \
             OCL/CLFilter/CLFilter.cpp \
             Magick/MagickPlugin.cpp \
-            Magick/Swirl/Swirl.cpp
+            Magick/Swirl/Swirl.cpp \
+            Magick/Wave/Wave.cpp \
+            Magick/Roll/Roll.cpp
