@@ -20,7 +20,7 @@
 using namespace OFX;
 OFXS_NAMESPACE_ANONYMOUS_ENTER
 
-#define kPluginName "Swirl"
+#define kPluginName "SwirlOFX"
 #define kPluginGrouping "Extra/Distort"
 #define kPluginIdentifier "net.fxarena.openfx.Swirl"
 #define kPluginDescription "Swirl effect using ImageMagick."

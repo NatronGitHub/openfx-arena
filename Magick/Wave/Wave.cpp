@@ -46,11 +46,11 @@ OFXS_NAMESPACE_ANONYMOUS_ENTER
 #define kParamWaveLengthHint "Adjust wave length"
 #define kParamWaveLengthDefault 150
 
-class WavePlugins
+class WavePlugin
     : public MagickPluginHelper<kSupportsRenderScale>
 {
 public:
-    WavePlugins(OfxImageEffectHandle handle)
+    WavePlugin(OfxImageEffectHandle handle)
         : MagickPluginHelper<kSupportsRenderScale>(handle)
         , _amp(0)
         , _length(0)
@@ -73,9 +73,9 @@ private:
     DoubleParam *_length;
 };
 
-mDeclarePluginFactory(WavePluginsFactory, {}, {});
+mDeclarePluginFactory(WavePluginFactory, {}, {});
 
-void WavePluginsFactory::describe(ImageEffectDescriptor &desc)
+void WavePluginFactory::describe(ImageEffectDescriptor &desc)
 {
     desc.setLabel(kPluginName);
     desc.setPluginGrouping(kPluginGrouping);
@@ -91,9 +91,9 @@ void WavePluginsFactory::describe(ImageEffectDescriptor &desc)
     desc.setHostMixingEnabled(kHostMixing);
 }
 
-void WavePluginsFactory::describeInContext(ImageEffectDescriptor &desc, ContextEnum context)
+void WavePluginFactory::describeInContext(ImageEffectDescriptor &desc, ContextEnum context)
 {
-    OFX::PageParamDescriptor *page = WavePlugins::describeInContextBegin(desc, context);
+    OFX::PageParamDescriptor *page = WavePlugin::describeInContextBegin(desc, context);
     {
         DoubleParamDescriptor *param = desc.defineDoubleParam(kParamWaveAmp);
         param->setLabel(kParamWaveAmpLabel);
@@ -112,16 +112,16 @@ void WavePluginsFactory::describeInContext(ImageEffectDescriptor &desc, ContextE
         param->setDefault(kParamWaveLengthDefault);
         page->addChild(*param);
     }
-    WavePlugins::describeInContextEnd(desc, context, page);
+    WavePlugin::describeInContextEnd(desc, context, page);
 }
 
 OFX::ImageEffect*
-WavePluginsFactory::createInstance(OfxImageEffectHandle handle, ContextEnum /*context*/)
+WavePluginFactory::createInstance(OfxImageEffectHandle handle, ContextEnum /*context*/)
 {
-    return new WavePlugins(handle);
+    return new WavePlugin(handle);
 }
 
-static WavePluginsFactory p(kPluginIdentifier, kPluginVersionMajor, kPluginVersionMinor);
+static WavePluginFactory p(kPluginIdentifier, kPluginVersionMajor, kPluginVersionMinor);
 mRegisterPluginFactoryInstance(p)
 
 OFXS_NAMESPACE_ANONYMOUS_EXIT
