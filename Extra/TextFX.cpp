@@ -36,7 +36,7 @@
 #define kPluginGrouping "Draw"
 #define kPluginIdentifier "net.fxarena.openfx.Text"
 #define kPluginVersionMajor 6
-#define kPluginVersionMinor 2
+#define kPluginVersionMinor 3
 
 #define kSupportsTiles 0
 #define kSupportsMultiResolution 0
@@ -532,6 +532,13 @@ void TextFXPlugin::render(const OFX::RenderArguments &args)
     PangoLayout *layout;
     PangoFontDescription *desc;
     PangoAttrList *alist;
+    PangoFontMap* fontmap;
+
+    fontmap = pango_cairo_font_map_get_default();
+    if (pango_cairo_font_map_get_font_type((PangoCairoFontMap*)(fontmap)) != CAIRO_FONT_TYPE_FT) {
+        fontmap = pango_cairo_font_map_new_for_font_type(CAIRO_FONT_TYPE_FT);
+        pango_cairo_font_map_set_default((PangoCairoFontMap*)(fontmap));
+    }
 
     surface = cairo_image_surface_create (CAIRO_FORMAT_ARGB32, width, height);
     cr = cairo_create (surface);
@@ -1054,6 +1061,13 @@ bool TextFXPlugin::getRegionOfDefinition(const OFX::RegionOfDefinitionArguments 
             PangoLayout *layout;
             PangoFontDescription *desc;
             PangoAttrList *alist;
+            PangoFontMap* fontmap;
+
+            fontmap = pango_cairo_font_map_get_default();
+            if (pango_cairo_font_map_get_font_type((PangoCairoFontMap*)(fontmap)) != CAIRO_FONT_TYPE_FT) {
+                fontmap = pango_cairo_font_map_new_for_font_type(CAIRO_FONT_TYPE_FT);
+                pango_cairo_font_map_set_default((PangoCairoFontMap*)(fontmap));
+            }
 
             surface = cairo_image_surface_create (CAIRO_FORMAT_ARGB32, width, height);
             cr = cairo_create (surface);
