@@ -132,11 +132,7 @@
 #define kParamFontAA "antialiasing"
 #define kParamFontAALabel "Antialiasing"
 #define kParamFontAAHint "This specifies the type of antialiasing to do when rendering text."
-#if defined(_WIN32) || defined(__WIN32__) || defined(WIN32)
-#define kParamFontAADefault 2
-#else
 #define kParamFontAADefault 0
-#endif
 
 #define kParamSubpixel "subpixel"
 #define kParamSubpixelLabel "Subpixel"
@@ -1248,12 +1244,7 @@ void TextFXPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, Co
         param->setLabel(kParamAutoSizeLabel);
         param->setHint(kParamAutoSizeHint);
         param->setAnimates(false);
-#if defined(_WIN32) || defined(__WIN32__) || defined(WIN32)
-        param->setEnabled(false);
-        param->setDefault(false);
-#else
         param->setDefault(kParamAutoSizeDefault);
-#endif
         param->setLayoutHint(eLayoutHintNoNewLine, 1);
         page->addChild(*param);
     }
