@@ -763,16 +763,18 @@ void TextFXPlugin::render(const OFX::RenderArguments &args)
     }
 
     if (scaleX!=1.0||scaleY!=1.0) {
-        cairo_translate(cr, xtext, ytext);
-        if (scaleUniform) {
-            cairo_scale(cr, scaleX, scaleX);
-        } else {
-            cairo_scale(cr, scaleX, scaleY);
+        if (!autoSize) {
+            cairo_translate(cr, xtext, ytext);
+            if (scaleUniform) {
+                cairo_scale(cr, scaleX, scaleX);
+            } else {
+                cairo_scale(cr, scaleX, scaleY);
+            }
+            cairo_translate(cr, -xtext, -ytext);
         }
-        cairo_translate(cr, -xtext, -ytext);
     }
 
-    if (skewX!=0.0) {
+    if (skewX != 0.0 && !autoSize) {
         cairo_matrix_t matrixSkewX = {
             1.0, 0.0,
             -skewX, 1.0,
@@ -783,7 +785,7 @@ void TextFXPlugin::render(const OFX::RenderArguments &args)
         cairo_translate(cr, -xtext, -ytext);
     }
 
-    if (skewY!=0.0) {
+    if (skewY !=0.0 && !autoSize) {
         cairo_matrix_t matrixSkewY = {
             1.0, -skewY,
             0.0, 1.0,
@@ -794,7 +796,7 @@ void TextFXPlugin::render(const OFX::RenderArguments &args)
         cairo_translate(cr, -xtext, -ytext);
     }
 
-    if (rotate!=0) {
+    if (rotate !=0 && !autoSize) {
         double rotateX = width/2.0;
         double rotateY = height/2.0;
         if (move) {
@@ -867,25 +869,6 @@ void TextFXPlugin::render(const OFX::RenderArguments &args)
                 cairo_fill(cr);
             }
             else {
-#if defined(_WIN32) || defined(__WIN32__) || defined(WIN32)
-                cairo_new_path(cr);
-                if (move) {
-                    int moveX, moveY;
-                    if (centerInteract) {
-                        int text_width, text_height;
-                        pango_layout_get_pixel_size(layout, &text_width, &text_height);
-                        moveX=xtext-(text_width/2);
-                        moveY=ytext-(text_height/2);
-                    } else {
-                        moveX=xtext;
-                        moveY=ytext;
-                    }
-                    cairo_move_to(cr, moveX, moveY);
-                }
-                pango_cairo_layout_path(cr, layout);
-                cairo_set_source_rgba(cr, r, g, b, a);
-                cairo_fill(cr);
-#else
                 if (!autoSize && move) {
                     int moveX, moveY;
                     if (centerInteract) {
@@ -902,7 +885,6 @@ void TextFXPlugin::render(const OFX::RenderArguments &args)
                 cairo_set_source_rgba(cr, r, g, b, a);
                 pango_cairo_update_layout(cr, layout);
                 pango_cairo_show_layout(cr, layout);
-#endif
             }
         }
     }
