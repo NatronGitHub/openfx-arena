@@ -6,7 +6,7 @@ A set of [OpenFX](http://openfx.sf.net) plugins designed for [Natron](http://nat
 Extra.ofx
 =========
 
-Various plugins designed for Natron.
+Essential plugins for Natron.
 
  * OpenRaster
  * ReadCDR
@@ -58,7 +58,7 @@ git clone https://github.com/olear/openfx-arena
 cd openfx-arena
 git submodule update -i --recursive
 make CONFIG=release
-sudo make install
+sudo make CONFIG=release install
 ```
 
 License

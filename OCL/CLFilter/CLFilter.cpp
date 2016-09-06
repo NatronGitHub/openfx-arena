@@ -1,6 +1,5 @@
 /*
  * This file is part of openfx-arena <https://github.com/olear/openfx-arena>,
- * Copyright (C) 2015, 2016 FxArena DA
  * Copyright (C) 2016 INRIA
  *
  * openfx-arena is free software: you can redistribute it and/or modify
