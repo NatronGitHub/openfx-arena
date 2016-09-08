@@ -36,7 +36,7 @@
 #define kPluginGrouping "Draw"
 #define kPluginIdentifier "net.fxarena.openfx.Text"
 #define kPluginVersionMajor 6
-#define kPluginVersionMinor 3
+#define kPluginVersionMinor 4
 
 #define kSupportsTiles 0
 #define kSupportsMultiResolution 0
@@ -966,7 +966,7 @@ void TextFXPlugin::changedParam(const OFX::InstanceChangedArgs &args, const std:
         int fontID;
         fontName_->getValueAtTime(args.time, fontID);
         fontName_->getOption(fontID,font);
-        font_->setValueAtTime(args.time, font);
+        font_->setValue(font);
     }
 
     clearPersistentMessage();
@@ -1375,7 +1375,7 @@ void TextFXPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, Co
         else if (defaultFont==0&&altFont>0)
             param->setDefault(altFont);
 
-        param->setAnimates(true);
+        param->setAnimates(false);
         page->addChild(*param);
     }
     {
@@ -1383,7 +1383,7 @@ void TextFXPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, Co
         param->setLabel(kParamFontLabel);
         param->setHint(kParamFontHint);
         param->setStringType(eStringTypeSingleLine);
-        param->setAnimates(true);
+        param->setAnimates(false);
 
         #ifdef DEBUG
         param->setIsSecret(false);
