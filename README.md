@@ -61,6 +61,13 @@ make CONFIG=release
 sudo make CONFIG=release install
 ```
 
+OCL is currently optional, and can be built using:
+```
+cd OCL
+make CONFIG=release
+sudo make CONFIG=release install
+```
+
 License
 =======
 
