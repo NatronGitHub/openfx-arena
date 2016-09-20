@@ -300,6 +300,7 @@ public:
 
     std::string textFromFile(std::string filename);
     void resetCenter(double time);
+    void setFontDesc(int stretch, int weight, PangoFontDescription* desc);
 
 private:
     // do not need to delete these, the ImageEffect is managing them for us
@@ -503,6 +504,78 @@ std::string TextFXPlugin::textFromFile(std::string filename) {
     return result;
 }
 
+void TextFXPlugin::setFontDesc(int stretch, int weight, PangoFontDescription* desc)
+{
+    switch(stretch) {
+    case 0:
+        pango_font_description_set_stretch(desc, PANGO_STRETCH_ULTRA_CONDENSED);
+        break;
+    case 1:
+        pango_font_description_set_stretch(desc, PANGO_STRETCH_EXTRA_CONDENSED);
+        break;
+    case 2:
+        pango_font_description_set_stretch(desc, PANGO_STRETCH_CONDENSED);
+        break;
+    case 3:
+        pango_font_description_set_stretch(desc, PANGO_STRETCH_SEMI_CONDENSED);
+        break;
+    case 4:
+        pango_font_description_set_stretch(desc, PANGO_STRETCH_NORMAL);
+        break;
+    case 5:
+        pango_font_description_set_stretch(desc, PANGO_STRETCH_SEMI_EXPANDED);
+        break;
+    case 6:
+        pango_font_description_set_stretch(desc, PANGO_STRETCH_EXPANDED);
+        break;
+    case 7:
+        pango_font_description_set_stretch(desc, PANGO_STRETCH_EXTRA_EXPANDED);
+        break;
+    case 8:
+        pango_font_description_set_stretch(desc, PANGO_STRETCH_ULTRA_EXPANDED);
+        break;
+    }
+
+    switch(weight) {
+    case 0:
+        pango_font_description_set_weight(desc, PANGO_WEIGHT_THIN);
+        break;
+    case 1:
+        pango_font_description_set_weight(desc, PANGO_WEIGHT_ULTRALIGHT);
+        break;
+    case 2:
+        pango_font_description_set_weight(desc, PANGO_WEIGHT_LIGHT);
+        break;
+    case 3:
+        pango_font_description_set_weight(desc, PANGO_WEIGHT_SEMILIGHT);
+        break;
+    case 4:
+        pango_font_description_set_weight(desc, PANGO_WEIGHT_BOOK);
+        break;
+    case 5:
+        pango_font_description_set_weight(desc, PANGO_WEIGHT_NORMAL);
+        break;
+    case 6:
+        pango_font_description_set_weight(desc, PANGO_WEIGHT_MEDIUM);
+        break;
+    case 7:
+        pango_font_description_set_weight(desc, PANGO_WEIGHT_SEMIBOLD);
+        break;
+    case 8:
+        pango_font_description_set_weight(desc, PANGO_WEIGHT_BOLD);
+        break;
+    case 9:
+        pango_font_description_set_weight(desc, PANGO_WEIGHT_ULTRABOLD);
+        break;
+    case 10:
+        pango_font_description_set_weight(desc, PANGO_WEIGHT_HEAVY);
+        break;
+    case 11:
+        pango_font_description_set_weight(desc, PANGO_WEIGHT_ULTRAHEAVY);
+        break;
+    }
+}
+
 /* Override the render */
 void TextFXPlugin::render(const OFX::RenderArguments &args)
 {
@@ -622,8 +695,9 @@ void TextFXPlugin::render(const OFX::RenderArguments &args)
         OFX::throwSuiteStatusException(kOfxStatFailed);
     }
 
-    if (gHostIsNatron)
+    if (gHostIsNatron) {
         fontName.erase(0,2);
+    }
 
     if (!txt.empty()) {
         std::string txt_tmp = textFromFile(txt);
@@ -745,77 +819,7 @@ void TextFXPlugin::render(const OFX::RenderArguments &args)
     }
 
     desc = pango_font_description_from_string(pangoFont.str().c_str());
-
-    switch(stretch) {
-    case 0:
-        pango_font_description_set_stretch(desc, PANGO_STRETCH_ULTRA_CONDENSED);
-        break;
-    case 1:
-        pango_font_description_set_stretch(desc, PANGO_STRETCH_EXTRA_CONDENSED);
-        break;
-    case 2:
-        pango_font_description_set_stretch(desc, PANGO_STRETCH_CONDENSED);
-        break;
-    case 3:
-        pango_font_description_set_stretch(desc, PANGO_STRETCH_SEMI_CONDENSED);
-        break;
-    case 4:
-        pango_font_description_set_stretch(desc, PANGO_STRETCH_NORMAL);
-        break;
-    case 5:
-        pango_font_description_set_stretch(desc, PANGO_STRETCH_SEMI_EXPANDED);
-        break;
-    case 6:
-        pango_font_description_set_stretch(desc, PANGO_STRETCH_EXPANDED);
-        break;
-    case 7:
-        pango_font_description_set_stretch(desc, PANGO_STRETCH_EXTRA_EXPANDED);
-        break;
-    case 8:
-        pango_font_description_set_stretch(desc, PANGO_STRETCH_ULTRA_EXPANDED);
-        break;
-    }
-
-    switch(weight) {
-    case 0:
-        pango_font_description_set_weight(desc, PANGO_WEIGHT_THIN);
-        break;
-    case 1:
-        pango_font_description_set_weight(desc, PANGO_WEIGHT_ULTRALIGHT);
-        break;
-    case 2:
-        pango_font_description_set_weight(desc, PANGO_WEIGHT_LIGHT);
-        break;
-    case 3:
-#ifndef LEGACY
-        pango_font_description_set_weight(desc, PANGO_WEIGHT_SEMILIGHT);
-#endif
-        break;
-    case 4:
-        pango_font_description_set_weight(desc, PANGO_WEIGHT_BOOK);
-        break;
-    case 5:
-        pango_font_description_set_weight(desc, PANGO_WEIGHT_NORMAL);
-        break;
-    case 6:
-        pango_font_description_set_weight(desc, PANGO_WEIGHT_MEDIUM);
-        break;
-    case 7:
-        pango_font_description_set_weight(desc, PANGO_WEIGHT_SEMIBOLD);
-        break;
-    case 8:
-        pango_font_description_set_weight(desc, PANGO_WEIGHT_BOLD);
-        break;
-    case 9:
-        pango_font_description_set_weight(desc, PANGO_WEIGHT_ULTRABOLD);
-        break;
-    case 10:
-        pango_font_description_set_weight(desc, PANGO_WEIGHT_HEAVY);
-        break;
-    case 11:
-        pango_font_description_set_weight(desc, PANGO_WEIGHT_ULTRAHEAVY);
-        break;
-    }
+    setFontDesc(stretch, weight, desc);
 
     pango_layout_set_font_description(layout, desc);
     pango_font_description_free(desc);
@@ -1207,77 +1211,7 @@ bool TextFXPlugin::getRegionOfDefinition(const OFX::RegionOfDefinitionArguments 
             }
 
             desc = pango_font_description_from_string(pangoFont.str().c_str());
-
-            switch(stretch) {
-            case 0:
-                pango_font_description_set_stretch(desc, PANGO_STRETCH_ULTRA_CONDENSED);
-                break;
-            case 1:
-                pango_font_description_set_stretch(desc, PANGO_STRETCH_EXTRA_CONDENSED);
-                break;
-            case 2:
-                pango_font_description_set_stretch(desc, PANGO_STRETCH_CONDENSED);
-                break;
-            case 3:
-                pango_font_description_set_stretch(desc, PANGO_STRETCH_SEMI_CONDENSED);
-                break;
-            case 4:
-                pango_font_description_set_stretch(desc, PANGO_STRETCH_NORMAL);
-                break;
-            case 5:
-                pango_font_description_set_stretch(desc, PANGO_STRETCH_SEMI_EXPANDED);
-                break;
-            case 6:
-                pango_font_description_set_stretch(desc, PANGO_STRETCH_EXPANDED);
-                break;
-            case 7:
-                pango_font_description_set_stretch(desc, PANGO_STRETCH_EXTRA_EXPANDED);
-                break;
-            case 8:
-                pango_font_description_set_stretch(desc, PANGO_STRETCH_ULTRA_EXPANDED);
-                break;
-            }
-
-            switch(weight) {
-            case 0:
-                pango_font_description_set_weight(desc, PANGO_WEIGHT_THIN);
-                break;
-            case 1:
-                pango_font_description_set_weight(desc, PANGO_WEIGHT_ULTRALIGHT);
-                break;
-            case 2:
-                pango_font_description_set_weight(desc, PANGO_WEIGHT_LIGHT);
-                break;
-            case 3:
-#ifndef LEGACY
-                pango_font_description_set_weight(desc, PANGO_WEIGHT_SEMILIGHT);
-#endif
-                break;
-            case 4:
-                pango_font_description_set_weight(desc, PANGO_WEIGHT_BOOK);
-                break;
-            case 5:
-                pango_font_description_set_weight(desc, PANGO_WEIGHT_NORMAL);
-                break;
-            case 6:
-                pango_font_description_set_weight(desc, PANGO_WEIGHT_MEDIUM);
-                break;
-            case 7:
-                pango_font_description_set_weight(desc, PANGO_WEIGHT_SEMIBOLD);
-                break;
-            case 8:
-                pango_font_description_set_weight(desc, PANGO_WEIGHT_BOLD);
-                break;
-            case 9:
-                pango_font_description_set_weight(desc, PANGO_WEIGHT_ULTRABOLD);
-                break;
-            case 10:
-                pango_font_description_set_weight(desc, PANGO_WEIGHT_HEAVY);
-                break;
-            case 11:
-                pango_font_description_set_weight(desc, PANGO_WEIGHT_ULTRAHEAVY);
-                break;
-            }
+            setFontDesc(stretch, weight, desc);
 
             pango_layout_set_font_description(layout, desc);
             pango_font_description_free(desc);
