@@ -31,6 +31,7 @@ Plugins
  * Tile
  * Wave
  * Looks
+ * Bulge
  * Glare
  * Ripple
  * Twirl
@@ -58,6 +59,7 @@ Requirements
    * Will build on older versions, but some features/plugins may not be available
    * Quantum depth under 32 will work, but it not recommended, note that most distros ship 16
    * Will work without HDRI, but it's not recommended
+ * OpenCL 1.2 compatible hardware and drivers (OCL plugins)
 
 
 Build
