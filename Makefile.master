@@ -59,9 +59,12 @@ CAIRO_LINKFLAGS += $(shell pkg-config cairo --libs --static)
 POPPLER_CXXFLAGS += $(shell pkg-config poppler-glib --cflags)
 POPPLER_LINKFLAGS += $(shell pkg-config poppler-glib --libs --static)
 
+# curl
+CURL_CXXFLAGS += $(shell pkg-config libcurl --cflags)
+CURL_LINKFLAGS += $(shell pkg-config libcurl --libs --static)
+
 # opencl
 OPENCL_CXXFLAGS += -I$(SRCDIR)/OCL
-
 OS := $(shell uname -s)
 ifeq ($(OS),Darwin)
 OPENCL_LINKFLAGS += -framework OpenCL
