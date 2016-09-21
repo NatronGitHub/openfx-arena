@@ -50,7 +50,9 @@ OTHER_FILES += \
             Magick/Wave/Makefile \
             Magick/Wave/Info.plist \
             Magick/Roll/Makefile \
-            Magick/Roll/Info.plist
+            Magick/Roll/Info.plist \
+            Magick/HaldCLUT/Info.plist \
+            Magick/HaldCLUT/net.fxarena.openfx.HaldCLUT.xml
 INCLUDEPATH += . \
             SupportExt \
             OpenFX/Support/include \
@@ -186,7 +188,7 @@ SOURCES += \
             OCL/Ripple/Ripple.cpp \
             OCL/Twirl/Twirl.cpp \
             OCL/TestCL/TestCL.cpp \
-            OCL/Looks/Looks.cpp \
+            OCL/HaldCLUT/HaldCLUT.cpp \
             OCL/Glow/Glow.cpp \
             OCL/Duotone/Duotone.cpp \
             OCL/Cartoon/Cartoon.cpp \
@@ -199,4 +201,5 @@ SOURCES += \
             Magick/MagickPlugin.cpp \
             Magick/Swirl/Swirl.cpp \
             Magick/Wave/Wave.cpp \
-            Magick/Roll/Roll.cpp
+            Magick/Roll/Roll.cpp \
+            Magick/HaldCLUT/HaldCLUT.cpp
