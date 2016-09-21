@@ -29,14 +29,14 @@ install:
   - wget https://www.freedesktop.org/software/harfbuzz/release/harfbuzz-0.9.42.tar.bz2
   - tar xf harfbuzz-0.9.42.tar.bz2
   - cd harfbuzz-0.9.42
-  - ./configure --prefix=/usr/local --enable-static --disable-shared
+  - env CFLAGS="-fPIC" ./configure --prefix=/usr/local --enable-static --disable-shared
   - make -j2
   - sudo make install
   - cd ..
   - wget http://ftp.gnome.org/pub/GNOME/sources/pango/1.38/pango-1.38.1.tar.xz
   - tar xf pango-1.38.1.tar.xz
   - cd pango-1.38.1
-  - ./configure --prefix=/usr/local --enable-static --disable-shared
+  - env CFLAGS="-fPIC" ./configure --prefix=/usr/local --enable-static --disable-shared
   - make -j2
   - sudo make install
   - cd ..
