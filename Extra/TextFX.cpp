@@ -16,6 +16,7 @@
 */
 
 #include <pango/pangocairo.h>
+#include <pango/pangofc-fontmap.h>
 #include <fontconfig/fontconfig.h>
 
 #include "ofxsMacros.h"
@@ -36,7 +37,7 @@
 #define kPluginGrouping "Draw"
 #define kPluginIdentifier "net.fxarena.openfx.Text"
 #define kPluginVersionMajor 6
-#define kPluginVersionMinor 4
+#define kPluginVersionMinor 6
 
 #define kSupportsTiles 0
 #define kSupportsMultiResolution 0
@@ -193,11 +194,93 @@
 #define kParamCenterInteractHint "Center the text in the interact."
 #define kParamCenterInteractDefault false
 
+#define kParamFontOverride "custom"
+#define kParamFontOverrideLabel "Custom font"
+#define kParamFontOverrideHint "Add custom font."
+
 using namespace OFX;
 static bool gHostIsNatron = false;
 
 bool stringCompare(const std::string & l, const std::string & r) {
     return (l==r);
+}
+
+std::list<std::string> _genFonts(OFX::ChoiceParam *fontName, OFX::StringParam *fontOverride, bool fontOverrideDir, FcConfig *fontConfig, bool properMenu, std::string fontNameDefault, std::string fontNameAltDefault)
+{
+    int defaultFont = 0;
+    int altFont = 0;
+    int fontIndex = 0;
+
+    if (!fontConfig) {
+        fontConfig = FcInitLoadConfigAndFonts();
+    }
+
+    if (fontOverride) {
+        std::string fontCustom;
+        fontOverride->getValue(fontCustom);
+        if (!fontCustom.empty()) {
+            const FcChar8 * fileCustom = (const FcChar8 *)fontCustom.c_str();
+            if (!fontOverrideDir) {
+                FcConfigAppFontAddFile(fontConfig,fileCustom);
+            } else {
+                FcConfigAppFontAddDir(fontConfig, fileCustom);
+            }
+        }
+    }
+
+    FcPattern *p = FcPatternCreate();
+    FcObjectSet *os = FcObjectSetBuild (FC_FAMILY,NULL);
+    FcFontSet *fs = FcFontList(fontConfig, p, os);
+    std::list<std::string> fonts;
+    for (int i=0; fs && i < fs->nfont; i++) {
+        FcPattern *font = fs->fonts[i];
+        FcChar8 *s;
+        s = FcPatternFormat(font,(const FcChar8 *)"%{family[0]}");
+        std::string fontName(reinterpret_cast<char*>(s));
+        fonts.push_back(fontName);
+        if (font)
+            FcPatternDestroy(font);
+    }
+
+    fonts.sort();
+    fonts.erase(unique(fonts.begin(), fonts.end(), stringCompare), fonts.end());
+
+    if (fontName) {
+        fontName->resetOptions();
+    }
+    std::list<std::string>::const_iterator font;
+    for(font = fonts.begin(); font != fonts.end(); ++font) {
+        std::string fontNameString = *font;
+        std::string fontItem;
+        if (properMenu) {
+            fontItem=fontNameString[0];
+            fontItem.append("/" + fontNameString);
+        } else {
+            fontItem=fontNameString;
+        }
+
+        if (fontName) {
+            fontName->appendOption(fontItem);
+        }
+        if (std::strcmp(fontNameString.c_str(), fontNameDefault.c_str()) == 0) {
+            defaultFont=fontIndex;
+        }
+        if (std::strcmp(fontNameString.c_str(), fontNameAltDefault.c_str()) == 0) {
+            altFont=fontIndex;
+        }
+
+        fontIndex++;
+    }
+
+    if (fontName) {
+        if (defaultFont > 0) {
+            fontName->setDefault(defaultFont);
+        } else if (altFont > 0) {
+            fontName->setDefault(altFont);
+        }
+    }
+
+    return fonts;
 }
 
 class TextFXPlugin : public OFX::ImageEffect
@@ -217,21 +300,21 @@ public:
 
     std::string textFromFile(std::string filename);
     void resetCenter(double time);
+    void setFontDesc(int stretch, int weight, PangoFontDescription* desc);
 
 private:
     // do not need to delete these, the ImageEffect is managing them for us
-    OFX::Clip *dstClip_;
-    OFX::StringParam *text_;
-    OFX::IntParam *fontSize_;
-    OFX::ChoiceParam *fontName_;
-    OFX::RGBAParam *textColor_;
-    OFX::StringParam *font_;
-    OFX::BooleanParam *justify_;
-    OFX::ChoiceParam *wrap_;
-    OFX::ChoiceParam *align_;
-    OFX::ChoiceParam *valign_;
-    OFX::BooleanParam *markup_;
-    OFX::ChoiceParam *style_;
+    OFX::Clip *_dstClip;
+    OFX::StringParam *_text;
+    OFX::IntParam *_fontSize;
+    OFX::RGBAParam *_textColor;
+    OFX::StringParam *_font;
+    OFX::BooleanParam *_justify;
+    OFX::ChoiceParam *_wrap;
+    OFX::ChoiceParam *_align;
+    OFX::ChoiceParam *_valign;
+    OFX::BooleanParam *_markup;
+    OFX::ChoiceParam *_style;
     OFX::BooleanParam *auto_;
     OFX::ChoiceParam *stretch_;
     OFX::ChoiceParam *weight_;
@@ -241,43 +324,85 @@ private:
     OFX::Double3DParam *strokeDashPattern_;
     OFX::ChoiceParam *fontAA_;
     OFX::ChoiceParam *subpixel_;
-    OFX::ChoiceParam *hintStyle_;
-    OFX::ChoiceParam *hintMetrics_;
-    OFX::DoubleParam *circleRadius_;
-    OFX::IntParam *circleWords_;
-    OFX::IntParam *letterSpace_;
-    OFX::Int2DParam *canvas_;
-    OFX::DoubleParam *arcRadius_;
-    OFX::DoubleParam *arcAngle_;
-    OFX::DoubleParam *rotate_;
-    OFX::Double2DParam *scale_;
-    OFX::Double2DParam *position_;
-    OFX::BooleanParam *move_;
-    OFX::StringParam *txt_;
-    OFX::DoubleParam *skewX_;
-    OFX::DoubleParam *skewY_;
-    OFX::BooleanParam *scaleUniform_;
-    OFX::BooleanParam *centerInteract_;
+    OFX::ChoiceParam *_hintStyle;
+    OFX::ChoiceParam *_hintMetrics;
+    OFX::DoubleParam *_circleRadius;
+    OFX::IntParam *_circleWords;
+    OFX::IntParam *_letterSpace;
+    OFX::Int2DParam *_canvas;
+    OFX::DoubleParam *_arcRadius;
+    OFX::DoubleParam *_arcAngle;
+    OFX::DoubleParam *_rotate;
+    OFX::Double2DParam *_scale;
+    OFX::Double2DParam *_position;
+    OFX::BooleanParam *_move;
+    OFX::StringParam *_txt;
+    OFX::DoubleParam *_skewX;
+    OFX::DoubleParam *_skewY;
+    OFX::BooleanParam *_scaleUniform;
+    OFX::BooleanParam *_centerInteract;
+    OFX::ChoiceParam *_fontName;
+    OFX::StringParam *_fontOverride;
+    FcConfig* _fcConfig;
 };
 
 TextFXPlugin::TextFXPlugin(OfxImageEffectHandle handle)
 : OFX::ImageEffect(handle)
-, dstClip_(0)
+, _dstClip(0)
+, _text(0)
+, _fontSize(0)
+, _textColor(0)
+, _font(0)
+, _justify(0)
+, _wrap(0)
+, _align(0)
+, _valign(0)
+, _markup(0)
+, _style(0)
+, auto_(0)
+, stretch_(0)
+, weight_(0)
+, strokeColor_(0)
+, strokeWidth_(0)
+, strokeDash_(0)
+, strokeDashPattern_(0)
+, fontAA_(0)
+, subpixel_(0)
+, _hintStyle(0)
+, _hintMetrics(0)
+, _circleRadius(0)
+, _circleWords(0)
+, _letterSpace(0)
+, _canvas(0)
+, _arcRadius(0)
+, _arcAngle(0)
+, _rotate(0)
+, _scale(0)
+, _position(0)
+, _move(0)
+, _txt(0)
+, _skewX(0)
+, _skewY(0)
+, _scaleUniform(0)
+, _centerInteract(0)
+, _fontName(0)
+, _fontOverride(0)
+, _fcConfig(0)
 {
-    dstClip_ = fetchClip(kOfxImageEffectOutputClipName);
-    assert(dstClip_ && dstClip_->getPixelComponents() == OFX::ePixelComponentRGBA);
+    _dstClip = fetchClip(kOfxImageEffectOutputClipName);
+    assert(_dstClip && _dstClip->getPixelComponents() == OFX::ePixelComponentRGBA);
 
-    text_ = fetchStringParam(kParamText);
-    fontSize_ = fetchIntParam(kParamFontSize);
-    fontName_ = fetchChoiceParam(kParamFontName);
-    textColor_ = fetchRGBAParam(kParamTextColor);
-    font_ = fetchStringParam(kParamFont);
-    justify_ = fetchBooleanParam(kParamJustify);
-    wrap_ = fetchChoiceParam(kParamWrap);
-    align_ = fetchChoiceParam(kParamAlign);
-    valign_ = fetchChoiceParam(kParamVAlign);
-    markup_ = fetchBooleanParam(kParamMarkup);
-    style_ = fetchChoiceParam(kParamStyle);
+    _text = fetchStringParam(kParamText);
+    _fontSize = fetchIntParam(kParamFontSize);
+    _fontName = fetchChoiceParam(kParamFontName);
+    _textColor = fetchRGBAParam(kParamTextColor);
+    _font = fetchStringParam(kParamFont);
+    _justify = fetchBooleanParam(kParamJustify);
+    _wrap = fetchChoiceParam(kParamWrap);
+    _align = fetchChoiceParam(kParamAlign);
+    _valign = fetchChoiceParam(kParamVAlign);
+    _markup = fetchBooleanParam(kParamMarkup);
+    _style = fetchChoiceParam(kParamStyle);
     auto_ = fetchBooleanParam(kParamAutoSize);
     stretch_ = fetchChoiceParam(kParamStretch);
     weight_ = fetchChoiceParam(kParamWeight);
@@ -287,68 +412,71 @@ TextFXPlugin::TextFXPlugin(OfxImageEffectHandle handle)
     strokeDashPattern_ = fetchDouble3DParam(kParamStrokeDashPattern);
     fontAA_ = fetchChoiceParam(kParamFontAA);
     subpixel_ = fetchChoiceParam(kParamSubpixel);
-    hintStyle_ = fetchChoiceParam(kParamHintStyle);
-    hintMetrics_ = fetchChoiceParam(kParamHintMetrics);
-    circleRadius_ = fetchDoubleParam(kParamCircleRadius);
-    circleWords_ = fetchIntParam(kParamCircleWords);
-    letterSpace_ = fetchIntParam(kParamLetterSpace);
-    canvas_ = fetchInt2DParam(kParamCanvas);
-    arcRadius_ = fetchDoubleParam(kParamArcRadius);
-    arcAngle_ = fetchDoubleParam(kParamArcAngle);
-    rotate_ = fetchDoubleParam(kParamTransformRotateOld);
-    scale_ = fetchDouble2DParam(kParamTransformScaleOld);
-    position_ = fetchDouble2DParam(kParamTransformCenterOld);
-    move_ = fetchBooleanParam(kParamPositionMove);
-    txt_ = fetchStringParam(kParamTextFile);
-    skewX_ = fetchDoubleParam(kParamTransformSkewXOld);
-    skewY_ = fetchDoubleParam(kParamTransformSkewYOld);
-    scaleUniform_ = fetchBooleanParam(kParamTransformScaleUniformOld);
-    centerInteract_ = fetchBooleanParam(kParamCenterInteract);
+    _hintStyle = fetchChoiceParam(kParamHintStyle);
+    _hintMetrics = fetchChoiceParam(kParamHintMetrics);
+    _circleRadius = fetchDoubleParam(kParamCircleRadius);
+    _circleWords = fetchIntParam(kParamCircleWords);
+    _letterSpace = fetchIntParam(kParamLetterSpace);
+    _canvas = fetchInt2DParam(kParamCanvas);
+    _arcRadius = fetchDoubleParam(kParamArcRadius);
+    _arcAngle = fetchDoubleParam(kParamArcAngle);
+    _rotate = fetchDoubleParam(kParamTransformRotateOld);
+    _scale = fetchDouble2DParam(kParamTransformScaleOld);
+    _position = fetchDouble2DParam(kParamTransformCenterOld);
+    _move = fetchBooleanParam(kParamPositionMove);
+    _txt = fetchStringParam(kParamTextFile);
+    _skewX = fetchDoubleParam(kParamTransformSkewXOld);
+    _skewY = fetchDoubleParam(kParamTransformSkewYOld);
+    _scaleUniform = fetchBooleanParam(kParamTransformScaleUniformOld);
+    _centerInteract = fetchBooleanParam(kParamCenterInteract);
+    _fontOverride = fetchStringParam(kParamFontOverride);
 
-    assert(text_ && fontSize_ && fontName_ && textColor_ && font_ && wrap_
-           && justify_ && align_ && valign_ && markup_ && style_ && auto_ && stretch_ && weight_ && strokeColor_
-           && strokeWidth_ && strokeDash_ && strokeDashPattern_ && fontAA_ && subpixel_ && hintStyle_
-           && hintMetrics_ && circleRadius_ && circleWords_ && letterSpace_ && canvas_
-           && arcRadius_ && arcAngle_ && rotate_ && scale_ && position_ && move_ && txt_
-           && skewX_ && skewY_ && scaleUniform_ && centerInteract_);
+    assert(_text && _fontSize && _fontName && _textColor && _font && _wrap
+           && _justify && _align && _valign && _markup && _style && auto_ && stretch_ && weight_ && strokeColor_
+           && strokeWidth_ && strokeDash_ && strokeDashPattern_ && fontAA_ && subpixel_ && _hintStyle
+           && _hintMetrics && _circleRadius && _circleWords && _letterSpace && _canvas
+           && _arcRadius && _arcAngle && _rotate && _scale && _position && _move && _txt
+           && _skewX && _skewY && _scaleUniform && _centerInteract && _fontOverride);
+
+    _fcConfig = FcInitLoadConfigAndFonts();
+
+    _genFonts(_fontName, _fontOverride, false, _fcConfig, gHostIsNatron, kParamFontNameDefault, kParamFontNameAltDefault);
 
     // Setup selected font
     std::string fontString, fontCombo;
-    font_->getValue(fontString);
+    _font->getValue(fontString);
     int fontID;
-    int fontCount = fontName_->getNOptions();
-    fontName_->getValue(fontID);
-    fontName_->getOption(fontID,fontCombo);
+    int fontCount = _fontName->getNOptions();
+    _fontName->getValue(fontID);
+    _fontName->getOption(fontID,fontCombo);
     if (!fontString.empty()) {
         if (std::strcmp(fontCombo.c_str(),fontString.c_str())!=0) {
             for(int x = 0; x < fontCount; x++) {
                 std::string fontFound;
-                fontName_->getOption(x,fontFound);
+                _fontName->getOption(x,fontFound);
                 if (!fontFound.empty()) {
                     if (std::strcmp(fontFound.c_str(),fontString.c_str())==0) {
-                        fontName_->setValue(x);
+                        _fontName->setValue(x);
                         break;
                     }
                 }
             }
         }
     }
-    else {
-        if (!fontCombo.empty())
-            font_->setValue(fontCombo);
+    else if (!fontCombo.empty()) {
+        _font->setValue(fontCombo);
     }
 }
-
 
 TextFXPlugin::~TextFXPlugin()
 {
 }
 
 void TextFXPlugin::resetCenter(double time) {
-    if (!dstClip_) {
+    if (!_dstClip) {
         return;
     }
-    OfxRectD rod = dstClip_->getRegionOfDefinition(time);
+    OfxRectD rod = _dstClip->getRegionOfDefinition(time);
     if ( (rod.x1 <= kOfxFlagInfiniteMin) || (kOfxFlagInfiniteMax <= rod.x2) ||
          ( rod.y1 <= kOfxFlagInfiniteMin) || ( kOfxFlagInfiniteMax <= rod.y2) ) {
         return;
@@ -356,8 +484,8 @@ void TextFXPlugin::resetCenter(double time) {
     OfxPointD newCenter;
     newCenter.x = (rod.x1 + rod.x2) / 2;
     newCenter.y = (rod.y1 + rod.y2) / 2;
-    if (position_) {
-        position_->setValue(newCenter.x, newCenter.y);
+    if (_position) {
+        _position->setValue(newCenter.x, newCenter.y);
     }
 }
 
@@ -376,6 +504,78 @@ std::string TextFXPlugin::textFromFile(std::string filename) {
     return result;
 }
 
+void TextFXPlugin::setFontDesc(int stretch, int weight, PangoFontDescription* desc)
+{
+    switch(stretch) {
+    case 0:
+        pango_font_description_set_stretch(desc, PANGO_STRETCH_ULTRA_CONDENSED);
+        break;
+    case 1:
+        pango_font_description_set_stretch(desc, PANGO_STRETCH_EXTRA_CONDENSED);
+        break;
+    case 2:
+        pango_font_description_set_stretch(desc, PANGO_STRETCH_CONDENSED);
+        break;
+    case 3:
+        pango_font_description_set_stretch(desc, PANGO_STRETCH_SEMI_CONDENSED);
+        break;
+    case 4:
+        pango_font_description_set_stretch(desc, PANGO_STRETCH_NORMAL);
+        break;
+    case 5:
+        pango_font_description_set_stretch(desc, PANGO_STRETCH_SEMI_EXPANDED);
+        break;
+    case 6:
+        pango_font_description_set_stretch(desc, PANGO_STRETCH_EXPANDED);
+        break;
+    case 7:
+        pango_font_description_set_stretch(desc, PANGO_STRETCH_EXTRA_EXPANDED);
+        break;
+    case 8:
+        pango_font_description_set_stretch(desc, PANGO_STRETCH_ULTRA_EXPANDED);
+        break;
+    }
+
+    switch(weight) {
+    case 0:
+        pango_font_description_set_weight(desc, PANGO_WEIGHT_THIN);
+        break;
+    case 1:
+        pango_font_description_set_weight(desc, PANGO_WEIGHT_ULTRALIGHT);
+        break;
+    case 2:
+        pango_font_description_set_weight(desc, PANGO_WEIGHT_LIGHT);
+        break;
+    case 3:
+        pango_font_description_set_weight(desc, PANGO_WEIGHT_SEMILIGHT);
+        break;
+    case 4:
+        pango_font_description_set_weight(desc, PANGO_WEIGHT_BOOK);
+        break;
+    case 5:
+        pango_font_description_set_weight(desc, PANGO_WEIGHT_NORMAL);
+        break;
+    case 6:
+        pango_font_description_set_weight(desc, PANGO_WEIGHT_MEDIUM);
+        break;
+    case 7:
+        pango_font_description_set_weight(desc, PANGO_WEIGHT_SEMIBOLD);
+        break;
+    case 8:
+        pango_font_description_set_weight(desc, PANGO_WEIGHT_BOLD);
+        break;
+    case 9:
+        pango_font_description_set_weight(desc, PANGO_WEIGHT_ULTRABOLD);
+        break;
+    case 10:
+        pango_font_description_set_weight(desc, PANGO_WEIGHT_HEAVY);
+        break;
+    case 11:
+        pango_font_description_set_weight(desc, PANGO_WEIGHT_ULTRAHEAVY);
+        break;
+    }
+}
+
 /* Override the render */
 void TextFXPlugin::render(const OFX::RenderArguments &args)
 {
@@ -386,14 +586,14 @@ void TextFXPlugin::render(const OFX::RenderArguments &args)
     }
 
     // dstclip
-    if (!dstClip_) {
+    if (!_dstClip) {
         OFX::throwSuiteStatusException(kOfxStatFailed);
         return;
     }
-    assert(dstClip_);
+    assert(_dstClip);
 
     // get dstclip
-    std::auto_ptr<OFX::Image> dstImg(dstClip_->fetchImage(args.time));
+    std::auto_ptr<OFX::Image> dstImg(_dstClip->fetchImage(args.time));
     if (!dstImg.get()) {
         OFX::throwSuiteStatusException(kOfxStatFailed);
         return;
@@ -434,7 +634,7 @@ void TextFXPlugin::render(const OFX::RenderArguments &args)
     // Get params
     double x, y, r, g, b, a, s_r, s_g, s_b, s_a, strokeWidth, strokeDashX, strokeDashY, strokeDashZ, circleRadius, arcRadius, arcAngle, rotate, scaleX, scaleY, skewX, skewY;
     int fontSize, fontID, cwidth, cheight, wrap, align, valign, style, stretch, weight, strokeDash, fontAA, subpixel, hintStyle, hintMetrics, circleWords, letterSpace;
-    std::string text, fontName, font, txt;
+    std::string text, fontName, font, txt, fontOverride;
     bool justify = false;
     bool markup = false;
     bool autoSize = false;
@@ -442,18 +642,18 @@ void TextFXPlugin::render(const OFX::RenderArguments &args)
     bool scaleUniform = false;
     bool centerInteract = false;
 
-    text_->getValueAtTime(args.time, text);
-    fontSize_->getValueAtTime(args.time, fontSize);
-    fontName_->getValueAtTime(args.time, fontID);
-    textColor_->getValueAtTime(args.time, r, g, b, a);
-    font_->getValueAtTime(args.time, font);
-    fontName_->getOption(fontID,fontName);
-    justify_->getValueAtTime(args.time, justify);
-    wrap_->getValueAtTime(args.time, wrap);
-    align_->getValueAtTime(args.time, align);
-    valign_->getValueAtTime(args.time, valign);
-    markup_->getValueAtTime(args.time, markup);
-    style_->getValueAtTime(args.time, style);
+    _text->getValueAtTime(args.time, text);
+    _fontSize->getValueAtTime(args.time, fontSize);
+    _fontName->getValueAtTime(args.time, fontID);
+    _textColor->getValueAtTime(args.time, r, g, b, a);
+    _font->getValueAtTime(args.time, font);
+    _fontName->getOption(fontID,fontName);
+    _justify->getValueAtTime(args.time, justify);
+    _wrap->getValueAtTime(args.time, wrap);
+    _align->getValueAtTime(args.time, align);
+    _valign->getValueAtTime(args.time, valign);
+    _markup->getValueAtTime(args.time, markup);
+    _style->getValueAtTime(args.time, style);
     auto_->getValueAtTime(args.time, autoSize);
     stretch_->getValueAtTime(args.time, stretch);
     weight_->getValueAtTime(args.time, weight);
@@ -463,23 +663,24 @@ void TextFXPlugin::render(const OFX::RenderArguments &args)
     strokeDashPattern_->getValueAtTime(args.time, strokeDashX, strokeDashY, strokeDashZ);
     fontAA_->getValueAtTime(args.time, fontAA);
     subpixel_->getValueAtTime(args.time, subpixel);
-    hintStyle_->getValueAtTime(args.time, hintStyle);
-    hintMetrics_->getValueAtTime(args.time, hintMetrics);
-    circleRadius_->getValueAtTime(args.time, circleRadius);
-    circleWords_->getValueAtTime(args.time, circleWords);
-    letterSpace_->getValueAtTime(args.time, letterSpace);
-    canvas_->getValueAtTime(args.time, cwidth, cheight);
-    arcRadius_->getValueAtTime(args.time, arcRadius);
-    arcAngle_->getValueAtTime(args.time, arcAngle);
-    rotate_->getValueAtTime(args.time, rotate);
-    scale_->getValueAtTime(args.time, scaleX, scaleY);
-    position_->getValueAtTime(args.time, x, y);
-    move_->getValueAtTime(args.time, move);
-    txt_->getValueAtTime(args.time, txt);
-    skewX_->getValueAtTime(args.time, skewX);
-    skewY_->getValueAtTime(args.time, skewY);
-    scaleUniform_->getValueAtTime(args.time, scaleUniform);
-    centerInteract_->getValueAtTime(args.time, centerInteract);
+    _hintStyle->getValueAtTime(args.time, hintStyle);
+    _hintMetrics->getValueAtTime(args.time, hintMetrics);
+    _circleRadius->getValueAtTime(args.time, circleRadius);
+    _circleWords->getValueAtTime(args.time, circleWords);
+    _letterSpace->getValueAtTime(args.time, letterSpace);
+    _canvas->getValueAtTime(args.time, cwidth, cheight);
+    _arcRadius->getValueAtTime(args.time, arcRadius);
+    _arcAngle->getValueAtTime(args.time, arcAngle);
+    _rotate->getValueAtTime(args.time, rotate);
+    _scale->getValueAtTime(args.time, scaleX, scaleY);
+    _position->getValueAtTime(args.time, x, y);
+    _move->getValueAtTime(args.time, move);
+    _txt->getValueAtTime(args.time, txt);
+    _skewX->getValueAtTime(args.time, skewX);
+    _skewY->getValueAtTime(args.time, skewY);
+    _scaleUniform->getValueAtTime(args.time, scaleUniform);
+    _centerInteract->getValueAtTime(args.time, centerInteract);
+    _fontOverride->getValueAtTime(args.time, fontOverride);
 
     double ytext = y*args.renderScale.y;
     double xtext = x*args.renderScale.x;
@@ -494,8 +695,9 @@ void TextFXPlugin::render(const OFX::RenderArguments &args)
         OFX::throwSuiteStatusException(kOfxStatFailed);
     }
 
-    if (gHostIsNatron)
+    if (gHostIsNatron) {
         fontName.erase(0,2);
+    }
 
     if (!txt.empty()) {
         std::string txt_tmp = textFromFile(txt);
@@ -533,8 +735,9 @@ void TextFXPlugin::render(const OFX::RenderArguments &args)
     fontmap = pango_cairo_font_map_get_default();
     if (pango_cairo_font_map_get_font_type((PangoCairoFontMap*)(fontmap)) != CAIRO_FONT_TYPE_FT) {
         fontmap = pango_cairo_font_map_new_for_font_type(CAIRO_FONT_TYPE_FT);
-        pango_cairo_font_map_set_default((PangoCairoFontMap*)(fontmap));
     }
+    pango_fc_font_map_set_config((PangoFcFontMap*)fontmap, _fcConfig);
+    pango_cairo_font_map_set_default((PangoCairoFontMap*)(fontmap));
 
     surface = cairo_image_surface_create (CAIRO_FORMAT_ARGB32, width, height);
     cr = cairo_create (surface);
@@ -609,83 +812,14 @@ void TextFXPlugin::render(const OFX::RenderArguments &args)
 
     pango_cairo_context_set_font_options(pango_layout_get_context(layout), options);
 
-    if (markup)
+    if (markup) {
         pango_layout_set_markup(layout, text.c_str(), -1);
-    else
+    } else {
         pango_layout_set_text(layout, text.c_str(), -1);
+    }
 
     desc = pango_font_description_from_string(pangoFont.str().c_str());
-
-    switch(stretch) {
-    case 0:
-        pango_font_description_set_stretch(desc, PANGO_STRETCH_ULTRA_CONDENSED);
-        break;
-    case 1:
-        pango_font_description_set_stretch(desc, PANGO_STRETCH_EXTRA_CONDENSED);
-        break;
-    case 2:
-        pango_font_description_set_stretch(desc, PANGO_STRETCH_CONDENSED);
-        break;
-    case 3:
-        pango_font_description_set_stretch(desc, PANGO_STRETCH_SEMI_CONDENSED);
-        break;
-    case 4:
-        pango_font_description_set_stretch(desc, PANGO_STRETCH_NORMAL);
-        break;
-    case 5:
-        pango_font_description_set_stretch(desc, PANGO_STRETCH_SEMI_EXPANDED);
-        break;
-    case 6:
-        pango_font_description_set_stretch(desc, PANGO_STRETCH_EXPANDED);
-        break;
-    case 7:
-        pango_font_description_set_stretch(desc, PANGO_STRETCH_EXTRA_EXPANDED);
-        break;
-    case 8:
-        pango_font_description_set_stretch(desc, PANGO_STRETCH_ULTRA_EXPANDED);
-        break;
-    }
-
-    switch(weight) {
-    case 0:
-        pango_font_description_set_weight(desc, PANGO_WEIGHT_THIN);
-        break;
-    case 1:
-        pango_font_description_set_weight(desc, PANGO_WEIGHT_ULTRALIGHT);
-        break;
-    case 2:
-        pango_font_description_set_weight(desc, PANGO_WEIGHT_LIGHT);
-        break;
-    case 3:
-#ifndef LEGACY
-        pango_font_description_set_weight(desc, PANGO_WEIGHT_SEMILIGHT);
-#endif
-        break;
-    case 4:
-        pango_font_description_set_weight(desc, PANGO_WEIGHT_BOOK);
-        break;
-    case 5:
-        pango_font_description_set_weight(desc, PANGO_WEIGHT_NORMAL);
-        break;
-    case 6:
-        pango_font_description_set_weight(desc, PANGO_WEIGHT_MEDIUM);
-        break;
-    case 7:
-        pango_font_description_set_weight(desc, PANGO_WEIGHT_SEMIBOLD);
-        break;
-    case 8:
-        pango_font_description_set_weight(desc, PANGO_WEIGHT_BOLD);
-        break;
-    case 9:
-        pango_font_description_set_weight(desc, PANGO_WEIGHT_ULTRABOLD);
-        break;
-    case 10:
-        pango_font_description_set_weight(desc, PANGO_WEIGHT_HEAVY);
-        break;
-    case 11:
-        pango_font_description_set_weight(desc, PANGO_WEIGHT_ULTRAHEAVY);
-        break;
-    }
+    setFontDesc(stretch, weight, desc);
 
     pango_layout_set_font_description(layout, desc);
     pango_font_description_free(desc);
@@ -745,8 +879,9 @@ void TextFXPlugin::render(const OFX::RenderArguments &args)
         pango_attr_list_insert(alist,pango_attr_letter_spacing_new(std::floor((letterSpace*PANGO_SCALE) * args.renderScale.x + 0.5)));
     }
 
-    if (!markup)
+    if (!markup) {
         pango_layout_set_attributes(layout,alist);
+    }
 
     if (!autoSize && !markup && circleRadius==0 && arcAngle==0 && strokeWidth==0 && move) {
         int moveX, moveY;
@@ -811,21 +946,24 @@ void TextFXPlugin::render(const OFX::RenderArguments &args)
     if (strokeWidth>0) {
         if (circleRadius==0) {
             if (strokeDash>0) {
-                if (strokeDashX<0.1)
+                if (strokeDashX<0.1) {
                     strokeDashX=0.1;
-                if (strokeDashY<0)
+                }
+                if (strokeDashY<0) {
                     strokeDashY=0;
-                if (strokeDashZ<0)
+                }
+                if (strokeDashZ<0) {
                     strokeDashZ=0;
+                }
                 double dash[] = {strokeDashX, strokeDashY, strokeDashZ};
                 cairo_set_dash(cr, dash, strokeDash, 0);
             }
 
             cairo_new_path(cr);
 
-            if (autoSize)
+            if (autoSize) {
                 cairo_move_to(cr, std::floor((strokeWidth/2) * args.renderScale.x + 0.5), 0.0);
-            else if (move) {
+            } else if (move) {
                 int moveX, moveY;
                 if (centerInteract) {
                     int text_width, text_height;
@@ -964,9 +1102,21 @@ void TextFXPlugin::changedParam(const OFX::InstanceChangedArgs &args, const std:
     } else if (paramName == kParamFontName) {
         std::string font;
         int fontID;
-        fontName_->getValueAtTime(args.time, fontID);
-        fontName_->getOption(fontID,font);
-        font_->setValue(font);
+        _fontName->getValueAtTime(args.time, fontID);
+        _fontName->getOption(fontID,font);
+        _font->setValue(font);
+    } else if (paramName == kParamFontOverride) {
+        int selectedFontIndex  = 0;
+        _fontName->getValueAtTime(args.time, selectedFontIndex);
+        std::string selectedFontName;
+        _fontName->getOption(selectedFontIndex, selectedFontName);
+        if (gHostIsNatron) {
+            selectedFontName.erase(0,2);
+        }
+        if (selectedFontName.empty()) {
+            selectedFontName = kParamFontNameDefault;
+        }
+        _genFonts(_fontName, _fontOverride, false, _fcConfig, gHostIsNatron, selectedFontName, kParamFontNameAltDefault);
     }
 
     clearPersistentMessage();
@@ -982,7 +1132,7 @@ bool TextFXPlugin::getRegionOfDefinition(const OFX::RegionOfDefinitionArguments 
     int width,height;
     bool autoSize = false;
 
-    canvas_->getValue(width, height);
+    _canvas->getValue(width, height);
     auto_->getValue(autoSize);
 
     if (autoSize) {
@@ -991,18 +1141,18 @@ bool TextFXPlugin::getRegionOfDefinition(const OFX::RegionOfDefinitionArguments 
         std::string text, fontName, font, txt;
         bool markup = false;
 
-        text_->getValueAtTime(args.time, text);
-        fontSize_->getValueAtTime(args.time, fontSize);
-        fontName_->getValueAtTime(args.time, fontID);
-        font_->getValueAtTime(args.time, font);
-        fontName_->getOption(fontID,fontName);
-        style_->getValueAtTime(args.time, style);
-        markup_->getValueAtTime(args.time, markup);
+        _text->getValueAtTime(args.time, text);
+        _fontSize->getValueAtTime(args.time, fontSize);
+        _fontName->getValueAtTime(args.time, fontID);
+        _font->getValueAtTime(args.time, font);
+        _fontName->getOption(fontID,fontName);
+        _style->getValueAtTime(args.time, style);
+        _markup->getValueAtTime(args.time, markup);
         stretch_->getValueAtTime(args.time, stretch);
         weight_->getValueAtTime(args.time, weight);
         strokeWidth_->getValueAtTime(args.time, strokeWidth);
-        letterSpace_->getValueAtTime(args.time, letterSpace);
-        txt_->getValueAtTime(args.time, txt);
+        _letterSpace->getValueAtTime(args.time, letterSpace);
+        _txt->getValueAtTime(args.time, txt);
 
         if (!txt.empty()) {
             std::string txt_tmp = textFromFile(txt);
@@ -1044,8 +1194,9 @@ bool TextFXPlugin::getRegionOfDefinition(const OFX::RegionOfDefinitionArguments 
             fontmap = pango_cairo_font_map_get_default();
             if (pango_cairo_font_map_get_font_type((PangoCairoFontMap*)(fontmap)) != CAIRO_FONT_TYPE_FT) {
                 fontmap = pango_cairo_font_map_new_for_font_type(CAIRO_FONT_TYPE_FT);
-                pango_cairo_font_map_set_default((PangoCairoFontMap*)(fontmap));
             }
+            pango_fc_font_map_set_config((PangoFcFontMap*)fontmap, _fcConfig);
+            pango_cairo_font_map_set_default((PangoCairoFontMap*)(fontmap));
 
             surface = cairo_image_surface_create (CAIRO_FORMAT_ARGB32, width, height);
             cr = cairo_create (surface);
@@ -1053,83 +1204,14 @@ bool TextFXPlugin::getRegionOfDefinition(const OFX::RegionOfDefinitionArguments 
             layout = pango_cairo_create_layout(cr);
             alist = pango_attr_list_new();
 
-            if (markup)
+            if (markup) {
                 pango_layout_set_markup(layout, text.c_str(), -1);
-            else
+            } else {
                 pango_layout_set_text(layout, text.c_str(), -1);
+            }
 
             desc = pango_font_description_from_string(pangoFont.str().c_str());
-
-            switch(stretch) {
-            case 0:
-                pango_font_description_set_stretch(desc, PANGO_STRETCH_ULTRA_CONDENSED);
-                break;
-            case 1:
-                pango_font_description_set_stretch(desc, PANGO_STRETCH_EXTRA_CONDENSED);
-                break;
-            case 2:
-                pango_font_description_set_stretch(desc, PANGO_STRETCH_CONDENSED);
-                break;
-            case 3:
-                pango_font_description_set_stretch(desc, PANGO_STRETCH_SEMI_CONDENSED);
-                break;
-            case 4:
-                pango_font_description_set_stretch(desc, PANGO_STRETCH_NORMAL);
-                break;
-            case 5:
-                pango_font_description_set_stretch(desc, PANGO_STRETCH_SEMI_EXPANDED);
-                break;
-            case 6:
-                pango_font_description_set_stretch(desc, PANGO_STRETCH_EXPANDED);
-                break;
-            case 7:
-                pango_font_description_set_stretch(desc, PANGO_STRETCH_EXTRA_EXPANDED);
-                break;
-            case 8:
-                pango_font_description_set_stretch(desc, PANGO_STRETCH_ULTRA_EXPANDED);
-                break;
-            }
-
-            switch(weight) {
-            case 0:
-                pango_font_description_set_weight(desc, PANGO_WEIGHT_THIN);
-                break;
-            case 1:
-                pango_font_description_set_weight(desc, PANGO_WEIGHT_ULTRALIGHT);
-                break;
-            case 2:
-                pango_font_description_set_weight(desc, PANGO_WEIGHT_LIGHT);
-                break;
-            case 3:
-#ifndef LEGACY
-                pango_font_description_set_weight(desc, PANGO_WEIGHT_SEMILIGHT);
-#endif
-                break;
-            case 4:
-                pango_font_description_set_weight(desc, PANGO_WEIGHT_BOOK);
-                break;
-            case 5:
-                pango_font_description_set_weight(desc, PANGO_WEIGHT_NORMAL);
-                break;
-            case 6:
-                pango_font_description_set_weight(desc, PANGO_WEIGHT_MEDIUM);
-                break;
-            case 7:
-                pango_font_description_set_weight(desc, PANGO_WEIGHT_SEMIBOLD);
-                break;
-            case 8:
-                pango_font_description_set_weight(desc, PANGO_WEIGHT_BOLD);
-                break;
-            case 9:
-                pango_font_description_set_weight(desc, PANGO_WEIGHT_ULTRABOLD);
-                break;
-            case 10:
-                pango_font_description_set_weight(desc, PANGO_WEIGHT_HEAVY);
-                break;
-            case 11:
-                pango_font_description_set_weight(desc, PANGO_WEIGHT_ULTRAHEAVY);
-                break;
-            }
+            setFontDesc(stretch, weight, desc);
 
             pango_layout_set_font_description(layout, desc);
             pango_font_description_free(desc);
@@ -1219,7 +1301,9 @@ void TextFXPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, Co
         param->setDefault(kParamPositionMoveDefault);
         param->setAnimates(false);
         param->setLayoutHint(eLayoutHintNoNewLine, 1);
-        page->addChild(*param);
+        if (page) {
+            page->addChild(*param);
+        }
     }
     {
         BooleanParamDescriptor *param = desc.defineBooleanParam(kParamAutoSize);
@@ -1228,7 +1312,9 @@ void TextFXPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, Co
         param->setAnimates(false);
         param->setDefault(kParamAutoSizeDefault);
         param->setLayoutHint(eLayoutHintNoNewLine, 1);
-        page->addChild(*param);
+        if (page) {
+            page->addChild(*param);
+        }
     }
     {
         BooleanParamDescriptor *param = desc.defineBooleanParam(kParamCenterInteract);
@@ -1236,7 +1322,9 @@ void TextFXPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, Co
         param->setHint(kParamCenterInteractHint);
         param->setDefault(kParamCenterInteractDefault);
         param->setAnimates(false);
-        page->addChild(*param);
+        if (page) {
+            page->addChild(*param);
+        }
     }
     {
         Int2DParamDescriptor* param = desc.defineInt2DParam(kParamCanvas);
@@ -1247,7 +1335,9 @@ void TextFXPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, Co
         param->setDefault(kParamCanvasDefault, kParamCanvasDefault);
         param->setAnimates(false);
         param->setLayoutHint(OFX::eLayoutHintDivider);
-        page->addChild(*param);
+        if (page) {
+            page->addChild(*param);
+        }
     }
     {
         BooleanParamDescriptor *param = desc.defineBooleanParam(kParamMarkup);
@@ -1255,7 +1345,9 @@ void TextFXPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, Co
         param->setHint(kParamMarkupHint);
         param->setDefault(kParamMarkupDefault);
         param->setAnimates(false);
-        page->addChild(*param);
+        if (page) {
+            page->addChild(*param);
+        }
     }
     {
         StringParamDescriptor* param = desc.defineStringParam(kParamTextFile);
@@ -1264,7 +1356,9 @@ void TextFXPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, Co
         param->setStringType(eStringTypeFilePath);
         param->setFilePathExists(true);
         param->setAnimates(false);
-        page->addChild(*param);
+        if (page) {
+            page->addChild(*param);
+        }
     }
     {
         StringParamDescriptor* param = desc.defineStringParam(kParamText);
@@ -1273,7 +1367,9 @@ void TextFXPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, Co
         param->setStringType(eStringTypeMultiLine);
         param->setAnimates(true);
         param->setDefault("Enter text");
-        page->addChild(*param);
+        if (page) {
+            page->addChild(*param);
+        }
     }
     {
         BooleanParamDescriptor *param = desc.defineBooleanParam(kParamJustify);
@@ -1282,7 +1378,9 @@ void TextFXPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, Co
         param->setDefault(kParamJustifyDefault);
         param->setLayoutHint(eLayoutHintNoNewLine, 1);
         param->setAnimates(false);
-        page->addChild(*param);
+        if (page) {
+            page->addChild(*param);
+        }
     }
     {
         ChoiceParamDescriptor *param = desc.defineChoiceParam(kParamWrap);
@@ -1294,7 +1392,9 @@ void TextFXPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, Co
         param->appendOption("Word-Char");
         param->setDefault(kParamWrapDefault);
         param->setAnimates(false);
-        page->addChild(*param);
+        if (page) {
+            page->addChild(*param);
+        }
     }
     {
         ChoiceParamDescriptor *param = desc.defineChoiceParam(kParamAlign);
@@ -1306,7 +1406,9 @@ void TextFXPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, Co
         param->setDefault(kParamAlignDefault);
         param->setAnimates(false);
         param->setLayoutHint(eLayoutHintNoNewLine, 1);
-        page->addChild(*param);
+        if (page) {
+            page->addChild(*param);
+        }
     }
     {
         ChoiceParamDescriptor *param = desc.defineChoiceParam(kParamVAlign);
@@ -1318,65 +1420,61 @@ void TextFXPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, Co
         param->setDefault(kParamVAlignDefault);
         param->setAnimates(false);
         param->setLayoutHint(OFX::eLayoutHintDivider);
-        page->addChild(*param);
+        if (page) {
+            page->addChild(*param);
+        }
     }
     {
         ChoiceParamDescriptor *param = desc.defineChoiceParam(kParamFontName);
         param->setLabel(kParamFontNameLabel);
         param->setHint(kParamFontNameHint);
-        if (gHostIsNatron)
+        if (gHostIsNatron) {
             param->setCascading(OFX::getImageEffectHostDescription()->supportsCascadingChoices);
-
-        // Get all fonts from fontconfig
+        }
+        std::list<std::string>::const_iterator font;
+        std::list<std::string> fonts = _genFonts(NULL, NULL, false, NULL, false, kParamFontNameDefault, kParamFontNameAltDefault);
         int defaultFont = 0;
         int altFont = 0;
         int fontIndex = 0;
-        FcConfig* config = FcInitLoadConfigAndFonts();
-        FcPattern *p = FcPatternCreate();
-        FcObjectSet *os = FcObjectSetBuild (FC_FAMILY,NULL);
-        FcFontSet *fs = FcFontList(config, p, os);
-        std::list<std::string> fonts;
-        for (int i=0; fs && i < fs->nfont; i++) {
-            FcPattern *font = fs->fonts[i];
-            FcChar8 *s;
-            s = FcPatternFormat(font,(const FcChar8 *)"%{family[0]}");
-            std::string fontName(reinterpret_cast<char*>(s));
-            fonts.push_back(fontName);
-            if (font)
-                FcPatternDestroy(font);
-        }
-
-        // sort fonts
-        fonts.sort();
-        fonts.erase(unique(fonts.begin(), fonts.end(), stringCompare), fonts.end());
-
-        // add to param
-        std::list<std::string>::const_iterator font;
         for(font = fonts.begin(); font != fonts.end(); ++font) {
             std::string fontName = *font;
-            std::string fontItem;
-            if (gHostIsNatron) {
-                fontItem=fontName[0];
-                fontItem.append("/"+fontName);
+            if (!fontName.empty()) {
+                std::string fontItem;
+                if (gHostIsNatron) {
+                    fontItem=fontName[0];
+                    fontItem.append("/" + fontName);
+                } else {
+                    fontItem=fontName;
+                }
+                param->appendOption(fontItem);
+                if (std::strcmp(fontName.c_str(), kParamFontNameDefault) == 0) {
+                    defaultFont=fontIndex;
+                }
+                if (std::strcmp(fontName.c_str(), kParamFontNameAltDefault) == 0) {
+                    altFont=fontIndex;
+                }
             }
-            else
-                fontItem=fontName;
-
-            param->appendOption(fontItem);
-            if (std::strcmp(fontName.c_str(),kParamFontNameDefault)==0)
-                defaultFont=fontIndex;
-            if (std::strcmp(fontName.c_str(),kParamFontNameAltDefault)==0)
-                altFont=fontIndex;
             fontIndex++;
         }
-
-        if (defaultFont>0)
+        if (defaultFont > 0) {
             param->setDefault(defaultFont);
-        else if (defaultFont==0&&altFont>0)
+        } else if (altFont > 0) {
             param->setDefault(altFont);
-
+        }
         param->setAnimates(false);
-        page->addChild(*param);
+        if (page) {
+            page->addChild(*param);
+        }
+    }
+    {
+        StringParamDescriptor* param = desc.defineStringParam(kParamFontOverride);
+        param->setLabel(kParamFontOverrideLabel);
+        param->setHint(kParamFontOverrideHint);
+        param->setStringType(eStringTypeFilePath);
+        param->setAnimates(false);
+        if (page) {
+            page->addChild(*param);
+        }
     }
     {
         StringParamDescriptor* param = desc.defineStringParam(kParamFont);
@@ -1391,7 +1489,9 @@ void TextFXPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, Co
         param->setIsSecret(true);
         #endif
 
-        page->addChild(*param);
+        if (page) {
+            page->addChild(*param);
+        }
     }
     {
         IntParamDescriptor* param = desc.defineIntParam(kParamFontSize);
@@ -1401,7 +1501,9 @@ void TextFXPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, Co
         param->setDisplayRange(1, 500);
         param->setDefault(kParamFontSizeDefault);
         param->setAnimates(true);
-        page->addChild(*param);
+        if (page) {
+            page->addChild(*param);
+        }
     }
     {
         RGBAParamDescriptor* param = desc.defineRGBAParam(kParamTextColor);
@@ -1409,7 +1511,9 @@ void TextFXPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, Co
         param->setHint(kParamTextColorHint);
         param->setDefault(1., 1., 1., 1.);
         param->setAnimates(true);
-        page->addChild(*param);
+        if (page) {
+            page->addChild(*param);
+        }
     }
     {
         IntParamDescriptor* param = desc.defineIntParam(kParamLetterSpace);
@@ -1419,7 +1523,9 @@ void TextFXPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, Co
         param->setDisplayRange(0, 500);
         param->setDefault(kParamLetterSpaceDefault);
         param->setLayoutHint(OFX::eLayoutHintDivider);
-        page->addChild(*param);
+        if (page) {
+            page->addChild(*param);
+        }
     }
     {
         ChoiceParamDescriptor *param = desc.defineChoiceParam(kParamHintStyle);
@@ -1433,7 +1539,9 @@ void TextFXPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, Co
         param->setDefault(kParamHintStyleDefault);
         param->setLayoutHint(eLayoutHintNoNewLine, 1);
         param->setAnimates(false);
-        page->addChild(*param);
+        if (page) {
+            page->addChild(*param);
+        }
     }
     {
         ChoiceParamDescriptor *param = desc.defineChoiceParam(kParamHintMetrics);
@@ -1444,7 +1552,9 @@ void TextFXPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, Co
         param->appendOption("On");
         param->setDefault(kParamHintMetricsDefault);
         param->setAnimates(false);
-        page->addChild(*param);
+        if (page) {
+            page->addChild(*param);
+        }
     }
     {
         ChoiceParamDescriptor *param = desc.defineChoiceParam(kParamFontAA);
@@ -1457,7 +1567,9 @@ void TextFXPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, Co
         param->setDefault(kParamFontAADefault);
         param->setLayoutHint(eLayoutHintNoNewLine, 1);
         param->setAnimates(false);
-        page->addChild(*param);
+        if (page) {
+            page->addChild(*param);
+        }
     }
     {
         ChoiceParamDescriptor *param = desc.defineChoiceParam(kParamSubpixel);
@@ -1470,7 +1582,9 @@ void TextFXPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, Co
         param->appendOption("VBGR");
         param->setDefault(kParamSubpixelDefault);
         param->setAnimates(false);
-        page->addChild(*param);
+        if (page) {
+            page->addChild(*param);
+        }
     }
     {
         ChoiceParamDescriptor *param = desc.defineChoiceParam(kParamStyle);
@@ -1482,7 +1596,9 @@ void TextFXPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, Co
         param->setDefault(kParamStyleDefault);
         param->setLayoutHint(eLayoutHintNoNewLine, 1);
         param->setAnimates(false);
-        page->addChild(*param);
+        if (page) {
+            page->addChild(*param);
+        }
     }
     {
         ChoiceParamDescriptor *param = desc.defineChoiceParam(kParamWeight);
@@ -1502,7 +1618,9 @@ void TextFXPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, Co
         param->appendOption("Ultra heavy");
         param->setDefault(kParamWeightDefault);
         param->setAnimates(false);
-        page->addChild(*param);
+        if (page) {
+            page->addChild(*param);
+        }
     }
     {
         ChoiceParamDescriptor *param = desc.defineChoiceParam(kParamStretch);
@@ -1520,7 +1638,9 @@ void TextFXPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, Co
         param->setDefault(kParamStretchDefault);
         param->setLayoutHint(OFX::eLayoutHintDivider);
         param->setAnimates(false);
-        page->addChild(*param);
+        if (page) {
+            page->addChild(*param);
+        }
     }
     {
         DoubleParamDescriptor* param = desc.defineDoubleParam(kParamStrokeWidth);
@@ -1530,7 +1650,9 @@ void TextFXPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, Co
         param->setDisplayRange(0, 100);
         param->setDefault(kParamStrokeWidthDefault);
         param->setAnimates(true);
-        page->addChild(*param);
+        if (page) {
+            page->addChild(*param);
+        }
     }
     {
         RGBAParamDescriptor* param = desc.defineRGBAParam(kParamStrokeColor);
@@ -1538,7 +1660,9 @@ void TextFXPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, Co
         param->setHint(kParamStrokeColorHint);
         param->setDefault(1., 0., 0., 1.);
         param->setAnimates(true);
-        page->addChild(*param);
+        if (page) {
+            page->addChild(*param);
+        }
     }
     {
         IntParamDescriptor* param = desc.defineIntParam(kParamStrokeDash);
@@ -1548,7 +1672,9 @@ void TextFXPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, Co
         param->setDisplayRange(0, 10);
         param->setDefault(kParamStrokeDashDefault);
         param->setAnimates(true);
-        page->addChild(*param);
+        if (page) {
+            page->addChild(*param);
+        }
     }
     {
         Double3DParamDescriptor* param = desc.defineDouble3DParam(kParamStrokeDashPattern);
@@ -1557,7 +1683,9 @@ void TextFXPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, Co
         param->setDefault(1.0, 0.0, 0.0);
         param->setAnimates(true);
         param->setLayoutHint(OFX::eLayoutHintDivider);
-        page->addChild(*param);
+        if (page) {
+            page->addChild(*param);
+        }
     }
     {
         DoubleParamDescriptor* param = desc.defineDoubleParam(kParamCircleRadius);
@@ -1567,7 +1695,9 @@ void TextFXPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, Co
         param->setDisplayRange(0, 1000);
         param->setDefault(kParamCircleRadiusDefault);
         param->setAnimates(true);
-        page->addChild(*param);
+        if (page) {
+            page->addChild(*param);
+        }
     }
     {
         IntParamDescriptor* param = desc.defineIntParam(kParamCircleWords);
@@ -1578,7 +1708,9 @@ void TextFXPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, Co
         param->setDefault(kParamCircleWordsDefault);
         param->setAnimates(true);
         param->setLayoutHint(OFX::eLayoutHintDivider);
-        page->addChild(*param);
+        if (page) {
+            page->addChild(*param);
+        }
     }
     {
         DoubleParamDescriptor* param = desc.defineDoubleParam(kParamArcRadius);
@@ -1588,7 +1720,9 @@ void TextFXPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, Co
         param->setDisplayRange(0, 1000);
         param->setDefault(kParamArcRadiusDefault);
         param->setAnimates(true);
-        page->addChild(*param);
+        if (page) {
+            page->addChild(*param);
+        }
     }
     {
         DoubleParamDescriptor* param = desc.defineDoubleParam(kParamArcAngle);
@@ -1599,7 +1733,9 @@ void TextFXPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, Co
         param->setDefault(kParamArcAngleDefault);
         param->setAnimates(true);
         param->setLayoutHint(OFX::eLayoutHintDivider);
-        page->addChild(*param);
+        if (page) {
+            page->addChild(*param);
+        }
     }
 }
 
