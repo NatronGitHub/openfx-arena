@@ -267,6 +267,7 @@ public:
             curl_easy_setopt(curl, CURLOPT_URL, location.c_str());
             curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, curlWriteData);
             curl_easy_setopt(curl, CURLOPT_WRITEDATA, fp);
+            curl_easy_setopt(curl, CURLOPT_SSL_VERIFYPEER, 0);
             res = curl_easy_perform(curl);
             curl_easy_cleanup(curl);
             fclose(fp);
