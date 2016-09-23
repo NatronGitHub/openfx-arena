@@ -30,6 +30,8 @@ PLUGINOBJECTS += \
         Modulate.o \
         ReadMisc.o \
         Text.o \
+	HaldCLUT.o \
+	MagickPlugin.o \
         ofxsOGLTextRenderer.o ofxsOGLFontData.o ofxsRectangleInteract.o \
         ofxsTransform3x3.o ofxsTransformInteract.o ofxsShutter.o \
         GenericReader.o GenericOCIO.o SequenceParsing.o
@@ -83,6 +85,8 @@ RESOURCES += \
 ../Magick/fr.inria.openfx.ReadMisc.svg \
 ../Magick/net.fxarena.openfx.Texture.png \
 ../Magick/net.fxarena.openfx.Texture.svg \
+../Magick/HaldCLUT/net.fxarena.openfx.HaldCLUT.png \
+../Magick/HaldCLUT/net.fxarena.openfx.HaldCLUT.svg
 #../Magick/net.fxarena.openfx.Text.png \
 #../Magick/net.fxarena.openfx.Text.svg
 
@@ -100,17 +104,19 @@ SRCDIR = ..
 
 VPATH += \
 $(SRCDIR)/Extra \
-$(SRCDIR)/Magick
+$(SRCDIR)/Magick \
+$(SRCDIR)/Magick/HaldCLUT
 
 CXXFLAGS += \
 -I$(SRCDIR)/Extra \
--I$(SRCDIR)/Magick
+-I$(SRCDIR)/Magick \
+-I$(SRCDIR)/Magick/HaldCLUT
 
 include $(SRCDIR)/Makefile.master
 include $(SRCDIR)/Makefile.io
 
-CXXFLAGS  += $(FCONFIG_CXXFLAGS) $(PANGO_CXXFLAGS) $(SVG_CXXFLAGS) $(CDR_CXXFLAGS) $(XML_CXXFLAGS) $(ZIP_CXXFLAGS) $(MAGICK_CXXFLAGS) $(LCMS_CXXFLAGS) $(GLIB_CXXFLAGS)
-LINKFLAGS += $(FCONFIG_LINKFLAGS) $(PANGO_LINKFLAGS) $(SVG_LINKFLAGS) $(CDR_LINKFLAGS) $(XML_LINKFLAGS) $(ZIP_LINKFLAGS) $(MAGICK_LINKFLAGS) $(LCMS_LINKFLAGS) $(GLIB_LINKFLAGS)
+CXXFLAGS  += $(FCONFIG_CXXFLAGS) $(PANGO_CXXFLAGS) $(SVG_CXXFLAGS) $(CDR_CXXFLAGS) $(XML_CXXFLAGS) $(ZIP_CXXFLAGS) $(MAGICK_CXXFLAGS) $(LCMS_CXXFLAGS) $(GLIB_CXXFLAGS) $(CURL_CXXFLAGS)
+LINKFLAGS += $(FCONFIG_LINKFLAGS) $(PANGO_LINKFLAGS) $(SVG_LINKFLAGS) $(CDR_LINKFLAGS) $(XML_LINKFLAGS) $(ZIP_LINKFLAGS) $(MAGICK_LINKFLAGS) $(LCMS_LINKFLAGS) $(GLIB_LINKFLAGS) $(CURL_LINKFLAGS)
 
 CXXFLAGS += -I.
 
@@ -142,3 +148,5 @@ lodepng.h:
 $(OBJECTPATH)/lodepng.o: lodepng.cpp lodepng.h
 $(OBJECTPATH)/ReadKrita.o: ReadKrita.cpp lodepng.h
 $(OBJECTPATH)/OpenRaster.o: OpenRaster.cpp lodepng.h
+$(OBJECTPATH)/MagickPlugin.o: MagickPlugin.cpp MagickPlugin.h
+
