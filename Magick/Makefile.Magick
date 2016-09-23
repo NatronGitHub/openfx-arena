@@ -1,8 +1,8 @@
 RESOURCES = \
-net.fxarena.openfx.$(PLUGINNAME).png \
-net.fxarena.openfx.$(PLUGINNAME).svg \
-$(SRCDIR)/Magick/Extra.png \
-$(SRCDIR)/Magick/Extra.svg
+    net.fxarena.openfx.$(PLUGINNAME).png \
+    net.fxarena.openfx.$(PLUGINNAME).svg \
+    $(SRCDIR)/Magick/Extra.png \
+    $(SRCDIR)/Magick/Extra.svg
 
 include $(SRCDIR)/Makefile.master
 
@@ -12,14 +12,13 @@ CXXFLAGS  += $(MAGICK_CXXFLAGS) -I$(SRCDIR)/Magick
 LINKFLAGS += $(MAGICK_LINKFLAGS)
 
 ifeq ($(IM),7)
-        CXXFLAGS += -DIM7
+CXXFLAGS += -DIM7
 endif
 
 ifeq ($(LEGACYIM),1)
-        CXXFLAGS += -DLEGACYIM -DNOMAGICKSEED
+CXXFLAGS += -DLEGACYIM -DNOMAGICKSEED
 endif
 
 ifeq ($(IM),68)
-        CXXFLAGS += -DNOMAGICKSEED
+CXXFLAGS += -DNOMAGICKSEED
 endif
-

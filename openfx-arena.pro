@@ -52,7 +52,9 @@ OTHER_FILES += \
             Magick/Roll/Makefile \
             Magick/Roll/Info.plist \
             Magick/HaldCLUT/Info.plist \
-            Magick/HaldCLUT/net.fxarena.openfx.HaldCLUT.xml
+            Magick/Makefile.Magick \
+            Magick/HaldCLUT/net.fxarena.openfx.HaldCLUT.xml \
+            Magick/HaldCLUT/Makefile
 INCLUDEPATH += . \
             SupportExt \
             OpenFX/Support/include \
