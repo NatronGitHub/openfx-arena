@@ -211,7 +211,7 @@ public:
             category = _presets[preset][1];
             filename = _presets[preset][2];
             //checksum = _presets[preset][3];
-            if (category.empty() || filename.empty() || checksum.empty()) {
+            if (category.empty() || filename.empty() /*|| checksum.empty()*/) {
                 setPersistentMessage(OFX::Message::eMessageError, "", "Unable to read XML");
                 OFX::throwSuiteStatusException(kOfxStatFailed);
             }

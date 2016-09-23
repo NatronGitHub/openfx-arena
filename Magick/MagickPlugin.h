@@ -26,7 +26,7 @@
 #define kParamOpenMP "openmp"
 #define kParamOpenMPLabel "OpenMP"
 #define kParamOpenMPHint "Enable/Disable OpenMP support. This will enable the plugin to use as many threads as allowed by host."
-#define kParamOpenMPDefault false
+#define kParamOpenMPDefault true
 
 #define kParamMatte "matte"
 #define kParamMatteLabel "Matte"
