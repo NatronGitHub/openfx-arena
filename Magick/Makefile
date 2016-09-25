@@ -43,12 +43,12 @@ RESOURCES = \
     net.fxarena.openfx.Arc.svg \
     net.fxarena.openfx.Polar.png \
     net.fxarena.openfx.Polar.svg \
-    net.fxarena.openfx.Roll.png \
-    net.fxarena.openfx.Roll.svg \
-    net.fxarena.openfx.Wave.png \
-    net.fxarena.openfx.Wave.svg \
-    net.fxarena.openfx.Swirl.png \
-    net.fxarena.openfx.Swirl.svg \
+    Roll/net.fxarena.openfx.Roll.png \
+    Roll/net.fxarena.openfx.Roll.svg \
+    Wave/net.fxarena.openfx.Wave.png \
+    Wave/net.fxarena.openfx.Wave.svg \
+    Swirl/net.fxarena.openfx.Swirl.png \
+    Swirl/net.fxarena.openfx.Swirl.svg \
     net.fxarena.openfx.Implode.png \
     net.fxarena.openfx.Implode.svg \
     net.fxarena.openfx.Charcoal.png \
@@ -66,7 +66,8 @@ RESOURCES = \
     net.fxarena.openfx.Texture.png \
     net.fxarena.openfx.Texture.svg \
     HaldCLUT/net.fxarena.openfx.HaldCLUT.png \
-    HaldCLUT/net.fxarena.openfx.HaldCLUT.svg
+    HaldCLUT/net.fxarena.openfx.HaldCLUT.svg \
+    HaldCLUT/net.fxarena.openfx.HaldCLUT.xml
 
 ifneq ($(LEGACYIM),1)
 RESOURCES += \
@@ -83,11 +84,13 @@ include $(SRCDIR)/Makefile.master
 include $(SRCDIR)/Makefile.io
 
 VPATH += \
-    $(SRCDIR)/Magick/HaldCLUT
+    $(SRCDIR)/Magick/HaldCLUT \
+    $(SRCDIR)/Magick/Swirl \
+    $(SRCDIR)/Magick/Roll \
+    $(SRCDIR)/Magick/Wave
 
 CXXFLAGS += \
-    -I. \
-    -I$(SRCDIR)/Magick/HaldCLUT
+    -I.
 
 CXXFLAGS  += \
     $(MAGICK_CXXFLAGS) \

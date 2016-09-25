@@ -38,9 +38,15 @@ PLUGINOBJECTS += \
     Text.o \
     HaldCLUT.o \
     MagickPlugin.o \
-    ofxsOGLTextRenderer.o ofxsOGLFontData.o ofxsRectangleInteract.o \
-    ofxsTransform3x3.o ofxsTransformInteract.o ofxsShutter.o \
-    GenericReader.o GenericOCIO.o SequenceParsing.o
+    ofxsOGLTextRenderer.o \
+    ofxsOGLFontData.o \
+    ofxsRectangleInteract.o \
+    ofxsTransform3x3.o \
+    ofxsTransformInteract.o \
+    ofxsShutter.o \
+    GenericReader.o \
+    GenericOCIO.o \
+    SequenceParsing.o
 
 RESOURCES = \
     ../Extra/net.fxarena.openfx.Text.png \
@@ -71,12 +77,12 @@ RESOURCES += \
     ../Magick/net.fxarena.openfx.Arc.svg \
     ../Magick/net.fxarena.openfx.Polar.png \
     ../Magick/net.fxarena.openfx.Polar.svg \
-    ../Magick/net.fxarena.openfx.Roll.png \
-    ../Magick/net.fxarena.openfx.Roll.svg \
-    ../Magick/net.fxarena.openfx.Wave.png \
-    ../Magick/net.fxarena.openfx.Wave.svg \
-    ../Magick/net.fxarena.openfx.Swirl.png \
-    ../Magick/net.fxarena.openfx.Swirl.svg \
+    ../Magick/Roll/net.fxarena.openfx.Roll.png \
+    ../Magick/Roll/net.fxarena.openfx.Roll.svg \
+    ../Magick/Wave/net.fxarena.openfx.Wave.png \
+    ../Magick/Wave/net.fxarena.openfx.Wave.svg \
+    ../Magick/Swirl/net.fxarena.openfx.Swirl.png \
+    ../Magick/Swirl/net.fxarena.openfx.Swirl.svg \
     ../Magick/net.fxarena.openfx.Implode.png \
     ../Magick/net.fxarena.openfx.Implode.svg \
     ../Magick/net.fxarena.openfx.Charcoal.png \
@@ -92,7 +98,8 @@ RESOURCES += \
     ../Magick/net.fxarena.openfx.Texture.png \
     ../Magick/net.fxarena.openfx.Texture.svg \
     ../Magick/HaldCLUT/net.fxarena.openfx.HaldCLUT.png \
-    ../Magick/HaldCLUT/net.fxarena.openfx.HaldCLUT.svg
+    ../Magick/HaldCLUT/net.fxarena.openfx.HaldCLUT.svg \
+    ../Magick/HaldCLUT/net.fxarena.openfx.HaldCLUT.xml
 
     #../Magick/net.fxarena.openfx.Text.png \
     #../Magick/net.fxarena.openfx.Text.svg
@@ -112,12 +119,14 @@ SRCDIR = ..
 VPATH += \
     $(SRCDIR)/Extra \
     $(SRCDIR)/Magick \
-    $(SRCDIR)/Magick/HaldCLUT
+    $(SRCDIR)/Magick/HaldCLUT \
+    $(SRCDIR)/Magick/Swirl \
+    $(SRCDIR)/Magick/Roll \
+    $(SRCDIR)/Magick/Wave
 
 CXXFLAGS += \
     -I$(SRCDIR)/Extra \
-    -I$(SRCDIR)/Magick \
-    -I$(SRCDIR)/Magick/HaldCLUT
+    -I$(SRCDIR)/Magick
 
 include $(SRCDIR)/Makefile.master
 include $(SRCDIR)/Makefile.io

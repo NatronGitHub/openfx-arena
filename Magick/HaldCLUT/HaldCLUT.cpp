@@ -26,6 +26,7 @@
 #include <iostream>
 #include <sys/stat.h>
 #include <sys/types.h>
+#include <cstring>
 
 using namespace OFX;
 OFXS_NAMESPACE_ANONYMOUS_ENTER
@@ -195,6 +196,26 @@ public:
         xml.append(".xml");
         parseXML(xml, &_presets);
 
+        if (_presets.size() > 0) {
+            std::string presetSelected;
+            int pid;
+            int opts = _preset->getNOptions();
+            _preset->getValue(pid);
+            _preset->getOption(pid,presetSelected);
+            if (!presetSelected.empty()) {
+                for(int x = 0; x < opts; x++) {
+                    std::string presetFound;
+                    _preset->getOption(x, presetFound);
+                    if (!presetFound.empty()) {
+                        if (std::strcmp(presetFound.c_str(), presetSelected.c_str())==0) {
+                             _preset->setValue(x);
+                            break;
+                        }
+                     }
+                }
+            }
+        }
+
         _lut = Magick::Image(Magick::Geometry(512, 512), Magick::Color("rgb(0,0,0)"));
     }
 
@@ -208,8 +229,10 @@ public:
         std::string presetFile;
 
         if (custom.empty()) {
-            category = _presets[preset][1];
-            filename = _presets[preset][2];
+            if (_presets.size() > 0) {
+                category = _presets[preset][1];
+                filename = _presets[preset][2];
+            }
             //checksum = _presets[preset][3];
             if (category.empty() || filename.empty() /*|| checksum.empty()*/) {
                 setPersistentMessage(OFX::Message::eMessageError, "", "Unable to read XML");
