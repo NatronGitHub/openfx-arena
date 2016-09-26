@@ -64,9 +64,10 @@ OFXS_NAMESPACE_ANONYMOUS_ENTER
     "They serve only to inform the user which film stock the given HaldCLUT image is designed to approximate. " \
     "As there is no way to convey this information other than by using the trademarked name, we believe this constitutes fair use. " \
     "Neither the publisher nor the authors are affiliated with or endorsed by the companies that own the trademarks."
-#define kPluginRepo "https://raw.githubusercontent.com/olear/clut/master"
+#define kPluginRepoURL "https://raw.githubusercontent.com/olear/clut/master"
+#define kPluginRepoZIP "https://github.com/olear/clut/archive/master.zip"
 #define kPluginVersionMajor 1
-#define kPluginVersionMinor 0
+#define kPluginVersionMinor 1
 
 #define kSupportsTiles 0
 #define kSupportsMultiResolution 1
@@ -82,8 +83,12 @@ OFXS_NAMESPACE_ANONYMOUS_ENTER
 #define kParamPresetDefault 0
 
 #define kParamCustom "custom"
-#define kParamCustomLabel "Custom"
+#define kParamCustomLabel "Custom CLUT File"
 #define kParamCustomHint "Add a custom CLUT PNG file."
+
+#define kParamCustomPath "customPath"
+#define kParamCustomPathLabel "Custom Preset Path"
+#define kParamCustomPathHint "Add a custom path where the presets are located (or will be downloaded)."
 
 static bool gHostIsNatron = false;
 
@@ -184,10 +189,12 @@ public:
         , _presets(0)
         , _preset(0)
         , _custom(0)
+        , _path(0)
     {
         _preset = fetchChoiceParam(kParamPreset);
         _custom = fetchStringParam(kParamCustom);
-        assert(_preset && _custom);
+        _path = fetchStringParam(kParamCustomPath);
+        assert(_preset && _custom && _path);
 
         std::string xml;
         xml.append(getPropertySet().propGetString(kOfxPluginPropFilePath, false));
@@ -217,14 +224,25 @@ public:
         }
 
         _lut = Magick::Image(Magick::Geometry(512, 512), Magick::Color("rgb(0,0,0)"));
+        _lut.comment("N/A");
+
+        std::string currPath;
+        _path->getValue(currPath);
+        if (currPath.empty()) {
+            currPath = presetPath("");
+        }
+        std::stringstream msg;
+        msg << "This plugin will download presets if they are not found on disk. The presets are stored in the " << currPath << " directory, you can override this location with the 'customPath' param. You can also download the presets manually from " << kPluginRepoZIP << ", extract and copy the preset files to the " << currPath << " directory.";
+        setPersistentMessage(OFX::Message::eMessageMessage, "", msg.str());
     }
 
     virtual void render(const OFX::RenderArguments &args, Magick::Image &image) OVERRIDE FINAL
     {
         int preset = 0;
-        std::string custom, url, clut, category, filename/*, checksum*/;
+        std::string custom, url, clut, category, filename/*, checksum*/, customPath;
         _preset->getValueAtTime(args.time, preset);
         _custom->getValueAtTime(args.time, custom);
+        _path->getValueAtTime(args.time, customPath);
 
         std::string presetFile;
 
@@ -238,9 +256,9 @@ public:
                 setPersistentMessage(OFX::Message::eMessageError, "", "Unable to read XML");
                 OFX::throwSuiteStatusException(kOfxStatFailed);
             }
-            url.append(kPluginRepo);
+            url.append(kPluginRepoURL);
             url.append("/" + category + "/" + filename);
-            clut.append(presetPath() + "/" + filename);
+            clut.append(presetPath(customPath) + "/" + filename);
             if (url.empty() || clut.empty()) {
                 setPersistentMessage(OFX::Message::eMessageError, "", "Missing XML data");
                 OFX::throwSuiteStatusException(kOfxStatFailed);
@@ -261,7 +279,7 @@ public:
                 _lut.read(presetFile.c_str());
             } catch(Magick::Exception &exp) {
                 if (custom.empty()) {
-                    _lut.comment("");
+                    _lut.comment("N/A");
                     if (!getFile(url, clut)) {
                         setPersistentMessage(OFX::Message::eMessageError, "", "Unable to download LUT");
                         OFX::throwSuiteStatusException(kOfxStatFailed);
@@ -274,7 +292,7 @@ public:
             _lut.comment(presetFile);
         }
 
-        if (_lut.rows() >= 512 && _lut.rows() == _lut.columns() && !_lut.comment().empty()) {
+        if (_lut.rows() >= 512 && _lut.rows() == _lut.columns() && _lut.comment() == presetFile) {
             image.gamma(2.2);
             image.haldClut(_lut);
         } else {
@@ -306,16 +324,18 @@ public:
             return false;
         }
     }
-    std::string presetPath()
+    std::string presetPath(std::string altpath)
     {
         std::string path;
+        if (altpath.empty()) {
 #ifdef _WIN32
-        path.append(getenv("HOMEDRIVE"));
-        path.append(getenv("HOMEPATH"));
+            path.append(getenv("HOMEDRIVE"));
+            path.append(getenv("HOMEPATH"));
 #else
-        path.append(getenv("HOME"));
+            path.append(getenv("HOME"));
 #endif
-        path.append("/.clut");
+            path.append("/.clut");
+        }
         if (!path.empty()) {
             if (!existsFile(path)) {
 #ifdef _WIN32
@@ -325,6 +345,9 @@ public:
 #endif
             }
         }
+        if (!altpath.empty()) {
+            path = altpath;
+        }
         return path;
     }
 private:
@@ -332,6 +355,7 @@ private:
     ChoiceParam *_preset;
     Magick::Image _lut;
     StringParam *_custom;
+    StringParam *_path;
 };
 
 void
@@ -342,7 +366,7 @@ HaldCLUTPlugin::changedParam(const OFX::InstanceChangedArgs &args, const std::st
         return;
     }
     if (paramName == kParamCustom) {
-        _lut.comment("");
+        _lut.comment("N/A");
     }
     clearPersistentMessage();
 }
@@ -430,6 +454,16 @@ HaldCLUTPluginFactory::describeInContext(ImageEffectDescriptor &desc, ContextEnu
         param->setLabel(kParamCustomLabel);
         param->setHint(kParamCustomHint);
         param->setStringType(eStringTypeFilePath);
+        param->setAnimates(false);
+        if (page) {
+            page->addChild(*param);
+        }
+    }
+    {
+        StringParamDescriptor* param = desc.defineStringParam(kParamCustomPath);
+        param->setLabel(kParamCustomPathLabel);
+        param->setHint(kParamCustomPathHint);
+        param->setStringType(eStringTypeDirectoryPath);
         param->setAnimates(false);
         if (page) {
             page->addChild(*param);
