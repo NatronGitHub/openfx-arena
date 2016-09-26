@@ -38,7 +38,7 @@ MagickPluginHelperBase::MagickPluginHelperBase(OfxImageEffectHandle handle)
 }
 
 void
-MagickPluginHelperBase::changedParam(const OFX::InstanceChangedArgs &args, const std::string &paramName)
+MagickPluginHelperBase::changedParam(const OFX::InstanceChangedArgs &args, const std::string &/*paramName*/)
 {
     if (!_renderscale && (args.renderScale.x != 1. || args.renderScale.y != 1.)) {
         OFX::throwSuiteStatusException(kOfxStatFailed);

@@ -29,4 +29,3 @@ uninstall:
 	  echo "(cd $$i && $(MAKE) $@)"; \
 	  (cd $$i && $(MAKE) $@); \
 	done
-

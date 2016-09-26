@@ -55,7 +55,7 @@ Requirements
  * poppler-glib
  * lcms 2.x
  * libcurl
- * ImageMagick (MagickCore/Magick++) 6.9.2/7.0.1 with Q32, HDRI, lcms2, zlib, freetype, libpng
+ * ImageMagick (MagickCore/Magick++) 6.9.2/7.0.3 with Q32, HDRI, lcms2, zlib, freetype, libpng
    * Will build on older versions, but some features/plugins may not be available
    * Quantum depth under 32 will work, but it not recommended, note that most distros ship 16
    * Will work without HDRI, but it's not recommended
@@ -69,8 +69,8 @@ Build
 git clone https://github.com/olear/openfx-arena
 cd openfx-arena
 git submodule update -i --recursive
-make CONFIG=release
-sudo make CONFIG=release install
+make CONFIG=release IM=7
+sudo make CONFIG=release IM=7 install
 ```
 
 License

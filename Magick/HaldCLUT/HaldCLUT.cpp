@@ -26,6 +26,7 @@
 #include <iostream>
 #include <sys/stat.h>
 #include <sys/types.h>
+#include <cstring>
 
 using namespace OFX;
 OFXS_NAMESPACE_ANONYMOUS_ENTER
@@ -45,14 +46,14 @@ OFXS_NAMESPACE_ANONYMOUS_ENTER
     "\n\n" \
     "HaldCLUT has a large collection (300+) of CLUT presets divided over several categories:\n\n" \
     "* Black and White (by Pat David)\n" \
-    "* Instant (consumer) (by Pat David)\n" \
-    "* Instant (pro) (by Pat David)\n" \
-    "* Negative (color) (by Pat David)\n" \
-    "* Negative (new) (by Pat David)\n" \
-    "* Negative (old) (by Pat David)\n" \
+    "* Instant Consumer (by Pat David)\n" \
+    "* Instant Pro (by Pat David)\n" \
+    "* Negative Color (by Pat David)\n" \
+    "* Negative New (by Pat David)\n" \
+    "* Negative Old (by Pat David)\n" \
     "* PictureFX (by Marc Roovers)\n" \
     "* Print Films (by Juan Melara)\n" \
-    "* Slide (color) (by Pat David)\n" \
+    "* Slide (Color) (by Pat David)\n" \
     "* Various" \
     "\n\n" \
     "The CLUT presets is licenced under the Creative Commons Attribution-ShareAlike license." \
@@ -86,13 +87,15 @@ OFXS_NAMESPACE_ANONYMOUS_ENTER
 
 static bool gHostIsNatron = false;
 
-bool existsFile(const std::string &filename)
+bool
+existsFile(const std::string &filename)
 {
     struct stat st;
     return (stat(filename.c_str(), &st) == 0);
 }
 
-std::vector<std::string> parsePreset(xmlDocPtr doc, xmlNodePtr cur)
+std::vector<std::string>
+parsePreset(xmlDocPtr doc, xmlNodePtr cur)
 {
     cur = cur->xmlChildrenNode;
     xmlChar *key;
@@ -126,7 +129,8 @@ std::vector<std::string> parsePreset(xmlDocPtr doc, xmlNodePtr cur)
     return preset;
 }
 
-void parseXML(const std::string &filename, std::vector<std::vector<std::string> >* presets)
+void
+parseXML(const std::string &filename, std::vector<std::vector<std::string> >* presets)
 {
     xmlDocPtr doc;
     xmlNodePtr cur;
@@ -164,7 +168,8 @@ void parseXML(const std::string &filename, std::vector<std::vector<std::string> 
     xmlCleanupParser();
 }
 
-size_t curlWriteData(void *ptr, size_t size, size_t nmemb, FILE *stream)
+size_t
+curlWriteData(void *ptr, size_t size, size_t nmemb, FILE *stream)
 {
     size_t written = fwrite(ptr, size, nmemb, stream);
     return written;
@@ -191,23 +196,45 @@ public:
         xml.append(".xml");
         parseXML(xml, &_presets);
 
+        if (_presets.size() > 0) {
+            std::string presetSelected;
+            int pid;
+            int opts = _preset->getNOptions();
+            _preset->getValue(pid);
+            _preset->getOption(pid,presetSelected);
+            if (!presetSelected.empty()) {
+                for(int x = 0; x < opts; x++) {
+                    std::string presetFound;
+                    _preset->getOption(x, presetFound);
+                    if (!presetFound.empty()) {
+                        if (std::strcmp(presetFound.c_str(), presetSelected.c_str())==0) {
+                             _preset->setValue(x);
+                            break;
+                        }
+                     }
+                }
+            }
+        }
+
         _lut = Magick::Image(Magick::Geometry(512, 512), Magick::Color("rgb(0,0,0)"));
     }
 
     virtual void render(const OFX::RenderArguments &args, Magick::Image &image) OVERRIDE FINAL
     {
         int preset = 0;
-        std::string custom, url, clut, category, filename, checksum;
+        std::string custom, url, clut, category, filename/*, checksum*/;
         _preset->getValueAtTime(args.time, preset);
         _custom->getValueAtTime(args.time, custom);
 
         std::string presetFile;
 
         if (custom.empty()) {
-            category = _presets[preset][1];
-            filename = _presets[preset][2];
-            checksum = _presets[preset][3];
-            if (category.empty() || filename.empty() || checksum.empty()) {
+            if (_presets.size() > 0) {
+                category = _presets[preset][1];
+                filename = _presets[preset][2];
+            }
+            //checksum = _presets[preset][3];
+            if (category.empty() || filename.empty() /*|| checksum.empty()*/) {
                 setPersistentMessage(OFX::Message::eMessageError, "", "Unable to read XML");
                 OFX::throwSuiteStatusException(kOfxStatFailed);
             }
@@ -256,6 +283,7 @@ public:
         }
 
     }
+    virtual void changedParam(const OFX::InstanceChangedArgs &args, const std::string &paramName) OVERRIDE FINAL;
     bool getFile(const std::string location, const std::string &destination)
     {
         CURL *curl;
@@ -306,9 +334,23 @@ private:
     StringParam *_custom;
 };
 
+void
+HaldCLUTPlugin::changedParam(const OFX::InstanceChangedArgs &args, const std::string &paramName)
+{
+    if (!_renderscale && (args.renderScale.x != 1. || args.renderScale.y != 1.)) {
+        OFX::throwSuiteStatusException(kOfxStatFailed);
+        return;
+    }
+    if (paramName == kParamCustom) {
+        _lut.comment("");
+    }
+    clearPersistentMessage();
+}
+
 mDeclarePluginFactory(HaldCLUTPluginFactory, {}, {});
 
-void HaldCLUTPluginFactory::describe(ImageEffectDescriptor &desc)
+void
+HaldCLUTPluginFactory::describe(ImageEffectDescriptor &desc)
 {
     desc.setLabel(kPluginName);
     desc.setPluginGrouping(kPluginGrouping);
@@ -324,7 +366,8 @@ void HaldCLUTPluginFactory::describe(ImageEffectDescriptor &desc)
     desc.setHostMixingEnabled(kHostMixing);
 }
 
-void HaldCLUTPluginFactory::describeInContext(ImageEffectDescriptor &desc, ContextEnum context)
+void
+HaldCLUTPluginFactory::describeInContext(ImageEffectDescriptor &desc, ContextEnum context)
 {
     gHostIsNatron = (getImageEffectHostDescription()->isNatron);
 

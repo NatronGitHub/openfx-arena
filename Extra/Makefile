@@ -1,47 +1,67 @@
+PLUGINNAME = Extra
+
 PLUGINOBJECTS = \
-        lodepng.o \
-        TextFX.o \
-        ReadCDR.o \
-        ReadSVG.o \
-        ReadKrita.o \
-        OpenRaster.o
+    lodepng.o \
+    TextFX.o \
+    ReadCDR.o \
+    ReadSVG.o \
+    ReadKrita.o \
+    OpenRaster.o
 
 ifneq ($(LICENSE),COMMERCIAL)
-        PLUGINOBJECTS += ReadPDF.o
+PLUGINOBJECTS += ReadPDF.o
 endif
 
 PLUGINOBJECTS += \
-        ofxsTransform3x3.o ofxsTransformInteract.o ofxsShutter.o \
-        GenericReader.o GenericOCIO.o SequenceParsing.o
-
-PLUGINNAME = Extra
+    ofxsTransform3x3.o \
+    ofxsTransformInteract.o \
+    ofxsShutter.o \
+    GenericReader.o \
+    GenericOCIO.o \
+    SequenceParsing.o
 
 RESOURCES = \
-net.fxarena.openfx.Text.png \
-net.fxarena.openfx.Text.svg \
-fr.inria.openfx.ReadCDR.png \
-fr.inria.openfx.ReadCDR.svg \
-net.fxarena.openfx.ReadSVG.png \
-net.fxarena.openfx.ReadSVG.svg \
-fr.inria.openfx.ReadKrita.png \
-fr.inria.openfx.ReadKrita.svg \
-fr.inria.openfx.OpenRaster.png \
-fr.inria.openfx.OpenRaster.svg
+    net.fxarena.openfx.Text.png \
+    net.fxarena.openfx.Text.svg \
+    fr.inria.openfx.ReadCDR.png \
+    fr.inria.openfx.ReadCDR.svg \
+    net.fxarena.openfx.ReadSVG.png \
+    net.fxarena.openfx.ReadSVG.svg \
+    fr.inria.openfx.ReadKrita.png \
+    fr.inria.openfx.ReadKrita.svg \
+    fr.inria.openfx.OpenRaster.png \
+    fr.inria.openfx.OpenRaster.svg
 
 ifneq ($(LICENSE),COMMERCIAL)
-        RESOURCES += fr.inria.openfx.ReadPDF.png fr.inria.openfx.ReadPDF.svg
+RESOURCES += \
+    fr.inria.openfx.ReadPDF.png \
+    fr.inria.openfx.ReadPDF.svg
 endif
 
 SRCDIR = ..
 include $(SRCDIR)/Makefile.master
 include $(SRCDIR)/Makefile.io
 
-CXXFLAGS  += $(FCONFIG_CXXFLAGS) $(PANGO_CXXFLAGS) $(SVG_CXXFLAGS) $(CDR_CXXFLAGS) $(XML_CXXFLAGS) $(ZIP_CXXFLAGS) $(GLIB_CXXFLAGS)
-LINKFLAGS += $(FCONFIG_LINKFLAGS) $(PANGO_LINKFLAGS) $(SVG_LINKFLAGS) $(CDR_LINKFLAGS) $(XML_LINKFLAGS) $(ZIP_LINKFLAGS) $(GLIB_LINKFLAGS)
+CXXFLAGS  += \
+    $(FCONFIG_CXXFLAGS) \
+    $(PANGO_CXXFLAGS) \
+    $(SVG_CXXFLAGS) \
+    $(CDR_CXXFLAGS) \
+    $(XML_CXXFLAGS) \
+    $(ZIP_CXXFLAGS) \
+    $(GLIB_CXXFLAGS)
+LINKFLAGS += \
+    $(FCONFIG_LINKFLAGS) \
+    $(PANGO_LINKFLAGS) \
+    $(SVG_LINKFLAGS) \
+    $(CDR_LINKFLAGS) \
+    $(XML_LINKFLAGS) \
+    $(ZIP_LINKFLAGS) \
+    $(GLIB_LINKFLAGS)
 
 ifneq ($(LICENSE),COMMERCIAL)
-        CXXFLAGS += $(POPPLER_CXXFLAGS)
-        LINKFLAGS += $(POPPLER_LINKFLAGS)
+CXXFLAGS += $(POPPLER_CXXFLAGS)
+LINKFLAGS += $(POPPLER_LINKFLAGS)
 endif
 
 PNGVERSION = a70c086077c0eaecbae3845e4da4424de5f43361

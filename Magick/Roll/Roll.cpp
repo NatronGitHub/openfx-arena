@@ -25,8 +25,8 @@ OFXS_NAMESPACE_ANONYMOUS_ENTER
 #define kPluginGrouping "Extra/Transform"
 #define kPluginIdentifier "net.fxarena.openfx.Roll"
 #define kPluginDescription "Roll effect using ImageMagick."
-#define kPluginVersionMajor 3
-#define kPluginVersionMinor 0
+#define kPluginVersionMajor 2
+#define kPluginVersionMinor 9
 
 #define kSupportsTiles 0
 #define kSupportsMultiResolution 1
