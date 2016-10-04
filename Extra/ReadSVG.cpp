@@ -86,7 +86,7 @@ private:
     }
     virtual void decodePlane(const std::string& filename, OfxTime time, int view, bool isPlayback, const OfxRectI& renderWindow, float *pixelData, const OfxRectI& bounds, OFX::PixelComponentEnum pixelComponents, int pixelComponentCount, const std::string& rawComponents, int rowBytes) OVERRIDE FINAL;
     virtual void getClipComponents(const OFX::ClipComponentsArguments& args, OFX::ClipComponentsSetter& clipComponents) OVERRIDE FINAL;
-    virtual bool getFrameBounds(const std::string& filename, OfxTime time, OfxRectI *bounds, double *par, std::string *error, int *tile_width, int *tile_height) OVERRIDE FINAL;
+    virtual bool getFrameBounds(const std::string& filename, OfxTime time, OfxRectI *bounds, OfxRectI* format, double *par, std::string *error, int *tile_width, int *tile_height) OVERRIDE FINAL;
     virtual void restoreState(const std::string& filename) OVERRIDE FINAL;
     virtual void onInputFileChanged(const std::string& newFile, bool throwErrors, bool setColorSpace, OFX::PreMultiplicationEnum *premult, OFX::PixelComponentEnum *components, int *componentCount) OVERRIDE FINAL;
     void getLayers(xmlNode *node, std::vector<std::string> *layers);
@@ -290,6 +290,7 @@ ReadSVGPlugin::decodePlane(const std::string& filename, OfxTime time, int /*view
 bool ReadSVGPlugin::getFrameBounds(const std::string& filename,
                               OfxTime time,
                               OfxRectI *bounds,
+                                   OfxRectI* format,
                               double *par,
                               std::string* /*error*/,int *tile_width, int *tile_height)
 {
@@ -338,6 +339,7 @@ bool ReadSVGPlugin::getFrameBounds(const std::string& filename,
         bounds->x2 = width;
         bounds->y1 = 0;
         bounds->y2 = height;
+        *format = *bounds;
         *par = 1.0;
     }
 

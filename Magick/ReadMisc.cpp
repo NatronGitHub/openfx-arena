@@ -49,7 +49,7 @@ public:
 private:
     virtual bool isVideoStream(const std::string& /*filename*/) OVERRIDE FINAL { return false; }
     virtual void decode(const std::string& filename, OfxTime time, int view, bool isPlayback, const OfxRectI& renderWindow, float *pixelData, const OfxRectI& bounds, OFX::PixelComponentEnum pixelComponents, int pixelComponentCount, int rowBytes) OVERRIDE FINAL;
-    virtual bool getFrameBounds(const std::string& filename, OfxTime time, OfxRectI *bounds, double *par, std::string *error, int *tile_width, int *tile_height) OVERRIDE FINAL;
+    virtual bool getFrameBounds(const std::string& filename, OfxTime time, OfxRectI *bounds, OfxRectI* format, double *par, std::string *error, int *tile_width, int *tile_height) OVERRIDE FINAL;
     virtual void onInputFileChanged(const std::string& newFile, bool throwErrors, bool setColorSpace, OFX::PreMultiplicationEnum *premult, OFX::PixelComponentEnum *components, int *componentCount) OVERRIDE FINAL;
 };
 
@@ -102,12 +102,13 @@ ReadMiscPlugin::decode(const std::string& filename,
 }
 
 bool ReadMiscPlugin::getFrameBounds(const std::string& filename,
-                              OfxTime /*time*/,
-                              OfxRectI *bounds,
-                              double *par,
-                              std::string* /*error*/,int *tile_width, int *tile_height)
+                                    OfxTime /*time*/,
+                                    OfxRectI *bounds,
+                                    OfxRectI* format,
+                                    double *par,
+                                    std::string* /*error*/,int *tile_width, int *tile_height)
 {
-    #ifdef DEBUG
+#ifdef DEBUG
     std::cout << "getFrameBounds ..." << std::endl;
     #endif
 
@@ -119,6 +120,7 @@ bool ReadMiscPlugin::getFrameBounds(const std::string& filename,
         bounds->x2 = image.columns();
         bounds->y1 = 0;
         bounds->y2 = image.rows();
+        *format = *bounds;
         *par = 1.0;
     }
     *tile_width = *tile_height = 0;
