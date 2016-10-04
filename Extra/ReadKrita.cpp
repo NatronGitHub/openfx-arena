@@ -44,6 +44,8 @@
 #define kSupportsTiles false
 #define kIsMultiPlanar false
 
+using namespace OFX::IO;
+
 class ReadKritaPlugin : public GenericReaderPlugin
 {
 public:

@@ -55,6 +55,8 @@
 #define kSupportsTiles false
 #define kIsMultiPlanar true
 
+using namespace OFX::IO;
+
 static bool gHostIsNatron = false;
 
 class ReadSVGPlugin : public GenericReaderPlugin

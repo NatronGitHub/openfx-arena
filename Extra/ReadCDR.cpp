@@ -55,6 +55,8 @@
 #define kSupportsTiles false
 #define kIsMultiPlanar false
 
+using namespace OFX::IO;
+
 class ReadCDRPlugin : public GenericReaderPlugin
 {
 public:

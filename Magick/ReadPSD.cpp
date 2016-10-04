@@ -93,6 +93,8 @@
 #define kParamOffsetLayerHint "Enable/Disable layer offset"
 #define kParamOffsetLayerDefault true
 
+using namespace OFX::IO;
+
 static bool gHostIsNatron   = false;
 
 void _setupChoice(OFX::ChoiceParam *visible, OFX::StringParam *hidden) {

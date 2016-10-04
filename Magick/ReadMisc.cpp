@@ -41,6 +41,8 @@
 #define kSupportsTiles false
 #define kIsMultiPlanar false
 
+using namespace OFX::IO;
+
 class ReadMiscPlugin : public GenericReaderPlugin
 {
 public:
