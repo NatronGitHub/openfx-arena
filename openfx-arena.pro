@@ -54,7 +54,8 @@ OTHER_FILES += \
             Magick/HaldCLUT/Info.plist \
             Magick/Makefile.Magick \
             Magick/HaldCLUT/net.fxarena.openfx.HaldCLUT.xml \
-            Magick/HaldCLUT/Makefile
+            Magick/HaldCLUT/Makefile \
+            Extra/Text/Makefile
 INCLUDEPATH += . \
             SupportExt \
             OpenFX/Support/include \
@@ -76,7 +77,8 @@ INCLUDEPATH += . \
             OCL/OpenCL \
             OCL/OpenCL/CL \
             OCL \
-            Magick
+            Magick \
+            Extra/Text
 HEADERS += \
             SupportExt/ofxsCoords.h \
             SupportExt/ofxsCopier.h \
@@ -163,7 +165,7 @@ SOURCES += \
             Extra/ReadSVG.cpp \
             Extra/ReadKrita.cpp \
             Extra/ReadCDR.cpp \
-            Extra/TextFX.cpp \
+            Extra/Text/TextFX.cpp \
             Extra/ReadPDF.cpp \
             Magick/Arc.cpp \
             Magick/Charcoal.cpp \

@@ -48,8 +48,8 @@ PLUGINOBJECTS += \
     SequenceParsing.o
 
 RESOURCES = \
-    ../Extra/net.fxarena.openfx.Text.png \
-    ../Extra/net.fxarena.openfx.Text.svg \
+    ../Extra/Text/net.fxarena.openfx.Text.png \
+    ../Extra/Text/net.fxarena.openfx.Text.svg \
     ../Extra/fr.inria.openfx.ReadCDR.png \
     ../Extra/fr.inria.openfx.ReadCDR.svg \
     ../Extra/net.fxarena.openfx.ReadSVG.png \
@@ -114,6 +114,7 @@ SRCDIR = ..
 
 VPATH += \
     $(SRCDIR)/Extra \
+    $(SRCDIR)/Extra/Text \
     $(SRCDIR)/Magick \
     $(SRCDIR)/Magick/Swirl \
     $(SRCDIR)/Magick/Roll \
@@ -121,6 +122,7 @@ VPATH += \
 
 CXXFLAGS += \
     -I$(SRCDIR)/Extra \
+    -I$(SRCDIR)/Extra/Text \
     -I$(SRCDIR)/Magick
 
 include $(SRCDIR)/Makefile.master

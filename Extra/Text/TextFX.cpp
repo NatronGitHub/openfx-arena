@@ -17,7 +17,18 @@
 
 #include <pango/pangocairo.h>
 #include <pango/pangofc-fontmap.h>
+
+#ifndef NOFC
 #include <fontconfig/fontconfig.h>
+#else
+#ifndef UNICODE
+#define UNICODE
+#endif
+#ifndef _UNICODE
+#define _UNICODE
+#endif
+#include <windows.h>
+#endif
 
 #include "ofxsMacros.h"
 #include "ofxsImageEffect.h"
@@ -36,8 +47,8 @@
 #define kPluginName "TextOFX"
 #define kPluginGrouping "Draw"
 #define kPluginIdentifier "net.fxarena.openfx.Text"
-#define kPluginVersionMajor 6
-#define kPluginVersionMinor 6
+#define kPluginVersionMajor 7
+#define kPluginVersionMinor 0
 
 #define kSupportsTiles 0
 #define kSupportsMultiResolution 0
@@ -205,6 +216,7 @@ bool stringCompare(const std::string & l, const std::string & r) {
     return (l==r);
 }
 
+#ifndef NOFC
 std::list<std::string> _genFonts(OFX::ChoiceParam *fontName, OFX::StringParam *fontOverride, bool fontOverrideDir, FcConfig *fontConfig, bool properMenu, std::string fontNameDefault, std::string fontNameAltDefault)
 {
     int defaultFont = 0;
@@ -282,6 +294,70 @@ std::list<std::string> _genFonts(OFX::ChoiceParam *fontName, OFX::StringParam *f
 
     return fonts;
 }
+#else
+std::list<std::string> _winFonts;
+int CALLBACK EnumFontFamiliesExProc(ENUMLOGFONTEX *lpelfe, NEWTEXTMETRICEX *lpntme, int FontType, LPARAM lParam)
+{
+    if (FontType == TRUETYPE_FONTTYPE) {
+        std::wstring wfont = lpelfe->elfFullName;
+        std::string font(wfont.begin(), wfont.end());
+        // TODO remove "hidden" win fonts
+        _winFonts.push_back(font);
+        _winFonts.sort();
+        _winFonts.erase(unique(_winFonts.begin(), _winFonts.end(), stringCompare), _winFonts.end());
+    }
+}
+void _genWinFonts()
+{
+    _winFonts.clear();
+    HDC hDC = GetDC( NULL );
+    //LOGFONT lf = { 0, 0, 0, 0, 0, 0, 0, 0, DEFAULT_CHARSET, 0, 0, 0, 0, "" };
+    LOGFONTW lf;
+    EnumFontFamiliesExW( hDC, &lf, (FONTENUMPROCW)EnumFontFamiliesExProc, 0, 0 );
+    ReleaseDC( NULL, hDC );
+}
+void _popWinFonts(OFX::ChoiceParam *fontName, OFX::StringParam *fontOverride, bool properMenu, std::string fontNameDefault, std::string fontNameAltDefault)
+{
+    int defaultFont = 0;
+    int altFont = 0;
+    int fontIndex = 0;
+
+    if (fontName) {
+        fontName->resetOptions();
+    }
+    std::list<std::string>::const_iterator font;
+    for(font = _winFonts.begin(); font != _winFonts.end(); ++font) {
+        std::string fontNameString = *font;
+        std::string fontItem;
+        if (properMenu) {
+            fontItem=fontNameString[0];
+            fontItem.append("/" + fontNameString);
+        } else {
+            fontItem=fontNameString;
+        }
+
+        if (fontName) {
+            fontName->appendOption(fontItem);
+        }
+        if (std::strcmp(fontNameString.c_str(), fontNameDefault.c_str()) == 0) {
+            defaultFont=fontIndex;
+        }
+        if (std::strcmp(fontNameString.c_str(), fontNameAltDefault.c_str()) == 0) {
+            altFont=fontIndex;
+        }
+
+        fontIndex++;
+    }
+
+    if (fontName) {
+        if (defaultFont > 0) {
+            fontName->setDefault(defaultFont);
+        } else if (altFont > 0) {
+            fontName->setDefault(altFont);
+        }
+    }
+}
+#endif
 
 class TextFXPlugin : public OFX::ImageEffect
 {
@@ -343,7 +419,9 @@ private:
     OFX::BooleanParam *_centerInteract;
     OFX::ChoiceParam *_fontName;
     OFX::StringParam *_fontOverride;
+#ifndef NOFC
     FcConfig* _fcConfig;
+#endif
 };
 
 TextFXPlugin::TextFXPlugin(OfxImageEffectHandle handle)
@@ -387,7 +465,9 @@ TextFXPlugin::TextFXPlugin(OfxImageEffectHandle handle)
 , _centerInteract(0)
 , _fontName(0)
 , _fontOverride(0)
+#ifndef NOFC
 , _fcConfig(0)
+#endif
 {
     _dstClip = fetchClip(kOfxImageEffectOutputClipName);
     assert(_dstClip && _dstClip->getPixelComponents() == OFX::ePixelComponentRGBA);
@@ -438,9 +518,13 @@ TextFXPlugin::TextFXPlugin(OfxImageEffectHandle handle)
            && _arcRadius && _arcAngle && _rotate && _scale && _position && _move && _txt
            && _skewX && _skewY && _scaleUniform && _centerInteract && _fontOverride);
 
+#ifndef NOFC
     _fcConfig = FcInitLoadConfigAndFonts();
-
     _genFonts(_fontName, _fontOverride, false, _fcConfig, gHostIsNatron, kParamFontNameDefault, kParamFontNameAltDefault);
+#else
+    _genWinFonts();
+    _popWinFonts(_fontName, _fontOverride, gHostIsNatron, kParamFontNameDefault, kParamFontNameAltDefault);
+#endif
 
     // Setup selected font
     std::string fontString, fontCombo;
@@ -736,7 +820,9 @@ void TextFXPlugin::render(const OFX::RenderArguments &args)
     if (pango_cairo_font_map_get_font_type((PangoCairoFontMap*)(fontmap)) != CAIRO_FONT_TYPE_FT) {
         fontmap = pango_cairo_font_map_new_for_font_type(CAIRO_FONT_TYPE_FT);
     }
+#ifndef NOFC
     pango_fc_font_map_set_config((PangoFcFontMap*)fontmap, _fcConfig);
+#endif
     pango_cairo_font_map_set_default((PangoCairoFontMap*)(fontmap));
 
     surface = cairo_image_surface_create (CAIRO_FORMAT_ARGB32, width, height);
@@ -1116,7 +1202,15 @@ void TextFXPlugin::changedParam(const OFX::InstanceChangedArgs &args, const std:
         if (selectedFontName.empty()) {
             selectedFontName = kParamFontNameDefault;
         }
+
+#ifndef NOFC
         _genFonts(_fontName, _fontOverride, false, _fcConfig, gHostIsNatron, selectedFontName, kParamFontNameAltDefault);
+#else
+        // TODO
+        //_genWinFonts();
+        //_popWinFonts(_fontName, _fontOverride, gHostIsNatron, kParamFontNameDefault, kParamFontNameAltDefault);
+#endif
+
     }
 
     clearPersistentMessage();
@@ -1130,9 +1224,9 @@ bool TextFXPlugin::getRegionOfDefinition(const OFX::RegionOfDefinitionArguments 
     }
 
     int width,height;
-    bool autoSize = false;
-
     _canvas->getValue(width, height);
+
+    bool autoSize = false;
     auto_->getValue(autoSize);
 
     if (autoSize) {
@@ -1195,7 +1289,9 @@ bool TextFXPlugin::getRegionOfDefinition(const OFX::RegionOfDefinitionArguments 
             if (pango_cairo_font_map_get_font_type((PangoCairoFontMap*)(fontmap)) != CAIRO_FONT_TYPE_FT) {
                 fontmap = pango_cairo_font_map_new_for_font_type(CAIRO_FONT_TYPE_FT);
             }
+#ifndef NOFC
             pango_fc_font_map_set_config((PangoFcFontMap*)fontmap, _fcConfig);
+#endif
             pango_cairo_font_map_set_default((PangoCairoFontMap*)(fontmap));
 
             surface = cairo_image_surface_create (CAIRO_FORMAT_ARGB32, width, height);
@@ -1428,11 +1524,20 @@ void TextFXPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, Co
         ChoiceParamDescriptor *param = desc.defineChoiceParam(kParamFontName);
         param->setLabel(kParamFontNameLabel);
         param->setHint(kParamFontNameHint);
+        param->setAnimates(false);
         if (gHostIsNatron) {
             param->setCascading(OFX::getImageEffectHostDescription()->supportsCascadingChoices);
         }
         std::list<std::string>::const_iterator font;
-        std::list<std::string> fonts = _genFonts(NULL, NULL, false, NULL, false, kParamFontNameDefault, kParamFontNameAltDefault);
+        std::list<std::string> fonts;
+
+#ifndef NOFC
+        fonts = _genFonts(NULL, NULL, false, NULL, false, kParamFontNameDefault, kParamFontNameAltDefault);
+#else
+        _genWinFonts();
+        fonts = _winFonts;
+#endif
+
         int defaultFont = 0;
         int altFont = 0;
         int fontIndex = 0;
@@ -1456,12 +1561,14 @@ void TextFXPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, Co
             }
             fontIndex++;
         }
+        if (fonts.empty()) {
+            param->appendOption("N/A");
+        }
         if (defaultFont > 0) {
             param->setDefault(defaultFont);
         } else if (altFont > 0) {
             param->setDefault(altFont);
         }
-        param->setAnimates(false);
         if (page) {
             page->addChild(*param);
         }
