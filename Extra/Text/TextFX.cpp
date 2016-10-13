@@ -311,8 +311,9 @@ int CALLBACK EnumFontFamiliesExProc(ENUMLOGFONTEX *lpelfe, NEWTEXTMETRICEX *lpnt
 }
 void _addWinFont(OFX::StringParam *fontParam)
 {
-    // NOTE! this works, but pango can't use the font:
-    // https://lists.cairographics.org/archives/cairo/2009-April/016984.html
+    // NOTE! https://lists.cairographics.org/archives/cairo/2009-April/016984.html
+    // so that means the font won't display correctly in viewer, but the final render will work...
+    // find and fix in pango(cairo)
     if (fontParam) {
         std::string font;
         fontParam->getValue(font);
@@ -752,7 +753,9 @@ void TextFXPlugin::render(const OFX::RenderArguments &args)
     _valign->getValueAtTime(args.time, valign);
     _markup->getValueAtTime(args.time, markup);
     _style->getValueAtTime(args.time, style);
+#ifndef NOFC
     auto_->getValueAtTime(args.time, autoSize);
+#endif
     stretch_->getValueAtTime(args.time, stretch);
     weight_->getValueAtTime(args.time, weight);
     strokeColor_->getValueAtTime(args.time, s_r, s_g, s_b, s_a);
@@ -830,14 +833,14 @@ void TextFXPlugin::render(const OFX::RenderArguments &args)
     PangoAttrList *alist;
     PangoFontMap* fontmap;
 
+#ifndef NOFC
     fontmap = pango_cairo_font_map_get_default();
     if (pango_cairo_font_map_get_font_type((PangoCairoFontMap*)(fontmap)) != CAIRO_FONT_TYPE_FT) {
         fontmap = pango_cairo_font_map_new_for_font_type(CAIRO_FONT_TYPE_FT);
     }
-#ifndef NOFC
     pango_fc_font_map_set_config((PangoFcFontMap*)fontmap, _fcConfig);
-#endif
     pango_cairo_font_map_set_default((PangoCairoFontMap*)(fontmap));
+#endif
 
     surface = cairo_image_surface_create (CAIRO_FORMAT_ARGB32, width, height);
     cr = cairo_create (surface);
@@ -1240,6 +1243,7 @@ bool TextFXPlugin::getRegionOfDefinition(const OFX::RegionOfDefinitionArguments 
     int width,height;
     _canvas->getValue(width, height);
 
+#ifndef NOFC
     bool autoSize = false;
     auto_->getValue(autoSize);
 
@@ -1303,9 +1307,7 @@ bool TextFXPlugin::getRegionOfDefinition(const OFX::RegionOfDefinitionArguments 
             if (pango_cairo_font_map_get_font_type((PangoCairoFontMap*)(fontmap)) != CAIRO_FONT_TYPE_FT) {
                 fontmap = pango_cairo_font_map_new_for_font_type(CAIRO_FONT_TYPE_FT);
             }
-#ifndef NOFC
             pango_fc_font_map_set_config((PangoFcFontMap*)fontmap, _fcConfig);
-#endif
             pango_cairo_font_map_set_default((PangoCairoFontMap*)(fontmap));
 
             surface = cairo_image_surface_create (CAIRO_FORMAT_ARGB32, width, height);
@@ -1347,6 +1349,7 @@ bool TextFXPlugin::getRegionOfDefinition(const OFX::RegionOfDefinitionArguments 
             cairo_surface_destroy(surface);
         }
     }
+#endif
 
     if (width>0 && height>0) {
         rod.x1 = rod.y1 = 0;
@@ -1422,6 +1425,9 @@ void TextFXPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, Co
         param->setAnimates(false);
         param->setDefault(kParamAutoSizeDefault);
         param->setLayoutHint(eLayoutHintNoNewLine, 1);
+#ifdef NOFC
+        param->setIsSecret(true);
+#endif
         if (page) {
             page->addChild(*param);
         }
