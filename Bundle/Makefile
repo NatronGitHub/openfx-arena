@@ -36,7 +36,6 @@ PLUGINOBJECTS += \
     Modulate.o \
     ReadMisc.o \
     Text.o \
-    HaldCLUT.o \
     MagickPlugin.o \
     ofxsOGLTextRenderer.o \
     ofxsOGLFontData.o \
@@ -96,10 +95,7 @@ RESOURCES += \
     ../Magick/fr.inria.openfx.ReadMisc.png \
     ../Magick/fr.inria.openfx.ReadMisc.svg \
     ../Magick/net.fxarena.openfx.Texture.png \
-    ../Magick/net.fxarena.openfx.Texture.svg \
-    ../Magick/HaldCLUT/net.fxarena.openfx.HaldCLUT.png \
-    ../Magick/HaldCLUT/net.fxarena.openfx.HaldCLUT.svg \
-    ../Magick/HaldCLUT/net.fxarena.openfx.HaldCLUT.xml
+    ../Magick/net.fxarena.openfx.Texture.svg
 
     #../Magick/net.fxarena.openfx.Text.png \
     #../Magick/net.fxarena.openfx.Text.svg
@@ -119,7 +115,6 @@ SRCDIR = ..
 VPATH += \
     $(SRCDIR)/Extra \
     $(SRCDIR)/Magick \
-    $(SRCDIR)/Magick/HaldCLUT \
     $(SRCDIR)/Magick/Swirl \
     $(SRCDIR)/Magick/Roll \
     $(SRCDIR)/Magick/Wave \
