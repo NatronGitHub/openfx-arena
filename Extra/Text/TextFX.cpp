@@ -16,9 +16,9 @@
 */
 
 #include <pango/pangocairo.h>
-#include <pango/pangofc-fontmap.h>
 
 #ifndef NOFC
+#include <pango/pangofc-fontmap.h>
 #include <fontconfig/fontconfig.h>
 #else
 #ifndef UNICODE
