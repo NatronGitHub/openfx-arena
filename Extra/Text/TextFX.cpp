@@ -47,8 +47,8 @@
 #define kPluginName "TextOFX"
 #define kPluginGrouping "Draw"
 #define kPluginIdentifier "net.fxarena.openfx.Text"
-#define kPluginVersionMajor 7
-#define kPluginVersionMinor 0
+#define kPluginVersionMajor 6
+#define kPluginVersionMinor 9
 
 #define kSupportsTiles 0
 #define kSupportsMultiResolution 0
@@ -250,8 +250,9 @@ std::list<std::string> _genFonts(OFX::ChoiceParam *fontName, OFX::StringParam *f
         s = FcPatternFormat(font,(const FcChar8 *)"%{family[0]}");
         std::string fontName(reinterpret_cast<char*>(s));
         fonts.push_back(fontName);
-        if (font)
+        if (font) {
             FcPatternDestroy(font);
+        }
     }
 
     fonts.sort();
@@ -312,8 +313,6 @@ int CALLBACK EnumFontFamiliesExProc(ENUMLOGFONTEX *lpelfe, NEWTEXTMETRICEX *lpnt
 void _addWinFont(OFX::StringParam *fontParam)
 {
     // NOTE! https://lists.cairographics.org/archives/cairo/2009-April/016984.html
-    // so that means the font won't display correctly in viewer, but the final render will work...
-    // find and fix in pango(cairo)
     if (fontParam) {
         std::string font;
         fontParam->getValue(font);
@@ -391,6 +390,7 @@ public:
     std::string textFromFile(std::string filename);
     void resetCenter(double time);
     void setFontDesc(int stretch, int weight, PangoFontDescription* desc);
+    void setFontOpts(cairo_font_options_t* options, int hintStyle, int hintMetrics, int fontAA, int subpixel);
 
 private:
     // do not need to delete these, the ImageEffect is managing them for us
@@ -433,6 +433,8 @@ private:
     OFX::BooleanParam *_centerInteract;
     OFX::ChoiceParam *_fontName;
     OFX::StringParam *_fontOverride;
+    PangoLayout *_layout;
+    cairo_surface_t *_surface;
 #ifndef NOFC
     FcConfig* _fcConfig;
 #endif
@@ -479,6 +481,8 @@ TextFXPlugin::TextFXPlugin(OfxImageEffectHandle handle)
 , _centerInteract(0)
 , _fontName(0)
 , _fontOverride(0)
+, _layout(0)
+, _surface(0)
 #ifndef NOFC
 , _fcConfig(0)
 #endif
@@ -569,6 +573,8 @@ TextFXPlugin::TextFXPlugin(OfxImageEffectHandle handle)
 
 TextFXPlugin::~TextFXPlugin()
 {
+    g_object_unref(_layout);
+    cairo_surface_destroy(_surface);
 }
 
 void TextFXPlugin::resetCenter(double time) {
@@ -673,6 +679,74 @@ void TextFXPlugin::setFontDesc(int stretch, int weight, PangoFontDescription* de
         pango_font_description_set_weight(desc, PANGO_WEIGHT_ULTRAHEAVY);
         break;
     }
+}
+
+void TextFXPlugin::setFontOpts(cairo_font_options_t* options, int hintStyle, int hintMetrics, int fontAA, int subpixel)
+{
+    switch(hintStyle) {
+    case 0:
+        cairo_font_options_set_hint_style(options, CAIRO_HINT_STYLE_DEFAULT);
+        break;
+    case 1:
+        cairo_font_options_set_hint_style(options, CAIRO_HINT_STYLE_NONE);
+        break;
+    case 2:
+        cairo_font_options_set_hint_style(options, CAIRO_HINT_STYLE_SLIGHT);
+        break;
+    case 3:
+        cairo_font_options_set_hint_style(options, CAIRO_HINT_STYLE_MEDIUM);
+        break;
+    case 4:
+        cairo_font_options_set_hint_style(options, CAIRO_HINT_STYLE_FULL);
+        break;
+    }
+
+    switch(hintMetrics) {
+    case 0:
+        cairo_font_options_set_hint_metrics(options, CAIRO_HINT_METRICS_DEFAULT);
+        break;
+    case 1:
+        cairo_font_options_set_hint_metrics(options, CAIRO_HINT_METRICS_OFF);
+        break;
+    case 2:
+        cairo_font_options_set_hint_metrics(options, CAIRO_HINT_METRICS_ON);
+        break;
+    }
+
+    switch(fontAA) {
+    case 0:
+        cairo_font_options_set_antialias(options, CAIRO_ANTIALIAS_DEFAULT);
+        break;
+    case 1:
+        cairo_font_options_set_antialias(options, CAIRO_ANTIALIAS_NONE);
+        break;
+    case 2:
+        cairo_font_options_set_antialias(options, CAIRO_ANTIALIAS_GRAY);
+        break;
+    case 3:
+        cairo_font_options_set_antialias(options, CAIRO_ANTIALIAS_SUBPIXEL);
+        break;
+    }
+
+    switch(subpixel) {
+    case 0:
+        cairo_font_options_set_subpixel_order(options, CAIRO_SUBPIXEL_ORDER_DEFAULT);
+        break;
+    case 1:
+        cairo_font_options_set_subpixel_order(options, CAIRO_SUBPIXEL_ORDER_RGB);
+        break;
+    case 2:
+        cairo_font_options_set_subpixel_order(options, CAIRO_SUBPIXEL_ORDER_BGR);
+        break;
+    case 3:
+        cairo_font_options_set_subpixel_order(options, CAIRO_SUBPIXEL_ORDER_VRGB);
+        break;
+    case 4:
+        cairo_font_options_set_subpixel_order(options, CAIRO_SUBPIXEL_ORDER_VBGR);
+        break;
+    }
+
+    pango_cairo_context_set_font_options(pango_layout_get_context(_layout), options);
 }
 
 /* Override the render */
@@ -827,8 +901,6 @@ void TextFXPlugin::render(const OFX::RenderArguments &args)
 
     cairo_t *cr;
     cairo_status_t status;
-    cairo_surface_t *surface;
-    PangoLayout *layout;
     PangoFontDescription *desc;
     PangoAttrList *alist;
     PangoFontMap* fontmap;
@@ -842,107 +914,43 @@ void TextFXPlugin::render(const OFX::RenderArguments &args)
     pango_cairo_font_map_set_default((PangoCairoFontMap*)(fontmap));
 #endif
 
-    surface = cairo_image_surface_create (CAIRO_FORMAT_ARGB32, width, height);
-    cr = cairo_create (surface);
+    _surface = cairo_image_surface_create(CAIRO_FORMAT_ARGB32, width, height);
+    cr = cairo_create(_surface);
 
-    layout = pango_cairo_create_layout(cr);
+    _layout = pango_cairo_create_layout(cr);
     alist = pango_attr_list_new();
 
     cairo_font_options_t* options = cairo_font_options_create();
-
-    switch(hintStyle) {
-    case 0:
-        cairo_font_options_set_hint_style(options, CAIRO_HINT_STYLE_DEFAULT);
-        break;
-    case 1:
-        cairo_font_options_set_hint_style(options, CAIRO_HINT_STYLE_NONE);
-        break;
-    case 2:
-        cairo_font_options_set_hint_style(options, CAIRO_HINT_STYLE_SLIGHT);
-        break;
-    case 3:
-        cairo_font_options_set_hint_style(options, CAIRO_HINT_STYLE_MEDIUM);
-        break;
-    case 4:
-        cairo_font_options_set_hint_style(options, CAIRO_HINT_STYLE_FULL);
-        break;
-    }
-
-    switch(hintMetrics) {
-    case 0:
-        cairo_font_options_set_hint_metrics(options, CAIRO_HINT_METRICS_DEFAULT);
-        break;
-    case 1:
-        cairo_font_options_set_hint_metrics(options, CAIRO_HINT_METRICS_OFF);
-        break;
-    case 2:
-        cairo_font_options_set_hint_metrics(options, CAIRO_HINT_METRICS_ON);
-        break;
-    }
-
-    switch(fontAA) {
-    case 0:
-        cairo_font_options_set_antialias(options, CAIRO_ANTIALIAS_DEFAULT);
-        break;
-    case 1:
-        cairo_font_options_set_antialias(options, CAIRO_ANTIALIAS_NONE);
-        break;
-    case 2:
-        cairo_font_options_set_antialias(options, CAIRO_ANTIALIAS_GRAY);
-        break;
-    case 3:
-        cairo_font_options_set_antialias(options, CAIRO_ANTIALIAS_SUBPIXEL);
-        break;
-    }
-
-    switch(subpixel) {
-    case 0:
-        cairo_font_options_set_subpixel_order(options, CAIRO_SUBPIXEL_ORDER_DEFAULT);
-        break;
-    case 1:
-        cairo_font_options_set_subpixel_order(options, CAIRO_SUBPIXEL_ORDER_RGB);
-        break;
-    case 2:
-        cairo_font_options_set_subpixel_order(options, CAIRO_SUBPIXEL_ORDER_BGR);
-        break;
-    case 3:
-        cairo_font_options_set_subpixel_order(options, CAIRO_SUBPIXEL_ORDER_VRGB);
-        break;
-    case 4:
-        cairo_font_options_set_subpixel_order(options, CAIRO_SUBPIXEL_ORDER_VBGR);
-        break;
-    }
-
-    pango_cairo_context_set_font_options(pango_layout_get_context(layout), options);
+    setFontOpts(options, hintStyle, hintMetrics, fontAA, subpixel);
 
     if (markup) {
-        pango_layout_set_markup(layout, text.c_str(), -1);
+        pango_layout_set_markup(_layout, text.c_str(), -1);
     } else {
-        pango_layout_set_text(layout, text.c_str(), -1);
+        pango_layout_set_text(_layout, text.c_str(), -1);
     }
 
     desc = pango_font_description_from_string(pangoFont.str().c_str());
     setFontDesc(stretch, weight, desc);
 
-    pango_layout_set_font_description(layout, desc);
+    pango_layout_set_font_description(_layout, desc);
     pango_font_description_free(desc);
 
     if (!autoSize && !move) {
         switch(wrap) {
         case 1:
-            pango_layout_set_width(layout, width * PANGO_SCALE);
-            pango_layout_set_wrap(layout, PANGO_WRAP_WORD);
+            pango_layout_set_width(_layout, width * PANGO_SCALE);
+            pango_layout_set_wrap(_layout, PANGO_WRAP_WORD);
             break;
         case 2:
-            pango_layout_set_width(layout, width * PANGO_SCALE);
-            pango_layout_set_wrap(layout, PANGO_WRAP_CHAR);
+            pango_layout_set_width(_layout, width * PANGO_SCALE);
+            pango_layout_set_wrap(_layout, PANGO_WRAP_CHAR);
             break;
         case 3:
-            pango_layout_set_width(layout, width * PANGO_SCALE);
-            pango_layout_set_wrap(layout, PANGO_WRAP_WORD_CHAR);
+            pango_layout_set_width(_layout, width * PANGO_SCALE);
+            pango_layout_set_wrap(_layout, PANGO_WRAP_WORD_CHAR);
             break;
         default:
-            pango_layout_set_width(layout, -1);
+            pango_layout_set_width(_layout, -1);
             break;
         }
     }
@@ -950,19 +958,19 @@ void TextFXPlugin::render(const OFX::RenderArguments &args)
     if (!move) {
         switch(align) {
         case 0:
-            pango_layout_set_alignment (layout, PANGO_ALIGN_LEFT);
+            pango_layout_set_alignment(_layout, PANGO_ALIGN_LEFT);
             break;
         case 1:
-            pango_layout_set_alignment (layout, PANGO_ALIGN_RIGHT);
+            pango_layout_set_alignment(_layout, PANGO_ALIGN_RIGHT);
             break;
         case 2:
-            pango_layout_set_alignment (layout, PANGO_ALIGN_CENTER);
+            pango_layout_set_alignment(_layout, PANGO_ALIGN_CENTER);
             break;
         }
 
         if (valign != 0) {
             int text_width, text_height;
-            pango_layout_get_pixel_size(layout, &text_width, &text_height);
+            pango_layout_get_pixel_size(_layout, &text_width, &text_height);
             switch (valign) {
             case 1:
                 cairo_move_to(cr, 0, (height-text_height)/2);
@@ -974,7 +982,7 @@ void TextFXPlugin::render(const OFX::RenderArguments &args)
         }
 
         if (justify) {
-            pango_layout_set_justify (layout, true);
+            pango_layout_set_justify (_layout, true);
         }
     }
 
@@ -983,14 +991,14 @@ void TextFXPlugin::render(const OFX::RenderArguments &args)
     }
 
     if (!markup) {
-        pango_layout_set_attributes(layout,alist);
+        pango_layout_set_attributes(_layout,alist);
     }
 
     if (!autoSize && !markup && circleRadius==0 && arcAngle==0 && strokeWidth==0 && move) {
         int moveX, moveY;
         if (centerInteract) {
             int text_width, text_height;
-            pango_layout_get_pixel_size(layout, &text_width, &text_height);
+            pango_layout_get_pixel_size(_layout, &text_width, &text_height);
             moveX=xtext-(text_width/2);
             moveY=ytext-(text_height/2);
         } else {
@@ -1070,7 +1078,7 @@ void TextFXPlugin::render(const OFX::RenderArguments &args)
                 int moveX, moveY;
                 if (centerInteract) {
                     int text_width, text_height;
-                    pango_layout_get_pixel_size(layout, &text_width, &text_height);
+                    pango_layout_get_pixel_size(_layout, &text_width, &text_height);
                     moveX=xtext-(text_width/2);
                     moveY=ytext-(text_height/2);
                 } else {
@@ -1080,7 +1088,7 @@ void TextFXPlugin::render(const OFX::RenderArguments &args)
                 cairo_move_to(cr, moveX, moveY);
             }
 
-            pango_cairo_layout_path(cr, layout);
+            pango_cairo_layout_path(cr, _layout);
             cairo_set_line_width(cr, std::floor(strokeWidth * args.renderScale.x + 0.5));
             //cairo_set_miter_limit(cr, );
             cairo_set_source_rgba(cr, s_r, s_g, s_b, s_a);
@@ -1103,7 +1111,7 @@ void TextFXPlugin::render(const OFX::RenderArguments &args)
                 cairo_save(cr);
                 path = cairo_copy_path_flat(cr);
                 cairo_new_path(cr);
-                pango_cairo_layout_line_path(cr, pango_layout_get_line_readonly(layout, 0)); //TODO if more than one line add support for that
+                pango_cairo_layout_line_path(cr, pango_layout_get_line_readonly(_layout, 0)); //TODO if more than one line add support for that
                 map_path_onto(cr, path);
                 cairo_path_destroy(path);
                 cairo_set_source_rgba(cr, r, g, b, a);
@@ -1114,7 +1122,7 @@ void TextFXPlugin::render(const OFX::RenderArguments &args)
                     int moveX, moveY;
                     if (centerInteract) {
                         int text_width, text_height;
-                        pango_layout_get_pixel_size(layout, &text_width, &text_height);
+                        pango_layout_get_pixel_size(_layout, &text_width, &text_height);
                         moveX=xtext-(text_width/2);
                         moveY=ytext-(text_height/2);
                     } else {
@@ -1124,8 +1132,8 @@ void TextFXPlugin::render(const OFX::RenderArguments &args)
                     cairo_move_to(cr, moveX, moveY);
                 }
                 cairo_set_source_rgba(cr, r, g, b, a);
-                pango_cairo_update_layout(cr, layout);
-                pango_cairo_show_layout(cr, layout);
+                pango_cairo_update_layout(cr, _layout);
+                pango_cairo_show_layout(cr, _layout);
             }
         }
     }
@@ -1143,11 +1151,11 @@ void TextFXPlugin::render(const OFX::RenderArguments &args)
             double angle = (360. * i) / circleWords;
             cairo_save(cr);
             cairo_set_source_rgba(cr, r, g, b, a);
-            cairo_rotate (cr, angle * G_PI / 180.);
-            pango_cairo_update_layout(cr, layout);
-            pango_layout_get_size(layout, &rwidth, &rheight);
+            cairo_rotate(cr, angle * G_PI / 180.);
+            pango_cairo_update_layout(cr, _layout);
+            pango_layout_get_size(_layout, &rwidth, &rheight);
             cairo_move_to(cr, - ((double)rwidth / PANGO_SCALE) / 2, - std::floor(circleRadius * args.renderScale.x + 0.5));
-            pango_cairo_layout_path(cr, layout);
+            pango_cairo_layout_path(cr, _layout);
             cairo_fill(cr);
             cairo_restore (cr);
         }
@@ -1160,9 +1168,9 @@ void TextFXPlugin::render(const OFX::RenderArguments &args)
         OFX::throwSuiteStatusException(kOfxStatErrFormat);
     }
 
-    cairo_surface_flush(surface);
+    cairo_surface_flush(_surface);
 
-    unsigned char* cdata = cairo_image_surface_get_data(surface);
+    unsigned char* cdata = cairo_image_surface_get_data(_surface);
     unsigned char* pixels = new unsigned char[width * height * 4];
     for (int i = 0; i < width; ++i) {
         for (int j = 0; j < height; ++j) {
@@ -1185,9 +1193,7 @@ void TextFXPlugin::render(const OFX::RenderArguments &args)
 
     pango_attr_list_unref(alist);
     cairo_font_options_destroy(options);
-    g_object_unref(layout);
     cairo_destroy(cr);
-    cairo_surface_destroy(surface);
     cdata = NULL;
     pixelData = NULL;
     delete[] pixels;
@@ -1297,8 +1303,6 @@ bool TextFXPlugin::getRegionOfDefinition(const OFX::RegionOfDefinitionArguments 
             height = rod.y2-rod.y1;
 
             cairo_t *cr;
-            cairo_surface_t *surface;
-            PangoLayout *layout;
             PangoFontDescription *desc;
             PangoAttrList *alist;
             PangoFontMap* fontmap;
@@ -1310,32 +1314,33 @@ bool TextFXPlugin::getRegionOfDefinition(const OFX::RegionOfDefinitionArguments 
             pango_fc_font_map_set_config((PangoFcFontMap*)fontmap, _fcConfig);
             pango_cairo_font_map_set_default((PangoCairoFontMap*)(fontmap));
 
-            surface = cairo_image_surface_create (CAIRO_FORMAT_ARGB32, width, height);
-            cr = cairo_create (surface);
+            _surface = cairo_image_surface_create (CAIRO_FORMAT_ARGB32, width, height);
+            cr = cairo_create (_surface);
 
-            layout = pango_cairo_create_layout(cr);
+            _layout = pango_cairo_create_layout(cr);
             alist = pango_attr_list_new();
 
             if (markup) {
-                pango_layout_set_markup(layout, text.c_str(), -1);
+                pango_layout_set_markup(_layout, text.c_str(), -1);
             } else {
-                pango_layout_set_text(layout, text.c_str(), -1);
+                pango_layout_set_text(_layout, text.c_str(), -1);
             }
 
             desc = pango_font_description_from_string(pangoFont.str().c_str());
             setFontDesc(stretch, weight, desc);
 
-            pango_layout_set_font_description(layout, desc);
+            pango_layout_set_font_description(_layout, desc);
             pango_font_description_free(desc);
 
             if (letterSpace != 0) {
                 pango_attr_list_insert(alist,pango_attr_letter_spacing_new(letterSpace*PANGO_SCALE));
             }
 
-            if (!markup)
-                pango_layout_set_attributes(layout,alist);
+            if (!markup) {
+                pango_layout_set_attributes(_layout,alist);
+            }
 
-            pango_layout_get_pixel_size(layout, &width, &height);
+            pango_layout_get_pixel_size(_layout, &width, &height);
 
             /// WIP
             if (strokeWidth>0) {
@@ -1344,9 +1349,7 @@ bool TextFXPlugin::getRegionOfDefinition(const OFX::RegionOfDefinitionArguments 
             }
 
             pango_attr_list_unref(alist);
-            g_object_unref(layout);
             cairo_destroy(cr);
-            cairo_surface_destroy(surface);
         }
     }
 #endif
