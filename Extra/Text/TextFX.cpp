@@ -301,22 +301,35 @@ int CALLBACK EnumFontFamiliesExProc(ENUMLOGFONTEX *lpelfe, NEWTEXTMETRICEX *lpnt
     if (FontType == TRUETYPE_FONTTYPE) {
         std::wstring wfont = lpelfe->elfFullName;
         std::string font(wfont.begin(), wfont.end());
-        // TODO remove "hidden" win fonts
-        _winFonts.push_back(font);
+        std::string prefix = "@";
+        if (strncmp(font.c_str(), prefix.c_str(), strlen(prefix.c_str())) != 0) {
+            _winFonts.push_back(font);
+        }
         _winFonts.sort();
         _winFonts.erase(unique(_winFonts.begin(), _winFonts.end(), stringCompare), _winFonts.end());
+    }
+}
+void _addWinFont(OFX::StringParam *fontParam)
+{
+    // NOTE! this works, but pango can't use the font:
+    // https://lists.cairographics.org/archives/cairo/2009-April/016984.html
+    if (fontParam) {
+        std::string font;
+        fontParam->getValue(font);
+        std::wstring wfont(font.begin(), font.end());
+        AddFontResourceExW(wfont.c_str(), FR_PRIVATE, NULL);
     }
 }
 void _genWinFonts()
 {
     _winFonts.clear();
-    HDC hDC = GetDC( NULL );
+    HDC hDC = GetDC(NULL);
     //LOGFONT lf = { 0, 0, 0, 0, 0, 0, 0, 0, DEFAULT_CHARSET, 0, 0, 0, 0, "" };
     LOGFONTW lf;
-    EnumFontFamiliesExW( hDC, &lf, (FONTENUMPROCW)EnumFontFamiliesExProc, 0, 0 );
-    ReleaseDC( NULL, hDC );
+    EnumFontFamiliesExW(hDC, &lf, (FONTENUMPROCW)EnumFontFamiliesExProc, 0, 0);
+    ReleaseDC(NULL, hDC);
 }
-void _popWinFonts(OFX::ChoiceParam *fontName, OFX::StringParam *fontOverride, bool properMenu, std::string fontNameDefault, std::string fontNameAltDefault)
+void _popWinFonts(OFX::ChoiceParam *fontName, bool properMenu, std::string fontNameDefault, std::string fontNameAltDefault)
 {
     int defaultFont = 0;
     int altFont = 0;
@@ -522,8 +535,9 @@ TextFXPlugin::TextFXPlugin(OfxImageEffectHandle handle)
     _fcConfig = FcInitLoadConfigAndFonts();
     _genFonts(_fontName, _fontOverride, false, _fcConfig, gHostIsNatron, kParamFontNameDefault, kParamFontNameAltDefault);
 #else
+    _addWinFont(_fontOverride);
     _genWinFonts();
-    _popWinFonts(_fontName, _fontOverride, gHostIsNatron, kParamFontNameDefault, kParamFontNameAltDefault);
+    _popWinFonts(_fontName, gHostIsNatron, kParamFontNameDefault, kParamFontNameAltDefault);
 #endif
 
     // Setup selected font
@@ -1206,9 +1220,9 @@ void TextFXPlugin::changedParam(const OFX::InstanceChangedArgs &args, const std:
 #ifndef NOFC
         _genFonts(_fontName, _fontOverride, false, _fcConfig, gHostIsNatron, selectedFontName, kParamFontNameAltDefault);
 #else
-        // TODO
-        //_genWinFonts();
-        //_popWinFonts(_fontName, _fontOverride, gHostIsNatron, kParamFontNameDefault, kParamFontNameAltDefault);
+        _addWinFont(_fontOverride);
+        _genWinFonts();
+        _popWinFonts(_fontName, gHostIsNatron, selectedFontName, kParamFontNameAltDefault);
 #endif
 
     }

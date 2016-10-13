@@ -66,6 +66,12 @@ CXXFLAGS += $(POPPLER_CXXFLAGS)
 LINKFLAGS += $(POPPLER_LINKFLAGS)
 endif
 
+# disable fontconfig (win-only)
+ifeq ($(NOFC),1)
+CXXFLAGS += -DNOFC
+LDFLAGS += -lgdi32
+endif
+
 PNGVERSION = a70c086077c0eaecbae3845e4da4424de5f43361
 
 lodepng.cpp:

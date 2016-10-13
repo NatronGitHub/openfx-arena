@@ -158,6 +158,12 @@ CXXFLAGS += $(POPPLER_CXXFLAGS)
 LINKFLAGS += $(POPPLER_LINKFLAGS)
 endif
 
+# disable fontconfig (win-only)
+ifeq ($(NOFC),1)
+CXXFLAGS += -DNOFC
+LDFLAGS += -lgdi32
+endif
+
 ifeq ($(IM),7)
 CXXFLAGS += -DIM7
 endif

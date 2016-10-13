@@ -24,5 +24,5 @@ $(PANGO_LINKFLAGS)
 # disable fontconfig (win-only)
 ifeq ($(NOFC),1)
 CXXFLAGS += -DNOFC
-LDFLAGS += -gdi32
+LDFLAGS += -lgdi32
 endif
