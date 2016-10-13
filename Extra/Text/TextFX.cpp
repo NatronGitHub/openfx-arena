@@ -573,8 +573,8 @@ TextFXPlugin::TextFXPlugin(OfxImageEffectHandle handle)
 
 TextFXPlugin::~TextFXPlugin()
 {
-    g_object_unref(_layout);
-    cairo_surface_destroy(_surface);
+    //g_object_unref(_layout);
+    //cairo_surface_destroy(_surface);
 }
 
 void TextFXPlugin::resetCenter(double time) {
@@ -1009,7 +1009,7 @@ void TextFXPlugin::render(const OFX::RenderArguments &args)
     }
 
     if (scaleX!=1.0||scaleY!=1.0) {
-        if (!autoSize) {
+        if (!autoSize && move) {
             cairo_translate(cr, xtext, ytext);
             if (scaleUniform) {
                 cairo_scale(cr, scaleX, scaleX);
@@ -1360,8 +1360,9 @@ bool TextFXPlugin::getRegionOfDefinition(const OFX::RegionOfDefinitionArguments 
         rod.y2 = height;
     }
     else {
-        rod.x1 = rod.y1 = kOfxFlagInfiniteMin;
-        rod.x2 = rod.y2 = kOfxFlagInfiniteMax;
+        //rod.x1 = rod.y1 = kOfxFlagInfiniteMin;
+        //rod.x2 = rod.y2 = kOfxFlagInfiniteMax;
+        return false;
     }
 
     return true;
