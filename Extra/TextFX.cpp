@@ -37,7 +37,7 @@
 #define kPluginGrouping "Draw"
 #define kPluginIdentifier "net.fxarena.openfx.Text"
 #define kPluginVersionMajor 6
-#define kPluginVersionMinor 6
+#define kPluginVersionMinor 7
 
 #define kSupportsTiles 0
 #define kSupportsMultiResolution 0
@@ -1244,8 +1244,9 @@ bool TextFXPlugin::getRegionOfDefinition(const OFX::RegionOfDefinitionArguments 
         rod.y2 = height;
     }
     else {
-        rod.x1 = rod.y1 = kOfxFlagInfiniteMin;
-        rod.x2 = rod.y2 = kOfxFlagInfiniteMax;
+        //rod.x1 = rod.y1 = kOfxFlagInfiniteMin;
+        //rod.x2 = rod.y2 = kOfxFlagInfiniteMax;
+        return false;
     }
 
     return true;
@@ -1462,6 +1463,9 @@ void TextFXPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, Co
             param->setDefault(altFont);
         }
         param->setAnimates(false);
+        if (fonts.empty()) {
+            param->appendOption("N/A");
+        }
         if (page) {
             page->addChild(*param);
         }
