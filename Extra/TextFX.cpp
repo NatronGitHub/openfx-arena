@@ -37,7 +37,7 @@
 #define kPluginGrouping "Draw"
 #define kPluginIdentifier "net.fxarena.openfx.Text"
 #define kPluginVersionMajor 6
-#define kPluginVersionMinor 7
+#define kPluginVersionMinor 8
 
 #define kSupportsTiles 0
 #define kSupportsMultiResolution 0
@@ -94,7 +94,7 @@
 
 #define kParamMarkup "markup"
 #define kParamMarkupLabel "Markup"
-#define kParamMarkupHint "Pango Text Attribute Markup Language, https://developer.gnome.org/pango/stable/PangoMarkupFormat.html . Colors don't work if Circle/Arc effect is used, colors are also not supported on Windows at the moment."
+#define kParamMarkupHint "Pango Text Attribute Markup Language, https://developer.gnome.org/pango/stable/PangoMarkupFormat.html . Colors don't work if Circle/Arc effect is used."
 #define kParamMarkupDefault false
 
 #define kParamAutoSize "autoSize"
@@ -198,6 +198,16 @@
 #define kParamFontOverrideLabel "Custom font"
 #define kParamFontOverrideHint "Add custom font."
 
+#define kParamScrollX "scrollX"
+#define kParamScrollXLabel "Scroll X"
+#define kParamScrollXHint "Scroll canvas X. Only works if Transform, AutoSize, Circle and Arc is disabled/not used."
+#define kParamScrollXDefault 0
+
+#define kParamScrollY "scrollY"
+#define kParamScrollYLabel "Scroll Y"
+#define kParamScrollYHint "Scroll canvas Y. Only works if Transform, AutoSize, Circle and Arc is disabled/not used."
+#define kParamScrollYDefault 0
+
 using namespace OFX;
 static bool gHostIsNatron = false;
 
@@ -238,8 +248,9 @@ std::list<std::string> _genFonts(OFX::ChoiceParam *fontName, OFX::StringParam *f
         s = FcPatternFormat(font,(const FcChar8 *)"%{family[0]}");
         std::string fontName(reinterpret_cast<char*>(s));
         fonts.push_back(fontName);
-        if (font)
+        if (font) {
             FcPatternDestroy(font);
+        }
     }
 
     fonts.sort();
@@ -344,6 +355,8 @@ private:
     OFX::ChoiceParam *_fontName;
     OFX::StringParam *_fontOverride;
     FcConfig* _fcConfig;
+    OFX::DoubleParam *_scrollX;
+    OFX::DoubleParam *_scrollY;
 };
 
 TextFXPlugin::TextFXPlugin(OfxImageEffectHandle handle)
@@ -388,6 +401,8 @@ TextFXPlugin::TextFXPlugin(OfxImageEffectHandle handle)
 , _fontName(0)
 , _fontOverride(0)
 , _fcConfig(0)
+, _scrollX(0)
+, _scrollY(0)
 {
     _dstClip = fetchClip(kOfxImageEffectOutputClipName);
     assert(_dstClip && _dstClip->getPixelComponents() == OFX::ePixelComponentRGBA);
@@ -430,13 +445,15 @@ TextFXPlugin::TextFXPlugin(OfxImageEffectHandle handle)
     _scaleUniform = fetchBooleanParam(kParamTransformScaleUniformOld);
     _centerInteract = fetchBooleanParam(kParamCenterInteract);
     _fontOverride = fetchStringParam(kParamFontOverride);
+    _scrollX = fetchDoubleParam(kParamScrollX);
+    _scrollY = fetchDoubleParam(kParamScrollY);
 
     assert(_text && _fontSize && _fontName && _textColor && _font && _wrap
            && _justify && _align && _valign && _markup && _style && auto_ && stretch_ && weight_ && strokeColor_
            && strokeWidth_ && strokeDash_ && strokeDashPattern_ && fontAA_ && subpixel_ && _hintStyle
            && _hintMetrics && _circleRadius && _circleWords && _letterSpace && _canvas
            && _arcRadius && _arcAngle && _rotate && _scale && _position && _move && _txt
-           && _skewX && _skewY && _scaleUniform && _centerInteract && _fontOverride);
+           && _skewX && _skewY && _scaleUniform && _centerInteract && _fontOverride && _scrollX && _scrollY);
 
     _fcConfig = FcInitLoadConfigAndFonts();
 
@@ -632,7 +649,7 @@ void TextFXPlugin::render(const OFX::RenderArguments &args)
     }
 
     // Get params
-    double x, y, r, g, b, a, s_r, s_g, s_b, s_a, strokeWidth, strokeDashX, strokeDashY, strokeDashZ, circleRadius, arcRadius, arcAngle, rotate, scaleX, scaleY, skewX, skewY;
+    double x, y, r, g, b, a, s_r, s_g, s_b, s_a, strokeWidth, strokeDashX, strokeDashY, strokeDashZ, circleRadius, arcRadius, arcAngle, rotate, scaleX, scaleY, skewX, skewY, scrollX, scrollY;
     int fontSize, fontID, cwidth, cheight, wrap, align, valign, style, stretch, weight, strokeDash, fontAA, subpixel, hintStyle, hintMetrics, circleWords, letterSpace;
     std::string text, fontName, font, txt, fontOverride;
     bool justify = false;
@@ -681,6 +698,8 @@ void TextFXPlugin::render(const OFX::RenderArguments &args)
     _scaleUniform->getValueAtTime(args.time, scaleUniform);
     _centerInteract->getValueAtTime(args.time, centerInteract);
     _fontOverride->getValueAtTime(args.time, fontOverride);
+    _scrollX->getValueAtTime(args.time, scrollX);
+    _scrollY->getValueAtTime(args.time, scrollY);
 
     double ytext = y*args.renderScale.y;
     double xtext = x*args.renderScale.x;
@@ -688,9 +707,9 @@ void TextFXPlugin::render(const OFX::RenderArguments &args)
     int tmp_height = dstBounds.y2 - dstBounds.y1;
     ytext = tmp_y + ((tmp_y+tmp_height-1) - ytext);
 
-    if (!font.empty())
+    if (!font.empty()) {
         fontName=font;
-    else {
+    } else {
         setPersistentMessage(OFX::Message::eMessageError, "", "No fonts found/selected");
         OFX::throwSuiteStatusException(kOfxStatFailed);
     }
@@ -739,8 +758,8 @@ void TextFXPlugin::render(const OFX::RenderArguments &args)
     pango_fc_font_map_set_config((PangoFcFontMap*)fontmap, _fcConfig);
     pango_cairo_font_map_set_default((PangoCairoFontMap*)(fontmap));
 
-    surface = cairo_image_surface_create (CAIRO_FORMAT_ARGB32, width, height);
-    cr = cairo_create (surface);
+    surface = cairo_image_surface_create(CAIRO_FORMAT_ARGB32, width, height);
+    cr = cairo_create(surface);
 
     layout = pango_cairo_create_layout(cr);
     alist = pango_attr_list_new();
@@ -847,13 +866,13 @@ void TextFXPlugin::render(const OFX::RenderArguments &args)
     if (!move) {
         switch(align) {
         case 0:
-            pango_layout_set_alignment (layout, PANGO_ALIGN_LEFT);
+            pango_layout_set_alignment(layout, PANGO_ALIGN_LEFT);
             break;
         case 1:
-            pango_layout_set_alignment (layout, PANGO_ALIGN_RIGHT);
+            pango_layout_set_alignment(layout, PANGO_ALIGN_RIGHT);
             break;
         case 2:
-            pango_layout_set_alignment (layout, PANGO_ALIGN_CENTER);
+            pango_layout_set_alignment(layout, PANGO_ALIGN_CENTER);
             break;
         }
 
@@ -871,7 +890,7 @@ void TextFXPlugin::render(const OFX::RenderArguments &args)
         }
 
         if (justify) {
-            pango_layout_set_justify (layout, true);
+            pango_layout_set_justify(layout, true);
         }
     }
 
@@ -881,6 +900,10 @@ void TextFXPlugin::render(const OFX::RenderArguments &args)
 
     if (!markup) {
         pango_layout_set_attributes(layout,alist);
+    }
+
+    if (!move && !autoSize && (scrollX!=0||scrollY!=0) && arcAngle==0 && circleRadius==0) {
+        cairo_move_to(cr, std::floor(scrollX * args.renderScale.x), std::floor(scrollY * args.renderScale.x));
     }
 
     if (!autoSize && !markup && circleRadius==0 && arcAngle==0 && strokeWidth==0 && move) {
@@ -943,7 +966,7 @@ void TextFXPlugin::render(const OFX::RenderArguments &args)
         cairo_translate(cr, -rotateX, -rotateY);
     }
 
-    if (strokeWidth>0) {
+    if (strokeWidth>0 && arcAngle==0) {
         if (circleRadius==0) {
             if (strokeDash>0) {
                 if (strokeDashX<0.1) {
@@ -960,6 +983,10 @@ void TextFXPlugin::render(const OFX::RenderArguments &args)
             }
 
             cairo_new_path(cr);
+
+            if (!move && !autoSize && (scrollX!=0||scrollY!=0)) {
+                cairo_move_to(cr, std::floor(scrollX * args.renderScale.x), std::floor(scrollY * args.renderScale.x));
+            }
 
             if (autoSize) {
                 cairo_move_to(cr, std::floor((strokeWidth/2) * args.renderScale.x + 0.5), 0.0);
@@ -1198,8 +1225,8 @@ bool TextFXPlugin::getRegionOfDefinition(const OFX::RegionOfDefinitionArguments 
             pango_fc_font_map_set_config((PangoFcFontMap*)fontmap, _fcConfig);
             pango_cairo_font_map_set_default((PangoCairoFontMap*)(fontmap));
 
-            surface = cairo_image_surface_create (CAIRO_FORMAT_ARGB32, width, height);
-            cr = cairo_create (surface);
+            surface = cairo_image_surface_create(CAIRO_FORMAT_ARGB32, width, height);
+            cr = cairo_create(surface);
 
             layout = pango_cairo_create_layout(cr);
             alist = pango_attr_list_new();
@@ -1737,6 +1764,30 @@ void TextFXPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, Co
         param->setDefault(kParamArcAngleDefault);
         param->setAnimates(true);
         param->setLayoutHint(OFX::eLayoutHintDivider);
+        if (page) {
+            page->addChild(*param);
+        }
+    }
+    {
+        DoubleParamDescriptor* param = desc.defineDoubleParam(kParamScrollX);
+        param->setLabel(kParamScrollXLabel);
+        param->setHint(kParamScrollXHint);
+        param->setRange(-10000, 10000);
+        param->setDisplayRange(-4000, 4000);
+        param->setDefault(kParamScrollXDefault);
+        param->setAnimates(true);
+        if (page) {
+            page->addChild(*param);
+        }
+    }
+    {
+        DoubleParamDescriptor* param = desc.defineDoubleParam(kParamScrollY);
+        param->setLabel(kParamScrollYLabel);
+        param->setHint(kParamScrollYHint);
+        param->setRange(-10000, 10000);
+        param->setDisplayRange(-4000, 4000);
+        param->setDefault(kParamScrollYDefault);
+        param->setAnimates(true);
         if (page) {
             page->addChild(*param);
         }
