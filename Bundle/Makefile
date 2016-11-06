@@ -48,12 +48,12 @@ PLUGINOBJECTS += \
     SequenceParsing.o
 
 RESOURCES = \
-    ../Extra/net.fxarena.openfx.Text.png \
-    ../Extra/net.fxarena.openfx.Text.svg \
+    ../TextFX/net.fxarena.openfx.Text.png \
+    ../TextFX/net.fxarena.openfx.Text.svg \
     ../Extra/fr.inria.openfx.ReadCDR.png \
     ../Extra/fr.inria.openfx.ReadCDR.svg \
-    ../Extra/net.fxarena.openfx.ReadSVG.png \
-    ../Extra/net.fxarena.openfx.ReadSVG.svg \
+    ../ReadSVG/net.fxarena.openfx.ReadSVG.png \
+    ../ReadSVG/net.fxarena.openfx.ReadSVG.svg \
     ../Extra/fr.inria.openfx.ReadKrita.png \
     ../Extra/fr.inria.openfx.ReadKrita.svg \
     ../Extra/fr.inria.openfx.OpenRaster.png \
@@ -113,6 +113,8 @@ endif
 SRCDIR = ..
 
 VPATH += \
+    $(SRCDIR)/ReadSVG \
+    $(SRCDIR)/TextFX \
     $(SRCDIR)/Extra \
     $(SRCDIR)/Magick \
     $(SRCDIR)/Magick/Swirl \
@@ -120,6 +122,7 @@ VPATH += \
     $(SRCDIR)/Magick/Wave
 
 CXXFLAGS += \
+    -I$(SRCDIR)/TextFX \
     -I$(SRCDIR)/Extra \
     -I$(SRCDIR)/Magick
 

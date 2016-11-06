@@ -21,12 +21,12 @@ PLUGINOBJECTS += \
     SequenceParsing.o
 
 RESOURCES = \
-    net.fxarena.openfx.Text.png \
-    net.fxarena.openfx.Text.svg \
+    $(SRCDIR)/TextFX/net.fxarena.openfx.Text.png \
+    $(SRCDIR)/TextFX/net.fxarena.openfx.Text.svg \
     fr.inria.openfx.ReadCDR.png \
     fr.inria.openfx.ReadCDR.svg \
-    net.fxarena.openfx.ReadSVG.png \
-    net.fxarena.openfx.ReadSVG.svg \
+    $(SRCDIR)/ReadSVG/net.fxarena.openfx.ReadSVG.png \
+    $(SRCDIR)/ReadSVG/net.fxarena.openfx.ReadSVG.svg \
     fr.inria.openfx.ReadKrita.png \
     fr.inria.openfx.ReadKrita.svg \
     fr.inria.openfx.OpenRaster.png \
@@ -41,6 +41,8 @@ endif
 SRCDIR = ..
 include $(SRCDIR)/Makefile.master
 include $(SRCDIR)/Makefile.io
+
+VPATH += $(SRCDIR)/TextFX $(SRCDIR)/ReadSVG
 
 CXXFLAGS  += \
     $(FCONFIG_CXXFLAGS) \
