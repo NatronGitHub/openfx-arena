@@ -88,8 +88,8 @@ RESOURCES += \
     ../Magick/net.fxarena.openfx.Charcoal.svg \
     ../Magick/net.fxarena.openfx.Oilpaint.png \
     ../Magick/net.fxarena.openfx.Oilpaint.svg \
-    ../Magick/net.fxarena.openfx.ReadPSD.png \
-    ../Magick/net.fxarena.openfx.ReadPSD.svg \
+    ../ReadPSD/net.fxarena.openfx.ReadPSD.png \
+    ../ReadPSD/net.fxarena.openfx.ReadPSD.svg \
     ../Magick/net.fxarena.openfx.Modulate.png \
     ../Magick/net.fxarena.openfx.Modulate.svg \
     ../Magick/fr.inria.openfx.ReadMisc.png \
@@ -113,6 +113,7 @@ endif
 SRCDIR = ..
 
 VPATH += \
+    $(SRCDIR)/ReadPSD \
     $(SRCDIR)/OpenRaster \
     $(SRCDIR)/ReadCDR \
     $(SRCDIR)/ReadKrita \
