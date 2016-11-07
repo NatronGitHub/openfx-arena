@@ -50,14 +50,14 @@ PLUGINOBJECTS += \
 RESOURCES = \
     ../TextFX/net.fxarena.openfx.Text.png \
     ../TextFX/net.fxarena.openfx.Text.svg \
-    ../Extra/fr.inria.openfx.ReadCDR.png \
-    ../Extra/fr.inria.openfx.ReadCDR.svg \
+    ../ReadCDR/fr.inria.openfx.ReadCDR.png \
+    ../ReadCDR/fr.inria.openfx.ReadCDR.svg \
     ../ReadSVG/net.fxarena.openfx.ReadSVG.png \
     ../ReadSVG/net.fxarena.openfx.ReadSVG.svg \
-    ../Extra/fr.inria.openfx.ReadKrita.png \
-    ../Extra/fr.inria.openfx.ReadKrita.svg \
-    ../Extra/fr.inria.openfx.OpenRaster.png \
-    ../Extra/fr.inria.openfx.OpenRaster.svg
+    ../ReadKrita/fr.inria.openfx.ReadKrita.png \
+    ../ReadKrita/fr.inria.openfx.ReadKrita.svg \
+    ../OpenRaster/fr.inria.openfx.OpenRaster.png \
+    ../OpenRaster/fr.inria.openfx.OpenRaster.svg
 
 ifneq ($(LICENSE),COMMERCIAL)
 RESOURCES += \
@@ -113,6 +113,9 @@ endif
 SRCDIR = ..
 
 VPATH += \
+    $(SRCDIR)/OpenRaster \
+    $(SRCDIR)/ReadCDR \
+    $(SRCDIR)/ReadKrita \
     $(SRCDIR)/ReadPDF \
     $(SRCDIR)/ReadSVG \
     $(SRCDIR)/TextFX \

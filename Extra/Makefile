@@ -23,14 +23,14 @@ PLUGINOBJECTS += \
 RESOURCES = \
     $(SRCDIR)/TextFX/net.fxarena.openfx.Text.png \
     $(SRCDIR)/TextFX/net.fxarena.openfx.Text.svg \
-    fr.inria.openfx.ReadCDR.png \
-    fr.inria.openfx.ReadCDR.svg \
+    $(SRCDIR)/ReadCDR/fr.inria.openfx.ReadCDR.png \
+    $(SRCDIR)/ReadCDR/fr.inria.openfx.ReadCDR.svg \
     $(SRCDIR)/ReadSVG/net.fxarena.openfx.ReadSVG.png \
     $(SRCDIR)/ReadSVG/net.fxarena.openfx.ReadSVG.svg \
-    fr.inria.openfx.ReadKrita.png \
-    fr.inria.openfx.ReadKrita.svg \
-    fr.inria.openfx.OpenRaster.png \
-    fr.inria.openfx.OpenRaster.svg
+    $(SRCDIR)/ReadKrita/fr.inria.openfx.ReadKrita.png \
+    $(SRCDIR)/ReadKrita/fr.inria.openfx.ReadKrita.svg \
+    $(SRCDIR)/OpenRaster/fr.inria.openfx.OpenRaster.png \
+    i$(SRCDIR)/OpenRaster/fr.inria.openfx.OpenRaster.svg
 
 ifneq ($(LICENSE),COMMERCIAL)
 RESOURCES += \
@@ -42,7 +42,7 @@ SRCDIR = ..
 include $(SRCDIR)/Makefile.master
 include $(SRCDIR)/Makefile.io
 
-VPATH += $(SRCDIR)/TextFX $(SRCDIR)/ReadSVG $(SRCDIR)/ReadPDF
+VPATH += $(SRCDIR)/TextFX $(SRCDIR)/ReadSVG $(SRCDIR)/ReadPDF $(SRCDIR)/ReadCDR $(SRCDIR)/ReadKrita $(SRCDIR)/OpenRaster
 
 CXXFLAGS  += \
     $(FCONFIG_CXXFLAGS) \
