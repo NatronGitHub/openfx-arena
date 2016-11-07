@@ -45,7 +45,3 @@ script:
   - git submodule update -i --recursive
   - PKG_CONFIG_PATH=/usr/local/lib/pkgconfig LD_LIBRARY_PATH=/usr/local/lib make IM=7 CONFIG=debug
   - make -C OCL
-  - mkdir build
-  - cd build
-  - cmake ..
-  - make VERBOSE=1

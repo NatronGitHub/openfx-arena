@@ -30,7 +30,7 @@ RESOURCES = \
     $(SRCDIR)/ReadKrita/fr.inria.openfx.ReadKrita.png \
     $(SRCDIR)/ReadKrita/fr.inria.openfx.ReadKrita.svg \
     $(SRCDIR)/OpenRaster/fr.inria.openfx.OpenRaster.png \
-    i$(SRCDIR)/OpenRaster/fr.inria.openfx.OpenRaster.svg
+    $(SRCDIR)/OpenRaster/fr.inria.openfx.OpenRaster.svg
 
 ifneq ($(LICENSE),COMMERCIAL)
 RESOURCES += \
@@ -45,6 +45,7 @@ include $(SRCDIR)/Makefile.io
 VPATH += $(SRCDIR)/TextFX $(SRCDIR)/ReadSVG $(SRCDIR)/ReadPDF $(SRCDIR)/ReadCDR $(SRCDIR)/ReadKrita $(SRCDIR)/OpenRaster
 
 CXXFLAGS  += \
+    -I. \
     $(FCONFIG_CXXFLAGS) \
     $(PANGO_CXXFLAGS) \
     $(SVG_CXXFLAGS) \
