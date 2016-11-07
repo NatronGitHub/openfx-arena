@@ -18,16 +18,32 @@ target_compile_definitions(OfxSupport PUBLIC OFX_EXTENSIONS_VEGAS OFX_EXTENSIONS
 # SupportExt
 include_directories("${CMAKE_SOURCE_DIR}/SupportExt")
 
-# Find packages
+# Text depends
 find_package(PangoCairo)
 find_package(Fontconfig)
 find_package(Glib)
 
-# Create plugin
+# Create Text plugin
 create_ofx_plugin(TextFX 
     "TextFX" 
     "${PangoCairo_LIBRARIES}" 
     "${PROJECT_SOURCE_DIR}/TextFX/net.fxarena.openfx.Text.png;${PROJECT_SOURCE_DIR}/TextFX/net.fxarena.openfx.Text.svg" 
     "${PangoCairo_INCLUDE_DIR};${Glib_INCLUDE_DIR};${GlibConfig_INCLUDE_DIR};${CAIRO_INCLUDE_DIRS};${FONTCONFIG_INCLUDE_DIR};${FREETYPE_INCLUDE_DIRS}"
     "${CMAKE_SOURCE_DIR}/SupportExt/ofxsTransform3x3.cpp;${CMAKE_SOURCE_DIR}/SupportExt/ofxsTransformInteract.cpp;${CMAKE_SOURCE_DIR}/SupportExt/ofxsShutter.cpp")
+
+# IO depends
+find_package(OpenColorIO)
+find_package(LibRSVG)
+find_package(LibXml2)
+
+# Create IO plugins
+add_definitions(-DOFX_IO_USING_OCIO)
+include_directories("${CMAKE_SOURCE_DIR}/OpenFX-IO/IOSupport" "${CMAKE_SOURCE_DIR}/SupportExt/glad")
+
+create_ofx_plugin(ReadSVG 
+    "ReadSVG" 
+    "${OCIO_LIBRARIES};${LibRSVG_LIBRARIES};${LIBXML2_LIBRARIES}" 
+    "${PROJECT_SOURCE_DIR}/TextFX/net.fxarena.openfx.Text.png;${PROJECT_SOURCE_DIR}/TextFX/net.fxarena.openfx.Text.svg" 
+    "${OCIO_INCLUDES};${LIBXML2_INCLUDE_DIR};${LibRSVG_INCLUDE_DIRS};${Glib_INCLUDE_DIR};${GlibConfig_INCLUDE_DIR};${CAIRO_INCLUDE_DIRS};${FONTCONFIG_INCLUDE_DIR};${FREETYPE_INCLUDE_DIRS}"
+    "${CMAKE_SOURCE_DIR}/OpenFX-IO/IOSupport/GenericReader.cpp;${CMAKE_SOURCE_DIR}/OpenFX-IO/IOSupport/GenericOCIO.cpp;${CMAKE_SOURCE_DIR}/OpenFX-IO/IOSupport/GenericOCIOOpenGL.cpp")
 
