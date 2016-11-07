@@ -43,40 +43,60 @@ if(NOT EXISTS ${PROJECT_SOURCE_DIR}/lodepng.cpp)
   execute_process(COMMAND curl https://raw.githubusercontent.com/lvandeve/lodepng/${PNGVERSION}/lodepng.cpp -o ${PROJECT_SOURCE_DIR}/lodepng.cpp)
 endif()
 
+# Text.ofx
 create_ofx_plugin(TextFX 
     "TextFX" 
     "${PangoCairo_LIBRARIES}" 
     "${PROJECT_SOURCE_DIR}/TextFX/net.fxarena.openfx.Text.png;${PROJECT_SOURCE_DIR}/TextFX/net.fxarena.openfx.Text.svg" 
     "${PangoCairo_INCLUDE_DIR};${Glib_INCLUDE_DIR};${GlibConfig_INCLUDE_DIR};${CAIRO_INCLUDE_DIRS};${FONTCONFIG_INCLUDE_DIR};${FREETYPE_INCLUDE_DIRS}"
     "${CMAKE_SOURCE_DIR}/SupportExt/ofxsTransform3x3.cpp;${CMAKE_SOURCE_DIR}/SupportExt/ofxsTransformInteract.cpp;${CMAKE_SOURCE_DIR}/SupportExt/ofxsShutter.cpp")
+
+# ReadSVG.ofx
 create_ofx_plugin(ReadSVG 
     "ReadSVG" 
     "${OCIO_LIBRARIES};${LibRSVG_LIBRARIES};${LIBXML2_LIBRARIES}" 
     "${PROJECT_SOURCE_DIR}/ReadSVG/net.fxarena.openfx.ReadSVG.png;${PROJECT_SOURCE_DIR}/ReadSVG/net.fxarena.openfx.ReadSVG.svg" 
     "${OCIO_INCLUDES};${LIBXML2_INCLUDE_DIR};${LibRSVG_INCLUDE_DIRS};${Glib_INCLUDE_DIR};${GlibConfig_INCLUDE_DIR};${CAIRO_INCLUDE_DIRS};${FONTCONFIG_INCLUDE_DIR};${FREETYPE_INCLUDE_DIRS}"
     "${CMAKE_SOURCE_DIR}/OpenFX-IO/IOSupport/GenericReader.cpp;${CMAKE_SOURCE_DIR}/OpenFX-IO/IOSupport/GenericOCIO.cpp;${CMAKE_SOURCE_DIR}/OpenFX-IO/IOSupport/GenericOCIOOpenGL.cpp")
+
+# ReadPDF.ofx
 create_ofx_plugin(ReadPDF 
     "ReadPDF" 
     "${OCIO_LIBRARIES};${POPPLER_LIBRARIES}" 
     "${PROJECT_SOURCE_DIR}/ReadPDF/fr.inria.openfx.ReadPDF.png;${PROJECT_SOURCE_DIR}/ReadPDF/fr.inria.openfx.ReadPDF.svg" 
     "${OCIO_INCLUDES};${POPPLER_INCLUDE_DIRS};${Glib_INCLUDE_DIR};${GlibConfig_INCLUDE_DIR};${CAIRO_INCLUDE_DIRS};${FONTCONFIG_INCLUDE_DIR};${FREETYPE_INCLUDE_DIRS}"
     "${CMAKE_SOURCE_DIR}/OpenFX-IO/IOSupport/GenericReader.cpp;${CMAKE_SOURCE_DIR}/OpenFX-IO/IOSupport/GenericOCIO.cpp;${CMAKE_SOURCE_DIR}/OpenFX-IO/IOSupport/GenericOCIOOpenGL.cpp")
+
+# ReadCDR.ofx
 #create_ofx_plugin(ReadCDR 
 #    "ReadCDR" 
 #    "${OCIO_LIBRARIES};${LIBCDR_LIBRARIES}" 
 #    "${PROJECT_SOURCE_DIR}/ReadCDR/fr.inria.openfx.ReadCDR.png;${PROJECT_SOURCE_DIR}/ReadCDR/fr.inria.openfx.ReadCDR.svg" 
 #    "${OCIO_INCLUDES};${LIBCDR_INCLUDE_DIRS};${Glib_INCLUDE_DIR};${GlibConfig_INCLUDE_DIR};${CAIRO_INCLUDE_DIRS};${FONTCONFIG_INCLUDE_DIR};${FREETYPE_INCLUDE_DIRS}"
 #    "${CMAKE_SOURCE_DIR}/OpenFX-IO/IOSupport/GenericReader.cpp;${CMAKE_SOURCE_DIR}/OpenFX-IO/IOSupport/GenericOCIO.cpp;${CMAKE_SOURCE_DIR}/OpenFX-IO/IOSupport/GenericOCIOOpenGL.cpp")
+
+# OpenRaster.ofx
 create_ofx_plugin(OpenRaster 
     "OpenRaster" 
     "${OCIO_LIBRARIES};${LIBXML2_LIBRARIES}" 
     "${PROJECT_SOURCE_DIR}/OpenRaster/fr.inria.openfx.OpenRaster.png;${PROJECT_SOURCE_DIR}/OpenRaster/fr.inria.openfx.OpenRaster.svg" 
     "${OCIO_INCLUDES};${LIBXML2_INCLUDE_DIR}"
     "${CMAKE_SOURCE_DIR}/OpenFX-IO/IOSupport/GenericReader.cpp;${CMAKE_SOURCE_DIR}/OpenFX-IO/IOSupport/GenericOCIO.cpp;${CMAKE_SOURCE_DIR}/OpenFX-IO/IOSupport/GenericOCIOOpenGL.cpp;${CMAKE_SOURCE_DIR}/lodepng.cpp")
+
+# ReadKrita.ofx
 create_ofx_plugin(ReadKrita 
     "ReadKrita" 
     "${OCIO_LIBRARIES};${LIBXML2_LIBRARIES}" 
     "${PROJECT_SOURCE_DIR}/ReadKrita/fr.inria.openfx.ReadKrita.png;${PROJECT_SOURCE_DIR}/ReadKrita/fr.inria.openfx.ReadKrita.svg" 
     "${OCIO_INCLUDES};${LIBXML2_INCLUDE_DIR}"
     "${CMAKE_SOURCE_DIR}/OpenFX-IO/IOSupport/GenericReader.cpp;${CMAKE_SOURCE_DIR}/OpenFX-IO/IOSupport/GenericOCIO.cpp;${CMAKE_SOURCE_DIR}/OpenFX-IO/IOSupport/GenericOCIOOpenGL.cpp;${CMAKE_SOURCE_DIR}/lodepng.cpp")
+
+# Extra.ofx
+create_ofx_plugin(Extra 
+    "TextFX;ReadSVG;ReadPDF;OpenRaster;ReadKrita" 
+    "${PangoCairo_LIBRARIES};${OCIO_LIBRARIES};${LibRSVG_LIBRARIES};${LIBXML2_LIBRARIES};${POPPLER_LIBRARIES}" 
+    "${PROJECT_SOURCE_DIR}/TextFX/net.fxarena.openfx.Text.png;${PROJECT_SOURCE_DIR}/TextFX/net.fxarena.openfx.Text.svg;${PROJECT_SOURCE_DIR}/ReadSVG/net.fxarena.openfx.ReadSVG.png;${PROJECT_SOURCE_DIR}/ReadSVG/net.fxarena.openfx.ReadSVG.svg;${PROJECT_SOURCE_DIR}/ReadPDF/fr.inria.openfx.ReadPDF.png;${PROJECT_SOURCE_DIR}/ReadPDF/fr.inria.openfx.ReadPDF.svg;${PROJECT_SOURCE_DIR}/OpenRaster/fr.inria.openfx.OpenRaster.png;${PROJECT_SOURCE_DIR}/OpenRaster/fr.inria.openfx.OpenRaster.svg;${PROJECT_SOURCE_DIR}/ReadKrita/fr.inria.openfx.ReadKrita.png;${PROJECT_SOURCE_DIR}/ReadKrita/fr.inria.openfx.ReadKrita.svg" 
+    "${PangoCairo_INCLUDE_DIR};${Glib_INCLUDE_DIR};${GlibConfig_INCLUDE_DIR};${CAIRO_INCLUDE_DIRS};${FONTCONFIG_INCLUDE_DIR};${FREETYPE_INCLUDE_DIRS};${OCIO_INCLUDES};${LIBXML2_INCLUDE_DIR};${LibRSVG_INCLUDE_DIRS};${POPPLER_INCLUDE_DIRS}"
+    "${CMAKE_SOURCE_DIR}/SupportExt/ofxsTransform3x3.cpp;${CMAKE_SOURCE_DIR}/SupportExt/ofxsTransformInteract.cpp;${CMAKE_SOURCE_DIR}/SupportExt/ofxsShutter.cpp;${CMAKE_SOURCE_DIR}/OpenFX-IO/IOSupport/GenericReader.cpp;${CMAKE_SOURCE_DIR}/OpenFX-IO/IOSupport/GenericOCIO.cpp;${CMAKE_SOURCE_DIR}/OpenFX-IO/IOSupport/GenericOCIOOpenGL.cpp;${CMAKE_SOURCE_DIR}/lodepng.cpp")
+
 
