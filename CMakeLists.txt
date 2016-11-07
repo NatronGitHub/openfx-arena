@@ -35,6 +35,7 @@ create_ofx_plugin(TextFX
 find_package(OpenColorIO)
 find_package(LibRSVG)
 find_package(LibXml2)
+find_package(PopplerCairo)
 
 # Create IO plugins
 add_definitions(-DOFX_IO_USING_OCIO)
@@ -43,7 +44,14 @@ include_directories("${CMAKE_SOURCE_DIR}/OpenFX-IO/IOSupport" "${CMAKE_SOURCE_DI
 create_ofx_plugin(ReadSVG 
     "ReadSVG" 
     "${OCIO_LIBRARIES};${LibRSVG_LIBRARIES};${LIBXML2_LIBRARIES}" 
-    "${PROJECT_SOURCE_DIR}/TextFX/net.fxarena.openfx.Text.png;${PROJECT_SOURCE_DIR}/TextFX/net.fxarena.openfx.Text.svg" 
+    "${PROJECT_SOURCE_DIR}/ReadSVG/net.fxarena.openfx.ReadSVG.png;${PROJECT_SOURCE_DIR}/ReadSVG/net.fxarena.openfx.ReadSVG.svg" 
     "${OCIO_INCLUDES};${LIBXML2_INCLUDE_DIR};${LibRSVG_INCLUDE_DIRS};${Glib_INCLUDE_DIR};${GlibConfig_INCLUDE_DIR};${CAIRO_INCLUDE_DIRS};${FONTCONFIG_INCLUDE_DIR};${FREETYPE_INCLUDE_DIRS}"
     "${CMAKE_SOURCE_DIR}/OpenFX-IO/IOSupport/GenericReader.cpp;${CMAKE_SOURCE_DIR}/OpenFX-IO/IOSupport/GenericOCIO.cpp;${CMAKE_SOURCE_DIR}/OpenFX-IO/IOSupport/GenericOCIOOpenGL.cpp")
+create_ofx_plugin(ReadPDF 
+    "ReadPDF" 
+    "${OCIO_LIBRARIES};${POPPLER_LIBRARIES}" 
+    "${PROJECT_SOURCE_DIR}/ReadPDF/fr.inria.openfx.ReadPDF.png;${PROJECT_SOURCE_DIR}/ReadPDF/fr.inria.openfx.ReadPDF.svg" 
+    "${OCIO_INCLUDES};${POPPLER_INCLUDE_DIRS};${Glib_INCLUDE_DIR};${GlibConfig_INCLUDE_DIR};${CAIRO_INCLUDE_DIRS};${FONTCONFIG_INCLUDE_DIR};${FREETYPE_INCLUDE_DIRS}"
+    "${CMAKE_SOURCE_DIR}/OpenFX-IO/IOSupport/GenericReader.cpp;${CMAKE_SOURCE_DIR}/OpenFX-IO/IOSupport/GenericOCIO.cpp;${CMAKE_SOURCE_DIR}/OpenFX-IO/IOSupport/GenericOCIOOpenGL.cpp")
+
 

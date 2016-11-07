@@ -61,8 +61,8 @@ RESOURCES = \
 
 ifneq ($(LICENSE),COMMERCIAL)
 RESOURCES += \
-    ../Extra/fr.inria.openfx.ReadPDF.png \
-    ../Extra/fr.inria.openfx.ReadPDF.svg
+    ../ReadPDF/fr.inria.openfx.ReadPDF.png \
+    ../ReadPDF/fr.inria.openfx.ReadPDF.svg
 endif
 
 RESOURCES += \
@@ -113,6 +113,7 @@ endif
 SRCDIR = ..
 
 VPATH += \
+    $(SRCDIR)/ReadPDF \
     $(SRCDIR)/ReadSVG \
     $(SRCDIR)/TextFX \
     $(SRCDIR)/Extra \

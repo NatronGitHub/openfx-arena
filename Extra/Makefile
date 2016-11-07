@@ -34,15 +34,15 @@ RESOURCES = \
 
 ifneq ($(LICENSE),COMMERCIAL)
 RESOURCES += \
-    fr.inria.openfx.ReadPDF.png \
-    fr.inria.openfx.ReadPDF.svg
+    $(SRCDIR)/ReadPDF/fr.inria.openfx.ReadPDF.png \
+    $(SRCDIR)/ReadPDF/fr.inria.openfx.ReadPDF.svg
 endif
 
 SRCDIR = ..
 include $(SRCDIR)/Makefile.master
 include $(SRCDIR)/Makefile.io
 
-VPATH += $(SRCDIR)/TextFX $(SRCDIR)/ReadSVG
+VPATH += $(SRCDIR)/TextFX $(SRCDIR)/ReadSVG $(SRCDIR)/ReadPDF
 
 CXXFLAGS  += \
     $(FCONFIG_CXXFLAGS) \
