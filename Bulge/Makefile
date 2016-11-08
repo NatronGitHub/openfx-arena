@@ -1,4 +1,4 @@
-SRCDIR = ../..
+SRCDIR = ..
 
 PLUGINOBJECTS = \
         Bulge.o \
@@ -17,7 +17,7 @@ net.fxarena.opencl.Bulge.cl
 
 include $(SRCDIR)/Makefile.master
 
-VPATH += $(SRCDIR)/OCL
+VPATH += $(SRCDIR)/ArenaCL
 
 CXXFLAGS += $(OPENCL_CXXFLAGS)
 LINKFLAGS += $(OPENCL_LINKFLAGS)

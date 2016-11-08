@@ -1,21 +1,20 @@
-SRCDIR = ../..
+SRCDIR = ..
 
 PLUGINOBJECTS = \
-        Ripple.o \
+        Sharpen.o \
         OCLPlugin.o
 
-PLUGINNAME = Ripple
+PLUGINNAME = Sharpen
 
 RESOURCES = \
 $(SRCDIR)/LICENSE \
-net.fxarena.opencl.Ripple.png \
-net.fxarena.opencl.Ripple.svg \
-net.fxarena.opencl.Ripple.cl
+net.fxarena.opencl.Sharpen.png \
+net.fxarena.opencl.Sharpen.svg \
+net.fxarena.opencl.Sharpen.cl
 
 include $(SRCDIR)/Makefile.master
 
-VPATH += $(SRCDIR)/OCL
+VPATH += $(SRCDIR)/ArenaCL
 
 CXXFLAGS += $(OPENCL_CXXFLAGS)
 LINKFLAGS += $(OPENCL_LINKFLAGS)
-

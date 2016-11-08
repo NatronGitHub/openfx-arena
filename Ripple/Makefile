@@ -1,20 +1,20 @@
-SRCDIR = ../..
+SRCDIR = ..
 
 PLUGINOBJECTS = \
-        Cartoon.o \
+        Ripple.o \
         OCLPlugin.o
 
-PLUGINNAME = Cartoon
+PLUGINNAME = Ripple
 
 RESOURCES = \
 $(SRCDIR)/LICENSE \
-net.fxarena.opencl.Cartoon.png \
-net.fxarena.opencl.Cartoon.svg \
-net.fxarena.opencl.Cartoon.cl
+net.fxarena.opencl.Ripple.png \
+net.fxarena.opencl.Ripple.svg \
+net.fxarena.opencl.Ripple.cl
 
 include $(SRCDIR)/Makefile.master
 
-VPATH += $(SRCDIR)/OCL
+VPATH += $(SRCDIR)/ArenaCL
 
 CXXFLAGS += $(OPENCL_CXXFLAGS)
 LINKFLAGS += $(OPENCL_LINKFLAGS)

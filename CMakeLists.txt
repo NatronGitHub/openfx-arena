@@ -23,8 +23,8 @@ add_definitions(-DOFX_IO_USING_OCIO)
 include_directories("${CMAKE_SOURCE_DIR}/OpenFX-IO/IOSupport" "${CMAKE_SOURCE_DIR}/SupportExt/glad" "${PROJECT_SOURCE_DIR}")
 
 # Find packages
-#add_definitions(-DMAGICKCORE_QUANTUM_DEPTH=32)
-#add_definitions(-DMAGICKCORE_HDRI_ENABLE=1)
+add_definitions(-DMAGICKCORE_QUANTUM_DEPTH=32)
+add_definitions(-DMAGICKCORE_HDRI_ENABLE=1)
 find_package(PangoCairo)
 find_package(Fontconfig)
 find_package(Glib)
@@ -108,6 +108,6 @@ create_ofx_plugin(ReadPSD
     "${OCIO_LIBRARIES};${ImageMagick_LIBRARIES};${LCMS2_LIBRARIES}" 
     "${PROJECT_SOURCE_DIR}/ReadPSD/net.fxarena.openfx.ReadPSD.png;${PROJECT_SOURCE_DIR}/ReadPSD/net.fxarena.openfx.ReadPSD.svg" 
     "${OCIO_INCLUDES};${ImageMagick_INCLUDE_DIRS};${LCMS2_INCLUDE_DIR}"
-    "${CMAKE_SOURCE_DIR}/OpenFX-IO/IOSupport/GenericReader.cpp;${CMAKE_SOURCE_DIR}/OpenFX-IO/IOSupport/GenericOCIO.cpp;${CMAKE_SOURCE_DIR}/OpenFX-IO/IOSupport/GenericOCIOOpenGL.cpp;${CMAKE_SOURCE_DIR}/SupportExt/ofxsMultiPlane.cpp;${CMAKE_SOURCE_DIR}/SupportExt/ofxsFileOpen.cpp;${CMAKE_SOURCE_DIR}/ofxsOGLUtilities.cpp")
+    "${CMAKE_SOURCE_DIR}/OpenFX-IO/IOSupport/GenericReader.cpp;${CMAKE_SOURCE_DIR}/OpenFX-IO/IOSupport/GenericOCIO.cpp;${CMAKE_SOURCE_DIR}/OpenFX-IO/IOSupport/GenericOCIOOpenGL.cpp;${CMAKE_SOURCE_DIR}/SupportExt/ofxsMultiPlane.cpp;${CMAKE_SOURCE_DIR}/SupportExt/ofxsFileOpen.cpp;${CMAKE_SOURCE_DIR}/SupportExt/ofxsOGLUtilities.cpp")
 
 

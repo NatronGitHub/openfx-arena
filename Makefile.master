@@ -64,13 +64,13 @@ CURL_CXXFLAGS += $(shell pkg-config libcurl --cflags)
 CURL_LINKFLAGS += $(shell pkg-config libcurl --libs --static)
 
 # opencl
-OPENCL_CXXFLAGS += -I$(SRCDIR)/OCL
+OPENCL_CXXFLAGS += -I$(SRCDIR)/ArenaCL
 OS := $(shell uname -s)
 ifeq ($(OS),Darwin)
 OPENCL_LINKFLAGS += -framework OpenCL
 else
-OPENCL_CXXFLAGS += -I$(SRCDIR)/OCL/OpenCL
-OPENCL_LINKFLAGS += -lOpenCL -L$(SRCDIR)/OCL/OpenCL/lib$(BITS)
+OPENCL_CXXFLAGS += -I$(SRCDIR)/ArenaCL/OpenCL
+OPENCL_LINKFLAGS += -lOpenCL -L$(SRCDIR)/ArenaCL/OpenCL/lib$(BITS)
 endif
 
 # mingw
