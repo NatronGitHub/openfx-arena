@@ -92,8 +92,8 @@ RESOURCES += \
     ../ReadPSD/net.fxarena.openfx.ReadPSD.svg \
     ../Magick/net.fxarena.openfx.Modulate.png \
     ../Magick/net.fxarena.openfx.Modulate.svg \
-    ../Magick/fr.inria.openfx.ReadMisc.png \
-    ../Magick/fr.inria.openfx.ReadMisc.svg \
+    ../ReadMisc/fr.inria.openfx.ReadMisc.png \
+    ../ReadMisc/fr.inria.openfx.ReadMisc.svg \
     ../Magick/net.fxarena.openfx.Texture.png \
     ../Magick/net.fxarena.openfx.Texture.svg
 
@@ -113,6 +113,7 @@ endif
 SRCDIR = ..
 
 VPATH += \
+    $(SRCDIR)/ReadMisc \
     $(SRCDIR)/ReadPSD \
     $(SRCDIR)/OpenRaster \
     $(SRCDIR)/ReadCDR \
@@ -143,8 +144,7 @@ CXXFLAGS  += \
     $(ZIP_CXXFLAGS) \
     $(MAGICK_CXXFLAGS) \
     $(LCMS_CXXFLAGS) \
-    $(GLIB_CXXFLAGS) \
-    $(CURL_CXXFLAGS)
+    $(GLIB_CXXFLAGS)
 LINKFLAGS += \
     $(FCONFIG_LINKFLAGS) \
     $(PANGO_LINKFLAGS) \
@@ -154,8 +154,7 @@ LINKFLAGS += \
     $(ZIP_LINKFLAGS) \
     $(MAGICK_LINKFLAGS) \
     $(LCMS_LINKFLAGS) \
-    $(GLIB_LINKFLAGS) \
-    $(CURL_LINKFLAGS)
+    $(GLIB_LINKFLAGS)
 
 CXXFLAGS += -I. -I$(SRCDIR)/Magick
 
