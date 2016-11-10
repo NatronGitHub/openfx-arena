@@ -27,7 +27,7 @@ add_definitions(-DMAGICKCORE_QUANTUM_DEPTH=32)
 add_definitions(-DMAGICKCORE_HDRI_ENABLE=1)
 find_package(PangoCairo)
 find_package(Fontconfig)
-find_package(Glib)
+#find_package(Glib)
 find_package(OpenColorIO)
 find_package(LibRSVG)
 find_package(LibXml2)
@@ -49,7 +49,7 @@ endif()
 # Text.ofx
 create_ofx_plugin(TextFX 
     "TextFX" 
-    "${PangoCairo_LIBRARIES}" 
+    "${PangoCairo_LIBRARIES};${FONTCONFIG_LIBRARIES};${CAIRO_LIBRARIES}" 
     "${PROJECT_SOURCE_DIR}/TextFX/net.fxarena.openfx.Text.png;${PROJECT_SOURCE_DIR}/TextFX/net.fxarena.openfx.Text.svg" 
     "${PangoCairo_INCLUDE_DIR};${Glib_INCLUDE_DIR};${GlibConfig_INCLUDE_DIR};${CAIRO_INCLUDE_DIRS};${FONTCONFIG_INCLUDE_DIR};${FREETYPE_INCLUDE_DIRS}"
     "${CMAKE_SOURCE_DIR}/SupportExt/ofxsTransform3x3.cpp;${CMAKE_SOURCE_DIR}/SupportExt/ofxsTransformInteract.cpp;${CMAKE_SOURCE_DIR}/SupportExt/ofxsShutter.cpp")
