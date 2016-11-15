@@ -25,6 +25,8 @@
 #include <libxml/parser.h>
 
 #include <iostream>
+#include <cstring>
+#include <fstream>
 
 #include "ofxNatron.h"
 #include "GenericReader.h"
@@ -40,13 +42,21 @@
 #define kPluginGrouping "Image/Readers"
 #define kPluginIdentifier "net.fxarena.openfx.ReadSVG"
 #define kPluginVersionMajor 3
-#define kPluginVersionMinor 1
+#define kPluginVersionMinor 2
 #define kPluginEvaluation 50
 
 #define kParamDpi "dpi"
 #define kParamDpiLabel "DPI"
 #define kParamDpiHint "Dots-per-inch (90 is default)"
 #define kParamDpiDefault 90
+
+#define kParamSource "source"
+#define kParamSourceLabel "Source"
+#define kParamSourceHint "The SVG source code. Used to override/edit the original file."
+
+#define kParamSourceButton "loadSource"
+#define kParamSourceButtonLabel "View Source"
+#define kParamSourceButtonHint "Get source from file."
 
 #define kSupportsRGBA true
 #define kSupportsRGB false
@@ -91,8 +101,12 @@ private:
     virtual bool getFrameBounds(const std::string& filename, OfxTime time, OfxRectI *bounds, OfxRectI* format, double *par, std::string *error, int *tile_width, int *tile_height) OVERRIDE FINAL;
     virtual void restoreState(const std::string& filename) OVERRIDE FINAL;
     virtual void onInputFileChanged(const std::string& newFile, bool throwErrors, bool setColorSpace, OFX::PreMultiplicationEnum *premult, OFX::PixelComponentEnum *components, int *componentCount) OVERRIDE FINAL;
+    virtual void changedParam(const OFX::InstanceChangedArgs &args, const std::string &paramName) OVERRIDE FINAL;
     void getLayers(xmlNode *node, std::vector<std::string> *layers);
+    std::string textFromFile(std::string filename);
     OFX::IntParam *_dpi;
+    OFX::StringParam *_source;
+    OFX::PushButtonParam *_load;
     std::vector<std::string> imageLayers;
 };
 
@@ -105,9 +119,13 @@ false
 #endif
 )
 ,_dpi(0)
+,_source(0)
+,_load(0)
 {
     _dpi = fetchIntParam(kParamDpi);
-    assert(_dpi);
+    _source = fetchStringParam(kParamSource);
+    _load = fetchPushButtonParam(kParamSourceButton);
+    assert(_dpi && _source && _load);
 }
 
 ReadSVGPlugin::~ReadSVGPlugin()
@@ -179,18 +197,14 @@ ReadSVGPlugin::decodePlane(const std::string& filename, OfxTime time, int /*view
         OFX::throwSuiteStatusException(kOfxStatErrFormat);
     }
 
-    if (filename.empty()) {
-        setPersistentMessage(OFX::Message::eMessageError, "", "No filename");
-        OFX::throwSuiteStatusException(kOfxStatErrFormat);
-    }
-
     std::string layerID;
     if (gHostIsNatron) {
         std::string layerName;
         std::vector<std::string> layerChannels = OFX::mapPixelComponentCustomToLayerChannels(rawComponents);
         int numChannels = layerChannels.size();
-        if (numChannels==5) // layer+R+G+B+A
+        if (numChannels==5) { // layer+R+G+B+A
             layerName=layerChannels[0];
+        }
         if (!layerName.empty()) {
             layerID = layerName;
         }
@@ -204,10 +218,27 @@ ReadSVGPlugin::decodePlane(const std::string& filename, OfxTime time, int /*view
     cairo_status_t status;
     double imageWidth, imageHeight, scaleWidth, scaleHeight;
     int dpi, width, height, renderWidth, renderHeight;
+    std::string source;
+
     _dpi->getValueAtTime(time, dpi);
+    _source->getValueAtTime(time, source);
+
+    if (filename.empty() && source.empty()) {
+        setPersistentMessage(OFX::Message::eMessageError, "", "No file or source.");
+        OFX::throwSuiteStatusException(kOfxStatErrFormat);
+    }
 
     rsvg_set_default_dpi_x_y(dpi, dpi);
-    handle=rsvg_handle_new_from_file(filename.c_str(), &error);
+
+    if (source.empty()) {
+        handle = rsvg_handle_new_from_file(filename.c_str(), &error);
+    } else {
+        guint8* data;
+        data = new guint8[source.length() + 1];
+        std::memcpy(data, source.c_str(), source.length() + 1);
+        handle = rsvg_handle_new_from_data(data, source.length(), &error);
+        delete[] data;
+    }
 
     if (error != NULL) {
         setPersistentMessage(OFX::Message::eMessageError, "", "Failed to read SVG");
@@ -245,8 +276,7 @@ ReadSVGPlugin::decodePlane(const std::string& filename, OfxTime time, int /*view
 
     if (layerID.empty()) {
         rsvg_handle_render_cairo(handle, cr);
-    }
-    else {
+    } else {
         std::ostringstream layerSub;
         layerSub << "#" << layerID;
         rsvg_handle_render_cairo_sub(handle, cr, layerSub.str().c_str());
@@ -296,13 +326,15 @@ bool ReadSVGPlugin::getFrameBounds(const std::string& filename,
                               double *par,
                               std::string* /*error*/,int *tile_width, int *tile_height)
 {
-    if (filename.empty()) {
-        setPersistentMessage(OFX::Message::eMessageError, "", "No filename");
+    int dpi;
+    std::string source;
+    _source->getValueAtTime(time, source);
+    _dpi->getValueAtTime(time, dpi);
+
+    if (filename.empty() && source.empty()) {
+        setPersistentMessage(OFX::Message::eMessageError, "", "No file or source");
         OFX::throwSuiteStatusException(kOfxStatErrFormat);
     }
-
-    int dpi;
-    _dpi->getValueAtTime(time, dpi);
 
     GError *error = NULL;
     RsvgHandle *handle;
@@ -312,7 +344,15 @@ bool ReadSVGPlugin::getFrameBounds(const std::string& filename,
 
     rsvg_set_default_dpi_x_y(dpi, dpi);
 
-    handle=rsvg_handle_new_from_file(filename.c_str(), &error);
+    if (source.empty()) {
+        handle = rsvg_handle_new_from_file(filename.c_str(), &error);
+    } else {
+        guint8* data;
+        data = new guint8[source.length() + 1];
+        std::memcpy(data, source.c_str(), source.length() + 1);
+        handle = rsvg_handle_new_from_data(data, source.length(), &error);
+        delete[] data;
+    }
 
     if (error != NULL) {
         setPersistentMessage(OFX::Message::eMessageError, "", "Failed to read SVG");
@@ -396,6 +436,32 @@ void ReadSVGPlugin::onInputFileChanged(const std::string& newFile,
     *premult = OFX::eImageUnPreMultiplied;
 }
 
+void ReadSVGPlugin::changedParam(const OFX::InstanceChangedArgs &args, const std::string &paramName)
+{
+    if (paramName == kParamSourceButton) {
+        std::string filename;
+        _fileParam->getValueAtTime(args.time, filename);
+        _source->setValue(textFromFile(filename));
+    } else {
+        GenericReaderPlugin::changedParam(args,paramName);
+    }
+}
+
+std::string ReadSVGPlugin::textFromFile(std::string filename) {
+    std::string result;
+    if (!filename.empty()) {
+        std::ifstream f;
+        f.open(filename.c_str());
+        std::ostringstream s;
+        s << f.rdbuf();
+        f.close();
+        if (!s.str().empty()) {
+            result = s.str();
+        }
+    }
+    return result;
+}
+
 using namespace OFX;
 
 mDeclareReaderPluginFactory(ReadSVGPluginFactory, {}, false);
@@ -414,7 +480,7 @@ void ReadSVGPluginFactory::describe(OFX::ImageEffectDescriptor &desc)
 {
     GenericReaderDescribe(desc, _extensions, kPluginEvaluation, kSupportsTiles, kIsMultiPlanar);
     desc.setLabel(kPluginName);
-    desc.setPluginDescription("Fast SVG (Scalable Vector Graphics) reader using librsvg and Cairo.");
+    desc.setPluginDescription("Scalable vector graphics reader using LibRSVG and Cairo.");
 }
 
 /** @brief The describe in context function, passed a plugin descriptor and a context */
@@ -431,8 +497,29 @@ void ReadSVGPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, C
         param->setDisplayRange(1, 500);
         param->setDefault(kParamDpiDefault);
         param->setAnimates(false);
-        param->setLayoutHint(OFX::eLayoutHintDivider);
-        page->addChild(*param);
+        param->setLayoutHint(eLayoutHintDivider);
+        if (page) {
+            page->addChild(*param);
+        }
+    }
+    {
+        StringParamDescriptor* param = desc.defineStringParam(kParamSource);
+        param->setLabel(kParamSourceLabel);
+        param->setHint(kParamSourceHint);
+        param->setStringType(eStringTypeMultiLine);
+        param->setAnimates(false);
+        if (page) {
+            page->addChild(*param);
+        }
+    }
+    {
+        PushButtonParamDescriptor* param = desc.definePushButtonParam(kParamSourceButton);
+        param->setLabel(kParamSourceButtonLabel);
+        param->setHint(kParamSourceButtonHint);
+        param->setLayoutHint(eLayoutHintDivider);
+        if (page) {
+            page->addChild(*param);
+        }
     }
 
     GenericReaderDescribeInContextEnd(desc, context, page, "reference", "reference");
