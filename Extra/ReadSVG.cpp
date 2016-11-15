@@ -104,6 +104,7 @@ private:
     virtual void changedParam(const OFX::InstanceChangedArgs &args, const std::string &paramName) OVERRIDE FINAL;
     void getLayers(xmlNode *node, std::vector<std::string> *layers);
     std::string textFromFile(std::string filename);
+    bool hasSuffix(const std::string &filename, const std::string &suffix);
     OFX::IntParam *_dpi;
     OFX::StringParam *_source;
     OFX::PushButtonParam *_load;
@@ -436,18 +437,24 @@ void ReadSVGPlugin::onInputFileChanged(const std::string& newFile,
     *premult = OFX::eImageUnPreMultiplied;
 }
 
-void ReadSVGPlugin::changedParam(const OFX::InstanceChangedArgs &args, const std::string &paramName)
+void
+ReadSVGPlugin::changedParam(const OFX::InstanceChangedArgs &args, const std::string &paramName)
 {
     if (paramName == kParamSourceButton) {
         std::string filename;
         _fileParam->getValueAtTime(args.time, filename);
-        _source->setValue(textFromFile(filename));
+        if (hasSuffix(filename, "svg") || hasSuffix(filename, "SVG")) {
+            _source->setValue(textFromFile(filename));
+        } else {
+            setPersistentMessage(OFX::Message::eMessageMessage, "", "View source does not support compressed SVG files.");
+        }
     } else {
         GenericReaderPlugin::changedParam(args,paramName);
     }
 }
 
-std::string ReadSVGPlugin::textFromFile(std::string filename) {
+std::string
+ReadSVGPlugin::textFromFile(std::string filename) {
     std::string result;
     if (!filename.empty()) {
         std::ifstream f;
@@ -460,6 +467,12 @@ std::string ReadSVGPlugin::textFromFile(std::string filename) {
         }
     }
     return result;
+}
+
+bool
+ReadSVGPlugin::hasSuffix(const std::string &filename, const std::string &suffix)
+{
+    return filename.size() >= suffix.size() && filename.compare(filename.size() - suffix.size(), suffix.size(), suffix) == 0;
 }
 
 using namespace OFX;
