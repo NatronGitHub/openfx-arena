@@ -29,6 +29,9 @@
 #include <poppler/GlobalParams.h>
 
 #include <iostream>
+#include <stdlib.h>
+#include <sys/types.h>
+#include <sys/stat.h>
 #include <algorithm>
 
 #ifdef __linux__
@@ -116,6 +119,7 @@ private:
     bool isSVG(const std::string &filename);
     bool isPDF(const std::string &filename);
     bool isCDR(const std::string &filename);
+    std::string getPopplerPath();
 };
 
 ReadSVGPlugin::ReadSVGPlugin(OfxImageEffectHandle handle, const std::vector<std::string>& extensions)
@@ -130,6 +134,17 @@ false
 {
     _dpi = fetchIntParam(kParamDpi);
     assert(_dpi);
+
+    // When we deploy the plugin we need access to the poppler data folder,
+    // we asume that the path is OFX_HOST_BINARY/../Resources/poppler.
+    // If not found, whatever poppler has as default will be used (may or may not work).
+    std::string popplerData = getPopplerPath();
+    if (!popplerData.empty()) {
+        struct stat sb;
+        if (stat(popplerData.c_str(), &sb) == 0 && S_ISDIR(sb.st_mode)) {
+            globalParams = new GlobalParams(popplerData.c_str());
+        }
+    }
 }
 
 ReadSVGPlugin::~ReadSVGPlugin()
@@ -561,6 +576,42 @@ ReadSVGPlugin::isCDR(const std::string &filename)
         std::transform(vectorFile.begin(), vectorFile.end(), vectorFile.begin(), ::tolower);
         result = vectorFile.compare(vectorFile.size()-suffixSize,suffixSize, "cdr") == 0;
     }
+    return result;
+}
+
+std::string
+ReadSVGPlugin::getPopplerPath()
+{
+    std::string result;
+    char path[PATH_MAX];
+
+#ifdef __linux__
+    char tmp[PATH_MAX];
+    if (readlink("/proc/self/exe", tmp, sizeof(tmp)) != -1) {
+        strcpy(path,dirname(tmp));
+    }
+#elif __APPLE__
+    char tmp[PATH_MAX];
+    uint32_t size = sizeof(tmp);
+    _NSGetExecutablePath(tmp, &size);
+    strcpy(path,dirname(tmp));
+#elif _WIN32
+    HMODULE hModule = GetModuleHandle(NULL);
+    if (hModule != NULL) {
+        GetModuleFileName(hModule,path, (sizeof(path)));
+        PathRemoveFileSpec(path);
+    }
+#endif
+
+    result = path;
+    if (!result.empty()) {
+#ifdef _WIN32
+        result += "\\..\\Resources\\poppler";
+#else
+        result += "/../Resources/poppler";
+#endif
+    }
+
     return result;
 }
 
