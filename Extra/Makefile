@@ -3,16 +3,9 @@ PLUGINNAME = Extra
 PLUGINOBJECTS = \
     lodepng.o \
     TextFX.o \
-    ReadCDR.o \
     ReadSVG.o \
     ReadKrita.o \
-    OpenRaster.o
-
-ifneq ($(LICENSE),COMMERCIAL)
-PLUGINOBJECTS += ReadPDF.o
-endif
-
-PLUGINOBJECTS += \
+    OpenRaster.o \
     ofxsTransform3x3.o \
     ofxsTransformInteract.o \
     ofxsShutter.o \
@@ -23,20 +16,12 @@ PLUGINOBJECTS += \
 RESOURCES = \
     net.fxarena.openfx.Text.png \
     net.fxarena.openfx.Text.svg \
-    fr.inria.openfx.ReadCDR.png \
-    fr.inria.openfx.ReadCDR.svg \
     net.fxarena.openfx.ReadSVG.png \
     net.fxarena.openfx.ReadSVG.svg \
     fr.inria.openfx.ReadKrita.png \
     fr.inria.openfx.ReadKrita.svg \
     fr.inria.openfx.OpenRaster.png \
     fr.inria.openfx.OpenRaster.svg
-
-ifneq ($(LICENSE),COMMERCIAL)
-RESOURCES += \
-    fr.inria.openfx.ReadPDF.png \
-    fr.inria.openfx.ReadPDF.svg
-endif
 
 SRCDIR = ..
 include $(SRCDIR)/Makefile.master
@@ -49,7 +34,8 @@ CXXFLAGS  += \
     $(CDR_CXXFLAGS) \
     $(XML_CXXFLAGS) \
     $(ZIP_CXXFLAGS) \
-    $(GLIB_CXXFLAGS)
+    $(GLIB_CXXFLAGS) \
+    $(POPPLER_CXXFLAGS)
 LINKFLAGS += \
     $(FCONFIG_LINKFLAGS) \
     $(PANGO_LINKFLAGS) \
@@ -57,12 +43,8 @@ LINKFLAGS += \
     $(CDR_LINKFLAGS) \
     $(XML_LINKFLAGS) \
     $(ZIP_LINKFLAGS) \
-    $(GLIB_LINKFLAGS)
-
-ifneq ($(LICENSE),COMMERCIAL)
-CXXFLAGS += $(POPPLER_CXXFLAGS)
-LINKFLAGS += $(POPPLER_LINKFLAGS)
-endif
+    $(GLIB_LINKFLAGS) \
+    $(POPPLER_LINKFLAGS)
 
 PNGVERSION = a70c086077c0eaecbae3845e4da4424de5f43361
 

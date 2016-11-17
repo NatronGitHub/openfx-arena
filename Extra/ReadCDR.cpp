@@ -369,6 +369,8 @@ void ReadCDRPluginFactory::describe(OFX::ImageEffectDescriptor &desc)
     desc.setLabel(kPluginName);
 
     desc.setPluginDescription("Read CorelDRAW(R) document format.\n\nThis plugin is not manufactured, approved, or supported by Corel Corporation or Corel Corporation Limited.");
+
+    desc.setIsDeprecated(true);
 }
 
 /** @brief The describe in context function, passed a plugin descriptor and a context */
