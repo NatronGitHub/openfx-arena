@@ -3,10 +3,9 @@ PLUGINNAME = Extra
 PLUGINOBJECTS = \
     lodepng.o \
     TextFX.o \
-    ReadCDR.o \
     ReadSVG.o \
     ReadKrita.o \
-    OpenRaster.o
+    OpenRaster.o \
     ofxsTransform3x3.o \
     ofxsTransformInteract.o \
     ofxsShutter.o \
@@ -17,8 +16,6 @@ PLUGINOBJECTS = \
 RESOURCES = \
     net.fxarena.openfx.Text.png \
     net.fxarena.openfx.Text.svg \
-    fr.inria.openfx.ReadCDR.png \
-    fr.inria.openfx.ReadCDR.svg \
     net.fxarena.openfx.ReadSVG.png \
     net.fxarena.openfx.ReadSVG.svg \
     fr.inria.openfx.ReadKrita.png \

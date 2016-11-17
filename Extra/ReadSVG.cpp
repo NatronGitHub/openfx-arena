@@ -240,7 +240,7 @@ ReadSVGPlugin::decodePlane(const std::string& filename, OfxTime time, int /*view
     _dpi->getValueAtTime(time, dpi);
     bool pdf = isPDF(filename);
     //bool svg = isSVG(filename);
-    //bool cdr = isCDR(filename);
+    bool cdr = isCDR(filename);
     int renderWidth = renderWindow.x2 - renderWindow.x1;
     int renderHeight = renderWindow.y2 - renderWindow.y1;
 
@@ -299,12 +299,38 @@ ReadSVGPlugin::decodePlane(const std::string& filename, OfxTime time, int /*view
         g_object_unref(document);
         error = NULL;
     } else {
+        std::ostringstream stream;
+        if (cdr) {
+            librevenge::RVNGFileStream input(filename.c_str());
+            if (!libcdr::CDRDocument::isSupported(&input)) {
+                setPersistentMessage(OFX::Message::eMessageError, "", "Unsupported file format");
+                OFX::throwSuiteStatusException(kOfxStatErrFormat);
+            }
+            librevenge::RVNGStringVector output;
+            librevenge::RVNGSVGDrawingGenerator generator(output, "svg");
+            if (!libcdr::CDRDocument::parse(&input, &generator)) {
+                setPersistentMessage(OFX::Message::eMessageError, "", "SVG generation failed");
+                OFX::throwSuiteStatusException(kOfxStatErrFormat);
+            }
+            if (output.empty()) {
+                setPersistentMessage(OFX::Message::eMessageError, "", "No SVG document generated");
+                OFX::throwSuiteStatusException(kOfxStatErrFormat);
+            }
+            stream << "<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"no\"?>";
+            for (unsigned k = 0; k<output.size(); ++k) {
+                stream << output[k].cstr();
+            }
+        }
         GError *error = NULL;
         RsvgHandle *handle;
         RsvgDimensionData dimension;
 
         rsvg_set_default_dpi_x_y(dpi, dpi);
-        handle=rsvg_handle_new_from_file(filename.c_str(), &error);
+        if (cdr) {
+            handle=rsvg_handle_new_from_data((guint8 *)stream.str().c_str(), stream.str().size(), &error);
+        } else {
+            handle=rsvg_handle_new_from_file(filename.c_str(), &error);
+        }
 
         if (error != NULL) {
             setPersistentMessage(OFX::Message::eMessageError, "", "Failed to read SVG");
@@ -394,6 +420,7 @@ bool ReadSVGPlugin::getFrameBounds(const std::string& filename,
 
     int dpi, width, height;
     _dpi->getValueAtTime(time, dpi);
+    bool cdr = isCDR(filename);
 
     if (isPDF(filename)) {
         GError *error = NULL;
@@ -424,13 +451,39 @@ bool ReadSVGPlugin::getFrameBounds(const std::string& filename,
         g_object_unref(document);
         error = NULL;
     } else {
+        std::ostringstream stream;
+        if (cdr) {
+            librevenge::RVNGFileStream input(filename.c_str());
+            if (!libcdr::CDRDocument::isSupported(&input)) {
+                setPersistentMessage(OFX::Message::eMessageError, "", "Unsupported file format");
+                OFX::throwSuiteStatusException(kOfxStatErrFormat);
+            }
+            librevenge::RVNGStringVector output;
+            librevenge::RVNGSVGDrawingGenerator generator(output, "svg");
+            if (!libcdr::CDRDocument::parse(&input, &generator)) {
+                setPersistentMessage(OFX::Message::eMessageError, "", "SVG generation failed");
+                OFX::throwSuiteStatusException(kOfxStatErrFormat);
+            }
+            if (output.empty()) {
+                setPersistentMessage(OFX::Message::eMessageError, "", "No SVG document generated");
+                OFX::throwSuiteStatusException(kOfxStatErrFormat);
+            }
+            stream << "<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"no\"?>";
+            for (unsigned k = 0; k<output.size(); ++k) {
+                stream << output[k].cstr();
+            }
+        }
         GError *error = NULL;
         RsvgHandle *handle;
         RsvgDimensionData dimension;
         double imageWidth, imageHeight;
 
         rsvg_set_default_dpi_x_y(dpi, dpi);
-        handle=rsvg_handle_new_from_file(filename.c_str(), &error);
+        if (cdr) {
+            handle=rsvg_handle_new_from_data((guint8 *)stream.str().c_str(), stream.str().size(), &error);
+        } else {
+            handle=rsvg_handle_new_from_file(filename.c_str(), &error);
+        }
 
         if (error != NULL) {
             setPersistentMessage(OFX::Message::eMessageError, "", "Failed to read SVG");
@@ -471,6 +524,7 @@ void
 ReadSVGPlugin::restoreState(const std::string& filename)
 {
     if (!filename.empty()) {
+        bool cdr = isCDR(filename);
         imageLayers.clear();
         if (isPDF(filename)) {
             GError *error = NULL;
@@ -498,15 +552,42 @@ ReadSVGPlugin::restoreState(const std::string& filename)
             g_object_unref(document);
             error = NULL;
         } else {
-            xmlDocPtr doc;
-            doc = xmlParseFile(filename.c_str());
-            xmlNode *root_element = NULL;
-            root_element = xmlDocGetRootElement(doc);
-            getLayers(root_element,&imageLayers);
-            xmlFreeDoc(doc);
+            std::ostringstream stream;
+            if (cdr) {
+                librevenge::RVNGFileStream input(filename.c_str());
+                if (!libcdr::CDRDocument::isSupported(&input)) {
+                    setPersistentMessage(OFX::Message::eMessageError, "", "Unsupported file format");
+                    OFX::throwSuiteStatusException(kOfxStatErrFormat);
+                }
+                librevenge::RVNGStringVector output;
+                librevenge::RVNGSVGDrawingGenerator generator(output, "svg");
+                if (!libcdr::CDRDocument::parse(&input, &generator)) {
+                    setPersistentMessage(OFX::Message::eMessageError, "", "SVG generation failed");
+                    OFX::throwSuiteStatusException(kOfxStatErrFormat);
+                }
+                if (output.empty()) {
+                    setPersistentMessage(OFX::Message::eMessageError, "", "No SVG document generated");
+                    OFX::throwSuiteStatusException(kOfxStatErrFormat);
+                }
+                stream << "<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"no\"?>";
+                for (unsigned k = 0; k<output.size(); ++k) {
+                    stream << output[k].cstr();
+                }
+            } else  {
+                xmlDocPtr doc;
+                doc = xmlParseFile(filename.c_str());
+                xmlNode *root_element = NULL;
+                root_element = xmlDocGetRootElement(doc);
+                getLayers(root_element,&imageLayers);
+                xmlFreeDoc(doc);
+            }
             GError *error = NULL;
             RsvgHandle *handle;
-            handle=rsvg_handle_new_from_file(filename.c_str(), &error);
+            if (cdr) {
+                handle=rsvg_handle_new_from_data((guint8 *)stream.str().c_str(), stream.str().size(), &error);
+            } else {
+                handle=rsvg_handle_new_from_file(filename.c_str(), &error);
+            }
             if (error != NULL) {
                 setPersistentMessage(OFX::Message::eMessageError, "", "Failed to read SVG");
             }
