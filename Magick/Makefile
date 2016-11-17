@@ -55,8 +55,8 @@ RESOURCES = \
     net.fxarena.openfx.Charcoal.svg \
     net.fxarena.openfx.Oilpaint.png \
     net.fxarena.openfx.Oilpaint.svg \
-    net.fxarena.openfx.ReadPSD.png \
-    net.fxarena.openfx.ReadPSD.svg \
+    ../ReadPSD/net.fxarena.openfx.ReadPSD.png \
+    ../ReadPSD/net.fxarena.openfx.ReadPSD.svg \
     net.fxarena.openfx.Modulate.png \
     net.fxarena.openfx.Modulate.svg \
     fr.inria.openfx.ReadMisc.png \
@@ -84,6 +84,7 @@ include $(SRCDIR)/Makefile.master
 include $(SRCDIR)/Makefile.io
 
 VPATH += \
+    $(SRCDIR)/ReadPSD \
     $(SRCDIR)/Magick/HaldCLUT \
     $(SRCDIR)/Magick/Swirl \
     $(SRCDIR)/Magick/Roll \

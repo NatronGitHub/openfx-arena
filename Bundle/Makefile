@@ -48,21 +48,21 @@ PLUGINOBJECTS += \
     SequenceParsing.o
 
 RESOURCES = \
-    ../Extra/net.fxarena.openfx.Text.png \
-    ../Extra/net.fxarena.openfx.Text.svg \
-    ../Extra/fr.inria.openfx.ReadCDR.png \
-    ../Extra/fr.inria.openfx.ReadCDR.svg \
-    ../Extra/net.fxarena.openfx.ReadSVG.png \
-    ../Extra/net.fxarena.openfx.ReadSVG.svg \
-    ../Extra/fr.inria.openfx.ReadKrita.png \
-    ../Extra/fr.inria.openfx.ReadKrita.svg \
-    ../Extra/fr.inria.openfx.OpenRaster.png \
-    ../Extra/fr.inria.openfx.OpenRaster.svg
+    ../TextFX/net.fxarena.openfx.Text.png \
+    ../TextFX/net.fxarena.openfx.Text.svg \
+    ../ReadCDR/fr.inria.openfx.ReadCDR.png \
+    ../ReadCDR/fr.inria.openfx.ReadCDR.svg \
+    ../ReadSVG/net.fxarena.openfx.ReadSVG.png \
+    ../ReadSVG/net.fxarena.openfx.ReadSVG.svg \
+    ../ReadKrita/fr.inria.openfx.ReadKrita.png \
+    ../ReadKrita/fr.inria.openfx.ReadKrita.svg \
+    ../OpenRaster/fr.inria.openfx.OpenRaster.png \
+    ../OpenRaster/fr.inria.openfx.OpenRaster.svg
 
 ifneq ($(LICENSE),COMMERCIAL)
 RESOURCES += \
-    ../Extra/fr.inria.openfx.ReadPDF.png \
-    ../Extra/fr.inria.openfx.ReadPDF.svg
+    ../ReadPDF/fr.inria.openfx.ReadPDF.png \
+    ../ReadPDF/fr.inria.openfx.ReadPDF.svg
 endif
 
 RESOURCES += \
@@ -88,12 +88,12 @@ RESOURCES += \
     ../Magick/net.fxarena.openfx.Charcoal.svg \
     ../Magick/net.fxarena.openfx.Oilpaint.png \
     ../Magick/net.fxarena.openfx.Oilpaint.svg \
-    ../Magick/net.fxarena.openfx.ReadPSD.png \
-    ../Magick/net.fxarena.openfx.ReadPSD.svg \
+    ../ReadPSD/net.fxarena.openfx.ReadPSD.png \
+    ../ReadPSD/net.fxarena.openfx.ReadPSD.svg \
     ../Magick/net.fxarena.openfx.Modulate.png \
     ../Magick/net.fxarena.openfx.Modulate.svg \
-    ../Magick/fr.inria.openfx.ReadMisc.png \
-    ../Magick/fr.inria.openfx.ReadMisc.svg \
+    ../ReadMisc/fr.inria.openfx.ReadMisc.png \
+    ../ReadMisc/fr.inria.openfx.ReadMisc.svg \
     ../Magick/net.fxarena.openfx.Texture.png \
     ../Magick/net.fxarena.openfx.Texture.svg
 
@@ -113,6 +113,14 @@ endif
 SRCDIR = ..
 
 VPATH += \
+    $(SRCDIR)/ReadMisc \
+    $(SRCDIR)/ReadPSD \
+    $(SRCDIR)/OpenRaster \
+    $(SRCDIR)/ReadCDR \
+    $(SRCDIR)/ReadKrita \
+    $(SRCDIR)/ReadPDF \
+    $(SRCDIR)/ReadSVG \
+    $(SRCDIR)/TextFX \
     $(SRCDIR)/Extra \
     $(SRCDIR)/Magick \
     $(SRCDIR)/Magick/Swirl \
@@ -121,6 +129,7 @@ VPATH += \
     $(SRCDIR)/Magick/Arc
 
 CXXFLAGS += \
+    -I$(SRCDIR)/TextFX \
     -I$(SRCDIR)/Extra \
     -I$(SRCDIR)/Magick
 
