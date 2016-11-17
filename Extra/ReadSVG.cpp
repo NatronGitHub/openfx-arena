@@ -707,7 +707,7 @@ ReadSVGPluginFactory::load()
     _extensions.push_back("svg");
     _extensions.push_back("svgz");
     _extensions.push_back("pdf");
-    //_extensions.push_back("cdr");
+    _extensions.push_back("cdr");
 }
 
 
