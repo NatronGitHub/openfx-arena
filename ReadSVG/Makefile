@@ -16,8 +16,13 @@ include $(SRCDIR)/Makefile.io
 
 CXXFLAGS  += \
     $(SVG_CXXFLAGS) \
-    $(XML_CXXFLAGS)
+    $(XML_CXXFLAGS) \
+    $(POPPLER_CXXFLAGS) \
+    $(CDR_CXXFLAGS)
+
 LINKFLAGS += \
     $(SVG_LINKFLAGS) \
-    $(XML_LINKFLAGS)
+    $(XML_LINKFLAGS) \
+    $(POPPLER_LINKFLAGS) \
+    $(CDR_LINKFLAGS)
 
