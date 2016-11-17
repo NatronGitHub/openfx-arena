@@ -16,15 +16,33 @@
 */
 
 #include <librsvg/rsvg.h>
-
 #ifdef LEGACY
 #include "librsvg/rsvg-cairo.h"
 #endif
-
+#include <librevenge/librevenge.h>
+#include <librevenge-generators/librevenge-generators.h>
+#include <librevenge-stream/librevenge-stream.h>
+#include <libcdr/libcdr.h>
 #include <libxml/xmlmemory.h>
 #include <libxml/parser.h>
+#include <poppler.h>
+#include <poppler/GlobalParams.h>
 
 #include <iostream>
+#include <algorithm>
+
+#ifdef __linux__
+#include <unistd.h>
+#include <libgen.h>
+#include <cstring>
+#elif __APPLE__
+#include <mach-o/dyld.h>
+#include <libgen.h>
+#include <cstring>
+#elif _WIN32
+#include <windows.h>
+#include <Shlwapi.h>
+#endif
 
 #include "ofxNatron.h"
 #include "GenericReader.h"
@@ -39,9 +57,10 @@
 #define kPluginName "ReadSVG"
 #define kPluginGrouping "Image/Readers"
 #define kPluginIdentifier "net.fxarena.openfx.ReadSVG"
-#define kPluginVersionMajor 3
-#define kPluginVersionMinor 1
+#define kPluginVersionMajor 4
+#define kPluginVersionMinor 0
 #define kPluginEvaluation 50
+#define kPDFDPI 72.0
 
 #define kParamDpi "dpi"
 #define kParamDpiLabel "DPI"
@@ -94,6 +113,9 @@ private:
     void getLayers(xmlNode *node, std::vector<std::string> *layers);
     OFX::IntParam *_dpi;
     std::vector<std::string> imageLayers;
+    bool isSVG(const std::string &filename);
+    bool isPDF(const std::string &filename);
+    bool isCDR(const std::string &filename);
 };
 
 ReadSVGPlugin::ReadSVGPlugin(OfxImageEffectHandle handle, const std::vector<std::string>& extensions)
@@ -184,6 +206,7 @@ ReadSVGPlugin::decodePlane(const std::string& filename, OfxTime time, int /*view
         OFX::throwSuiteStatusException(kOfxStatErrFormat);
     }
 
+    int layer = 0;
     std::string layerID;
     if (gHostIsNatron) {
         std::string layerName;
@@ -193,72 +216,127 @@ ReadSVGPlugin::decodePlane(const std::string& filename, OfxTime time, int /*view
             layerName=layerChannels[0];
         if (!layerName.empty()) {
             layerID = layerName;
+            layer = atoi(layerName.c_str());
         }
     }
 
-    GError *error = NULL;
-    RsvgHandle *handle;
-    RsvgDimensionData dimension;
+    double imageWidth, imageHeight, scaleWidth, scaleHeight;
+    int dpi, width, height;
+    _dpi->getValueAtTime(time, dpi);
+    bool pdf = isPDF(filename);
+    //bool svg = isSVG(filename);
+    //bool cdr = isCDR(filename);
+    int renderWidth = renderWindow.x2 - renderWindow.x1;
+    int renderHeight = renderWindow.y2 - renderWindow.y1;
+
     cairo_surface_t *surface;
     cairo_t *cr;
     cairo_status_t status;
-    double imageWidth, imageHeight, scaleWidth, scaleHeight;
-    int dpi, width, height, renderWidth, renderHeight;
-    _dpi->getValueAtTime(time, dpi);
 
-    rsvg_set_default_dpi_x_y(dpi, dpi);
-    handle=rsvg_handle_new_from_file(filename.c_str(), &error);
+    if(pdf) {
+        GError *error = NULL;
+        PopplerDocument *document = NULL;
+        PopplerPage *page = NULL;
+        PopplerPage *fpage = NULL;
 
-    if (error != NULL) {
-        setPersistentMessage(OFX::Message::eMessageError, "", "Failed to read SVG");
-        OFX::throwSuiteStatusException(kOfxStatErrFormat);
-    }
+        gchar *absolute, *uri;
+        absolute = g_strdup(filename.c_str());
+        uri = g_filename_to_uri(absolute, NULL, &error);
+        free(absolute);
 
-    rsvg_handle_get_dimensions(handle, &dimension);
+        document = poppler_document_new_from_file(uri, NULL, &error);
 
-    imageWidth = dimension.width;
-    imageHeight = dimension.height;
-    renderWidth= renderWindow.x2 - renderWindow.x1;
-    renderHeight= renderWindow.y2 - renderWindow.y1;
+        if (error != NULL) {
+            setPersistentMessage(OFX::Message::eMessageError, "", "Failed to read PDF");
+            OFX::throwSuiteStatusException(kOfxStatErrFormat);
+        }
 
-    if (dpi != kParamDpiDefault) {
-        width = imageWidth * dpi / kParamDpiDefault;
-        height = imageHeight * dpi / kParamDpiDefault;
-    }
-    else {
-        width = imageWidth;
-        height = imageHeight;
-    }
+        page = poppler_document_get_page(document, layer);
+        fpage = poppler_document_get_page(document, 0);
 
-    if (width != renderWidth || height != renderHeight) {
-        setPersistentMessage(OFX::Message::eMessageError, "", "Image don't match RenderWindow");
-        OFX::throwSuiteStatusException(kOfxStatErrFormat);
-    }
+        if (page == NULL || fpage == NULL) {
+            setPersistentMessage(OFX::Message::eMessageError, "", "Failed to read PDF page");
+            OFX::throwSuiteStatusException(kOfxStatErrFormat);
+        }
 
-    surface=cairo_image_surface_create(CAIRO_FORMAT_ARGB32, width, height);
-    cr=cairo_create(surface);
+        poppler_page_get_size(fpage, &imageWidth, &imageHeight);
 
-    scaleWidth = width / imageWidth;
-    scaleHeight = height / imageHeight;
+        width = dpi * imageWidth / kPDFDPI;
+        height = dpi * imageHeight / kPDFDPI;
+        scaleWidth = dpi/kPDFDPI;
+        scaleHeight = dpi/kPDFDPI;
 
-    cairo_scale(cr, scaleWidth, scaleHeight);
+        if (width != renderWidth || height != renderHeight) {
+            setPersistentMessage(OFX::Message::eMessageError, "", "PDF don't match RenderWindow");
+            OFX::throwSuiteStatusException(kOfxStatErrFormat);
+        }
 
-    if (layerID.empty()) {
-        rsvg_handle_render_cairo(handle, cr);
-    }
-    else {
-        std::ostringstream layerSub;
-        layerSub << "#" << layerID;
-        rsvg_handle_render_cairo_sub(handle, cr, layerSub.str().c_str());
+        surface=cairo_image_surface_create(CAIRO_FORMAT_ARGB32, width, height);
+        cr=cairo_create(surface);
+        cairo_scale(cr, scaleWidth, scaleHeight);
+        poppler_page_render(page, cr);
+        cairo_set_operator(cr, CAIRO_OPERATOR_DEST_OVER);
+        cairo_set_source_rgb(cr, 1, 1, 1);
+        cairo_paint(cr);
+
+        g_object_unref(page);
+        g_object_unref(fpage);
+        g_object_unref(document);
+        error = NULL;
+    } else {
+        GError *error = NULL;
+        RsvgHandle *handle;
+        RsvgDimensionData dimension;
+
+        rsvg_set_default_dpi_x_y(dpi, dpi);
+        handle=rsvg_handle_new_from_file(filename.c_str(), &error);
+
+        if (error != NULL) {
+            setPersistentMessage(OFX::Message::eMessageError, "", "Failed to read SVG");
+            OFX::throwSuiteStatusException(kOfxStatErrFormat);
+        }
+
+        rsvg_handle_get_dimensions(handle, &dimension);
+        imageWidth = dimension.width;
+        imageHeight = dimension.height;
+
+        if (dpi != kParamDpiDefault) {
+            width = imageWidth * dpi / kParamDpiDefault;
+            height = imageHeight * dpi / kParamDpiDefault;
+        } else {
+            width = imageWidth;
+            height = imageHeight;
+        }
+
+        scaleWidth = width / imageWidth;
+        scaleHeight = height / imageHeight;
+
+        if (width != renderWidth || height != renderHeight) {
+            setPersistentMessage(OFX::Message::eMessageError, "", "SVG don't match RenderWindow");
+            OFX::throwSuiteStatusException(kOfxStatErrFormat);
+        }
+
+        surface=cairo_image_surface_create(CAIRO_FORMAT_ARGB32, width, height);
+        cr=cairo_create(surface);
+        cairo_scale(cr, scaleWidth, scaleHeight);
+
+        if (layerID.empty()) {
+            rsvg_handle_render_cairo(handle, cr);
+        } else {
+            std::ostringstream layerSub;
+            layerSub << "#" << layerID;
+            rsvg_handle_render_cairo_sub(handle, cr, layerSub.str().c_str());
+        }
+
+        g_object_unref(handle);
+        error = NULL;
     }
 
     status = cairo_status(cr);
-
     if (status) {
         setPersistentMessage(OFX::Message::eMessageError, "", "Cairo Render failed");
         OFX::throwSuiteStatusException(kOfxStatErrFormat);
     }
-
     cairo_surface_flush(surface);
 
     unsigned char* cdata = cairo_image_surface_get_data(surface);
@@ -281,11 +359,9 @@ ReadSVGPlugin::decodePlane(const std::string& filename, OfxTime time, int /*view
         }
     }
 
-    g_object_unref(handle);
     cairo_destroy(cr);
     cairo_surface_destroy(surface);
     cdata = NULL;
-    error = NULL;
     delete[] pixels;
 }
 
@@ -301,40 +377,67 @@ bool ReadSVGPlugin::getFrameBounds(const std::string& filename,
         OFX::throwSuiteStatusException(kOfxStatErrFormat);
     }
 
-    int dpi;
+    int dpi, width, height;
     _dpi->getValueAtTime(time, dpi);
 
-    GError *error = NULL;
-    RsvgHandle *handle;
-    RsvgDimensionData dimension;
-    double imageWidth, imageHeight;
-    int width, height;
+    if (isPDF(filename)) {
+        GError *error = NULL;
+        PopplerDocument *document = NULL;
+        PopplerPage *page = NULL;
+        double imageWidth, imageHeight;
 
-    rsvg_set_default_dpi_x_y(dpi, dpi);
+        gchar *absolute, *uri;
+        absolute = g_strdup(filename.c_str());
+        uri = g_filename_to_uri(absolute, NULL, &error);
+        free(absolute);
 
-    handle=rsvg_handle_new_from_file(filename.c_str(), &error);
+        document = poppler_document_new_from_file(uri, NULL, &error);
 
-    if (error != NULL) {
-        setPersistentMessage(OFX::Message::eMessageError, "", "Failed to read SVG");
-        OFX::throwSuiteStatusException(kOfxStatErrFormat);
+        if (error != NULL) {
+            setPersistentMessage(OFX::Message::eMessageError, "", "Failed to read PDF");
+            OFX::throwSuiteStatusException(kOfxStatErrFormat);
+        }
+
+        page = poppler_document_get_page(document, 0);
+        poppler_page_get_size(page, &imageWidth, &imageHeight);
+        if (page !=NULL) {
+            width = dpi * imageWidth / kPDFDPI;
+            height = dpi * imageHeight / kPDFDPI;
+        }
+
+        g_object_unref(page);
+        g_object_unref(document);
+        error = NULL;
+    } else {
+        GError *error = NULL;
+        RsvgHandle *handle;
+        RsvgDimensionData dimension;
+        double imageWidth, imageHeight;
+
+        rsvg_set_default_dpi_x_y(dpi, dpi);
+        handle=rsvg_handle_new_from_file(filename.c_str(), &error);
+
+        if (error != NULL) {
+            setPersistentMessage(OFX::Message::eMessageError, "", "Failed to read SVG");
+            OFX::throwSuiteStatusException(kOfxStatErrFormat);
+        }
+
+        rsvg_handle_get_dimensions(handle, &dimension);
+
+        imageWidth = dimension.width;
+        imageHeight = dimension.height;
+
+        if (dpi != kParamDpiDefault) {
+            width = imageWidth * dpi / kParamDpiDefault;
+            height = imageHeight * dpi / kParamDpiDefault;
+        } else {
+            width = imageWidth;
+            height = imageHeight;
+        }
+
+        g_object_unref(handle);
+        error = NULL;
     }
-
-    rsvg_handle_get_dimensions(handle, &dimension);
-
-    imageWidth = dimension.width;
-    imageHeight = dimension.height;
-
-    if (dpi != kParamDpiDefault) {
-        width = imageWidth * dpi / kParamDpiDefault;
-        height = imageHeight * dpi / kParamDpiDefault;
-    }
-    else {
-        width = imageWidth;
-        height = imageHeight;
-    }
-
-    g_object_unref(handle);
-    error = NULL;
 
     if (width > 0 && height > 0) {
         bounds->x1 = 0;
@@ -354,26 +457,48 @@ ReadSVGPlugin::restoreState(const std::string& filename)
 {
     if (!filename.empty()) {
         imageLayers.clear();
-        xmlDocPtr doc;
-        doc = xmlParseFile(filename.c_str());
-        xmlNode *root_element = NULL;
-        root_element = xmlDocGetRootElement(doc);
-        getLayers(root_element,&imageLayers);
-        xmlFreeDoc(doc);
-
-        GError *error = NULL;
-        RsvgHandle *handle;
-
-        handle=rsvg_handle_new_from_file(filename.c_str(), &error);
-
-        if (error != NULL) {
-            setPersistentMessage(OFX::Message::eMessageError, "", "Failed to read SVG");
+        if (isPDF(filename)) {
+            GError *error = NULL;
+            PopplerDocument *document = NULL;
+            gchar *absolute, *uri;
+            absolute = g_strdup(filename.c_str());
+            uri = g_filename_to_uri(absolute, NULL, &error);
+            free(absolute);
+            document = poppler_document_new_from_file(uri, NULL, &error);
+            if (error != NULL) {
+                setPersistentMessage(OFX::Message::eMessageError, "", "Failed to read PDF");
+            } else {
+                imageLayers.clear();
+                int pages = 0;
+                pages = poppler_document_get_n_pages(document);
+                if (pages<0) {
+                    pages=0;
+                }
+                for (int i = 0; i < pages; i++) {
+                    std::ostringstream pageName;
+                    pageName << i;
+                    imageLayers.push_back(pageName.str());
+                }
+            }
+            g_object_unref(document);
+            error = NULL;
+        } else {
+            xmlDocPtr doc;
+            doc = xmlParseFile(filename.c_str());
+            xmlNode *root_element = NULL;
+            root_element = xmlDocGetRootElement(doc);
+            getLayers(root_element,&imageLayers);
+            xmlFreeDoc(doc);
+            GError *error = NULL;
+            RsvgHandle *handle;
+            handle=rsvg_handle_new_from_file(filename.c_str(), &error);
+            if (error != NULL) {
+                setPersistentMessage(OFX::Message::eMessageError, "", "Failed to read SVG");
+            }
+            g_object_unref(handle);
+            error = NULL;
         }
-
-        g_object_unref(handle);
-        error = NULL;
-    }
-    else {
+    } else {
         setPersistentMessage(OFX::Message::eMessageError, "", "Empty and/or corrupt image");
     }
 }
@@ -396,6 +521,49 @@ void ReadSVGPlugin::onInputFileChanged(const std::string& newFile,
     *premult = OFX::eImageUnPreMultiplied;
 }
 
+bool
+ReadSVGPlugin::isSVG(const std::string &filename)
+{
+    bool result = false;
+    int suffixSize = 3;
+    if (filename.size() > suffixSize) {
+        std::string vectorFile = filename;
+        std::transform(vectorFile.begin(), vectorFile.end(), vectorFile.begin(), ::tolower);
+        bool hasSVG = vectorFile.compare(vectorFile.size()-suffixSize,suffixSize, "svg") == 0;
+        bool hasSVGZ = vectorFile.compare(vectorFile.size()-suffixSize+1,suffixSize+1, "svgz") == 0;
+        if (hasSVG || hasSVGZ) {
+            result = true;
+        }
+    }
+    return result;
+}
+
+bool
+ReadSVGPlugin::isPDF(const std::string &filename)
+{
+    bool result = false;
+    int suffixSize = 3;
+    if (filename.size() > suffixSize) {
+        std::string vectorFile = filename;
+        std::transform(vectorFile.begin(), vectorFile.end(), vectorFile.begin(), ::tolower);
+        result = vectorFile.compare(vectorFile.size()-suffixSize,suffixSize, "pdf") == 0;
+    }
+    return result;
+}
+
+bool
+ReadSVGPlugin::isCDR(const std::string &filename)
+{
+    bool result = false;
+    int suffixSize = 3;
+    if (filename.size() > suffixSize) {
+        std::string vectorFile = filename;
+        std::transform(vectorFile.begin(), vectorFile.end(), vectorFile.begin(), ::tolower);
+        result = vectorFile.compare(vectorFile.size()-suffixSize,suffixSize, "cdr") == 0;
+    }
+    return result;
+}
+
 using namespace OFX;
 
 mDeclareReaderPluginFactory(ReadSVGPluginFactory, {}, false);
@@ -406,6 +574,8 @@ ReadSVGPluginFactory::load()
     _extensions.clear();
     _extensions.push_back("svg");
     _extensions.push_back("svgz");
+    _extensions.push_back("pdf");
+    //_extensions.push_back("cdr");
 }
 
 
@@ -414,7 +584,7 @@ void ReadSVGPluginFactory::describe(OFX::ImageEffectDescriptor &desc)
 {
     GenericReaderDescribe(desc, _extensions, kPluginEvaluation, kSupportsTiles, kIsMultiPlanar);
     desc.setLabel(kPluginName);
-    desc.setPluginDescription("Fast SVG (Scalable Vector Graphics) reader using librsvg and Cairo.");
+    desc.setPluginDescription("Vector graphics reader.");
 }
 
 /** @brief The describe in context function, passed a plugin descriptor and a context */

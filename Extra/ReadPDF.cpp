@@ -450,6 +450,8 @@ void ReadPDFPluginFactory::describe(OFX::ImageEffectDescriptor &desc)
     GenericReaderDescribe(desc, _extensions, kPluginEvaluation, kSupportsTiles, kIsMultiPlanar);
     desc.setLabel(kPluginName);
     desc.setPluginDescription("Read PDF documents using poppler.");
+
+    desc.setIsDeprecated(true);
 }
 
 /** @brief The describe in context function, passed a plugin descriptor and a context */
