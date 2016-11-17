@@ -54,7 +54,9 @@ OTHER_FILES += \
             Magick/HaldCLUT/Info.plist \
             Magick/Makefile.Magick \
             Magick/HaldCLUT/net.fxarena.openfx.HaldCLUT.xml \
-            Magick/HaldCLUT/Makefile
+            Magick/HaldCLUT/Makefile \
+            Magick/Arc/Makefile \
+            Magick/Arc/Info.plist
 INCLUDEPATH += . \
             SupportExt \
             OpenFX/Support/include \
@@ -165,7 +167,7 @@ SOURCES += \
             Extra/ReadCDR.cpp \
             Extra/TextFX.cpp \
             Extra/ReadPDF.cpp \
-            Magick/Arc.cpp \
+            Magick/Arc/Arc.cpp \
             Magick/Charcoal.cpp \
             Magick/Edges.cpp \
             Magick/Implode.cpp \

@@ -72,8 +72,8 @@ RESOURCES += \
     ../Magick/net.fxarena.openfx.Tile.svg \
     ../Magick/net.fxarena.openfx.Reflection.png \
     ../Magick/net.fxarena.openfx.Reflection.svg \
-    ../Magick/net.fxarena.openfx.Arc.png \
-    ../Magick/net.fxarena.openfx.Arc.svg \
+    ../Magick/Arc/net.fxarena.openfx.Arc.png \
+    ../Magick/Arc/net.fxarena.openfx.Arc.svg \
     ../Magick/net.fxarena.openfx.Polar.png \
     ../Magick/net.fxarena.openfx.Polar.svg \
     ../Magick/Roll/net.fxarena.openfx.Roll.png \
@@ -117,7 +117,8 @@ VPATH += \
     $(SRCDIR)/Magick \
     $(SRCDIR)/Magick/Swirl \
     $(SRCDIR)/Magick/Roll \
-    $(SRCDIR)/Magick/Wave
+    $(SRCDIR)/Magick/Wave \
+    $(SRCDIR)/Magick/Arc
 
 CXXFLAGS += \
     -I$(SRCDIR)/Extra \

@@ -39,8 +39,8 @@ RESOURCES = \
     net.fxarena.openfx.Tile.svg \
     net.fxarena.openfx.Reflection.png \
     net.fxarena.openfx.Reflection.svg \
-    net.fxarena.openfx.Arc.png \
-    net.fxarena.openfx.Arc.svg \
+    Arc/net.fxarena.openfx.Arc.png \
+    Arc/net.fxarena.openfx.Arc.svg \
     net.fxarena.openfx.Polar.png \
     net.fxarena.openfx.Polar.svg \
     Roll/net.fxarena.openfx.Roll.png \
@@ -87,7 +87,8 @@ VPATH += \
     $(SRCDIR)/Magick/HaldCLUT \
     $(SRCDIR)/Magick/Swirl \
     $(SRCDIR)/Magick/Roll \
-    $(SRCDIR)/Magick/Wave
+    $(SRCDIR)/Magick/Wave \
+    $(SRCDIR)/Magick/Arc
 
 CXXFLAGS += \
     -I.
