@@ -37,7 +37,7 @@
 #define kPluginGrouping "Draw"
 #define kPluginIdentifier "net.fxarena.openfx.Text"
 #define kPluginVersionMajor 6
-#define kPluginVersionMinor 8
+#define kPluginVersionMinor 9
 
 #define kSupportsTiles 0
 #define kSupportsMultiResolution 0
@@ -71,6 +71,10 @@
 #define kParamTextColor "color"
 #define kParamTextColorLabel "Font color"
 #define kParamTextColorHint "The fill color of the text to render."
+
+#define kParamBGColor "backgroundColor"
+#define kParamBGColorLabel "Background Color"
+#define kParamBGColorHint "The fill color of the background."
 
 #define kParamJustify "justify"
 #define kParamJustifyLabel "Justify"
@@ -319,6 +323,7 @@ private:
     OFX::StringParam *_text;
     OFX::IntParam *_fontSize;
     OFX::RGBAParam *_textColor;
+    OFX::RGBAParam *_bgColor;
     OFX::StringParam *_font;
     OFX::BooleanParam *_justify;
     OFX::ChoiceParam *_wrap;
@@ -365,6 +370,7 @@ TextFXPlugin::TextFXPlugin(OfxImageEffectHandle handle)
 , _text(0)
 , _fontSize(0)
 , _textColor(0)
+, _bgColor(0)
 , _font(0)
 , _justify(0)
 , _wrap(0)
@@ -411,6 +417,7 @@ TextFXPlugin::TextFXPlugin(OfxImageEffectHandle handle)
     _fontSize = fetchIntParam(kParamFontSize);
     _fontName = fetchChoiceParam(kParamFontName);
     _textColor = fetchRGBAParam(kParamTextColor);
+    _bgColor = fetchRGBAParam(kParamBGColor);
     _font = fetchStringParam(kParamFont);
     _justify = fetchBooleanParam(kParamJustify);
     _wrap = fetchChoiceParam(kParamWrap);
@@ -448,7 +455,7 @@ TextFXPlugin::TextFXPlugin(OfxImageEffectHandle handle)
     _scrollX = fetchDoubleParam(kParamScrollX);
     _scrollY = fetchDoubleParam(kParamScrollY);
 
-    assert(_text && _fontSize && _fontName && _textColor && _font && _wrap
+    assert(_text && _fontSize && _fontName && _textColor && _bgColor && _font && _wrap
            && _justify && _align && _valign && _markup && _style && auto_ && stretch_ && weight_ && strokeColor_
            && strokeWidth_ && strokeDash_ && strokeDashPattern_ && fontAA_ && subpixel_ && _hintStyle
            && _hintMetrics && _circleRadius && _circleWords && _letterSpace && _canvas
@@ -649,7 +656,7 @@ void TextFXPlugin::render(const OFX::RenderArguments &args)
     }
 
     // Get params
-    double x, y, r, g, b, a, s_r, s_g, s_b, s_a, strokeWidth, strokeDashX, strokeDashY, strokeDashZ, circleRadius, arcRadius, arcAngle, rotate, scaleX, scaleY, skewX, skewY, scrollX, scrollY;
+    double x, y, r, g, b, a, s_r, s_g, s_b, s_a, strokeWidth, strokeDashX, strokeDashY, strokeDashZ, circleRadius, arcRadius, arcAngle, rotate, scaleX, scaleY, skewX, skewY, scrollX, scrollY, bg_r, bg_g, bg_b, bg_a;
     int fontSize, fontID, cwidth, cheight, wrap, align, valign, style, stretch, weight, strokeDash, fontAA, subpixel, hintStyle, hintMetrics, circleWords, letterSpace;
     std::string text, fontName, font, txt, fontOverride;
     bool justify = false;
@@ -663,6 +670,7 @@ void TextFXPlugin::render(const OFX::RenderArguments &args)
     _fontSize->getValueAtTime(args.time, fontSize);
     _fontName->getValueAtTime(args.time, fontID);
     _textColor->getValueAtTime(args.time, r, g, b, a);
+    _bgColor->getValueAtTime(args.time, bg_r, bg_g, bg_b, bg_a);
     _font->getValueAtTime(args.time, font);
     _fontName->getOption(fontID,fontName);
     _justify->getValueAtTime(args.time, justify);
@@ -765,6 +773,10 @@ void TextFXPlugin::render(const OFX::RenderArguments &args)
     alist = pango_attr_list_new();
 
     cairo_font_options_t* options = cairo_font_options_create();
+
+    cairo_rectangle(cr, 0, 0, width, height);
+    cairo_set_source_rgba(cr, bg_r, bg_g, bg_b, bg_a);
+    cairo_fill(cr);
 
     switch(hintStyle) {
     case 0:
@@ -1541,6 +1553,16 @@ void TextFXPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, Co
         param->setLabel(kParamTextColorLabel);
         param->setHint(kParamTextColorHint);
         param->setDefault(1., 1., 1., 1.);
+        param->setAnimates(true);
+        if (page) {
+            page->addChild(*param);
+        }
+    }
+    {
+        RGBAParamDescriptor* param = desc.defineRGBAParam(kParamBGColor);
+        param->setLabel(kParamBGColorLabel);
+        param->setHint(kParamBGColorHint);
+        param->setDefault(0., 0., 0., 0.);
         param->setAnimates(true);
         if (page) {
             page->addChild(*param);
