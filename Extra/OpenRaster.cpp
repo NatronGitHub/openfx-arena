@@ -31,7 +31,7 @@
 #define kPluginGrouping "Image/Readers"
 #define kPluginIdentifier "fr.inria.openfx.OpenRaster"
 #define kPluginVersionMajor 2
-#define kPluginVersionMinor 0
+#define kPluginVersionMinor 1
 #define kPluginEvaluation 50
 
 #define kSupportsRGBA true
@@ -82,6 +82,7 @@ private:
     virtual void getClipComponents(const OFX::ClipComponentsArguments& args, OFX::ClipComponentsSetter& clipComponents) OVERRIDE FINAL;
     virtual bool getFrameBounds(const std::string& filename, OfxTime time, OfxRectI *bounds, OfxRectI* format, double *par, std::string *error, int *tile_width, int *tile_height) OVERRIDE FINAL;
     virtual bool guessParamsFromFilename(const std::string& filename, std::string *colorspace, OFX::PreMultiplicationEnum *filePremult, OFX::PixelComponentEnum *components, int *componentCount) OVERRIDE FINAL;
+    virtual void changedFilename(const OFX::InstanceChangedArgs &args) OVERRIDE FINAL;
     std::string extractXML(std::string filename);
     void getImageSize(int *width, int *height, std::string filename);
     bool hasMergedImage(std::string filename);
@@ -448,6 +449,36 @@ bool OpenRasterPlugin::guessParamsFromFilename(const std::string& /*newFile*/,
     *filePremult = OFX::eImageUnPreMultiplied;
 
     return true;
+}
+
+void OpenRasterPlugin::changedFilename(const OFX::InstanceChangedArgs &args)
+{
+    GenericReaderPlugin::changedFilename(args);
+
+    int startingTime = getStartingTime();
+    std::string filename;
+    OfxStatus st = getFilenameAtTime(startingTime, &filename);
+    if ( st != kOfxStatOK || filename.empty() ) {
+        setPersistentMessage(OFX::Message::eMessageError, "", "No filename");
+        OFX::throwSuiteStatusException(kOfxStatErrFormat);
+    }
+    imageLayers.clear();
+    std::string xml = extractXML(filename);
+    if (!xml.empty()) {
+        xmlDocPtr doc;
+        doc = xmlParseDoc((const xmlChar *)xml.c_str());
+        xmlNode *root_element = NULL;
+        root_element = xmlDocGetRootElement(doc);
+        getLayersInfo(root_element,&imageLayers);
+        xmlFreeDoc(doc);
+        if (hasMergedImage(filename)) {
+            std::vector<std::string> layerInfo;
+            layerInfo.push_back("Default");
+            layerInfo.push_back("mergedimage.png");
+            imageLayers.push_back(layerInfo);
+        }
+        std::reverse(imageLayers.begin(),imageLayers.end());
+    }
 }
 
 using namespace OFX;

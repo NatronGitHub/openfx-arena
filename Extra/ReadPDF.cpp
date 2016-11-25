@@ -48,7 +48,7 @@
 #define kPluginGrouping "Image/Readers"
 #define kPluginIdentifier "fr.inria.openfx.ReadPDF"
 #define kPluginVersionMajor 1
-#define kPluginVersionMinor 3
+#define kPluginVersionMinor 4
 #define kPluginEvaluation 50
 #define kPluginDPI 72.0
 
@@ -105,6 +105,7 @@ private:
     virtual void getClipComponents(const OFX::ClipComponentsArguments& args, OFX::ClipComponentsSetter& clipComponents) OVERRIDE FINAL;
     virtual bool getFrameBounds(const std::string& filename, OfxTime time, OfxRectI *bounds, OfxRectI* format, double *par, std::string *error,int *tile_width, int *tile_height) OVERRIDE FINAL;
     virtual bool guessParamsFromFilename(const std::string& filename, std::string *colorspace, OFX::PreMultiplicationEnum *filePremult, OFX::PixelComponentEnum *components, int *componentCount) OVERRIDE FINAL;
+    virtual void changedFilename(const OFX::InstanceChangedArgs &args) OVERRIDE FINAL;
     std::string getResourcesPath();
     std::vector<std::string> imageLayers;
     OFX::DoubleParam *_dpi;
@@ -429,6 +430,48 @@ bool ReadPDFPlugin::guessParamsFromFilename(const std::string& /*newFile*/,
     *filePremult = OFX::eImageUnPreMultiplied;
 
     return true;
+}
+
+void ReadPDFPlugin::changedFilename(const OFX::InstanceChangedArgs &args)
+{
+    GenericReaderPlugin::changedFilename(args);
+
+    int startingTime = getStartingTime();
+    std::string filename;
+    OfxStatus st = getFilenameAtTime(startingTime, &filename);
+    if ( st != kOfxStatOK || filename.empty() ) {
+        setPersistentMessage(OFX::Message::eMessageError, "", "No filename");
+        OFX::throwSuiteStatusException(kOfxStatErrFormat);
+    }
+
+    GError *error = NULL;
+    PopplerDocument *document = NULL;
+
+    gchar *absolute, *uri;
+    absolute = g_strdup(filename.c_str());
+    uri = g_filename_to_uri(absolute, NULL, &error);
+    free(absolute);
+
+    document = poppler_document_new_from_file(uri, NULL, &error);
+
+    imageLayers.clear();
+    if (error != NULL) {
+        setPersistentMessage(OFX::Message::eMessageError, "", "Failed to read PDF");
+    } else {
+        int pages = 0;
+        pages = poppler_document_get_n_pages(document);
+        if (pages<0)
+            pages=0;
+
+        for (int i = 0; i < pages; i++) {
+            std::ostringstream pageName;
+            pageName << i;
+            imageLayers.push_back(pageName.str());
+        }
+    }
+
+    g_object_unref(document);
+    error = NULL;
 }
 
 using namespace OFX;

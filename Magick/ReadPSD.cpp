@@ -25,7 +25,7 @@
 #define kPluginGrouping "Image/Readers"
 #define kPluginIdentifier "net.fxarena.openfx.ReadPSD"
 #define kPluginVersionMajor 2
-#define kPluginVersionMinor 6
+#define kPluginVersionMinor 7
 #define kPluginEvaluation 92
 
 #define kSupportsRGBA true
@@ -231,6 +231,7 @@ private:
     virtual bool getFrameBounds(const std::string& filename, OfxTime time, OfxRectI *bounds, OfxRectI* format, double *par, std::string *error,int *tile_width, int *tile_height) OVERRIDE FINAL;
     virtual void changedParam(const OFX::InstanceChangedArgs &args, const std::string &paramName) OVERRIDE FINAL;
     virtual bool guessParamsFromFilename(const std::string& filename, std::string *colorspace, OFX::PreMultiplicationEnum *filePremult, OFX::PixelComponentEnum *components, int *componentCount) OVERRIDE FINAL;
+    virtual void changedFilename(const OFX::InstanceChangedArgs &args) OVERRIDE FINAL;
     void genLayerMenu();
     std::string _filename;
     bool _hasLCMS;
@@ -726,6 +727,37 @@ bool ReadPSDPlugin::guessParamsFromFilename(const std::string& /*newFile*/,
     *filePremult = OFX::eImageUnPreMultiplied;
 
     return true;
+}
+
+void ReadPSDPlugin::changedFilename(const OFX::InstanceChangedArgs &args)
+{
+    GenericReaderPlugin::changedFilename(args);
+
+    int startingTime = getStartingTime();
+    std::string filename;
+    OfxStatus st = getFilenameAtTime(startingTime, &filename);
+    if ( st != kOfxStatOK || filename.empty() ) {
+        setPersistentMessage(OFX::Message::eMessageError, "", "No filename");
+        OFX::throwSuiteStatusException(kOfxStatErrFormat);
+    }
+
+    _psd.clear();
+    try {
+        Magick::readImages(&_psd, filename);
+    }
+    catch(Magick::Exception) {
+        setPersistentMessage(OFX::Message::eMessageError, "", "Unable to read image");
+        OFX::throwSuiteStatusException(kOfxStatErrFormat);
+    }
+    genLayerMenu();
+    int layer = 0;
+    _imageLayer->getValue(layer);
+    if (!_psd.empty() && _psd[layer].columns()>0 && _psd[layer].rows()>0) {
+        _filename = filename;
+    } else {
+        _psd.clear();
+        setPersistentMessage(OFX::Message::eMessageError, "", "Unable to read image");
+    }
 }
 
 using namespace OFX;
