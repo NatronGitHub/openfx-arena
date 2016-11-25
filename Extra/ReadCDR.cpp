@@ -52,7 +52,6 @@
 #define kIsMultiPlanar false
 
 using namespace OFX::IO;
-using namespace OFX::IO;
 
 #ifdef OFX_IO_USING_OCIO
 namespace OCIO = OCIO_NAMESPACE;
