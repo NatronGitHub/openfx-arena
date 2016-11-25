@@ -21,15 +21,11 @@
 #include <ofxNatron.h>
 #include <cstring>
 
-#ifdef OFX_IO_USING_OCIO
-#include <OpenColorIO/OpenColorIO.h>
-#endif
-
 #define kPluginName "ReadPSD"
 #define kPluginGrouping "Image/Readers"
 #define kPluginIdentifier "net.fxarena.openfx.ReadPSD"
 #define kPluginVersionMajor 2
-#define kPluginVersionMinor 6
+#define kPluginVersionMinor 7
 #define kPluginEvaluation 92
 
 #define kSupportsRGBA true
@@ -94,6 +90,12 @@
 #define kParamOffsetLayerDefault true
 
 using namespace OFX::IO;
+
+#ifdef OFX_IO_USING_OCIO
+namespace OCIO = OCIO_NAMESPACE;
+#endif
+
+OFXS_NAMESPACE_ANONYMOUS_ENTER
 
 static bool gHostIsNatron   = false;
 
@@ -227,9 +229,9 @@ private:
     virtual void getClipComponents(const OFX::ClipComponentsArguments& args, OFX::ClipComponentsSetter& clipComponents) OVERRIDE FINAL;
     virtual void decodePlane(const std::string& filename, OfxTime time, int view, bool isPlayback, const OfxRectI& renderWindow, float *pixelData, const OfxRectI& bounds, OFX::PixelComponentEnum pixelComponents, int pixelComponentCount, const std::string& rawComponents, int rowBytes) OVERRIDE FINAL;
     virtual bool getFrameBounds(const std::string& filename, OfxTime time, OfxRectI *bounds, OfxRectI* format, double *par, std::string *error,int *tile_width, int *tile_height) OVERRIDE FINAL;
-    virtual void restoreState(const std::string& filename) OVERRIDE FINAL;
-    virtual void onInputFileChanged(const std::string& newFile, bool throwErrors, bool setColorSpace, OFX::PreMultiplicationEnum *premult, OFX::PixelComponentEnum *components, int *componentCount) OVERRIDE FINAL;
     virtual void changedParam(const OFX::InstanceChangedArgs &args, const std::string &paramName) OVERRIDE FINAL;
+    virtual bool guessParamsFromFilename(const std::string& filename, std::string *colorspace, OFX::PreMultiplicationEnum *filePremult, OFX::PixelComponentEnum *components, int *componentCount) OVERRIDE FINAL;
+    virtual void changedFilename(const OFX::InstanceChangedArgs &args) OVERRIDE FINAL;
     void genLayerMenu();
     std::string _filename;
     bool _hasLCMS;
@@ -286,7 +288,7 @@ false
     _iccCMYKSelected = fetchStringParam(kParamICCCMYKSelected);
     _iccGRAYSelected = fetchStringParam(kParamICCGRAYSelected);
 
-    assert(_outputComponents && _iccIn && _iccOut && _doICC && _iccRGB && _iccCMYK && _iccGRAY && _iccRender && _iccBlack && _imageLayer && _offsetLayer && _iccInSelected && _iccOutSelected && _iccRGBSelected && _iccCMYKSelected && _iccGRAYSelected);
+    assert(_iccIn && _iccOut && _doICC && _iccRGB && _iccCMYK && _iccGRAY && _iccRender && _iccBlack && _imageLayer && _offsetLayer && _iccInSelected && _iccOutSelected && _iccRGBSelected && _iccCMYKSelected && _iccGRAYSelected);
 
     _setupChoice(_iccIn, _iccInSelected);
     _setupChoice(_iccOut, _iccOutSelected);
@@ -635,7 +637,7 @@ bool ReadPSDPlugin::getFrameBounds(const std::string& /*filename*/,
     return true;
 }
 
-void ReadPSDPlugin::restoreState(const std::string& filename)
+/*void ReadPSDPlugin::restoreState(const std::string& filename)
 {
     #ifdef DEBUG
     std::cout << "restoreState ..." << std::endl;
@@ -661,14 +663,14 @@ void ReadPSDPlugin::restoreState(const std::string& filename)
         _psd.clear();
         setPersistentMessage(OFX::Message::eMessageError, "", "Unable to read image");
     }
-}
+}*/
 
-void ReadPSDPlugin::onInputFileChanged(const std::string& newFile,
-                                  bool /*throwErrors*/,
-                                  bool setColorSpace,
-                                  OFX::PreMultiplicationEnum *premult,
-                                  OFX::PixelComponentEnum *components,int */*componentCount*/)
-{
+//void ReadPSDPlugin::onInputFileChanged(const std::string& newFile,
+//                                  bool /*throwErrors*/,
+//                                  bool setColorSpace,
+//                                  OFX::PreMultiplicationEnum *premult,
+//                                  OFX::PixelComponentEnum *components,int */*componentCount*/)
+/*{
     #ifdef DEBUG
     std::cout << "onInputFileChanged ..." << std::endl;
     #endif
@@ -684,6 +686,78 @@ void ReadPSDPlugin::onInputFileChanged(const std::string& newFile,
 
     *components = OFX::ePixelComponentRGBA;
     *premult = OFX::eImageUnPreMultiplied;
+}*/
+
+bool ReadPSDPlugin::guessParamsFromFilename(const std::string& /*newFile*/,
+                                       std::string *colorspace,
+                                       OFX::PreMultiplicationEnum *filePremult,
+                                       OFX::PixelComponentEnum *components,
+                                       int *componentCount)
+{
+    assert(colorspace && filePremult && components && componentCount);
+# ifdef OFX_IO_USING_OCIO
+    *colorspace = "sRGB";
+# endif
+    int startingTime = getStartingTime();
+    std::string filename;
+    OfxStatus st = getFilenameAtTime(startingTime, &filename);
+    if ( st != kOfxStatOK || filename.empty() ) {
+        return false;
+    }
+
+    _psd.clear();
+    try {
+        Magick::readImages(&_psd, filename);
+    }
+    catch(Magick::Exception) {
+        setPersistentMessage(OFX::Message::eMessageError, "", "Unable to read image");
+        OFX::throwSuiteStatusException(kOfxStatErrFormat);
+    }
+    genLayerMenu();
+    int layer = 0;
+    _imageLayer->getValue(layer);
+    if (!_psd.empty() && _psd[layer].columns()>0 && _psd[layer].rows()>0) {
+        _filename = filename;
+    } else {
+        _psd.clear();
+        setPersistentMessage(OFX::Message::eMessageError, "", "Unable to read image");
+    }
+
+    *components = OFX::ePixelComponentRGBA;
+    *filePremult = OFX::eImageUnPreMultiplied;
+
+    return true;
+}
+
+void ReadPSDPlugin::changedFilename(const OFX::InstanceChangedArgs &args)
+{
+    GenericReaderPlugin::changedFilename(args);
+
+    int startingTime = getStartingTime();
+    std::string filename;
+    OfxStatus st = getFilenameAtTime(startingTime, &filename);
+    if ( st != kOfxStatOK || filename.empty() ) {
+        setPersistentMessage(OFX::Message::eMessageError, "", "No filename");
+        OFX::throwSuiteStatusException(kOfxStatErrFormat);
+    }
+
+    _psd.clear();
+    try {
+        Magick::readImages(&_psd, filename);
+    }
+    catch(Magick::Exception) {
+        setPersistentMessage(OFX::Message::eMessageError, "", "Unable to read image");
+        OFX::throwSuiteStatusException(kOfxStatErrFormat);
+    }
+    genLayerMenu();
+    int layer = 0;
+    _imageLayer->getValue(layer);
+    if (!_psd.empty() && _psd[layer].columns()>0 && _psd[layer].rows()>0) {
+        _filename = filename;
+    } else {
+        _psd.clear();
+        setPersistentMessage(OFX::Message::eMessageError, "", "Unable to read image");
+    }
 }
 
 using namespace OFX;
@@ -980,9 +1054,11 @@ ImageEffect* ReadPSDPluginFactory::createInstance(OfxImageEffectHandle handle,
                                      ContextEnum /*context*/)
 {
     ReadPSDPlugin* ret =  new ReadPSDPlugin(handle, _extensions);
-    ret->restoreStateFromParameters();
+    ret->restoreStateFromParams();
     return ret;
 }
 
 static ReadPSDPluginFactory p(kPluginIdentifier, kPluginVersionMajor, kPluginVersionMinor);
 mRegisterPluginFactoryInstance(p)
+
+OFXS_NAMESPACE_ANONYMOUS_EXIT

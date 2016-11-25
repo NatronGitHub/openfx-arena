@@ -23,9 +23,6 @@
 #include "ofxsMacros.h"
 #include "ofxsMultiThread.h"
 #include "ofxsImageEffect.h"
-#ifdef OFX_IO_USING_OCIO
-#include <OpenColorIO/OpenColorIO.h>
-#endif
 
 #define kPluginName "ReadMisc"
 #define kPluginGrouping "Image/Readers"
@@ -43,6 +40,12 @@
 
 using namespace OFX::IO;
 
+#ifdef OFX_IO_USING_OCIO
+namespace OCIO = OCIO_NAMESPACE;
+#endif
+
+OFXS_NAMESPACE_ANONYMOUS_ENTER
+
 class ReadMiscPlugin : public GenericReaderPlugin
 {
 public:
@@ -52,7 +55,7 @@ private:
     virtual bool isVideoStream(const std::string& /*filename*/) OVERRIDE FINAL { return false; }
     virtual void decode(const std::string& filename, OfxTime time, int view, bool isPlayback, const OfxRectI& renderWindow, float *pixelData, const OfxRectI& bounds, OFX::PixelComponentEnum pixelComponents, int pixelComponentCount, int rowBytes) OVERRIDE FINAL;
     virtual bool getFrameBounds(const std::string& filename, OfxTime time, OfxRectI *bounds, OfxRectI* format, double *par, std::string *error, int *tile_width, int *tile_height) OVERRIDE FINAL;
-    virtual void onInputFileChanged(const std::string& newFile, bool throwErrors, bool setColorSpace, OFX::PreMultiplicationEnum *premult, OFX::PixelComponentEnum *components, int *componentCount) OVERRIDE FINAL;
+    virtual bool guessParamsFromFilename(const std::string& filename, std::string *colorspace, OFX::PreMultiplicationEnum *filePremult, OFX::PixelComponentEnum *components, int *componentCount) OVERRIDE FINAL;
 };
 
 ReadMiscPlugin::ReadMiscPlugin(OfxImageEffectHandle handle, const std::vector<std::string>& extensions)
@@ -129,40 +132,41 @@ bool ReadMiscPlugin::getFrameBounds(const std::string& filename,
     return true;
 }
 
-void ReadMiscPlugin::onInputFileChanged(const std::string& newFile,
-                                  bool /*throwErrors*/,
-                                  bool setColorSpace,
-                                  OFX::PreMultiplicationEnum *premult,
-                                  OFX::PixelComponentEnum *components,int */*componentCount*/)
+bool ReadMiscPlugin::guessParamsFromFilename(const std::string& /*newFile*/,
+                                       std::string *colorspace,
+                                       OFX::PreMultiplicationEnum *filePremult,
+                                       OFX::PixelComponentEnum *components,
+                                       int *componentCount)
 {
-    #ifdef DEBUG
-    std::cout << "onInputFileChanged ..." << std::endl;
-    #endif
+    assert(colorspace && filePremult && components && componentCount);
+# ifdef OFX_IO_USING_OCIO
+    *colorspace = "sRGB";
+# endif
+    int startingTime = getStartingTime();
+    std::string filename;
+    OfxStatus st = getFilenameAtTime(startingTime, &filename);
+    if ( st != kOfxStatOK || filename.empty() ) {
+        return false;
+    }
 
-    assert(premult && components);
     Magick::Image image;
     try {
-        image.ping(newFile);
+        image.ping(filename);
     }
     catch(Magick::Warning &warning) { // ignore since warns interupt render
         #ifdef DEBUG
         std::cout << warning.what() << std::endl;
         #endif
     }
-    if (image.columns()>0 && image.rows()>0) {
-        if (setColorSpace) {
-        # ifdef OFX_IO_USING_OCIO
-        _ocio->setInputColorspace("sRGB");
-        # endif // OFX_IO_USING_OCIO
-        }
-    }
-    else {
+    if (image.columns()==0 && image.rows()==0) {
         setPersistentMessage(OFX::Message::eMessageError, "", "Unable to read image");
         OFX::throwSuiteStatusException(kOfxStatErrFormat);
     }
 
     *components = OFX::ePixelComponentRGBA;
-    *premult = OFX::eImageUnPreMultiplied;
+    *filePremult = OFX::eImageUnPreMultiplied;
+
+    return true;
 }
 
 using namespace OFX;
@@ -207,9 +211,11 @@ ImageEffect* ReadMiscPluginFactory::createInstance(OfxImageEffectHandle handle,
                                      ContextEnum /*context*/)
 {
     ReadMiscPlugin* ret =  new ReadMiscPlugin(handle, _extensions);
-    ret->restoreStateFromParameters();
+    ret->restoreStateFromParams();
     return ret;
 }
 
 static ReadMiscPluginFactory p(kPluginIdentifier, kPluginVersionMajor, kPluginVersionMinor);
 mRegisterPluginFactoryInstance(p)
+
+OFXS_NAMESPACE_ANONYMOUS_EXIT

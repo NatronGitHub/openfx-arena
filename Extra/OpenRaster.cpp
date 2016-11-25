@@ -27,15 +27,11 @@
 #include "ofxsImageEffect.h"
 #include "lodepng.h"
 
-#ifdef OFX_IO_USING_OCIO
-#include <OpenColorIO/OpenColorIO.h>
-#endif
-
 #define kPluginName "OpenRaster"
 #define kPluginGrouping "Image/Readers"
 #define kPluginIdentifier "fr.inria.openfx.OpenRaster"
 #define kPluginVersionMajor 2
-#define kPluginVersionMinor 0
+#define kPluginVersionMinor 1
 #define kPluginEvaluation 50
 
 #define kSupportsRGBA true
@@ -46,6 +42,12 @@
 #define kIsMultiPlanar true
 
 using namespace OFX::IO;
+
+#ifdef OFX_IO_USING_OCIO
+namespace OCIO = OCIO_NAMESPACE;
+#endif
+
+OFXS_NAMESPACE_ANONYMOUS_ENTER
 
 static bool gHostIsNatron = false;
 
@@ -79,8 +81,8 @@ private:
     virtual void decodePlane(const std::string& filename, OfxTime time, int view, bool isPlayback, const OfxRectI& renderWindow, float *pixelData, const OfxRectI& bounds, OFX::PixelComponentEnum pixelComponents, int pixelComponentCount, const std::string& rawComponents, int rowBytes) OVERRIDE FINAL;
     virtual void getClipComponents(const OFX::ClipComponentsArguments& args, OFX::ClipComponentsSetter& clipComponents) OVERRIDE FINAL;
     virtual bool getFrameBounds(const std::string& filename, OfxTime time, OfxRectI *bounds, OfxRectI* format, double *par, std::string *error, int *tile_width, int *tile_height) OVERRIDE FINAL;
-    virtual void restoreState(const std::string& filename) OVERRIDE FINAL;
-    virtual void onInputFileChanged(const std::string& newFile, bool throwErrors, bool setColorSpace, OFX::PreMultiplicationEnum *premult, OFX::PixelComponentEnum *components, int *componentCount) OVERRIDE FINAL;
+    virtual bool guessParamsFromFilename(const std::string& filename, std::string *colorspace, OFX::PreMultiplicationEnum *filePremult, OFX::PixelComponentEnum *components, int *componentCount) OVERRIDE FINAL;
+    virtual void changedFilename(const OFX::InstanceChangedArgs &args) OVERRIDE FINAL;
     std::string extractXML(std::string filename);
     void getImageSize(int *width, int *height, std::string filename);
     bool hasMergedImage(std::string filename);
@@ -405,49 +407,78 @@ bool OpenRasterPlugin::getFrameBounds(const std::string& filename,
     return true;
 }
 
-void
-OpenRasterPlugin::restoreState(const std::string& filename)
+bool OpenRasterPlugin::guessParamsFromFilename(const std::string& /*newFile*/,
+                                       std::string *colorspace,
+                                       OFX::PreMultiplicationEnum *filePremult,
+                                       OFX::PixelComponentEnum *components,
+                                       int *componentCount)
 {
-    if (!filename.empty()) {
-        imageLayers.clear();
-        std::string xml = extractXML(filename);
-        if (!xml.empty()) {
-            xmlDocPtr doc;
-            doc = xmlParseDoc((const xmlChar *)xml.c_str());
-            xmlNode *root_element = NULL;
-            root_element = xmlDocGetRootElement(doc);
-            getLayersInfo(root_element,&imageLayers);
-            xmlFreeDoc(doc);
-            if (hasMergedImage(filename)) {
-                std::vector<std::string> layerInfo;
-                layerInfo.push_back("Default");
-                layerInfo.push_back("mergedimage.png");
-                imageLayers.push_back(layerInfo);
-            }
-            std::reverse(imageLayers.begin(),imageLayers.end());
+    assert(colorspace && filePremult && components && componentCount);
+# ifdef OFX_IO_USING_OCIO
+    *colorspace = "sRGB";
+# endif
+    int startingTime = getStartingTime();
+    std::string filename;
+    OfxStatus st = getFilenameAtTime(startingTime, &filename);
+    if ( st != kOfxStatOK || filename.empty() ) {
+        return false;
+    }
+
+    imageLayers.clear();
+    std::string xml = extractXML(filename);
+    if (!xml.empty()) {
+        xmlDocPtr doc;
+        doc = xmlParseDoc((const xmlChar *)xml.c_str());
+        xmlNode *root_element = NULL;
+        root_element = xmlDocGetRootElement(doc);
+        getLayersInfo(root_element,&imageLayers);
+        xmlFreeDoc(doc);
+        if (hasMergedImage(filename)) {
+            std::vector<std::string> layerInfo;
+            layerInfo.push_back("Default");
+            layerInfo.push_back("mergedimage.png");
+            imageLayers.push_back(layerInfo);
         }
+        std::reverse(imageLayers.begin(),imageLayers.end());
     }
     if (imageLayers.empty()) {
         setPersistentMessage(OFX::Message::eMessageError, "", "Empty and/or corrupt image");
     }
-}
-
-void OpenRasterPlugin::onInputFileChanged(const std::string& newFile,
-                                  bool /*throwErrors*/,
-                                  bool setColorSpace,
-                                  OFX::PreMultiplicationEnum *premult,
-                                  OFX::PixelComponentEnum *components,int */*componentCount*/)
-{
-    assert(premult && components);
-    restoreState(newFile);
-    if (setColorSpace) {
-# ifdef OFX_IO_USING_OCIO
-        _ocio->setInputColorspace("sRGB");
-# endif // OFX_IO_USING_OCIO
-    }
 
     *components = OFX::ePixelComponentRGBA;
-    *premult = OFX::eImageUnPreMultiplied;
+    *filePremult = OFX::eImageUnPreMultiplied;
+
+    return true;
+}
+
+void OpenRasterPlugin::changedFilename(const OFX::InstanceChangedArgs &args)
+{
+    GenericReaderPlugin::changedFilename(args);
+
+    int startingTime = getStartingTime();
+    std::string filename;
+    OfxStatus st = getFilenameAtTime(startingTime, &filename);
+    if ( st != kOfxStatOK || filename.empty() ) {
+        setPersistentMessage(OFX::Message::eMessageError, "", "No filename");
+        OFX::throwSuiteStatusException(kOfxStatErrFormat);
+    }
+    imageLayers.clear();
+    std::string xml = extractXML(filename);
+    if (!xml.empty()) {
+        xmlDocPtr doc;
+        doc = xmlParseDoc((const xmlChar *)xml.c_str());
+        xmlNode *root_element = NULL;
+        root_element = xmlDocGetRootElement(doc);
+        getLayersInfo(root_element,&imageLayers);
+        xmlFreeDoc(doc);
+        if (hasMergedImage(filename)) {
+            std::vector<std::string> layerInfo;
+            layerInfo.push_back("Default");
+            layerInfo.push_back("mergedimage.png");
+            imageLayers.push_back(layerInfo);
+        }
+        std::reverse(imageLayers.begin(),imageLayers.end());
+    }
 }
 
 using namespace OFX;
@@ -482,9 +513,11 @@ ImageEffect* OpenRasterPluginFactory::createInstance(OfxImageEffectHandle handle
                                      ContextEnum /*context*/)
 {
     OpenRasterPlugin* ret =  new OpenRasterPlugin(handle, _extensions);
-    ret->restoreStateFromParameters();
+    ret->restoreStateFromParams();
     return ret;
 }
 
 static OpenRasterPluginFactory p(kPluginIdentifier, kPluginVersionMajor, kPluginVersionMinor);
 mRegisterPluginFactoryInstance(p)
+
+OFXS_NAMESPACE_ANONYMOUS_EXIT

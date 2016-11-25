@@ -26,10 +26,6 @@
 #include "ofxsImageEffect.h"
 #include "lodepng.h"
 
-#ifdef OFX_IO_USING_OCIO
-#include <OpenColorIO/OpenColorIO.h>
-#endif
-
 #define kPluginName "ReadKrita"
 #define kPluginGrouping "Image/Readers"
 #define kPluginIdentifier "fr.inria.openfx.ReadKrita"
@@ -46,6 +42,12 @@
 
 using namespace OFX::IO;
 
+#ifdef OFX_IO_USING_OCIO
+namespace OCIO = OCIO_NAMESPACE;
+#endif
+
+OFXS_NAMESPACE_ANONYMOUS_ENTER
+
 class ReadKritaPlugin : public GenericReaderPlugin
 {
 public:
@@ -55,7 +57,7 @@ private:
     virtual bool isVideoStream(const std::string& /*filename*/) OVERRIDE FINAL { return false; }
     virtual void decode(const std::string& filename, OfxTime time, int view, bool isPlayback, const OfxRectI& renderWindow, float *pixelData, const OfxRectI& bounds, OFX::PixelComponentEnum pixelComponents, int pixelComponentCount, int rowBytes) OVERRIDE FINAL;
     virtual bool getFrameBounds(const std::string& filename, OfxTime time, OfxRectI *bounds, OfxRectI* format, double *par, std::string *error, int *tile_width, int *tile_height) OVERRIDE FINAL;
-    virtual void onInputFileChanged(const std::string& newFile, bool throwErrors, bool setColorSpace, OFX::PreMultiplicationEnum *premult, OFX::PixelComponentEnum *components, int *componentCount) OVERRIDE FINAL;
+    virtual bool guessParamsFromFilename(const std::string& filename, std::string *colorspace, OFX::PreMultiplicationEnum *filePremult, OFX::PixelComponentEnum *components, int *componentCount) OVERRIDE FINAL;
     std::string extractXML(std::string kritaFile);
     void parseXML(xmlNode *node,int *width, int *height);
     void getImageSize(int *width, int *height, std::string filename);
@@ -237,30 +239,35 @@ bool ReadKritaPlugin::getFrameBounds(const std::string& filename,
     return true;
 }
 
-void ReadKritaPlugin::onInputFileChanged(const std::string& newFile,
-                                  bool /*throwErrors*/,
-                                  bool setColorSpace,
-                                  OFX::PreMultiplicationEnum *premult,
-                                  OFX::PixelComponentEnum *components,int */*componentCount*/)
+bool ReadKritaPlugin::guessParamsFromFilename(const std::string& /*newFile*/,
+                                       std::string *colorspace,
+                                       OFX::PreMultiplicationEnum *filePremult,
+                                       OFX::PixelComponentEnum *components,
+                                       int *componentCount)
 {
-    assert(premult && components);
+    assert(colorspace && filePremult && components && componentCount);
+# ifdef OFX_IO_USING_OCIO
+    *colorspace = "sRGB";
+# endif
+    int startingTime = getStartingTime();
+    std::string filename;
+    OfxStatus st = getFilenameAtTime(startingTime, &filename);
+    if ( st != kOfxStatOK || filename.empty() ) {
+        return false;
+    }
+
     int width = 0;
     int height = 0;
-    getImageSize(&width,&height,newFile);
-    if (width>0 && height>0) {
-        if (setColorSpace) {
-# ifdef OFX_IO_USING_OCIO
-            _ocio->setInputColorspace("sRGB");
- # endif // OFX_IO_USING_OCIO
-        }
-    }
-    else {
+    getImageSize(&width,&height,filename);
+    if (width==0 && height==0) {
         setPersistentMessage(OFX::Message::eMessageError, "", "Unable to read image");
         OFX::throwSuiteStatusException(kOfxStatErrFormat);
     }
 
     *components = OFX::ePixelComponentRGBA;
-    *premult = OFX::eImageUnPreMultiplied;
+    *filePremult = OFX::eImageUnPreMultiplied;
+
+    return true;
 }
 
 using namespace OFX;
@@ -294,9 +301,11 @@ ImageEffect* ReadKritaPluginFactory::createInstance(OfxImageEffectHandle handle,
                                      ContextEnum /*context*/)
 {
     ReadKritaPlugin* ret =  new ReadKritaPlugin(handle, _extensions);
-    ret->restoreStateFromParameters();
+    ret->restoreStateFromParams();
     return ret;
 }
 
 static ReadKritaPluginFactory p(kPluginIdentifier, kPluginVersionMajor, kPluginVersionMinor);
 mRegisterPluginFactoryInstance(p)
+
+OFXS_NAMESPACE_ANONYMOUS_EXIT

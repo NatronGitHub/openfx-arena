@@ -32,10 +32,6 @@
 #include "GenericOCIO.h"
 #include "ofxsImageEffect.h"
 
-#ifdef OFX_IO_USING_OCIO
-#include <OpenColorIO/OpenColorIO.h>
-#endif
-
 #define kPluginName "ReadCDR"
 #define kPluginGrouping "Image/Readers"
 #define kPluginIdentifier "fr.inria.openfx.ReadCDR"
@@ -57,6 +53,12 @@
 
 using namespace OFX::IO;
 
+#ifdef OFX_IO_USING_OCIO
+namespace OCIO = OCIO_NAMESPACE;
+#endif
+
+OFXS_NAMESPACE_ANONYMOUS_ENTER
+
 class ReadCDRPlugin : public GenericReaderPlugin
 {
 public:
@@ -66,7 +68,7 @@ private:
     virtual bool isVideoStream(const std::string& /*filename*/) OVERRIDE FINAL { return false; }
     virtual void decode(const std::string& filename, OfxTime time, int view, bool isPlayback, const OfxRectI& renderWindow, float *pixelData, const OfxRectI& bounds, OFX::PixelComponentEnum pixelComponents, int pixelComponentCount, int rowBytes) OVERRIDE FINAL;
     virtual bool getFrameBounds(const std::string& filename, OfxTime time, OfxRectI *bounds, OfxRectI* format, double *par, std::string *error,int *tile_width, int *tile_height) OVERRIDE FINAL;
-    virtual void onInputFileChanged(const std::string& newFile, bool throwErrors, bool setColorSpace, OFX::PreMultiplicationEnum *premult, OFX::PixelComponentEnum *components, int *componentCount) OVERRIDE FINAL;
+    virtual bool guessParamsFromFilename(const std::string& filename, std::string *colorspace, OFX::PreMultiplicationEnum *filePremult, OFX::PixelComponentEnum *components, int *componentCount) OVERRIDE FINAL;
     OFX::IntParam *_dpi;
 };
 
@@ -123,8 +125,9 @@ ReadCDRPlugin::decode(const std::string& filename,
 
     std::ostringstream stream;
     stream << "<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"no\"?>";
-    for (unsigned k = 0; k<output.size(); ++k)
+    for (unsigned k = 0; k<output.size(); ++k) {
         stream << output[k].cstr();
+    }
 
     GError *error = NULL;
     RsvgHandle *handle;
@@ -242,8 +245,9 @@ bool ReadCDRPlugin::getFrameBounds(const std::string& filename,
 
     std::ostringstream stream;
     stream << "<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"no\"?>";
-    for (unsigned k = 0; k<output.size(); ++k)
+    for (unsigned k = 0; k<output.size(); ++k) {
         stream << output[k].cstr();
+    }
 
     int dpi;
     _dpi->getValueAtTime(time, dpi);
@@ -271,8 +275,7 @@ bool ReadCDRPlugin::getFrameBounds(const std::string& filename,
     if (dpi != kParamDpiDefault) {
         width = imageWidth * dpi / kParamDpiDefault;
         height = imageHeight * dpi / kParamDpiDefault;
-    }
-    else {
+    } else {
         width = imageWidth;
         height = imageHeight;
     }
@@ -293,20 +296,24 @@ bool ReadCDRPlugin::getFrameBounds(const std::string& filename,
     return true;
 }
 
-void ReadCDRPlugin::onInputFileChanged(const std::string& newFile,
-                                  bool /*throwErrors*/,
-                                  bool setColorSpace,
-                                  OFX::PreMultiplicationEnum *premult,
-                                  OFX::PixelComponentEnum *components,int */*componentCount*/)
+bool ReadCDRPlugin::guessParamsFromFilename(const std::string& /*newFile*/,
+                                       std::string *colorspace,
+                                       OFX::PreMultiplicationEnum *filePremult,
+                                       OFX::PixelComponentEnum *components,
+                                       int *componentCount)
 {
-    assert(premult && components);
-
-    if (newFile.empty()) {
-        setPersistentMessage(OFX::Message::eMessageError, "", "No filename");
-        OFX::throwSuiteStatusException(kOfxStatErrFormat);
+    assert(colorspace && filePremult && components && componentCount);
+# ifdef OFX_IO_USING_OCIO
+    *colorspace = "sRGB";
+# endif
+    int startingTime = getStartingTime();
+    std::string filename;
+    OfxStatus st = getFilenameAtTime(startingTime, &filename);
+    if ( st != kOfxStatOK || filename.empty() ) {
+        return false;
     }
 
-    librevenge::RVNGFileStream input(newFile.c_str());
+    librevenge::RVNGFileStream input(filename.c_str());
     if (!libcdr::CDRDocument::isSupported(&input)) {
         setPersistentMessage(OFX::Message::eMessageError, "", "Unsupported file format");
         OFX::throwSuiteStatusException(kOfxStatErrFormat);
@@ -325,8 +332,9 @@ void ReadCDRPlugin::onInputFileChanged(const std::string& newFile,
 
     std::ostringstream stream;
     stream << "<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"no\"?>";
-    for (unsigned k = 0; k<output.size(); ++k)
+    for (unsigned k = 0; k<output.size(); ++k) {
         stream << output[k].cstr();
+    }
 
     GError *error = NULL;
     RsvgHandle *handle;
@@ -341,15 +349,12 @@ void ReadCDRPlugin::onInputFileChanged(const std::string& newFile,
     g_object_unref(handle);
     error = NULL;
 
-    if (setColorSpace) {
-# ifdef OFX_IO_USING_OCIO
-        _ocio->setInputColorspace("sRGB");
-# endif
-    }
-
     *components = OFX::ePixelComponentRGBA;
-    *premult = OFX::eImagePreMultiplied;
+    *filePremult = OFX::eImagePreMultiplied;
+
+    return true;
 }
+
 
 using namespace OFX;
 
@@ -394,9 +399,11 @@ ImageEffect* ReadCDRPluginFactory::createInstance(OfxImageEffectHandle handle,
                                      ContextEnum /*context*/)
 {
     ReadCDRPlugin* ret =  new ReadCDRPlugin(handle, _extensions);
-    ret->restoreStateFromParameters();
+    ret->restoreStateFromParams();
     return ret;
 }
 
 static ReadCDRPluginFactory p(kPluginIdentifier, kPluginVersionMajor, kPluginVersionMinor);
 mRegisterPluginFactoryInstance(p)
+
+OFXS_NAMESPACE_ANONYMOUS_EXIT

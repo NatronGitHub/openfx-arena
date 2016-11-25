@@ -44,15 +44,11 @@
 #include "ofxsMacros.h"
 #include "ofxsImageEffect.h"
 
-#ifdef OFX_IO_USING_OCIO
-#include <OpenColorIO/OpenColorIO.h>
-#endif
-
 #define kPluginName "ReadPDF"
 #define kPluginGrouping "Image/Readers"
 #define kPluginIdentifier "fr.inria.openfx.ReadPDF"
 #define kPluginVersionMajor 1
-#define kPluginVersionMinor 3
+#define kPluginVersionMinor 4
 #define kPluginEvaluation 50
 #define kPluginDPI 72.0
 
@@ -69,6 +65,12 @@
 #define kIsMultiPlanar true
 
 using namespace OFX::IO;
+
+#ifdef OFX_IO_USING_OCIO
+namespace OCIO = OCIO_NAMESPACE;
+#endif
+
+OFXS_NAMESPACE_ANONYMOUS_ENTER
 
 static bool gHostIsNatron = false;
 
@@ -102,8 +104,8 @@ private:
     virtual void decodePlane(const std::string& filename, OfxTime time, int view, bool isPlayback, const OfxRectI& renderWindow, float *pixelData, const OfxRectI& bounds, OFX::PixelComponentEnum pixelComponents, int pixelComponentCount, const std::string& rawComponents, int rowBytes) OVERRIDE FINAL;
     virtual void getClipComponents(const OFX::ClipComponentsArguments& args, OFX::ClipComponentsSetter& clipComponents) OVERRIDE FINAL;
     virtual bool getFrameBounds(const std::string& filename, OfxTime time, OfxRectI *bounds, OfxRectI* format, double *par, std::string *error,int *tile_width, int *tile_height) OVERRIDE FINAL;
-    virtual void restoreState(const std::string& filename) OVERRIDE FINAL;
-    virtual void onInputFileChanged(const std::string& newFile, bool throwErrors, bool setColorSpace, OFX::PreMultiplicationEnum *premult, OFX::PixelComponentEnum *components, int *componentCount) OVERRIDE FINAL;
+    virtual bool guessParamsFromFilename(const std::string& filename, std::string *colorspace, OFX::PreMultiplicationEnum *filePremult, OFX::PixelComponentEnum *components, int *componentCount) OVERRIDE FINAL;
+    virtual void changedFilename(const OFX::InstanceChangedArgs &args) OVERRIDE FINAL;
     std::string getResourcesPath();
     std::vector<std::string> imageLayers;
     OFX::DoubleParam *_dpi;
@@ -378,58 +380,98 @@ bool ReadPDFPlugin::getFrameBounds(const std::string& filename,
     return true;
 }
 
-void ReadPDFPlugin::restoreState(const std::string& filename)
+bool ReadPDFPlugin::guessParamsFromFilename(const std::string& /*newFile*/,
+                                       std::string *colorspace,
+                                       OFX::PreMultiplicationEnum *filePremult,
+                                       OFX::PixelComponentEnum *components,
+                                       int *componentCount)
 {
-    if (filename.empty()) {
-        setPersistentMessage(OFX::Message::eMessageError, "", "No filename");
-    } else {
-        GError *error = NULL;
-        PopplerDocument *document = NULL;
-
-        gchar *absolute, *uri;
-        absolute = g_strdup(filename.c_str());
-        uri = g_filename_to_uri(absolute, NULL, &error);
-        free(absolute);
-
-        document = poppler_document_new_from_file(uri, NULL, &error);
-
-        if (error != NULL) {
-            setPersistentMessage(OFX::Message::eMessageError, "", "Failed to read PDF");
-        } else {
-            imageLayers.clear();
-            int pages = 0;
-            pages = poppler_document_get_n_pages(document);
-            if (pages<0)
-                pages=0;
-
-            for (int i = 0; i < pages; i++) {
-                std::ostringstream pageName;
-                pageName << i;
-                imageLayers.push_back(pageName.str());
-            }
-        }
-
-        g_object_unref(document);
-        error = NULL;
-    }
-}
-
-void ReadPDFPlugin::onInputFileChanged(const std::string& newFile,
-                                  bool /*throwErrors*/,
-                                  bool setColorSpace,
-                                  OFX::PreMultiplicationEnum *premult,
-                                  OFX::PixelComponentEnum *components,int */*componentCount*/)
-{
-    assert(premult && components);
-    restoreState(newFile);
-    if (setColorSpace) {
+    assert(colorspace && filePremult && components && componentCount);
 # ifdef OFX_IO_USING_OCIO
-        _ocio->setInputColorspace("sRGB");
+    *colorspace = "sRGB";
 # endif
+    int startingTime = getStartingTime();
+    std::string filename;
+    OfxStatus st = getFilenameAtTime(startingTime, &filename);
+    if ( st != kOfxStatOK || filename.empty() ) {
+        return false;
     }
+
+    GError *error = NULL;
+    PopplerDocument *document = NULL;
+
+    gchar *absolute, *uri;
+    absolute = g_strdup(filename.c_str());
+    uri = g_filename_to_uri(absolute, NULL, &error);
+    free(absolute);
+
+    document = poppler_document_new_from_file(uri, NULL, &error);
+
+    imageLayers.clear();
+    if (error != NULL) {
+        setPersistentMessage(OFX::Message::eMessageError, "", "Failed to read PDF");
+    } else {
+        int pages = 0;
+        pages = poppler_document_get_n_pages(document);
+        if (pages<0)
+            pages=0;
+
+        for (int i = 0; i < pages; i++) {
+            std::ostringstream pageName;
+            pageName << i;
+            imageLayers.push_back(pageName.str());
+        }
+    }
+
+    g_object_unref(document);
+    error = NULL;
 
     *components = OFX::ePixelComponentRGBA;
-    *premult = OFX::eImageUnPreMultiplied;
+    *filePremult = OFX::eImageUnPreMultiplied;
+
+    return true;
+}
+
+void ReadPDFPlugin::changedFilename(const OFX::InstanceChangedArgs &args)
+{
+    GenericReaderPlugin::changedFilename(args);
+
+    int startingTime = getStartingTime();
+    std::string filename;
+    OfxStatus st = getFilenameAtTime(startingTime, &filename);
+    if ( st != kOfxStatOK || filename.empty() ) {
+        setPersistentMessage(OFX::Message::eMessageError, "", "No filename");
+        OFX::throwSuiteStatusException(kOfxStatErrFormat);
+    }
+
+    GError *error = NULL;
+    PopplerDocument *document = NULL;
+
+    gchar *absolute, *uri;
+    absolute = g_strdup(filename.c_str());
+    uri = g_filename_to_uri(absolute, NULL, &error);
+    free(absolute);
+
+    document = poppler_document_new_from_file(uri, NULL, &error);
+
+    imageLayers.clear();
+    if (error != NULL) {
+        setPersistentMessage(OFX::Message::eMessageError, "", "Failed to read PDF");
+    } else {
+        int pages = 0;
+        pages = poppler_document_get_n_pages(document);
+        if (pages<0)
+            pages=0;
+
+        for (int i = 0; i < pages; i++) {
+            std::ostringstream pageName;
+            pageName << i;
+            imageLayers.push_back(pageName.str());
+        }
+    }
+
+    g_object_unref(document);
+    error = NULL;
 }
 
 using namespace OFX;
@@ -477,9 +519,11 @@ ImageEffect* ReadPDFPluginFactory::createInstance(OfxImageEffectHandle handle,
                                      ContextEnum /*context*/)
 {
     ReadPDFPlugin* ret =  new ReadPDFPlugin(handle, _extensions);
-    ret->restoreStateFromParameters();
+    ret->restoreStateFromParams();
     return ret;
 }
 
 static ReadPDFPluginFactory p(kPluginIdentifier, kPluginVersionMajor, kPluginVersionMinor);
 mRegisterPluginFactoryInstance(p)
+
+OFXS_NAMESPACE_ANONYMOUS_EXIT
