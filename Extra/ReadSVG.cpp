@@ -36,7 +36,7 @@
 #define kPluginGrouping "Image/Readers"
 #define kPluginIdentifier "net.fxarena.openfx.ReadSVG"
 #define kPluginVersionMajor 3
-#define kPluginVersionMinor 1
+#define kPluginVersionMinor 2
 #define kPluginEvaluation 50
 
 #define kParamDpi "dpi"
@@ -92,6 +92,7 @@ private:
     virtual void getClipComponents(const OFX::ClipComponentsArguments& args, OFX::ClipComponentsSetter& clipComponents) OVERRIDE FINAL;
     virtual bool getFrameBounds(const std::string& filename, OfxTime time, OfxRectI *bounds, OfxRectI* format, double *par, std::string *error, int *tile_width, int *tile_height) OVERRIDE FINAL;
     virtual bool guessParamsFromFilename(const std::string& filename, std::string *colorspace, OFX::PreMultiplicationEnum *filePremult, OFX::PixelComponentEnum *components, int *componentCount) OVERRIDE FINAL;
+    virtual void changedFilename(const OFX::InstanceChangedArgs &args) OVERRIDE FINAL;
     void getLayers(xmlNode *node, std::vector<std::string> *layers);
     OFX::IntParam *_dpi;
     std::vector<std::string> imageLayers;
@@ -382,6 +383,7 @@ bool ReadSVGPlugin::guessParamsFromFilename(const std::string& /*newFile*/,
 
     if (error != NULL) {
         setPersistentMessage(OFX::Message::eMessageError, "", "Failed to read SVG");
+        OFX::throwSuiteStatusException(kOfxStatErrFormat);
     }
 
     g_object_unref(handle);
@@ -391,6 +393,26 @@ bool ReadSVGPlugin::guessParamsFromFilename(const std::string& /*newFile*/,
     *filePremult = OFX::eImageUnPreMultiplied;
 
     return true;
+}
+
+void ReadSVGPlugin::changedFilename(const OFX::InstanceChangedArgs &args)
+{
+    GenericReaderPlugin::changedFilename(args);
+
+    int startingTime = getStartingTime();
+    std::string filename;
+    OfxStatus st = getFilenameAtTime(startingTime, &filename);
+    if ( st != kOfxStatOK || filename.empty() ) {
+        setPersistentMessage(OFX::Message::eMessageError, "", "No filename");
+        OFX::throwSuiteStatusException(kOfxStatErrFormat);
+    }
+    imageLayers.clear();
+    xmlDocPtr doc;
+    doc = xmlParseFile(filename.c_str());
+    xmlNode *root_element = NULL;
+    root_element = xmlDocGetRootElement(doc);
+    getLayers(root_element,&imageLayers);
+    xmlFreeDoc(doc);
 }
 
 using namespace OFX;
