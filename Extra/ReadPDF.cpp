@@ -79,6 +79,7 @@ class ReadPDFPlugin : public GenericReaderPlugin
 public:
     ReadPDFPlugin(OfxImageEffectHandle handle, const std::vector<std::string>& extensions);
     virtual ~ReadPDFPlugin();
+    virtual void restoreStateFromParams() OVERRIDE FINAL;
 private:
     virtual bool isVideoStream(const std::string& /*filename*/) OVERRIDE FINAL { return false; }
     virtual void decode(const std::string& filename, OfxTime time, int view, bool isPlayback, const OfxRectI& renderWindow, float *pixelData, const OfxRectI& bounds,
@@ -138,6 +139,45 @@ false
 
 ReadPDFPlugin::~ReadPDFPlugin()
 {
+}
+
+void ReadPDFPlugin::restoreStateFromParams()
+{
+    GenericReaderPlugin::restoreStateFromParams();
+
+    int startingTime = getStartingTime();
+    std::string filename;
+    OfxStatus st = getFilenameAtTime(startingTime, &filename);
+    if ( st == kOfxStatOK || !filename.empty() ) {
+        GError *error = NULL;
+        PopplerDocument *document = NULL;
+
+        gchar *absolute, *uri;
+        absolute = g_strdup(filename.c_str());
+        uri = g_filename_to_uri(absolute, NULL, &error);
+        free(absolute);
+
+        document = poppler_document_new_from_file(uri, NULL, &error);
+
+        imageLayers.clear();
+        if (error != NULL) {
+            setPersistentMessage(OFX::Message::eMessageError, "", "Failed to read PDF");
+        } else {
+            int pages = 0;
+            pages = poppler_document_get_n_pages(document);
+            if (pages<0)
+                pages=0;
+
+            for (int i = 0; i < pages; i++) {
+                std::ostringstream pageName;
+                pageName << i;
+                imageLayers.push_back(pageName.str());
+            }
+        }
+
+        g_object_unref(document);
+        error = NULL;
+    }
 }
 
 std::string

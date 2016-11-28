@@ -56,6 +56,7 @@ class OpenRasterPlugin : public GenericReaderPlugin
 public:
     OpenRasterPlugin(OfxImageEffectHandle handle, const std::vector<std::string>& extensions);
     virtual ~OpenRasterPlugin();
+    virtual void restoreStateFromParams() OVERRIDE FINAL;
 private:
     virtual bool isVideoStream(const std::string& /*filename*/) OVERRIDE FINAL { return false; }
     virtual void decode(const std::string& filename, OfxTime time, int view, bool isPlayback, const OfxRectI& renderWindow, float *pixelData, const OfxRectI& bounds,
@@ -305,6 +306,11 @@ OpenRasterPlugin::decodePlane(const std::string& filename, OfxTime /*time*/, int
         OFX::throwSuiteStatusException(kOfxStatErrFormat);
     }
 
+    if (imageLayers.size() == 0) {
+        setPersistentMessage(OFX::Message::eMessageError, "", "No layers");
+        OFX::throwSuiteStatusException(kOfxStatErrFormat);
+    }
+
     int layer = 0;
     if (gHostIsNatron) {
         std::string layerName;
@@ -481,6 +487,34 @@ void OpenRasterPlugin::changedFilename(const OFX::InstanceChangedArgs &args)
     }
 }
 
+void OpenRasterPlugin::restoreStateFromParams()
+{
+    GenericReaderPlugin::restoreStateFromParams();
+
+    int startingTime = getStartingTime();
+    std::string filename;
+    OfxStatus st = getFilenameAtTime(startingTime, &filename);
+    if ( st == kOfxStatOK || !filename.empty() ) {
+        imageLayers.clear();
+        std::string xml = extractXML(filename);
+        if (!xml.empty()) {
+            xmlDocPtr doc;
+            doc = xmlParseDoc((const xmlChar *)xml.c_str());
+            xmlNode *root_element = NULL;
+            root_element = xmlDocGetRootElement(doc);
+            getLayersInfo(root_element,&imageLayers);
+            xmlFreeDoc(doc);
+            if (hasMergedImage(filename)) {
+                std::vector<std::string> layerInfo;
+                layerInfo.push_back("Default");
+                layerInfo.push_back("mergedimage.png");
+                imageLayers.push_back(layerInfo);
+            }
+            std::reverse(imageLayers.begin(),imageLayers.end());
+        }
+    }
+}
+
 using namespace OFX;
 
 mDeclareReaderPluginFactory(OpenRasterPluginFactory, {}, false);
@@ -505,7 +539,7 @@ void OpenRasterPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc
 {
     gHostIsNatron = (OFX::getImageEffectHostDescription()->isNatron);
     PageParamDescriptor *page = GenericReaderDescribeInContextBegin(desc, context, isVideoStreamPlugin(), kSupportsRGBA, kSupportsRGB, kSupportsXY,kSupportsAlpha, kSupportsTiles, true);
-    GenericReaderDescribeInContextEnd(desc, context, page, "reference", "scene_linear");
+    GenericReaderDescribeInContextEnd(desc, context, page, "sRGB", "scene_linear");
 }
 
 /** @brief The create instance function, the plugin must return an object derived from the \ref OFX::ImageEffect class */

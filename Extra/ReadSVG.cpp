@@ -66,6 +66,7 @@ class ReadSVGPlugin : public GenericReaderPlugin
 public:
     ReadSVGPlugin(OfxImageEffectHandle handle, const std::vector<std::string>& extensions);
     virtual ~ReadSVGPlugin();
+    virtual void restoreStateFromParams() OVERRIDE FINAL;
 private:
     virtual bool isVideoStream(const std::string& /*filename*/) OVERRIDE FINAL { return false; }
     virtual void decode(const std::string& filename, OfxTime time, int view, bool isPlayback, const OfxRectI& renderWindow, float *pixelData, const OfxRectI& bounds,
@@ -114,6 +115,24 @@ false
 
 ReadSVGPlugin::~ReadSVGPlugin()
 {
+}
+
+void ReadSVGPlugin::restoreStateFromParams()
+{
+    GenericReaderPlugin::restoreStateFromParams();
+
+    int startingTime = getStartingTime();
+    std::string filename;
+    OfxStatus st = getFilenameAtTime(startingTime, &filename);
+    if ( st == kOfxStatOK || !filename.empty() ) {
+        imageLayers.clear();
+        xmlDocPtr doc;
+        doc = xmlParseFile(filename.c_str());
+        xmlNode *root_element = NULL;
+        root_element = xmlDocGetRootElement(doc);
+        getLayers(root_element,&imageLayers);
+        xmlFreeDoc(doc);
+    }
 }
 
 void
@@ -454,7 +473,7 @@ void ReadSVGPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, C
         page->addChild(*param);
     }
 
-    GenericReaderDescribeInContextEnd(desc, context, page, "reference", "scene_linear");
+    GenericReaderDescribeInContextEnd(desc, context, page, "sRGB", "scene_linear");
 }
 
 /** @brief The create instance function, the plugin must return an object derived from the \ref OFX::ImageEffect class */
