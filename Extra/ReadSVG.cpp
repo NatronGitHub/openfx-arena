@@ -32,15 +32,11 @@
 #include "ofxsMacros.h"
 #include "ofxsImageEffect.h"
 
-#ifdef OFX_IO_USING_OCIO
-#include <OpenColorIO/OpenColorIO.h>
-#endif
-
 #define kPluginName "ReadSVG"
 #define kPluginGrouping "Image/Readers"
 #define kPluginIdentifier "net.fxarena.openfx.ReadSVG"
 #define kPluginVersionMajor 3
-#define kPluginVersionMinor 1
+#define kPluginVersionMinor 2
 #define kPluginEvaluation 50
 
 #define kParamDpi "dpi"
@@ -57,6 +53,12 @@
 
 using namespace OFX::IO;
 
+#ifdef OFX_IO_USING_OCIO
+namespace OCIO = OCIO_NAMESPACE;
+#endif
+
+OFXS_NAMESPACE_ANONYMOUS_ENTER
+
 static bool gHostIsNatron = false;
 
 class ReadSVGPlugin : public GenericReaderPlugin
@@ -64,6 +66,7 @@ class ReadSVGPlugin : public GenericReaderPlugin
 public:
     ReadSVGPlugin(OfxImageEffectHandle handle, const std::vector<std::string>& extensions);
     virtual ~ReadSVGPlugin();
+    virtual void restoreStateFromParams() OVERRIDE FINAL;
 private:
     virtual bool isVideoStream(const std::string& /*filename*/) OVERRIDE FINAL { return false; }
     virtual void decode(const std::string& filename, OfxTime time, int view, bool isPlayback, const OfxRectI& renderWindow, float *pixelData, const OfxRectI& bounds,
@@ -89,8 +92,8 @@ private:
     virtual void decodePlane(const std::string& filename, OfxTime time, int view, bool isPlayback, const OfxRectI& renderWindow, float *pixelData, const OfxRectI& bounds, OFX::PixelComponentEnum pixelComponents, int pixelComponentCount, const std::string& rawComponents, int rowBytes) OVERRIDE FINAL;
     virtual void getClipComponents(const OFX::ClipComponentsArguments& args, OFX::ClipComponentsSetter& clipComponents) OVERRIDE FINAL;
     virtual bool getFrameBounds(const std::string& filename, OfxTime time, OfxRectI *bounds, OfxRectI* format, double *par, std::string *error, int *tile_width, int *tile_height) OVERRIDE FINAL;
-    virtual void restoreState(const std::string& filename) OVERRIDE FINAL;
-    virtual void onInputFileChanged(const std::string& newFile, bool throwErrors, bool setColorSpace, OFX::PreMultiplicationEnum *premult, OFX::PixelComponentEnum *components, int *componentCount) OVERRIDE FINAL;
+    virtual bool guessParamsFromFilename(const std::string& filename, std::string *colorspace, OFX::PreMultiplicationEnum *filePremult, OFX::PixelComponentEnum *components, int *componentCount) OVERRIDE FINAL;
+    virtual void changedFilename(const OFX::InstanceChangedArgs &args) OVERRIDE FINAL;
     void getLayers(xmlNode *node, std::vector<std::string> *layers);
     OFX::IntParam *_dpi;
     std::vector<std::string> imageLayers;
@@ -112,6 +115,24 @@ false
 
 ReadSVGPlugin::~ReadSVGPlugin()
 {
+}
+
+void ReadSVGPlugin::restoreStateFromParams()
+{
+    GenericReaderPlugin::restoreStateFromParams();
+
+    int startingTime = getStartingTime();
+    std::string filename;
+    OfxStatus st = getFilenameAtTime(startingTime, &filename);
+    if ( st == kOfxStatOK || !filename.empty() ) {
+        imageLayers.clear();
+        xmlDocPtr doc;
+        doc = xmlParseFile(filename.c_str());
+        xmlNode *root_element = NULL;
+        root_element = xmlDocGetRootElement(doc);
+        getLayers(root_element,&imageLayers);
+        xmlFreeDoc(doc);
+    }
 }
 
 void
@@ -349,51 +370,68 @@ bool ReadSVGPlugin::getFrameBounds(const std::string& filename,
     return true;
 }
 
-void
-ReadSVGPlugin::restoreState(const std::string& filename)
+bool ReadSVGPlugin::guessParamsFromFilename(const std::string& /*newFile*/,
+                                       std::string *colorspace,
+                                       OFX::PreMultiplicationEnum *filePremult,
+                                       OFX::PixelComponentEnum *components,
+                                       int *componentCount)
 {
-    if (!filename.empty()) {
-        imageLayers.clear();
-        xmlDocPtr doc;
-        doc = xmlParseFile(filename.c_str());
-        xmlNode *root_element = NULL;
-        root_element = xmlDocGetRootElement(doc);
-        getLayers(root_element,&imageLayers);
-        xmlFreeDoc(doc);
-
-        GError *error = NULL;
-        RsvgHandle *handle;
-
-        handle=rsvg_handle_new_from_file(filename.c_str(), &error);
-
-        if (error != NULL) {
-            setPersistentMessage(OFX::Message::eMessageError, "", "Failed to read SVG");
-        }
-
-        g_object_unref(handle);
-        error = NULL;
-    }
-    else {
-        setPersistentMessage(OFX::Message::eMessageError, "", "Empty and/or corrupt image");
-    }
-}
-
-void ReadSVGPlugin::onInputFileChanged(const std::string& newFile,
-                                  bool /*throwErrors*/,
-                                  bool setColorSpace,
-                                  OFX::PreMultiplicationEnum *premult,
-                                  OFX::PixelComponentEnum *components,int */*componentCount*/)
-{
-    assert(premult && components);
-    restoreState(newFile);
-    if (setColorSpace) {
+    assert(colorspace && filePremult && components && componentCount);
 # ifdef OFX_IO_USING_OCIO
-        _ocio->setInputColorspace("sRGB");
+    *colorspace = "sRGB";
 # endif
+    int startingTime = getStartingTime();
+    std::string filename;
+    OfxStatus st = getFilenameAtTime(startingTime, &filename);
+    if ( st != kOfxStatOK || filename.empty() ) {
+        return false;
     }
+
+    imageLayers.clear();
+    xmlDocPtr doc;
+    doc = xmlParseFile(filename.c_str());
+    xmlNode *root_element = NULL;
+    root_element = xmlDocGetRootElement(doc);
+    getLayers(root_element,&imageLayers);
+    xmlFreeDoc(doc);
+
+    GError *error = NULL;
+    RsvgHandle *handle;
+
+    handle=rsvg_handle_new_from_file(filename.c_str(), &error);
+
+    if (error != NULL) {
+        setPersistentMessage(OFX::Message::eMessageError, "", "Failed to read SVG");
+        OFX::throwSuiteStatusException(kOfxStatErrFormat);
+    }
+
+    g_object_unref(handle);
+    error = NULL;
 
     *components = OFX::ePixelComponentRGBA;
-    *premult = OFX::eImageUnPreMultiplied;
+    *filePremult = OFX::eImageUnPreMultiplied;
+
+    return true;
+}
+
+void ReadSVGPlugin::changedFilename(const OFX::InstanceChangedArgs &args)
+{
+    GenericReaderPlugin::changedFilename(args);
+
+    int startingTime = getStartingTime();
+    std::string filename;
+    OfxStatus st = getFilenameAtTime(startingTime, &filename);
+    if ( st != kOfxStatOK || filename.empty() ) {
+        setPersistentMessage(OFX::Message::eMessageError, "", "No filename");
+        OFX::throwSuiteStatusException(kOfxStatErrFormat);
+    }
+    imageLayers.clear();
+    xmlDocPtr doc;
+    doc = xmlParseFile(filename.c_str());
+    xmlNode *root_element = NULL;
+    root_element = xmlDocGetRootElement(doc);
+    getLayers(root_element,&imageLayers);
+    xmlFreeDoc(doc);
 }
 
 using namespace OFX;
@@ -435,7 +473,7 @@ void ReadSVGPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, C
         page->addChild(*param);
     }
 
-    GenericReaderDescribeInContextEnd(desc, context, page, "reference", "reference");
+    GenericReaderDescribeInContextEnd(desc, context, page, "sRGB", "scene_linear");
 }
 
 /** @brief The create instance function, the plugin must return an object derived from the \ref OFX::ImageEffect class */
@@ -443,9 +481,11 @@ ImageEffect* ReadSVGPluginFactory::createInstance(OfxImageEffectHandle handle,
                                      ContextEnum /*context*/)
 {
     ReadSVGPlugin* ret =  new ReadSVGPlugin(handle, _extensions);
-    ret->restoreStateFromParameters();
+    ret->restoreStateFromParams();
     return ret;
 }
 
 static ReadSVGPluginFactory p(kPluginIdentifier, kPluginVersionMajor, kPluginVersionMinor);
 mRegisterPluginFactoryInstance(p)
+
+OFXS_NAMESPACE_ANONYMOUS_EXIT
