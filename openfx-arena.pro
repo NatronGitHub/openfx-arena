@@ -162,7 +162,7 @@ HEADERS += \
             Magick/MagickPlugin.h
 SOURCES += \
             Extra/OpenRaster.cpp \
-            Extra/ReadSVG.cpp \
+            ReadSVG/ReadSVG.cpp \
             Extra/ReadKrita.cpp \
             Extra/ReadCDR.cpp \
             Extra/TextFX.cpp \

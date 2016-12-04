@@ -86,6 +86,7 @@ class ReadSVGPlugin : public GenericReaderPlugin
 public:
     ReadSVGPlugin(OfxImageEffectHandle handle, const std::vector<std::string>& extensions);
     virtual ~ReadSVGPlugin();
+    virtual void restoreStateFromParams() OVERRIDE FINAL;
 private:
     virtual bool isVideoStream(const std::string& /*filename*/) OVERRIDE FINAL { return false; }
     virtual void decode(const std::string& filename, OfxTime time, int view, bool isPlayback, const OfxRectI& renderWindow, float *pixelData, const OfxRectI& bounds,
@@ -111,8 +112,8 @@ private:
     virtual void decodePlane(const std::string& filename, OfxTime time, int view, bool isPlayback, const OfxRectI& renderWindow, float *pixelData, const OfxRectI& bounds, OFX::PixelComponentEnum pixelComponents, int pixelComponentCount, const std::string& rawComponents, int rowBytes) OVERRIDE FINAL;
     virtual void getClipComponents(const OFX::ClipComponentsArguments& args, OFX::ClipComponentsSetter& clipComponents) OVERRIDE FINAL;
     virtual bool getFrameBounds(const std::string& filename, OfxTime time, OfxRectI *bounds, OfxRectI* format, double *par, std::string *error, int *tile_width, int *tile_height) OVERRIDE FINAL;
-    virtual void restoreState(const std::string& filename) OVERRIDE FINAL;
-    virtual void onInputFileChanged(const std::string& newFile, bool throwErrors, bool setColorSpace, OFX::PreMultiplicationEnum *premult, OFX::PixelComponentEnum *components, int *componentCount) OVERRIDE FINAL;
+    virtual bool guessParamsFromFilename(const std::string& filename, std::string *colorspace, OFX::PreMultiplicationEnum *filePremult, OFX::PixelComponentEnum *components, int *componentCount) OVERRIDE FINAL;
+    virtual void changedFilename(const OFX::InstanceChangedArgs &args) OVERRIDE FINAL;
     void getLayers(xmlNode *node, std::vector<std::string> *layers);
     OFX::IntParam *_dpi;
     std::vector<std::string> imageLayers;
@@ -149,6 +150,90 @@ false
 
 ReadSVGPlugin::~ReadSVGPlugin()
 {
+}
+
+void
+ReadSVGPlugin::restoreStateFromParams()
+{
+    GenericReaderPlugin::restoreStateFromParams();
+
+    int startingTime = getStartingTime();
+    std::string filename;
+    OfxStatus st = getFilenameAtTime(startingTime, &filename);
+    if (st == kOfxStatOK) {
+        if (!filename.empty()) {
+            imageLayers.clear();
+            bool cdr = isCDR(filename);
+            if (isPDF(filename)) {
+                GError *error = NULL;
+                PopplerDocument *document = NULL;
+                gchar *absolute, *uri;
+                absolute = g_strdup(filename.c_str());
+                uri = g_filename_to_uri(absolute, NULL, &error);
+                free(absolute);
+                document = poppler_document_new_from_file(uri, NULL, &error);
+                if (error != NULL) {
+                    setPersistentMessage(OFX::Message::eMessageError, "", "Failed to read PDF");
+                } else {
+                    imageLayers.clear();
+                    int pages = 0;
+                    pages = poppler_document_get_n_pages(document);
+                    if (pages<0) {
+                        pages=0;
+                    }
+                    for (int i = 0; i < pages; i++) {
+                        std::ostringstream pageName;
+                        pageName << i;
+                        imageLayers.push_back(pageName.str());
+                    }
+                }
+                g_object_unref(document);
+                error = NULL;
+            } else {
+                std::ostringstream stream;
+                if (cdr) {
+                    librevenge::RVNGFileStream input(filename.c_str());
+                    if (!libcdr::CDRDocument::isSupported(&input)) {
+                        setPersistentMessage(OFX::Message::eMessageError, "", "Unsupported file format");
+                        OFX::throwSuiteStatusException(kOfxStatErrFormat);
+                    }
+                    librevenge::RVNGStringVector output;
+                    librevenge::RVNGSVGDrawingGenerator generator(output, "svg");
+                    if (!libcdr::CDRDocument::parse(&input, &generator)) {
+                        setPersistentMessage(OFX::Message::eMessageError, "", "SVG generation failed");
+                        OFX::throwSuiteStatusException(kOfxStatErrFormat);
+                    }
+                    if (output.empty()) {
+                        setPersistentMessage(OFX::Message::eMessageError, "", "No SVG document generated");
+                        OFX::throwSuiteStatusException(kOfxStatErrFormat);
+                    }
+                    stream << "<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"no\"?>";
+                    for (unsigned k = 0; k<output.size(); ++k) {
+                        stream << output[k].cstr();
+                    }
+                } else  {
+                    xmlDocPtr doc;
+                    doc = xmlParseFile(filename.c_str());
+                    xmlNode *root_element = NULL;
+                    root_element = xmlDocGetRootElement(doc);
+                    getLayers(root_element,&imageLayers);
+                    xmlFreeDoc(doc);
+                }
+                GError *error = NULL;
+                RsvgHandle *handle;
+                if (cdr) {
+                    handle=rsvg_handle_new_from_data((guint8 *)stream.str().c_str(), stream.str().size(), &error);
+                } else {
+                    handle=rsvg_handle_new_from_file(filename.c_str(), &error);
+                }
+                if (error != NULL) {
+                    setPersistentMessage(OFX::Message::eMessageError, "", "Failed to read SVG");
+                }
+                g_object_unref(handle);
+                error = NULL;
+            }
+        }
+    }
 }
 
 void
@@ -520,12 +605,27 @@ bool ReadSVGPlugin::getFrameBounds(const std::string& filename,
     return true;
 }
 
-void
-ReadSVGPlugin::restoreState(const std::string& filename)
+bool
+ReadSVGPlugin::guessParamsFromFilename(const std::string& /*newFile*/,
+                                       std::string *colorspace,
+                                       OFX::PreMultiplicationEnum *filePremult,
+                                       OFX::PixelComponentEnum *components,
+                                       int *componentCount)
 {
+    assert(colorspace && filePremult && components && componentCount);
+# ifdef OFX_IO_USING_OCIO
+    *colorspace = "sRGB";
+# endif
+    int startingTime = getStartingTime();
+    std::string filename;
+    OfxStatus st = getFilenameAtTime(startingTime, &filename);
+    if ( st != kOfxStatOK || filename.empty() ) {
+        return false;
+    }
+
     if (!filename.empty()) {
-        bool cdr = isCDR(filename);
         imageLayers.clear();
+        bool cdr = isCDR(filename);
         if (isPDF(filename)) {
             GError *error = NULL;
             PopplerDocument *document = NULL;
@@ -594,27 +694,57 @@ ReadSVGPlugin::restoreState(const std::string& filename)
             g_object_unref(handle);
             error = NULL;
         }
-    } else {
-        setPersistentMessage(OFX::Message::eMessageError, "", "Empty and/or corrupt image");
-    }
-}
-
-void ReadSVGPlugin::onInputFileChanged(const std::string& newFile,
-                                  bool /*throwErrors*/,
-                                  bool setColorSpace,
-                                  OFX::PreMultiplicationEnum *premult,
-                                  OFX::PixelComponentEnum *components,int */*componentCount*/)
-{
-    assert(premult && components);
-    restoreState(newFile);
-    if (setColorSpace) {
-# ifdef OFX_IO_USING_OCIO
-        _ocio->setInputColorspace("sRGB");
-# endif
     }
 
     *components = OFX::ePixelComponentRGBA;
-    *premult = OFX::eImageUnPreMultiplied;
+    *filePremult = OFX::eImageUnPreMultiplied;
+
+    return true;
+}
+
+void
+ReadSVGPlugin::changedFilename(const OFX::InstanceChangedArgs &args)
+{
+    GenericReaderPlugin::changedFilename(args);
+
+    int startingTime = getStartingTime();
+    std::string filename;
+    OfxStatus st = getFilenameAtTime(startingTime, &filename);
+    if ( st != kOfxStatOK || filename.empty() ) {
+        setPersistentMessage(OFX::Message::eMessageError, "", "No filename");
+        OFX::throwSuiteStatusException(kOfxStatErrFormat);
+    }
+    imageLayers.clear();
+    if (isPDF(filename)) {
+        GError *error = NULL;
+        PopplerDocument *document = NULL;
+        gchar *absolute, *uri;
+        absolute = g_strdup(filename.c_str());
+        uri = g_filename_to_uri(absolute, NULL, &error);
+        free(absolute);
+        document = poppler_document_new_from_file(uri, NULL, &error);
+        if (error == NULL) {
+            int pages = 0;
+            pages = poppler_document_get_n_pages(document);
+            if (pages<0) {
+                pages=0;
+            }
+            for (int i = 0; i < pages; i++) {
+                std::ostringstream pageName;
+                pageName << i;
+                imageLayers.push_back(pageName.str());
+            }
+        }
+        g_object_unref(document);
+        error = NULL;
+    } else if (isSVG(filename)) {
+        xmlDocPtr doc;
+        doc = xmlParseFile(filename.c_str());
+        xmlNode *root_element = NULL;
+        root_element = xmlDocGetRootElement(doc);
+        getLayers(root_element,&imageLayers);
+        xmlFreeDoc(doc);
+    }
 }
 
 bool
@@ -737,7 +867,7 @@ void ReadSVGPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, C
         page->addChild(*param);
     }
 
-    GenericReaderDescribeInContextEnd(desc, context, page, "reference", "reference");
+    GenericReaderDescribeInContextEnd(desc, context, page, "sRGB", "reference");
 }
 
 /** @brief The create instance function, the plugin must return an object derived from the \ref OFX::ImageEffect class */
@@ -745,7 +875,7 @@ ImageEffect* ReadSVGPluginFactory::createInstance(OfxImageEffectHandle handle,
                                      ContextEnum /*context*/)
 {
     ReadSVGPlugin* ret =  new ReadSVGPlugin(handle, _extensions);
-    ret->restoreStateFromParameters();
+    ret->restoreStateFromParams();
     return ret;
 }
 
