@@ -67,8 +67,8 @@
 
 #define kParamDpi "dpi"
 #define kParamDpiLabel "DPI"
-#define kParamDpiHint "Dots-per-inch (90 is default)"
-#define kParamDpiDefault 90
+#define kParamDpiHint "Dots-per-inch (96 is default)"
+#define kParamDpiDefault 96
 
 #define kSupportsRGBA true
 #define kSupportsRGB false
