@@ -14,8 +14,6 @@ net.fxarena.opencl.Ripple.cl
 
 include $(SRCDIR)/Makefile.master
 
-VPATH += $(SRCDIR)/ArenaCL
-
 CXXFLAGS += $(OPENCL_CXXFLAGS)
 LINKFLAGS += $(OPENCL_LINKFLAGS)
 

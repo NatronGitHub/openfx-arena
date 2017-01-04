@@ -14,8 +14,6 @@ net.fxarena.opencl.Duotone.cl
 
 include $(SRCDIR)/Makefile.master
 
-VPATH += $(SRCDIR)/ArenaCL
-
 CXXFLAGS += $(OPENCL_CXXFLAGS)
 LINKFLAGS += $(OPENCL_LINKFLAGS)
 

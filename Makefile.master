@@ -64,7 +64,8 @@ CURL_CXXFLAGS += $(shell pkg-config libcurl --cflags)
 CURL_LINKFLAGS += $(shell pkg-config libcurl --libs --static)
 
 # opencl
-OPENCL_CXXFLAGS += -I$(SRCDIR)/ArenaCL -I$(SRCDIR)/OpenCL
+VPATH += $(SRCDIR)/OpenCL
+OPENCL_CXXFLAGS += -I$(SRCDIR)/OpenCL
 OS := $(shell uname -s)
 ifeq ($(OS),Darwin)
 OPENCL_LINKFLAGS += -framework OpenCL

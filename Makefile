@@ -1,4 +1,4 @@
-SUBDIRS = Bundle
+SUBDIRS = Bundle BundleCL
 
 all: subdirs
 
