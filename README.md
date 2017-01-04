@@ -7,14 +7,11 @@ Plugins
 =======
 
  * OpenRaster
- * ReadCDR
  * ReadKrita
- * ReadSVG
- * ReadPDF
+ * ReadSVG(PDF/CDR)
  * Text
  * Arc
  * Charcoal
- * Edges
  * Implode
  * Modulate
  * Oilpaint
@@ -29,15 +26,11 @@ Plugins
  * Texture
  * Tile
  * Wave
- * Looks
- * Bulge
- * Glare
+ * Bulge (wip)
+ * Glare (wip)
  * Ripple
- * Twirl
- * Sharpen
- * Cartoon
+ * Twirl (wip)
  * Duotone
- * Edge
 
 Requirements
 ============
@@ -53,11 +46,8 @@ Requirements
  * librevenge
  * poppler-glib
  * lcms 2.x
- * ImageMagick (MagickCore/Magick++) 6.9.2/7.0.3 with Q32, HDRI, lcms2, zlib, freetype, libpng
-   * Will build on older versions, but some features/plugins may not be available
-   * Quantum depth under 32 will work, but it not recommended, note that most distros ship 16
-   * Will work without HDRI, but it's not recommended
- * OpenCL 1.2 compatible hardware and drivers (OCL plugins)
+ * ImageMagick (MagickCore/Magick++) 6.9.2/7.0.3 with Q16/Q32, HDRI, lcms2, zlib, freetype, libpng
+ * OpenCL 1.1 compatible hardware and drivers
 
 
 Build
