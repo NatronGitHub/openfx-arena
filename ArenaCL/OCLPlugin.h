@@ -18,15 +18,13 @@
 #ifndef OCLPlugin_h
 #define OCLPlugin_h
 
+#define CL_USE_DEPRECATED_OPENCL_1_1_APIS
+#define CL_USE_DEPRECATED_OPENCL_1_2_APIS
+
 #include "ofxsImageEffect.h"
 #include "ofxsMacros.h"
 #include <iostream>
-
-#if defined(__APPLE__) || defined(__MACOSX)
-#include "OpenCL/mac/cl.hpp"
-#else
-#include <CL/cl.hpp>
-#endif
+#include <cl.hpp>
 
 #define kParamOCLDevice "device"
 #define kParamOCLDeviceLabel "OpenCL Device"

@@ -69,8 +69,8 @@ OS := $(shell uname -s)
 ifeq ($(OS),Darwin)
 OPENCL_LINKFLAGS += -framework OpenCL
 else
-OPENCL_CXXFLAGS += -I$(SRCDIR)/ArenaCL/OpenCL
-OPENCL_LINKFLAGS += -lOpenCL -L$(SRCDIR)/ArenaCL/OpenCL/lib$(BITS)
+OPENCL_CXXFLAGS += -I$(SRCDIR)/OpenCL
+OPENCL_LINKFLAGS += -lOpenCL -L$(SRCDIR)/OpenCL/lib$(BITS)
 endif
 
 # mingw
