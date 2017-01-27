@@ -30,6 +30,7 @@
 #include "GenericReader.h"
 #include "GenericOCIO.h"
 #include "ofxsMacros.h"
+#include "ofxsMultiPlane.h"
 #include "ofxsImageEffect.h"
 
 #define kPluginName "ReadSVG"
@@ -175,17 +176,16 @@ ReadSVGPlugin::getClipComponents(const OFX::ClipComponentsArguments& args, OFX::
     if (imageLayers.size()>0 && gHostIsNatron) {
         for (int i = 0; i < (int)imageLayers.size(); i++) {
             if (!imageLayers[i].empty()) {
-                std::string component(kNatronOfxImageComponentsPlane);
-                component.append(imageLayers[i]);
-                component.append(kNatronOfxImageComponentsPlaneChannel);
-                component.append("R");
-                component.append(kNatronOfxImageComponentsPlaneChannel);
-                component.append("G");
-                component.append(kNatronOfxImageComponentsPlaneChannel);
-                component.append("B");
-                component.append(kNatronOfxImageComponentsPlaneChannel);
-                component.append("A");
-                clipComponents.addClipComponents(*_outputClip, component);
+
+                std::string layerName;
+                {
+                    std::ostringstream ss;
+                    ss << imageLayers[i];
+                    layerName = ss.str();
+                }
+                const char* components[4] = {"R","G","B", "A"};
+                OFX::MultiPlane::ImagePlaneDesc plane(layerName, layerName, "", components, 4);
+                clipComponents.addClipComponents(*_outputClip, OFX::MultiPlane::ImagePlaneDesc::mapPlaneToOFXPlaneString(plane));
             }
         }
     }
@@ -207,14 +207,9 @@ ReadSVGPlugin::decodePlane(const std::string& filename, OfxTime time, int /*view
 
     std::string layerID;
     if (gHostIsNatron) {
-        std::string layerName;
-        std::vector<std::string> layerChannels = OFX::mapPixelComponentCustomToLayerChannels(rawComponents);
-        int numChannels = layerChannels.size();
-        if (numChannels==5) // layer+R+G+B+A
-            layerName=layerChannels[0];
-        if (!layerName.empty()) {
-            layerID = layerName;
-        }
+        OFX::MultiPlane::ImagePlaneDesc plane, pairedPlane;
+        OFX::MultiPlane::ImagePlaneDesc::mapOFXComponentsTypeStringToPlanes(rawComponents, &plane, &pairedPlane);
+        layerID = plane.getPlaneLabel();
     }
 
     GError *error = NULL;
