@@ -51,7 +51,6 @@ config.pri
 [Dd]ebug/
 [Rr]elease/
 x64/
-l/
 build/
 [Bb]in/
 [Oo]bj/

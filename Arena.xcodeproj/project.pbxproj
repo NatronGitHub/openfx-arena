@@ -9,8 +9,6 @@
 /* Begin PBXBuildFile section */
 		1E2F4DAB189295F600F4CE25 /* CoreFoundation.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = D74E62491875A7A400D8FA13 /* CoreFoundation.framework */; };
 		1E9B5EFC198A3D040095C8AA /* OpenGL.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 1E9B5EFA198A3D040095C8AA /* OpenGL.framework */; };
-		AC66E3201E3B5A9700EE6BE0 /* lodepng.cpp in Sources */ = {isa = PBXBuildFile; fileRef = AC66E31D1E3B5A9700EE6BE0 /* lodepng.cpp */; };
-		AC66E3211E3B5A9700EE6BE0 /* Makefile in Sources */ = {isa = PBXBuildFile; fileRef = AC66E31F1E3B5A9700EE6BE0 /* Makefile */; };
 		AC7F58251DA40E1B00939A29 /* ofxsGenerator.cpp in Sources */ = {isa = PBXBuildFile; fileRef = ACE3CEC11BB7E19D0042BAF9 /* ofxsGenerator.cpp */; };
 		AC7F58261DA40E1D00939A29 /* ofxsLut.cpp in Sources */ = {isa = PBXBuildFile; fileRef = ACE3CEC41BB7E19D0042BAF9 /* ofxsLut.cpp */; };
 		AC7F58271DA40E2300939A29 /* ofxsOGLFontData.cpp in Sources */ = {isa = PBXBuildFile; fileRef = ACE3CECC1BB7E19D0042BAF9 /* ofxsOGLFontData.cpp */; };
@@ -64,6 +62,7 @@
 		AC7F58631DA40E6600939A29 /* CoreFoundation.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = D74E62491875A7A400D8FA13 /* CoreFoundation.framework */; };
 		AC7F58641DA40E6600939A29 /* OpenGL.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 1E9B5EFA198A3D040095C8AA /* OpenGL.framework */; };
 		AC7F586B1DA40E7900939A29 /* OpenRaster.cpp in Sources */ = {isa = PBXBuildFile; fileRef = AC7F57371DA40DA900939A29 /* OpenRaster.cpp */; };
+		AC7F586C1DA40E7B00939A29 /* ReadCDR.cpp in Sources */ = {isa = PBXBuildFile; fileRef = AC7F57381DA40DA900939A29 /* ReadCDR.cpp */; };
 		AC7F586D1DA40E7D00939A29 /* ReadKrita.cpp in Sources */ = {isa = PBXBuildFile; fileRef = AC7F57391DA40DA900939A29 /* ReadKrita.cpp */; };
 		AC7F586E1DA40E7F00939A29 /* ReadPDF.cpp in Sources */ = {isa = PBXBuildFile; fileRef = AC7F573A1DA40DA900939A29 /* ReadPDF.cpp */; };
 		AC7F586F1DA40E8300939A29 /* ReadSVG.cpp in Sources */ = {isa = PBXBuildFile; fileRef = AC7F573B1DA40DA900939A29 /* ReadSVG.cpp */; };
@@ -730,10 +729,6 @@
 /* Begin PBXFileReference section */
 		1E2F4DCA189295F600F4CE25 /* Extra.ofx.bundle */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = Extra.ofx.bundle; sourceTree = BUILT_PRODUCTS_DIR; };
 		1E9B5EFA198A3D040095C8AA /* OpenGL.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = OpenGL.framework; path = System/Library/Frameworks/OpenGL.framework; sourceTree = SDKROOT; };
-		AC66E31C1E3B5A9700EE6BE0 /* Info.plist */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
-		AC66E31D1E3B5A9700EE6BE0 /* lodepng.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = lodepng.cpp; sourceTree = "<group>"; };
-		AC66E31E1E3B5A9700EE6BE0 /* lodepng.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = lodepng.h; sourceTree = "<group>"; };
-		AC66E31F1E3B5A9700EE6BE0 /* Makefile */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.make; path = Makefile; sourceTree = "<group>"; };
 		AC7F57281DA40DA900939A29 /* fr.inria.openfx.OpenRaster.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = fr.inria.openfx.OpenRaster.png; sourceTree = "<group>"; };
 		AC7F57291DA40DA900939A29 /* fr.inria.openfx.OpenRaster.svg */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.xml; path = fr.inria.openfx.OpenRaster.svg; sourceTree = "<group>"; };
 		AC7F572A1DA40DA900939A29 /* fr.inria.openfx.ReadCDR.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = fr.inria.openfx.ReadCDR.png; sourceTree = "<group>"; };
@@ -2066,17 +2061,6 @@
 /* End PBXFrameworksBuildPhase section */
 
 /* Begin PBXGroup section */
-		AC66E31A1E3B5A9700EE6BE0 /* Bundle */ = {
-			isa = PBXGroup;
-			children = (
-				AC66E31C1E3B5A9700EE6BE0 /* Info.plist */,
-				AC66E31D1E3B5A9700EE6BE0 /* lodepng.cpp */,
-				AC66E31E1E3B5A9700EE6BE0 /* lodepng.h */,
-				AC66E31F1E3B5A9700EE6BE0 /* Makefile */,
-			);
-			path = Bundle;
-			sourceTree = "<group>";
-		};
 		AC7F57271DA40DA900939A29 /* Extra */ = {
 			isa = PBXGroup;
 			children = (
@@ -2710,11 +2694,11 @@
 		ACE3CA1B1BB7E19A0042BAF9 /* Products */ = {
 			isa = PBXGroup;
 			children = (
-				ACE3CF6C1BB7E19D0042BAF9 /* basic.ofx.bundle */,
+				ACE3CF6C1BB7E19D0042BAF9 /* basics.ofx.bundle */,
 				ACE3CF6E1BB7E19D0042BAF9 /* invert.ofx.bundle */,
-				ACE3CF701BB7E19D0042BAF9 /* custom.ofx.bundle */,
+				ACE3CF701BB7E19D0042BAF9 /* gain.ofx.bundle */,
 				ACE3CF721BB7E19D0042BAF9 /* saturation.ofx.bundle */,
-				ACE3CF741BB7E19D0042BAF9 /* rectangle.ofx.bundle */,
+				ACE3CF741BB7E19D0042BAF9 /* circle.ofx.bundle */,
 			);
 			name = Products;
 			sourceTree = "<group>";
@@ -3990,11 +3974,11 @@
 		ACE3CCA91BB7E19C0042BAF9 /* Products */ = {
 			isa = PBXGroup;
 			children = (
-				ACE3CF5C1BB7E19D0042BAF9 /* basic.ofx.bundle */,
+				ACE3CF5C1BB7E19D0042BAF9 /* basics.ofx.bundle */,
 				ACE3CF5E1BB7E19D0042BAF9 /* invert.ofx.bundle */,
-				ACE3CF601BB7E19D0042BAF9 /* custom.ofx.bundle */,
+				ACE3CF601BB7E19D0042BAF9 /* gain.ofx.bundle */,
 				ACE3CF621BB7E19D0042BAF9 /* saturation.ofx.bundle */,
-				ACE3CF641BB7E19D0042BAF9 /* rectangle.ofx.bundle */,
+				ACE3CF641BB7E19D0042BAF9 /* circle.ofx.bundle */,
 			);
 			name = Products;
 			sourceTree = "<group>";
@@ -4875,7 +4859,6 @@
 		D74E623B1875A79700D8FA13 = {
 			isa = PBXGroup;
 			children = (
-				AC66E31A1E3B5A9700EE6BE0 /* Bundle */,
 				AC7F57B01DA40DC300939A29 /* OCL */,
 				AC7F57441DA40DB300939A29 /* Magick */,
 				AC7F57271DA40DA900939A29 /* Extra */,
@@ -5158,10 +5141,9 @@
 			remoteRef = ACE3CF531BB7E19D0042BAF9 /* PBXContainerItemProxy */;
 			sourceTree = BUILT_PRODUCTS_DIR;
 		};
-		ACE3CF5C1BB7E19D0042BAF9 /* basic.ofx.bundle */ = {
+		ACE3CF5C1BB7E19D0042BAF9 /* basics.ofx.bundle */ = {
 			isa = PBXReferenceProxy;
 			fileType = wrapper.cfbundle;
-			name = basic.ofx.bundle;
 			path = basics.ofx.bundle;
 			remoteRef = ACE3CF5B1BB7E19D0042BAF9 /* PBXContainerItemProxy */;
 			sourceTree = BUILT_PRODUCTS_DIR;
@@ -5173,10 +5155,9 @@
 			remoteRef = ACE3CF5D1BB7E19D0042BAF9 /* PBXContainerItemProxy */;
 			sourceTree = BUILT_PRODUCTS_DIR;
 		};
-		ACE3CF601BB7E19D0042BAF9 /* custom.ofx.bundle */ = {
+		ACE3CF601BB7E19D0042BAF9 /* gain.ofx.bundle */ = {
 			isa = PBXReferenceProxy;
 			fileType = wrapper.cfbundle;
-			name = custom.ofx.bundle;
 			path = gain.ofx.bundle;
 			remoteRef = ACE3CF5F1BB7E19D0042BAF9 /* PBXContainerItemProxy */;
 			sourceTree = BUILT_PRODUCTS_DIR;
@@ -5188,18 +5169,16 @@
 			remoteRef = ACE3CF611BB7E19D0042BAF9 /* PBXContainerItemProxy */;
 			sourceTree = BUILT_PRODUCTS_DIR;
 		};
-		ACE3CF641BB7E19D0042BAF9 /* rectangle.ofx.bundle */ = {
+		ACE3CF641BB7E19D0042BAF9 /* circle.ofx.bundle */ = {
 			isa = PBXReferenceProxy;
 			fileType = wrapper.cfbundle;
-			name = rectangle.ofx.bundle;
 			path = circle.ofx.bundle;
 			remoteRef = ACE3CF631BB7E19D0042BAF9 /* PBXContainerItemProxy */;
 			sourceTree = BUILT_PRODUCTS_DIR;
 		};
-		ACE3CF6C1BB7E19D0042BAF9 /* basic.ofx.bundle */ = {
+		ACE3CF6C1BB7E19D0042BAF9 /* basics.ofx.bundle */ = {
 			isa = PBXReferenceProxy;
 			fileType = wrapper.cfbundle;
-			name = basic.ofx.bundle;
 			path = basics.ofx.bundle;
 			remoteRef = ACE3CF6B1BB7E19D0042BAF9 /* PBXContainerItemProxy */;
 			sourceTree = BUILT_PRODUCTS_DIR;
@@ -5211,10 +5190,9 @@
 			remoteRef = ACE3CF6D1BB7E19D0042BAF9 /* PBXContainerItemProxy */;
 			sourceTree = BUILT_PRODUCTS_DIR;
 		};
-		ACE3CF701BB7E19D0042BAF9 /* custom.ofx.bundle */ = {
+		ACE3CF701BB7E19D0042BAF9 /* gain.ofx.bundle */ = {
 			isa = PBXReferenceProxy;
 			fileType = wrapper.cfbundle;
-			name = custom.ofx.bundle;
 			path = gain.ofx.bundle;
 			remoteRef = ACE3CF6F1BB7E19D0042BAF9 /* PBXContainerItemProxy */;
 			sourceTree = BUILT_PRODUCTS_DIR;
@@ -5226,10 +5204,9 @@
 			remoteRef = ACE3CF711BB7E19D0042BAF9 /* PBXContainerItemProxy */;
 			sourceTree = BUILT_PRODUCTS_DIR;
 		};
-		ACE3CF741BB7E19D0042BAF9 /* rectangle.ofx.bundle */ = {
+		ACE3CF741BB7E19D0042BAF9 /* circle.ofx.bundle */ = {
 			isa = PBXReferenceProxy;
 			fileType = wrapper.cfbundle;
-			name = rectangle.ofx.bundle;
 			path = circle.ofx.bundle;
 			remoteRef = ACE3CF731BB7E19D0042BAF9 /* PBXContainerItemProxy */;
 			sourceTree = BUILT_PRODUCTS_DIR;
@@ -5494,15 +5471,14 @@
 			buildActionMask = 2147483647;
 			files = (
 				AC7F586B1DA40E7900939A29 /* OpenRaster.cpp in Sources */,
+				AC7F586C1DA40E7B00939A29 /* ReadCDR.cpp in Sources */,
 				AC7F586D1DA40E7D00939A29 /* ReadKrita.cpp in Sources */,
 				AC7F586E1DA40E7F00939A29 /* ReadPDF.cpp in Sources */,
 				AC7F586F1DA40E8300939A29 /* ReadSVG.cpp in Sources */,
 				AC7F58701DA40E8400939A29 /* TextFX.cpp in Sources */,
-				AC66E3211E3B5A9700EE6BE0 /* Makefile in Sources */,
 				AC7F58251DA40E1B00939A29 /* ofxsGenerator.cpp in Sources */,
 				AC7F58261DA40E1D00939A29 /* ofxsLut.cpp in Sources */,
 				AC7F58281DA40E2500939A29 /* ofxsOGLTextRenderer.cpp in Sources */,
-				AC66E3201E3B5A9700EE6BE0 /* lodepng.cpp in Sources */,
 				AC7F58291DA40E2700939A29 /* ofxsRectangleInteract.cpp in Sources */,
 				AC7F582A1DA40E2A00939A29 /* ofxsTracking.cpp in Sources */,
 				AC7F582B1DA40E2C00939A29 /* ofxsTransform3x3.cpp in Sources */,
@@ -5615,23 +5591,6 @@
 					"$(MAGICK_PATH)/include/ImageMagick-6",
 					"$(POVRAY_PATH)/include/PovRay",
 					"$(ZIP_PATH)",
-					"$(PANGO_PATH)/include/pango-1.0",
-					"$(SVG_PATH)/include/librsvg-2.0",
-					"$(GLIB_PATH)/include/glib-2.0",
-					"$(POPPLER_PATH)/include/poppler",
-					"$(POPPLER_PATH)/include/poppler/glib",
-					"$(CAIRO_PATH)/include/cairo",
-					"$(ZIP_PATH)/include",
-					"$(ZIP_CONF)",
-					"$(LIBXML_PATH)/include/libxml2",
-					"$(GLIB_CONFIG)",
-					"$(FREETYPE_PATH)/include/freetype2",
-					"$(GDKPIXBUF_PATH)/include/gdk-pixbuf-2.0",
-					../Bundle,
-					"$(LIBREVENGE_PATH)/include/librevenge-0.0",
-					"$(LIBCDR_PATH)/include/libcdr-0.0",
-					"$(LIBWPD_PATH)/include/libwpd-0.9",
-					"$(LIBWPG_PATH)/include/libwpg-0.2",
 				);
 				INFOPLIST_FILE = Extra/Info.plist;
 				OTHER_LDFLAGS = (
@@ -5694,23 +5653,6 @@
 					"$(MAGICK_PATH)/include/ImageMagick-6",
 					"$(POVRAY_PATH)/include/PovRay",
 					"$(ZIP_PATH)",
-					"$(PANGO_PATH)/include/pango-1.0",
-					"$(SVG_PATH)/include/librsvg-2.0",
-					"$(GLIB_PATH)/include/glib-2.0",
-					"$(POPPLER_PATH)/include/poppler",
-					"$(POPPLER_PATH)/include/poppler/glib",
-					"$(CAIRO_PATH)/include/cairo",
-					"$(ZIP_PATH)/include",
-					"$(ZIP_CONF)",
-					"$(LIBXML_PATH)/include/libxml2",
-					"$(GLIB_CONFIG)",
-					"$(FREETYPE_PATH)/include/freetype2",
-					"$(GDKPIXBUF_PATH)/include/gdk-pixbuf-2.0",
-					../Bundle,
-					"$(LIBREVENGE_PATH)/include/librevenge-0.0",
-					"$(LIBCDR_PATH)/include/libcdr-0.0",
-					"$(LIBWPD_PATH)/include/libwpd-0.9",
-					"$(LIBWPG_PATH)/include/libwpg-0.2",
 				);
 				INFOPLIST_FILE = Extra/Info.plist;
 				OTHER_LDFLAGS = (

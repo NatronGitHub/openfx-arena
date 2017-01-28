@@ -18,7 +18,6 @@
 #include <poppler.h>
 #include <poppler/GlobalParams.h>
 #include <cairo.h>
-#include <string>
 
 #include <iostream>
 #include <stdlib.h>
@@ -43,7 +42,6 @@
 #include "GenericReader.h"
 #include "GenericOCIO.h"
 #include "ofxsMacros.h"
-#include "ofxsMultiPlane.h"
 #include "ofxsImageEffect.h"
 
 #define kPluginName "ReadPDF"
@@ -225,15 +223,19 @@ ReadPDFPlugin::getClipComponents(const OFX::ClipComponentsArguments& args, OFX::
     clipComponents.setPassThroughClip(NULL, args.time, args.view);
     if (imageLayers.size()>0 && gHostIsNatron) {
         for (int i = 0; i < (int)imageLayers.size(); i++) {
-            std::string layerName;
-            {
-                std::ostringstream ss;
-                ss << imageLayers[i];
-                layerName = ss.str();
-            }
-            const char* components[4] = {"R","G","B", "A"};
-            OFX::MultiPlane::ImagePlaneDesc plane(layerName, layerName, "", components, 4);
-            clipComponents.addClipComponents(*_outputClip, OFX::MultiPlane::ImagePlaneDesc::mapPlaneToOFXPlaneString(plane));
+            std::ostringstream layerName;
+            layerName << imageLayers[i];
+            std::string component(kNatronOfxImageComponentsPlane);
+            component.append(layerName.str());
+            component.append(kNatronOfxImageComponentsPlaneChannel);
+            component.append("R");
+            component.append(kNatronOfxImageComponentsPlaneChannel);
+            component.append("G");
+            component.append(kNatronOfxImageComponentsPlaneChannel);
+            component.append("B");
+            component.append(kNatronOfxImageComponentsPlaneChannel);
+            component.append("A");
+            clipComponents.addClipComponents(*_outputClip, component);
         }
     }
 }
@@ -265,11 +267,13 @@ ReadPDFPlugin::decodePlane(const std::string& filename, OfxTime time, int /*view
 
     int layer = 0;
     if (gHostIsNatron) {
-        OFX::MultiPlane::ImagePlaneDesc plane, pairedPlane;
-        OFX::MultiPlane::ImagePlaneDesc::mapOFXComponentsTypeStringToPlanes(rawComponents, &plane, &pairedPlane);
-
-        if (!plane.getPlaneLabel().empty()) {
-            layer = atoi(plane.getPlaneLabel().c_str());
+        std::string layerName;
+        std::vector<std::string> layerChannels = OFX::mapPixelComponentCustomToLayerChannels(rawComponents);
+        int numChannels = layerChannels.size();
+        if (numChannels==5) // layer+R+G+B+A
+            layerName=layerChannels[0];
+        if (!layerName.empty()) {
+            layer = atoi(layerName.c_str());
         }
     }
 
