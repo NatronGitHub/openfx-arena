@@ -50,7 +50,7 @@
 #define kParamFontNameHint "The name of the font to be used"
 #define kParamFontNameDefault "Arial"
 
-#ifdef IM7
+#if MagickLibVersion >= 0x700
 #define kParamFontNameAltDefault "DejaVu-Sans-Book" // failsafe on Linux/BSD
 #else
 #define kParamFontNameAltDefault "DejaVu-Sans" // failsafe on Linux/BSD
@@ -284,7 +284,7 @@ void PolaroidPlugin::render(const OFX::RenderArguments &args)
     image.borderColor("white"); // TODO param
     image.backgroundColor("black"); // TODO param
     image.font(fontName);
-#ifdef IM7
+#if MagickLibVersion >= 0x700
     image.polaroid(text,angle,MagickCore::UndefinedInterpolatePixel);
 #else
     image.polaroid(text,angle);
@@ -306,7 +306,7 @@ void PolaroidPlugin::render(const OFX::RenderArguments &args)
     // return image
     if (dstClip_ && dstClip_->isConnected()) {
         output.composite(image, 0, 0, Magick::OverCompositeOp);
-#ifdef IM7
+#if MagickLibVersion >= 0x700
         output.composite(image, 0, 0, Magick::CopyAlphaCompositeOp);
 #else
         output.composite(image, 0, 0, Magick::CopyOpacityCompositeOp);

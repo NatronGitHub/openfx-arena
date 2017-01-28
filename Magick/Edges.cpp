@@ -320,7 +320,7 @@ void EdgesPlugin::render(const OFX::RenderArguments &args)
 
     // multiply
     if (brightness>0) {
-#ifdef IM7
+#if MagickLibVersion >= 0x700
         image.evaluate(Magick::RedChannel,Magick::MultiplyEvaluateOperator,brightness);
         image.evaluate(Magick::GreenChannel,Magick::MultiplyEvaluateOperator,brightness);
         image.evaluate(Magick::BlueChannel,Magick::MultiplyEvaluateOperator,brightness);
@@ -334,7 +334,7 @@ void EdgesPlugin::render(const OFX::RenderArguments &args)
     // return image
     if (dstClip_ && dstClip_->isConnected()) {
         output.composite(image, 0, 0, Magick::OverCompositeOp);
-#ifdef IM7
+#if MagickLibVersion >= 0x700
         output.composite(image, 0, 0, Magick::CopyAlphaCompositeOp);
 #else
         output.composite(image, 0, 0, Magick::CopyOpacityCompositeOp);

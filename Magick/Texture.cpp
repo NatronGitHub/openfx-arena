@@ -264,7 +264,7 @@ void TexturePlugin::render(const OFX::RenderArguments &args)
             break;
         }
         if (effect>8 && effect<12) { // loops 1 2 3
-#ifdef IM7
+#if MagickLibVersion >= 0x700
             image.alpha(false);
 #else
             image.matte(false);
@@ -274,7 +274,7 @@ void TexturePlugin::render(const OFX::RenderArguments &args)
             image.fx("sin(u*4*pi)*100");
             image.edge(1);
             image.blur(0,10);
-#ifdef IM7
+#if MagickLibVersion >= 0x700
             image.alpha(true);
 #else
             image.matte(true);

@@ -63,7 +63,7 @@
 #define kParamFontNameHint "The name of the font to be used"
 #define kParamFontNameDefault "Arial"
 
-#ifdef IM7
+#if MagickLibVersion >= 0x700
 #define kParamFontNameAltDefault "DejaVu-Sans-Book" // failsafe on Linux/BSD
 #else
 #define kParamFontNameAltDefault "DejaVu-Sans" // failsafe on Linux/BSD
@@ -438,7 +438,7 @@ void TextPlugin::render(const OFX::RenderArguments &args)
     ytext = tmp_y + ((tmp_y+tmp_height-1) - ytext);
 
     // Setup text draw
-#ifdef IM7
+#if MagickLibVersion >= 0x700
     std::vector<Magick::Drawable> draw;
 #else
     std::list<Magick::Drawable> draw;
@@ -510,7 +510,7 @@ void TextPlugin::render(const OFX::RenderArguments &args)
         if (srcImg.get()) {
             Magick::Image input;
             input.read(width,height,"RGB",Magick::FloatPixel,(float*)srcImg->getPixelData());
-#ifdef IM7
+#if MagickLibVersion >= 0x700
             input.alpha(true);
 #else
             input.matte(true);
@@ -523,7 +523,7 @@ void TextPlugin::render(const OFX::RenderArguments &args)
     // return image
     if (dstClip_ && dstClip_->isConnected()) {
         output.composite(image, 0, 0, Magick::OverCompositeOp);
-#ifdef IM7
+#if MagickLibVersion >= 0x700
         output.composite(image, 0, 0, Magick::CopyAlphaCompositeOp);
 #else
         output.composite(image, 0, 0, Magick::CopyOpacityCompositeOp);

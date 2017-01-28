@@ -230,7 +230,7 @@ void MagickPluginHelper<SupportsRenderScale>::render(const OFX::RenderArguments 
             break;
         }
         if (matte) {
-#ifdef IM7
+#if MagickLibVersion >= 0x700
             image.alpha(false);
             image.alpha(true);
 #else
@@ -243,7 +243,7 @@ void MagickPluginHelper<SupportsRenderScale>::render(const OFX::RenderArguments 
     }
     if (_dstClip && _dstClip->isConnected()) {
         output.composite(image, 0, 0, Magick::OverCompositeOp);
-#ifdef IM7
+#if MagickLibVersion >= 0x700
         output.composite(image, 0, 0, Magick::CopyAlphaCompositeOp);
 #else
         output.composite(image, 0, 0, Magick::CopyOpacityCompositeOp);

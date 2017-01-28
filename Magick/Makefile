@@ -103,10 +103,6 @@ LINKFLAGS += \
     $(CURL_LINKFLAGS) \
     $(XML_LINKFLAGS)
 
-ifeq ($(IM),7)
-CXXFLAGS += -DIM7
-endif
-
 ifeq ($(LEGACYIM),1)
 CXXFLAGS += -DLEGACYIM -DNOMAGICKSEED
 endif

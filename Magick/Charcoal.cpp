@@ -193,7 +193,7 @@ void CharcoalPlugin::render(const OFX::RenderArguments &args)
     // return image
     if (dstClip_ && dstClip_->isConnected()) {
         output.composite(image,0,0,Magick::OverCompositeOp);
-#ifdef IM7
+#if MagickLibVersion >= 0x700
         output.composite(image, 0, 0, Magick::CopyAlphaCompositeOp);
 #else
         output.composite(image, 0, 0, Magick::CopyOpacityCompositeOp);

@@ -302,7 +302,7 @@ void ArcPlugin::render(const OFX::RenderArguments &args)
 
     // merge alpha if requested
     if (matte) {
-#ifdef IM7
+#if MagickLibVersion >= 0x700
         image.alpha(false);
         image.alpha(true);
 #else
@@ -340,7 +340,7 @@ void ArcPlugin::render(const OFX::RenderArguments &args)
     // return image
     if (dstClip_ && dstClip_->isConnected()) {
         output.composite(image, 0, 0, Magick::OverCompositeOp);
-#ifdef IM7
+#if MagickLibVersion >= 0x700
         output.composite(image, 0, 0, Magick::CopyAlphaCompositeOp);
 #else
         output.composite(image, 0, 0, Magick::CopyOpacityCompositeOp);

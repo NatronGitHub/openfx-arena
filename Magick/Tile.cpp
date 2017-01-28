@@ -247,7 +247,7 @@ void TilePlugin::render(const OFX::RenderArguments &args)
     montage.tile(grid);
 
     if (matte) {
-#ifdef IM7
+#if MagickLibVersion >= 0x700
         image.alpha(false);
         image.alpha(true);
 #else
@@ -298,7 +298,7 @@ void TilePlugin::render(const OFX::RenderArguments &args)
     // return image
     if (dstClip_ && dstClip_->isConnected()) {
         output.composite(container, 0, 0, Magick::OverCompositeOp);
-#ifdef IM7
+#if MagickLibVersion >= 0x700
         output.composite(container, 0, 0, Magick::CopyAlphaCompositeOp);
 #else
         output.composite(container, 0, 0, Magick::CopyOpacityCompositeOp);
