@@ -43,7 +43,6 @@ PLUGINOBJECTS += \
     ofxsTransform3x3.o \
     ofxsTransformInteract.o \
     ofxsShutter.o \
-    ofxsMultiPlane.o \
     GenericReader.o \
     GenericOCIO.o \
     SequenceParsing.o
