@@ -24,7 +24,6 @@
 #include "ofxsMacros.h"
 #include "ofxsMultiThread.h"
 #include "ofxsImageEffect.h"
-#include "ofxsMultiPlane.h"
 #include <lcms2.h>
 #include <dirent.h>
 #include <ofxNatron.h>
@@ -372,21 +371,21 @@ void ReadPSDPlugin::getClipComponents(const OFX::ClipComponentsArguments& args, 
         if (!_psd.empty() && _psd[0].format() == "Adobe Photoshop bitmap")
             startLayer++; // first layer in a PSD is a comp
         for (int i = startLayer; i < (int)_psd.size(); i++) {
-
-            std::string layerName;
-            {
-                std::ostringstream ss;
-                if (!_psd[i].label().empty()) {
-                    ss << _psd[i].label();
-                } else {
-                    ss << "Image Layer #" << i;
-                }
-                layerName = ss.str();
-            }
-            const char* components[4] = {"R","G","B", "A"};
-            OFX::MultiPlane::ImagePlaneDesc plane(layerName, layerName, "", components, 4);
-            clipComponents.addClipComponents(*_outputClip, OFX::MultiPlane::ImagePlaneDesc::mapPlaneToOFXPlaneString(plane));
-
+            std::ostringstream layerName;
+            layerName << _psd[i].label();
+            if (layerName.str().empty())
+                layerName << "Image Layer #" << i; // add a label if empty
+            std::string component(kNatronOfxImageComponentsPlane);
+            component.append(layerName.str());
+            component.append(kNatronOfxImageComponentsPlaneChannel);
+            component.append("R");
+            component.append(kNatronOfxImageComponentsPlaneChannel);
+            component.append("G");
+            component.append(kNatronOfxImageComponentsPlaneChannel);
+            component.append("B");
+            component.append(kNatronOfxImageComponentsPlaneChannel);
+            component.append("A");
+            clipComponents.addClipComponents(*_outputClip, component);
         }
     }
 }
@@ -409,10 +408,8 @@ void ReadPSDPlugin::decodePlane(const std::string& filename, OfxTime time, int /
     bool iccBlack = false;
     int imageLayer = 0;
     bool offsetLayer = false;
-
-    OFX::MultiPlane::ImagePlaneDesc plane, paiedPlane;
-    OFX::MultiPlane::ImagePlaneDesc::mapOFXComponentsTypeStringToPlanes(rawComponents, &plane, &paiedPlane);
-
+    std::vector<std::string> layerChannels = OFX::mapPixelComponentCustomToLayerChannels(rawComponents);
+    int numChannels = layerChannels.size();
     std::string iccProfileIn, iccProfileOut, iccProfileRGB, iccProfileCMYK, iccProfileGRAY;
     _iccInSelected->getValueAtTime(time, iccProfileIn);
     _iccOutSelected->getValueAtTime(time, iccProfileOut);
@@ -426,7 +423,9 @@ void ReadPSDPlugin::decodePlane(const std::string& filename, OfxTime time, int /
     _offsetLayer->getValueAtTime(time, offsetLayer);
 
     // Get multiplane layer
-    if (!plane.getPlaneLabel().empty()) {
+    if (numChannels==5) // layer+R+G+B+A
+        layerName=layerChannels[0];
+    if (!layerName.empty()) {
         for (size_t i = 0; i < _psd.size(); i++) {
             bool foundLayer = false;
             std::ostringstream psdLayer;
