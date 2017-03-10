@@ -402,7 +402,6 @@ void ReadPSDPlugin::decodePlane(const std::string& filename, OfxTime time, int /
     int layer = 0;
     int width = bounds.x2;
     int height = bounds.y2;
-    std::string layerName;
     bool color = false;
     int iccRender = 0;
     bool iccBlack = false;
@@ -425,14 +424,14 @@ void ReadPSDPlugin::decodePlane(const std::string& filename, OfxTime time, int /
     _offsetLayer->getValueAtTime(time, offsetLayer);
 
     // Get multiplane layer
-    if (!plane.getPlaneLabel().empty()) {
+    if (!plane.isColorPlane()) {
         for (size_t i = 0; i < _psd.size(); i++) {
             bool foundLayer = false;
             std::ostringstream psdLayer;
             psdLayer << "Image Layer #" << i; // if layer name is empty
-            if (_psd[i].label()==layerName)
+            if (_psd[i].label()==plane.getPlaneLabel())
                 foundLayer = true;
-            if (psdLayer.str()==layerName && !foundLayer)
+            if (psdLayer.str()==plane.getPlaneLabel() && !foundLayer)
                 foundLayer = true;
             if (foundLayer) {
                 if (offsetLayer) {

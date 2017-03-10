@@ -315,7 +315,7 @@ OpenRasterPlugin::decodePlane(const std::string& filename, OfxTime /*time*/, int
         OFX::MultiPlane::ImagePlaneDesc plane, pairedPlane;
         OFX::MultiPlane::ImagePlaneDesc::mapOFXComponentsTypeStringToPlanes(rawComponents, &plane, &pairedPlane);
 
-        if (!plane.getPlaneLabel().empty()) {
+        if (!plane.isColorPlane()) {
             for (int i = 0; i < (int)imageLayers.size(); i++) {
                 bool foundLayer = false;
                 std::ostringstream nonameLayer;

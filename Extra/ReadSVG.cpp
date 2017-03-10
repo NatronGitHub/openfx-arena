@@ -209,6 +209,9 @@ ReadSVGPlugin::decodePlane(const std::string& filename, OfxTime time, int /*view
         OFX::MultiPlane::ImagePlaneDesc plane, pairedPlane;
         OFX::MultiPlane::ImagePlaneDesc::mapOFXComponentsTypeStringToPlanes(rawComponents, &plane, &pairedPlane);
         layerID = plane.getPlaneLabel();
+        if (plane.isColorPlane()) {
+            layerID.clear());
+        }
     }
 
     GError *error = NULL;

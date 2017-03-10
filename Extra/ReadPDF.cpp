@@ -267,7 +267,7 @@ ReadPDFPlugin::decodePlane(const std::string& filename, OfxTime time, int /*view
         OFX::MultiPlane::ImagePlaneDesc plane, pairedPlane;
         OFX::MultiPlane::ImagePlaneDesc::mapOFXComponentsTypeStringToPlanes(rawComponents, &plane, &pairedPlane);
 
-        if (!plane.getPlaneLabel().empty()) {
+        if (!plane.isColorPlane()) {
             layer = atoi(plane.getPlaneLabel().c_str());
         }
     }
