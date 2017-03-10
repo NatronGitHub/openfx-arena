@@ -275,7 +275,6 @@ void
 OpenRasterPlugin::getClipComponents(const OFX::ClipComponentsArguments& args, OFX::ClipComponentsSetter& clipComponents)
 {
     assert(isMultiPlanar());
-    clipComponents.addClipComponents(*_outputClip, getOutputComponents());
     clipComponents.setPassThroughClip(NULL, args.time, args.view);
     if (imageLayers.size()>0 && gHostIsNatron) {
         for (int i = 0; i < (int)imageLayers.size(); i++) {
@@ -291,7 +290,7 @@ OpenRasterPlugin::getClipComponents(const OFX::ClipComponentsArguments& args, OF
             }
             const char* components[4] = {"R","G","B", "A"};
             OFX::MultiPlane::ImagePlaneDesc plane(layerName, layerName, "", components, 4);
-            clipComponents.addClipComponents(*_outputClip, OFX::MultiPlane::ImagePlaneDesc::mapPlaneToOFXPlaneString(plane));
+            clipComponents.addClipPlane(*_outputClip, OFX::MultiPlane::ImagePlaneDesc::mapPlaneToOFXPlaneString(plane));
         }
     }
 }
