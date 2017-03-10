@@ -87,7 +87,6 @@
 		AC7F58641DA40E6600939A29 /* OpenGL.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 1E9B5EFA198A3D040095C8AA /* OpenGL.framework */; };
 		AC7F586B1DA40E7900939A29 /* OpenRaster.cpp in Sources */ = {isa = PBXBuildFile; fileRef = AC7F57371DA40DA900939A29 /* OpenRaster.cpp */; };
 		AC7F586D1DA40E7D00939A29 /* ReadKrita.cpp in Sources */ = {isa = PBXBuildFile; fileRef = AC7F57391DA40DA900939A29 /* ReadKrita.cpp */; };
-		AC7F586E1DA40E7F00939A29 /* ReadPDF.cpp in Sources */ = {isa = PBXBuildFile; fileRef = AC7F573A1DA40DA900939A29 /* ReadPDF.cpp */; };
 		AC7F586F1DA40E8300939A29 /* ReadSVG.cpp in Sources */ = {isa = PBXBuildFile; fileRef = AC7F573B1DA40DA900939A29 /* ReadSVG.cpp */; };
 		AC7F58701DA40E8400939A29 /* TextFX.cpp in Sources */ = {isa = PBXBuildFile; fileRef = AC7F573C1DA40DA900939A29 /* TextFX.cpp */; };
 		AC7F58711DA40E9400939A29 /* fr.inria.openfx.OpenRaster.png in CopyFiles */ = {isa = PBXBuildFile; fileRef = AC7F57281DA40DA900939A29 /* fr.inria.openfx.OpenRaster.png */; };
@@ -5653,7 +5652,6 @@
 			files = (
 				AC7F586B1DA40E7900939A29 /* OpenRaster.cpp in Sources */,
 				AC7F586D1DA40E7D00939A29 /* ReadKrita.cpp in Sources */,
-				AC7F586E1DA40E7F00939A29 /* ReadPDF.cpp in Sources */,
 				AC7F586F1DA40E8300939A29 /* ReadSVG.cpp in Sources */,
 				AC7F58701DA40E8400939A29 /* TextFX.cpp in Sources */,
 				AC66E3211E3B5A9700EE6BE0 /* Makefile in Sources */,
@@ -5821,6 +5819,7 @@
 					"-L$(PANGO_PATH)/lib",
 					"-lpangocairo-1.0",
 					"-lcairo",
+					"-lzip",
 					"-lz",
 					"-lpixman-1",
 					"-lpng16",
@@ -5900,6 +5899,7 @@
 					"-L$(PANGO_PATH)/lib",
 					"-lpangocairo-1.0",
 					"-lcairo",
+					"-lzip",
 					"-lz",
 					"-lpixman-1",
 					"-lpng16",
@@ -5970,6 +5970,7 @@
 					"-lgraphite2",
 					"-lpango-1.0",
 					"-lm",
+					"-lgomp",
 					"-lgmodule-2.0",
 					"-lgobject-2.0",
 					"-lffi",
@@ -6033,6 +6034,7 @@
 					"-lgraphite2",
 					"-lpango-1.0",
 					"-lm",
+					"-lgomp",
 					"-lgmodule-2.0",
 					"-lgobject-2.0",
 					"-lffi",
