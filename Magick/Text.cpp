@@ -210,7 +210,11 @@ TextPlugin::TextPlugin(OfxImageEffectHandle handle)
 , height_(0)
 ,has_freetype(false)
 {
-    Magick::InitializeMagick(NULL);
+    try {
+        Magick::InitializeMagick(NULL);
+    } catch (const std::exception& e) {
+        std::cerr << "Failure when calling InitializeMagick: " << e.what() << std::endl;
+    }
 
 #ifndef LEGACYIM
     std::string delegates = MagickCore::GetMagickDelegates();
