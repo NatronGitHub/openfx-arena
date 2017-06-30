@@ -356,9 +356,7 @@ void PolarPluginFactory::describe(OFX::ImageEffectDescriptor &desc)
     // basic labels
     desc.setLabel(kPluginName);
     desc.setPluginGrouping(kPluginGrouping);
-    size_t magickNumber;
-    std::string magickString = MagickCore::GetMagickVersion(&magickNumber);
-    desc.setPluginDescription("Polar Distort transform node.\n\nPowered by "+magickString+"\n\nImageMagick (R) is Copyright 1999-2015 ImageMagick Studio LLC, a non-profit organization dedicated to making software imaging solutions freely available.\n\nImageMagick is distributed under the Apache 2.0 license.");
+    desc.setPluginDescription("Polar Distort transform node.");
 
     // add the supported contexts
     desc.addSupportedContext(eContextGeneral);
