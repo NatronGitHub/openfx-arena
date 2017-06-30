@@ -190,13 +190,7 @@ void ReadMiscPluginFactory::describe(OFX::ImageEffectDescriptor &desc)
     GenericReaderDescribe(desc, _extensions, kPluginEvaluation, kSupportsTiles, false);
     desc.setLabel(kPluginName);
 
-    size_t magickNumber;
-    std::string magickString = MagickCore::GetMagickVersion(&magickNumber);
-    std::string plugCopyright = "\n\nImageMagick (R) is Copyright 1999-2015 ImageMagick Studio LLC, a non-profit organization dedicated to making software imaging solutions freely available.\n\nImageMagick is distributed under the Apache 2.0 license.";
-    # ifdef OFX_IO_USING_OCIO
-    plugCopyright.append("\n\nOpenColorIO is Copyright 2003-2010 Sony Pictures Imageworks Inc., et al. All Rights Reserved.\n\nOpenColorIO is distributed under a BSD license.");
-    # endif // OFX_IO_USING_OCIO
-    desc.setPluginDescription("Read Misc image format.\n\nPowered by "+magickString+plugCopyright);
+    desc.setPluginDescription("Read Misc image format.");
 }
 
 /** @brief The describe in context function, passed a plugin descriptor and a context */
