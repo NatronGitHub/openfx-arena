@@ -18,6 +18,7 @@
 #include <poppler.h>
 #include <poppler/GlobalParams.h>
 #include <cairo.h>
+#include <string>
 
 #include <iostream>
 #include <stdlib.h>
@@ -42,6 +43,7 @@
 #include "GenericReader.h"
 #include "GenericOCIO.h"
 #include "ofxsMacros.h"
+#include "ofxsMultiPlane.h"
 #include "ofxsImageEffect.h"
 
 #define kPluginName "ReadPDF"
@@ -103,7 +105,7 @@ private:
         decodePlane(filename, time, view, isPlayback, renderWindow, pixelData, bounds, pixelComponents, pixelComponentCount, rawComps, rowBytes);
     }
     virtual void decodePlane(const std::string& filename, OfxTime time, int view, bool isPlayback, const OfxRectI& renderWindow, float *pixelData, const OfxRectI& bounds, OFX::PixelComponentEnum pixelComponents, int pixelComponentCount, const std::string& rawComponents, int rowBytes) OVERRIDE FINAL;
-    virtual void getClipComponents(const OFX::ClipComponentsArguments& args, OFX::ClipComponentsSetter& clipComponents) OVERRIDE FINAL;
+    virtual OfxStatus getClipComponents(const OFX::ClipComponentsArguments& args, OFX::ClipComponentsSetter& clipComponents) OVERRIDE FINAL;
     virtual bool getFrameBounds(const std::string& filename, OfxTime time, OfxRectI *bounds, OfxRectI* format, double *par, std::string *error,int *tile_width, int *tile_height) OVERRIDE FINAL;
     virtual bool guessParamsFromFilename(const std::string& filename, std::string *colorspace, OFX::PreMultiplicationEnum *filePremult, OFX::PixelComponentEnum *components, int *componentCount) OVERRIDE FINAL;
     virtual void changedFilename(const OFX::InstanceChangedArgs &args) OVERRIDE FINAL;
@@ -215,29 +217,25 @@ ReadPDFPlugin::getResourcesPath() {
     return result;
 }
 
-void
+OfxStatus
 ReadPDFPlugin::getClipComponents(const OFX::ClipComponentsArguments& args, OFX::ClipComponentsSetter& clipComponents)
 {
     assert(isMultiPlanar());
-    clipComponents.addClipComponents(*_outputClip, getOutputComponents());
     clipComponents.setPassThroughClip(NULL, args.time, args.view);
     if (imageLayers.size()>0 && gHostIsNatron) {
         for (int i = 0; i < (int)imageLayers.size(); i++) {
-            std::ostringstream layerName;
-            layerName << imageLayers[i];
-            std::string component(kNatronOfxImageComponentsPlane);
-            component.append(layerName.str());
-            component.append(kNatronOfxImageComponentsPlaneChannel);
-            component.append("R");
-            component.append(kNatronOfxImageComponentsPlaneChannel);
-            component.append("G");
-            component.append(kNatronOfxImageComponentsPlaneChannel);
-            component.append("B");
-            component.append(kNatronOfxImageComponentsPlaneChannel);
-            component.append("A");
-            clipComponents.addClipComponents(*_outputClip, component);
+            std::string layerName;
+            {
+                std::ostringstream ss;
+                ss << imageLayers[i];
+                layerName = ss.str();
+            }
+            const char* components[4] = {"R","G","B", "A"};
+            OFX::MultiPlane::ImagePlaneDesc plane(layerName, layerName, "", components, 4);
+            clipComponents.addClipPlane(*_outputClip, OFX::MultiPlane::ImagePlaneDesc::mapPlaneToOFXPlaneString(plane));
         }
     }
+    return kOfxStatOK;
 }
 
 void
@@ -267,13 +265,11 @@ ReadPDFPlugin::decodePlane(const std::string& filename, OfxTime time, int /*view
 
     int layer = 0;
     if (gHostIsNatron) {
-        std::string layerName;
-        std::vector<std::string> layerChannels = OFX::mapPixelComponentCustomToLayerChannels(rawComponents);
-        int numChannels = layerChannels.size();
-        if (numChannels==5) // layer+R+G+B+A
-            layerName=layerChannels[0];
-        if (!layerName.empty()) {
-            layer = atoi(layerName.c_str());
+        OFX::MultiPlane::ImagePlaneDesc plane, pairedPlane;
+        OFX::MultiPlane::ImagePlaneDesc::mapOFXComponentsTypeStringToPlanes(rawComponents, &plane, &pairedPlane);
+
+        if (!plane.isColorPlane()) {
+            layer = atoi(plane.getPlaneLabel().c_str());
         }
     }
 

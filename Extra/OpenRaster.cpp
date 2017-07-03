@@ -25,6 +25,7 @@
 #include "GenericOCIO.h"
 #include "ofxsMacros.h"
 #include "ofxsImageEffect.h"
+#include "ofxsMultiPlane.h"
 #include "lodepng.h"
 
 #define kPluginName "OpenRaster"
@@ -80,7 +81,7 @@ private:
         decodePlane(filename, time, view, isPlayback, renderWindow, pixelData, bounds, pixelComponents, pixelComponentCount, rawComps, rowBytes);
     }
     virtual void decodePlane(const std::string& filename, OfxTime time, int view, bool isPlayback, const OfxRectI& renderWindow, float *pixelData, const OfxRectI& bounds, OFX::PixelComponentEnum pixelComponents, int pixelComponentCount, const std::string& rawComponents, int rowBytes) OVERRIDE FINAL;
-    virtual void getClipComponents(const OFX::ClipComponentsArguments& args, OFX::ClipComponentsSetter& clipComponents) OVERRIDE FINAL;
+    virtual OfxStatus getClipComponents(const OFX::ClipComponentsArguments& args, OFX::ClipComponentsSetter& clipComponents) OVERRIDE FINAL;
     virtual bool getFrameBounds(const std::string& filename, OfxTime time, OfxRectI *bounds, OfxRectI* format, double *par, std::string *error, int *tile_width, int *tile_height) OVERRIDE FINAL;
     virtual bool guessParamsFromFilename(const std::string& filename, std::string *colorspace, OFX::PreMultiplicationEnum *filePremult, OFX::PixelComponentEnum *components, int *componentCount) OVERRIDE FINAL;
     virtual void changedFilename(const OFX::InstanceChangedArgs &args) OVERRIDE FINAL;
@@ -270,31 +271,29 @@ OpenRasterPlugin::hasMergedImage(std::string filename)
     return status;
 }
 
-void
+OfxStatus
 OpenRasterPlugin::getClipComponents(const OFX::ClipComponentsArguments& args, OFX::ClipComponentsSetter& clipComponents)
 {
     assert(isMultiPlanar());
-    clipComponents.addClipComponents(*_outputClip, getOutputComponents());
     clipComponents.setPassThroughClip(NULL, args.time, args.view);
     if (imageLayers.size()>0 && gHostIsNatron) {
         for (int i = 0; i < (int)imageLayers.size(); i++) {
-            std::ostringstream layerName;
-            layerName << imageLayers[i][0];
-            if (layerName.str().empty())
-                layerName << "Image Layer #" << i; // if layer name is empty
-            std::string component(kNatronOfxImageComponentsPlane);
-            component.append(layerName.str());
-            component.append(kNatronOfxImageComponentsPlaneChannel);
-            component.append("R");
-            component.append(kNatronOfxImageComponentsPlaneChannel);
-            component.append("G");
-            component.append(kNatronOfxImageComponentsPlaneChannel);
-            component.append("B");
-            component.append(kNatronOfxImageComponentsPlaneChannel);
-            component.append("A");
-            clipComponents.addClipComponents(*_outputClip, component);
+            std::string layerName;
+            {
+                std::ostringstream ss;
+                if (!imageLayers[i][0].empty()) {
+                    ss << imageLayers[i][0];
+                } else {
+                    ss << "Image Layer #" << i; // if layer name is empty
+                }
+                layerName = ss.str();
+            }
+            const char* components[4] = {"R","G","B", "A"};
+            OFX::MultiPlane::ImagePlaneDesc plane(layerName, layerName, "", components, 4);
+            clipComponents.addClipPlane(*_outputClip, OFX::MultiPlane::ImagePlaneDesc::mapPlaneToOFXPlaneString(plane));
         }
     }
+    return kOfxStatOK;
 }
 
 void
@@ -313,19 +312,18 @@ OpenRasterPlugin::decodePlane(const std::string& filename, OfxTime /*time*/, int
 
     int layer = 0;
     if (gHostIsNatron) {
-        std::string layerName;
-        std::vector<std::string> layerChannels = OFX::mapPixelComponentCustomToLayerChannels(rawComponents);
-        int numChannels = layerChannels.size();
-        if (numChannels==5) // layer+R+G+B+A
-            layerName=layerChannels[0];
-        if (!layerName.empty()) {
+
+        OFX::MultiPlane::ImagePlaneDesc plane, pairedPlane;
+        OFX::MultiPlane::ImagePlaneDesc::mapOFXComponentsTypeStringToPlanes(rawComponents, &plane, &pairedPlane);
+
+        if (!plane.isColorPlane()) {
             for (int i = 0; i < (int)imageLayers.size(); i++) {
                 bool foundLayer = false;
                 std::ostringstream nonameLayer;
                 nonameLayer << "Image Layer #" << i; // if layer name is empty
-                if (imageLayers[i][0]==layerName)
+                if (imageLayers[i][0]==plane.getPlaneLabel())
                     foundLayer = true;
-                if (nonameLayer.str()==layerName && !foundLayer)
+                if (nonameLayer.str()==plane.getPlaneLabel() && !foundLayer)
                     foundLayer = true;
                 if (foundLayer) {
                     layer = i;

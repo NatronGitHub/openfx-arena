@@ -24,6 +24,7 @@
 #include "ofxsMacros.h"
 #include "ofxsMultiThread.h"
 #include "ofxsImageEffect.h"
+#include "ofxsMultiPlane.h"
 #include <lcms2.h>
 #include <dirent.h>
 #include <ofxNatron.h>
@@ -235,7 +236,7 @@ private:
         }
         decodePlane(filename, time, view, isPlayback, renderWindow, pixelData, bounds, pixelComponents, pixelComponentCount, rawComps, rowBytes);
     }
-    virtual void getClipComponents(const OFX::ClipComponentsArguments& args, OFX::ClipComponentsSetter& clipComponents) OVERRIDE FINAL;
+    virtual OfxStatus getClipComponents(const OFX::ClipComponentsArguments& args, OFX::ClipComponentsSetter& clipComponents) OVERRIDE FINAL;
     virtual void decodePlane(const std::string& filename, OfxTime time, int view, bool isPlayback, const OfxRectI& renderWindow, float *pixelData, const OfxRectI& bounds, OFX::PixelComponentEnum pixelComponents, int pixelComponentCount, const std::string& rawComponents, int rowBytes) OVERRIDE FINAL;
     virtual bool getFrameBounds(const std::string& filename, OfxTime time, OfxRectI *bounds, OfxRectI* format, double *par, std::string *error,int *tile_width, int *tile_height) OVERRIDE FINAL;
     virtual void changedParam(const OFX::InstanceChangedArgs &args, const std::string &paramName) OVERRIDE FINAL;
@@ -357,37 +358,37 @@ void ReadPSDPlugin::genLayerMenu()
     }
 }
 
-void ReadPSDPlugin::getClipComponents(const OFX::ClipComponentsArguments& args, OFX::ClipComponentsSetter& clipComponents)
+OfxStatus ReadPSDPlugin::getClipComponents(const OFX::ClipComponentsArguments& args, OFX::ClipComponentsSetter& clipComponents)
 {
     #ifdef DEBUG
     std::cout << "getClipComponents ..." << std::endl;
     #endif
 
     assert(isMultiPlanar());
-    clipComponents.addClipComponents(*_outputClip, getOutputComponents());
     clipComponents.setPassThroughClip(NULL, args.time, args.view);
     if (_psd.size()>0 && gHostIsNatron) { // what about nuke?
         int startLayer = 0;
         if (!_psd.empty() && _psd[0].format() == "Adobe Photoshop bitmap")
             startLayer++; // first layer in a PSD is a comp
         for (int i = startLayer; i < (int)_psd.size(); i++) {
-            std::ostringstream layerName;
-            layerName << _psd[i].label();
-            if (layerName.str().empty())
-                layerName << "Image Layer #" << i; // add a label if empty
-            std::string component(kNatronOfxImageComponentsPlane);
-            component.append(layerName.str());
-            component.append(kNatronOfxImageComponentsPlaneChannel);
-            component.append("R");
-            component.append(kNatronOfxImageComponentsPlaneChannel);
-            component.append("G");
-            component.append(kNatronOfxImageComponentsPlaneChannel);
-            component.append("B");
-            component.append(kNatronOfxImageComponentsPlaneChannel);
-            component.append("A");
-            clipComponents.addClipComponents(*_outputClip, component);
+
+            std::string layerName;
+            {
+                std::ostringstream ss;
+                if (!_psd[i].label().empty()) {
+                    ss << _psd[i].label();
+                } else {
+                    ss << "Image Layer #" << i;
+                }
+                layerName = ss.str();
+            }
+            const char* components[4] = {"R","G","B", "A"};
+            OFX::MultiPlane::ImagePlaneDesc plane(layerName, layerName, "", components, 4);
+            clipComponents.addClipPlane(*_outputClip, OFX::MultiPlane::ImagePlaneDesc::mapPlaneToOFXPlaneString(plane));
+
         }
     }
+    return kOfxStatOK;
 }
 
 void ReadPSDPlugin::decodePlane(const std::string& filename, OfxTime time, int /*view*/, bool /*isPlayback*/, const OfxRectI& renderWindow, float *pixelData, const OfxRectI& bounds,
@@ -402,14 +403,15 @@ void ReadPSDPlugin::decodePlane(const std::string& filename, OfxTime time, int /
     int layer = 0;
     int width = bounds.x2;
     int height = bounds.y2;
-    std::string layerName;
     bool color = false;
     int iccRender = 0;
     bool iccBlack = false;
     int imageLayer = 0;
     bool offsetLayer = false;
-    std::vector<std::string> layerChannels = OFX::mapPixelComponentCustomToLayerChannels(rawComponents);
-    int numChannels = layerChannels.size();
+
+    OFX::MultiPlane::ImagePlaneDesc plane, paiedPlane;
+    OFX::MultiPlane::ImagePlaneDesc::mapOFXComponentsTypeStringToPlanes(rawComponents, &plane, &paiedPlane);
+
     std::string iccProfileIn, iccProfileOut, iccProfileRGB, iccProfileCMYK, iccProfileGRAY;
     _iccInSelected->getValueAtTime(time, iccProfileIn);
     _iccOutSelected->getValueAtTime(time, iccProfileOut);
@@ -423,16 +425,14 @@ void ReadPSDPlugin::decodePlane(const std::string& filename, OfxTime time, int /
     _offsetLayer->getValueAtTime(time, offsetLayer);
 
     // Get multiplane layer
-    if (numChannels==5) // layer+R+G+B+A
-        layerName=layerChannels[0];
-    if (!layerName.empty()) {
+    if (!plane.isColorPlane()) {
         for (size_t i = 0; i < _psd.size(); i++) {
             bool foundLayer = false;
             std::ostringstream psdLayer;
             psdLayer << "Image Layer #" << i; // if layer name is empty
-            if (_psd[i].label()==layerName)
+            if (_psd[i].label()==plane.getPlaneLabel())
                 foundLayer = true;
-            if (psdLayer.str()==layerName && !foundLayer)
+            if (psdLayer.str()==plane.getPlaneLabel() && !foundLayer)
                 foundLayer = true;
             if (foundLayer) {
                 if (offsetLayer) {
