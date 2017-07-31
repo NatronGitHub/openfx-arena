@@ -1144,7 +1144,7 @@ void TextFXPlugin::changedParam(const OFX::InstanceChangedArgs &args, const std:
         _fontName->getValueAtTime(args.time, fontID);
         _fontName->getOption(fontID,font);
         _font->setValue(font);
-    } else if (paramName == kParamFontOverride) {
+    } else if (paramName == kParamFontOverride && args.reason != OFX::eChangeTime) {
         int selectedFontIndex  = 0;
         _fontName->getValueAtTime(args.time, selectedFontIndex);
         std::string selectedFontName;
