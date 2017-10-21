@@ -186,10 +186,10 @@ class HaldCLUTPlugin
 public:
     HaldCLUTPlugin(OfxImageEffectHandle handle)
         : MagickPluginHelper<kSupportsRenderScale>(handle)
-        , _presets(0)
-        , _preset(0)
-        , _custom(0)
-        , _path(0)
+        , _presets()
+        , _preset(NULL)
+        , _custom(NULL)
+        , _path(NULL)
     {
         _preset = fetchChoiceParam(kParamPreset);
         _custom = fetchStringParam(kParamCustom);

@@ -102,9 +102,14 @@ private:
 
 TexturePlugin::TexturePlugin(OfxImageEffectHandle handle)
 : OFX::ImageEffect(handle)
-, dstClip_(0)
-, width_(0)
-, height_(0)
+, dstClip_(NULL)
+, effect_(NULL)
+, seed_(NULL)
+, width_(NULL)
+, height_(NULL)
+, fromColor_(NULL)
+, toColor_(NULL)
+, enableOpenMP_(NULL)
 {
     Magick::InitializeMagick(NULL);
 

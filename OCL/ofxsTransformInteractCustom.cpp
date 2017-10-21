@@ -964,10 +964,8 @@ TransformInteractCustomHelper::penMotion(const OFX::PenArgs &args)
         centerChanged = true;
         if (_translate) {
             // recompute dxrot,dyrot after rounding
-            double det = R.determinant();
-            if (det != 0.) {
-                OFX::Matrix3x3 Rinv = R.inverse(det);
-
+            OFX::Matrix3x3 Rinv;
+            if ( R.inverse(&Rinv) ) {
                 dxrot = newx - currentCenter.x;
                 dyrot = newy - currentCenter.y;
                 OFX::Point3D dRot;

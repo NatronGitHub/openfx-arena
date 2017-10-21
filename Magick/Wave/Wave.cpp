@@ -52,8 +52,8 @@ class WavePlugin
 public:
     WavePlugin(OfxImageEffectHandle handle)
         : MagickPluginHelper<kSupportsRenderScale>(handle)
-        , _amp(0)
-        , _length(0)
+        , _amp(NULL)
+        , _length(NULL)
     {
         _amp = fetchDoubleParam(kParamWaveAmp);
         _length = fetchDoubleParam(kParamWaveLength);

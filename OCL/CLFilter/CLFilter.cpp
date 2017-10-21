@@ -53,7 +53,7 @@ class CLFilterCLPlugin
 public:
     CLFilterCLPlugin(OfxImageEffectHandle handle)
         : OCLPluginHelper<kSupportsRenderScale>(handle, "", "")
-        , _kSource(0)
+        , _kSource(NULL)
     {
         _kSource = fetchStringParam(kParamKernel);
         assert(_kSource);

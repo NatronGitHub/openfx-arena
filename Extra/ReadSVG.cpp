@@ -108,7 +108,7 @@ ReadSVGPlugin::ReadSVGPlugin(OfxImageEffectHandle handle, const std::vector<std:
 false
 #endif
 )
-,_dpi(0)
+,_dpi(NULL)
 {
     _dpi = fetchIntParam(kParamDpi);
     assert(_dpi);

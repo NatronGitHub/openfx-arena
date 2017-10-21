@@ -52,8 +52,8 @@ class RollPlugin
 public:
     RollPlugin(OfxImageEffectHandle handle)
         : MagickPluginHelper<kSupportsRenderScale>(handle)
-        , _x(0)
-        , _y(0)
+        , _x(NULL)
+        , _y(NULL)
     {
         _x = fetchDoubleParam(kParamRollX);
         _y = fetchDoubleParam(kParamRollY);

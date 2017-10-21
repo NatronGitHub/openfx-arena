@@ -46,7 +46,7 @@ class SwirlPlugin
 public:
     SwirlPlugin(OfxImageEffectHandle handle)
         : MagickPluginHelper<kSupportsRenderScale>(handle)
-        , _swirl(0)
+        , _swirl(NULL)
     {
         _swirl = fetchDoubleParam(kParamSwirl);
         assert(_swirl);

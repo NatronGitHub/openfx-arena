@@ -20,11 +20,11 @@
 
 MagickPluginHelperBase::MagickPluginHelperBase(OfxImageEffectHandle handle)
     : ImageEffect(handle)
-    , _dstClip(0)
-    , _srcClip(0)
-    , _enableMP(0)
-    , _matte(0)
-    , _vpixel(0)
+    , _dstClip(NULL)
+    , _srcClip(NULL)
+    , _enableMP(NULL)
+    , _matte(NULL)
+    , _vpixel(NULL)
 {
     _dstClip = fetchClip(kOfxImageEffectOutputClipName);
     assert(_dstClip && _dstClip->getPixelComponents() == OFX::ePixelComponentRGBA);

@@ -46,9 +46,9 @@ class TwirlCLPlugin
 public:
     TwirlCLPlugin(OfxImageEffectHandle handle)
         : OCLPluginHelper<kSupportsRenderScale>(handle, "", kPluginIdentifier)
-        , _position(0)
-        , _radius(0)
-        , _strength(0)
+        , _position(NULL)
+        , _radius(NULL)
+        , _strength(NULL)
     {
         _position = fetchDouble2DParam(kParamTransformCenterOld);
         _radius = fetchDouble2DParam(kParamTransformScaleOld);

@@ -101,8 +101,8 @@ private:
 
 ArcPlugin::ArcPlugin(OfxImageEffectHandle handle)
 : OFX::ImageEffect(handle)
-, dstClip_(0)
-, srcClip_(0)
+, dstClip_(NULL)
+, srcClip_(NULL)
 {
     Magick::InitializeMagick(NULL);
     dstClip_ = fetchClip(kOfxImageEffectOutputClipName);

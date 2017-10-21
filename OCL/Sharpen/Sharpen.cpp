@@ -46,7 +46,7 @@ class SharpenCLPlugin
 public:
     SharpenCLPlugin(OfxImageEffectHandle handle)
         : OCLPluginHelper<kSupportsRenderScale>(handle, "", kPluginIdentifier)
-        , _factor(0)
+        , _factor(NULL)
     {
         _factor = fetchDoubleParam(kParamFactor);
         assert(_factor);

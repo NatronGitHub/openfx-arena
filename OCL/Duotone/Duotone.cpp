@@ -49,8 +49,8 @@ class DuotoneCLPlugin
 public:
     DuotoneCLPlugin(OfxImageEffectHandle handle)
         : OCLPluginHelper<kSupportsRenderScale>(handle, "", kPluginIdentifier)
-        , _darkColor(0)
-        , _lightColor(0)
+        , _darkColor(NULL)
+        , _lightColor(NULL)
     {
         _darkColor = fetchRGBParam(kParamDarkColor);
         _lightColor = fetchRGBParam(kParamLightColor);

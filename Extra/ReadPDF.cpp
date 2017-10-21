@@ -122,7 +122,7 @@ ReadPDFPlugin::ReadPDFPlugin(OfxImageEffectHandle handle, const std::vector<std:
 false
 #endif
 )
-,_dpi(0)
+,_dpi(NULL)
 {
     _dpi = fetchDoubleParam(kParamDpi);
     assert(_dpi);

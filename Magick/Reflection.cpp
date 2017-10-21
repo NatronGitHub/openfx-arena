@@ -88,8 +88,14 @@ private:
 
 ReflectionPlugin::ReflectionPlugin(OfxImageEffectHandle handle)
 : OFX::ImageEffect(handle)
-, dstClip_(0)
-, srcClip_(0)
+, dstClip_(NULL)
+, srcClip_(NULL)
+, spacing_(NULL)
+, offset_(NULL)
+, matte_(NULL)
+, reflection_(NULL)
+, mirror_(NULL)
+, enableOpenMP_(NULL)
 {
     Magick::InitializeMagick(NULL);
     dstClip_ = fetchClip(kOfxImageEffectOutputClipName);

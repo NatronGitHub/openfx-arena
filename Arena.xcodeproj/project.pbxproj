@@ -6,6 +6,22 @@
 	objectVersion = 46;
 	objects = {
 
+/* Begin PBXAggregateTarget section */
+		1E82F7471F9BCD6A00133D19 /* all */ = {
+			isa = PBXAggregateTarget;
+			buildConfigurationList = 1E82F7481F9BCD6A00133D19 /* Build configuration list for PBXAggregateTarget "all" */;
+			buildPhases = (
+			);
+			dependencies = (
+				1E82F74C1F9BCD6F00133D19 /* PBXTargetDependency */,
+				1E82F74E1F9BCD7100133D19 /* PBXTargetDependency */,
+				1E82F7501F9BCD7200133D19 /* PBXTargetDependency */,
+			);
+			name = all;
+			productName = all;
+		};
+/* End PBXAggregateTarget section */
+
 /* Begin PBXBuildFile section */
 		1E2F4DAB189295F600F4CE25 /* CoreFoundation.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = D74E62491875A7A400D8FA13 /* CoreFoundation.framework */; };
 		1E9B5EFC198A3D040095C8AA /* OpenGL.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 1E9B5EFA198A3D040095C8AA /* OpenGL.framework */; };
@@ -195,6 +211,27 @@
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
+		1E82F74B1F9BCD6F00133D19 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = D74E623C1875A79700D8FA13 /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = 1E2F4D97189295F600F4CE25;
+			remoteInfo = Extra.ofx;
+		};
+		1E82F74D1F9BCD7100133D19 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = D74E623C1875A79700D8FA13 /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = AC7F58351DA40E6400939A29;
+			remoteInfo = Magick.ofx;
+		};
+		1E82F74F1F9BCD7200133D19 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = D74E623C1875A79700D8FA13 /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = AC7F58501DA40E6600939A29;
+			remoteInfo = OCL.ofx;
+		};
 		AC061B741E4DA8A500ED1947 /* PBXContainerItemProxy */ = {
 			isa = PBXContainerItemProxy;
 			containerPortal = ACE3C9D21BB7E19A0042BAF9 /* Examples.xcodeproj */;
@@ -5088,6 +5125,12 @@
 			isa = PBXProject;
 			attributes = {
 				LastUpgradeCheck = 0500;
+				TargetAttributes = {
+					1E82F7471F9BCD6A00133D19 = {
+						CreatedOnToolsVersion = 9.0.1;
+						ProvisioningStyle = Automatic;
+					};
+				};
 			};
 			buildConfigurationList = D74E623F1875A79700D8FA13 /* Build configuration list for PBXProject "Arena" */;
 			compatibilityVersion = "Xcode 3.2";
@@ -5142,6 +5185,7 @@
 				1E2F4D97189295F600F4CE25 /* Extra.ofx */,
 				AC7F58351DA40E6400939A29 /* Magick.ofx */,
 				AC7F58501DA40E6600939A29 /* OCL.ofx */,
+				1E82F7471F9BCD6A00133D19 /* all */,
 			);
 		};
 /* End PBXProject section */
@@ -5775,6 +5819,24 @@
 		};
 /* End PBXSourcesBuildPhase section */
 
+/* Begin PBXTargetDependency section */
+		1E82F74C1F9BCD6F00133D19 /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = 1E2F4D97189295F600F4CE25 /* Extra.ofx */;
+			targetProxy = 1E82F74B1F9BCD6F00133D19 /* PBXContainerItemProxy */;
+		};
+		1E82F74E1F9BCD7100133D19 /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = AC7F58351DA40E6400939A29 /* Magick.ofx */;
+			targetProxy = 1E82F74D1F9BCD7100133D19 /* PBXContainerItemProxy */;
+		};
+		1E82F7501F9BCD7200133D19 /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = AC7F58501DA40E6600939A29 /* OCL.ofx */;
+			targetProxy = 1E82F74F1F9BCD7200133D19 /* PBXContainerItemProxy */;
+		};
+/* End PBXTargetDependency section */
+
 /* Begin XCBuildConfiguration section */
 		1E2F4DC8189295F600F4CE25 /* Debug */ = {
 			isa = XCBuildConfiguration;
@@ -5792,17 +5854,16 @@
 					"$(MAGICK_PATH)/include/ImageMagick-6/Magick++",
 					"$(MAGICK_PATH)/include/ImageMagick-6",
 					"$(POVRAY_PATH)/include/PovRay",
-					"$(ZIP_PATH)",
 					"$(PANGO_PATH)/include/pango-1.0",
 					"$(SVG_PATH)/include/librsvg-2.0",
+					"$(GLIB_PATH)/lib/glib-2.0/include",
 					"$(GLIB_PATH)/include/glib-2.0",
 					"$(POPPLER_PATH)/include/poppler",
 					"$(POPPLER_PATH)/include/poppler/glib",
 					"$(CAIRO_PATH)/include/cairo",
 					"$(ZIP_PATH)/include",
-					"$(ZIP_CONF)",
+					"$(ZIP_PATH)/lib/libzip/include",
 					"$(LIBXML_PATH)/include/libxml2",
-					"$(GLIB_CONFIG)",
 					"$(FREETYPE_PATH)/include/freetype2",
 					"$(GDKPIXBUF_PATH)/include/gdk-pixbuf-2.0",
 					../Bundle,
@@ -5832,7 +5893,6 @@
 					"-lgobject-2.0",
 					"-lffi",
 					"-lglib-2.0",
-					"-lintl",
 					"-liconv",
 					"-lfontconfig",
 					"-lexpat",
@@ -5850,6 +5910,8 @@
 					"-lMagickCore-6.Q32HDRI",
 					"-L$(OCIO_PATH)/lib",
 					"-lOpenColorIO",
+					"-L$(GETTEXT_PATH)/lib",
+					"-lintl",
 				);
 				PRODUCT_NAME = "$(TARGET_NAME)";
 			};
@@ -5872,17 +5934,16 @@
 					"$(MAGICK_PATH)/include/ImageMagick-6/Magick++",
 					"$(MAGICK_PATH)/include/ImageMagick-6",
 					"$(POVRAY_PATH)/include/PovRay",
-					"$(ZIP_PATH)",
 					"$(PANGO_PATH)/include/pango-1.0",
 					"$(SVG_PATH)/include/librsvg-2.0",
+					"$(GLIB_PATH)/lib/glib-2.0/include",
 					"$(GLIB_PATH)/include/glib-2.0",
 					"$(POPPLER_PATH)/include/poppler",
 					"$(POPPLER_PATH)/include/poppler/glib",
 					"$(CAIRO_PATH)/include/cairo",
 					"$(ZIP_PATH)/include",
-					"$(ZIP_CONF)",
+					"$(ZIP_PATH)/lib/libzip/include",
 					"$(LIBXML_PATH)/include/libxml2",
-					"$(GLIB_CONFIG)",
 					"$(FREETYPE_PATH)/include/freetype2",
 					"$(GDKPIXBUF_PATH)/include/gdk-pixbuf-2.0",
 					../Bundle,
@@ -5912,7 +5973,6 @@
 					"-lgobject-2.0",
 					"-lffi",
 					"-lglib-2.0",
-					"-lintl",
 					"-liconv",
 					"-lfontconfig",
 					"-lexpat",
@@ -5930,7 +5990,25 @@
 					"-lMagickCore-6.Q32HDRI",
 					"-L$(OCIO_PATH)/lib",
 					"-lOpenColorIO",
+					"-L$(GETTEXT_PATH)/lib",
+					"-lintl",
 				);
+				PRODUCT_NAME = "$(TARGET_NAME)";
+			};
+			name = Release;
+		};
+		1E82F7491F9BCD6A00133D19 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CODE_SIGN_STYLE = Automatic;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+			};
+			name = Debug;
+		};
+		1E82F74A1F9BCD6A00133D19 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CODE_SIGN_STYLE = Automatic;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 			};
 			name = Release;
@@ -6207,6 +6285,7 @@
 					OFX_IO_USING_OCIO,
 					OFX_IO_MT_FFMPEG,
 				);
+				GCC_WARN_PEDANTIC = YES;
 				HEADER_SEARCH_PATHS = (
 					"$(OFX_PATH)/include",
 					"$(OFX_PATH)/Support/include",
@@ -6246,6 +6325,7 @@
 					OFX_IO_USING_OCIO,
 					OFX_IO_MT_FFMPEG,
 				);
+				GCC_WARN_PEDANTIC = YES;
 				HEADER_SEARCH_PATHS = (
 					"$(OFX_PATH)/include",
 					"$(OFX_PATH)/Support/include",
@@ -6276,6 +6356,15 @@
 			buildConfigurations = (
 				1E2F4DC8189295F600F4CE25 /* Debug */,
 				1E2F4DC9189295F600F4CE25 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		1E82F7481F9BCD6A00133D19 /* Build configuration list for PBXAggregateTarget "all" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				1E82F7491F9BCD6A00133D19 /* Debug */,
+				1E82F74A1F9BCD6A00133D19 /* Release */,
 			);
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;

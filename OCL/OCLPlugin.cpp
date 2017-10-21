@@ -22,9 +22,9 @@
 
 OCLPluginHelperBase::OCLPluginHelperBase(OfxImageEffectHandle handle, const std::string &kernelSource, const std::string &pluginID)
     : ImageEffect(handle)
-    , _dstClip(0)
-    , _srcClip(0)
-    , _device(0)
+    , _dstClip(NULL)
+    , _srcClip(NULL)
+    , _device(NULL)
     , _renderscale(0)
 {
     _dstClip = fetchClip(kOfxImageEffectOutputClipName);

@@ -76,8 +76,12 @@ private:
 
 SketchPlugin::SketchPlugin(OfxImageEffectHandle handle)
 : OFX::ImageEffect(handle)
-, dstClip_(0)
-, srcClip_(0)
+, dstClip_(NULL)
+, srcClip_(NULL)
+, radius_(NULL)
+, sigma_(NULL)
+, angle_(NULL)
+, enableOpenMP_(NULL)
 {
     Magick::InitializeMagick(NULL);
     dstClip_ = fetchClip(kOfxImageEffectOutputClipName);

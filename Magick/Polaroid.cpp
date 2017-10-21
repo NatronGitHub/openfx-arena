@@ -97,9 +97,15 @@ private:
 
 PolaroidPlugin::PolaroidPlugin(OfxImageEffectHandle handle)
 : OFX::ImageEffect(handle)
-, dstClip_(0)
-, srcClip_(0)
-,has_freetype(false)
+, dstClip_(NULL)
+, srcClip_(NULL)
+, text_(NULL)
+, angle_(NULL)
+, fontSize_(NULL)
+, fontName_(NULL)
+, font_(NULL)
+, has_freetype(false)
+, enableOpenMP_(NULL)
 {
     Magick::InitializeMagick(NULL);
 
