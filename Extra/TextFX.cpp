@@ -619,7 +619,7 @@ void TextFXPlugin::render(const OFX::RenderArguments &args)
     assert(_dstClip);
 
     // get dstclip
-    std::auto_ptr<OFX::Image> dstImg(_dstClip->fetchImage(args.time));
+    OFX::auto_ptr<OFX::Image> dstImg(_dstClip->fetchImage(args.time));
     if (!dstImg.get()) {
         OFX::throwSuiteStatusException(kOfxStatFailed);
         return;

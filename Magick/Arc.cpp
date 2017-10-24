@@ -140,7 +140,7 @@ void ArcPlugin::render(const OFX::RenderArguments &args)
         return;
     }
     assert(srcClip_);
-    std::auto_ptr<const OFX::Image> srcImg(srcClip_->fetchImage(args.time));
+    OFX::auto_ptr<const OFX::Image> srcImg(srcClip_->fetchImage(args.time));
     OfxRectI srcRod,srcBounds;
     if (srcImg.get()) {
         srcRod = srcImg->getRegionOfDefinition();
@@ -162,7 +162,7 @@ void ArcPlugin::render(const OFX::RenderArguments &args)
         return;
     }
     assert(dstClip_);
-    std::auto_ptr<OFX::Image> dstImg(dstClip_->fetchImage(args.time));
+    OFX::auto_ptr<OFX::Image> dstImg(dstClip_->fetchImage(args.time));
     if (!dstImg.get()) {
         OFX::throwSuiteStatusException(kOfxStatFailed);
         return;

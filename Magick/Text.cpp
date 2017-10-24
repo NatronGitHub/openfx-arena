@@ -321,7 +321,7 @@ void TextPlugin::render(const OFX::RenderArguments &args)
     assert(dstClip_);
 
     // get dstclip
-    std::auto_ptr<OFX::Image> dstImg(dstClip_->fetchImage(args.time));
+    OFX::auto_ptr<OFX::Image> dstImg(dstClip_->fetchImage(args.time));
     if (!dstImg.get()) {
         OFX::throwSuiteStatusException(kOfxStatFailed);
         return;
@@ -530,7 +530,7 @@ void TextPlugin::render(const OFX::RenderArguments &args)
 
     // add src clip if any
     if (srcClip_ && srcClip_->isConnected() && cwidth==0 && cheight==0) {
-        std::auto_ptr<const OFX::Image> srcImg(srcClip_->fetchImage(args.time));
+        OFX::auto_ptr<const OFX::Image> srcImg(srcClip_->fetchImage(args.time));
         if (srcImg.get()) {
             Magick::Image input;
             input.read(width,height,"RGB",Magick::FloatPixel,(float*)srcImg->getPixelData());

@@ -151,7 +151,7 @@ void TexturePlugin::render(const OFX::RenderArguments &args)
     }
     assert(dstClip_);
 
-    std::auto_ptr<OFX::Image> dstImg(dstClip_->fetchImage(args.time));
+    OFX::auto_ptr<OFX::Image> dstImg(dstClip_->fetchImage(args.time));
     if (!dstImg.get()) {
         OFX::throwSuiteStatusException(kOfxStatFailed);
         return;

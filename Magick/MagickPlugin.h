@@ -95,7 +95,7 @@ void MagickPluginHelper<SupportsRenderScale>::render(const OFX::RenderArguments 
         return;
     }
     assert(_srcClip);
-    std::auto_ptr<const OFX::Image> srcImg(_srcClip->fetchImage(args.time));
+    OFX::auto_ptr<const OFX::Image> srcImg(_srcClip->fetchImage(args.time));
     OfxRectI srcRod,srcBounds;
     if (srcImg.get()) {
         srcRod = srcImg->getRegionOfDefinition();
@@ -118,7 +118,7 @@ void MagickPluginHelper<SupportsRenderScale>::render(const OFX::RenderArguments 
         return;
     }
     assert(_dstClip);
-    std::auto_ptr<OFX::Image> dstImg(_dstClip->fetchImage(args.time));
+    OFX::auto_ptr<OFX::Image> dstImg(_dstClip->fetchImage(args.time));
     if (!dstImg.get()) {
         OFX::throwSuiteStatusException(kOfxStatFailed);
         return;
