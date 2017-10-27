@@ -278,25 +278,21 @@ TextPlugin::TextPlugin(OfxImageEffectHandle handle)
     font_->getValue(fontString);
     int fontID;
     int fontCount = fontName_->getNOptions();
-    fontName_->getValue(fontID);
-    fontName_->getOption(fontID,fontCombo);
-    if (!fontString.empty()) {
-        if (std::strcmp(fontCombo.c_str(),fontString.c_str())!=0) {
+    if (fontCount > 0) {
+        fontName_->getValue(fontID);
+        fontName_->getOption(fontID, fontCombo);
+        if (fontString.empty() && !fontCombo.empty()) {
+            font_->setValue(fontCombo);
+        } else if (fontCombo != fontString) {
             for(int x = 0; x < fontCount; x++) {
                 std::string fontFound;
-                fontName_->getOption(x,fontFound);
-                if (!fontFound.empty()) {
-                    if (std::strcmp(fontFound.c_str(),fontString.c_str())==0) {
-                        fontName_->setValue(x);
-                        break;
-                    }
+                fontName_->getOption(x, fontFound);
+                if (fontFound == fontString) {
+                    fontName_->setValue(x);
+                    break;
                 }
             }
         }
-    }
-    else {
-        if (!fontCombo.empty())
-            font_->setValue(fontCombo);
     }
 }
 
