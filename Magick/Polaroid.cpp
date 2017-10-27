@@ -325,11 +325,13 @@ void PolaroidPlugin::changedParam(const OFX::InstanceChangedArgs &args, const st
     }
 
     if (paramName == kParamFontName) {
-        std::string font;
-        int fontID;
-        fontName_->getValueAtTime(args.time, fontID);
-        fontName_->getOption(fontID,font);
-        font_->setValueAtTime(args.time, font);
+        if (fontName_->getNOptions() > 0) {
+            std::string font;
+            int fontID;
+            fontName_->getValueAtTime(args.time, fontID);
+            fontName_->getOption(fontID, font);
+            font_->setValueAtTime(args.time, font);
+        }
     }
 
     clearPersistentMessage();
