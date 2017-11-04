@@ -163,7 +163,10 @@ ifeq ($(IM),68)
 CXXFLAGS += -DNOMAGICKSEED
 endif
 
-PNGVERSION = a70c086077c0eaecbae3845e4da4424de5f43361
+# lodepng version, see https://github.com/lvandeve/lodepng
+# a70c086077c0eaecbae3845e4da4424de5f43361 is Apr 21, 2016
+# c7bb19ad54a53f0d9917da37de7288b1aadf6d0f is Oct 23, 2017
+PNGVERSION = c7bb19ad54a53f0d9917da37de7288b1aadf6d0f
 
 lodepng.cpp:
 	curl -o $@ https://raw.githubusercontent.com/lvandeve/lodepng/$(PNGVERSION)/lodepng.cpp
