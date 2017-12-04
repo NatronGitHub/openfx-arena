@@ -439,7 +439,7 @@ bool OpenRasterPlugin::guessParamsFromFilename(const std::string& /*newFile*/,
         xmlFreeDoc(doc);
         if (hasMergedImage(filename)) {
             std::vector<std::string> layerInfo;
-            layerInfo.push_back("Default");
+            layerInfo.push_back(kFnOfxImagePlaneColour);
             layerInfo.push_back("mergedimage.png");
             imageLayers.push_back(layerInfo);
         }
@@ -477,7 +477,7 @@ void OpenRasterPlugin::changedFilename(const OFX::InstanceChangedArgs &args)
         xmlFreeDoc(doc);
         if (hasMergedImage(filename)) {
             std::vector<std::string> layerInfo;
-            layerInfo.push_back("Default");
+            layerInfo.push_back(kFnOfxImagePlaneColour);
             layerInfo.push_back("mergedimage.png");
             imageLayers.push_back(layerInfo);
         }
@@ -504,7 +504,7 @@ void OpenRasterPlugin::restoreStateFromParams()
             xmlFreeDoc(doc);
             if (hasMergedImage(filename)) {
                 std::vector<std::string> layerInfo;
-                layerInfo.push_back("Default");
+                layerInfo.push_back(kFnOfxImagePlaneColour);
                 layerInfo.push_back("mergedimage.png");
                 imageLayers.push_back(layerInfo);
             }

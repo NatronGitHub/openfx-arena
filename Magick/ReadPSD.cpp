@@ -387,6 +387,9 @@ OfxStatus ReadPSDPlugin::getClipComponents(const OFX::ClipComponentsArguments& a
             clipComponents.addClipPlane(*_outputClip, OFX::MultiPlane::ImagePlaneDesc::mapPlaneToOFXPlaneString(plane));
 
         }
+
+        // Also add the color plane
+        clipComponents.addClipPlane(*_outputClip, OFX::MultiPlane::ImagePlaneDesc::mapPlaneToOFXPlaneString(OFX::MultiPlane::ImagePlaneDesc::getRGBAComponents()));
     }
     return kOfxStatOK;
 }
