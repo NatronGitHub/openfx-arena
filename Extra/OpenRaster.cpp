@@ -292,6 +292,9 @@ OpenRasterPlugin::getClipComponents(const OFX::ClipComponentsArguments& args, OF
             OFX::MultiPlane::ImagePlaneDesc plane(layerName, layerName, "", components, 4);
             clipComponents.addClipPlane(*_outputClip, OFX::MultiPlane::ImagePlaneDesc::mapPlaneToOFXPlaneString(plane));
         }
+
+        // Also add the color plane
+        clipComponents.addClipPlane(*_outputClip, OFX::MultiPlane::ImagePlaneDesc::mapPlaneToOFXPlaneString(OFX::MultiPlane::ImagePlaneDesc::getRGBAComponents()));
     }
     return kOfxStatOK;
 }
