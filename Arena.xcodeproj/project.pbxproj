@@ -1029,9 +1029,7 @@
 		AC7F58081DA40DC300939A29 /* net.fxarena.opencl.Twirl.svg */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.xml; path = net.fxarena.opencl.Twirl.svg; sourceTree = "<group>"; };
 		AC7F58091DA40DC300939A29 /* Twirl.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = Twirl.cpp; sourceTree = "<group>"; };
 		AC7F584E1DA40E6400939A29 /* Magick.ofx.bundle */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = Magick.ofx.bundle; sourceTree = BUILT_PRODUCTS_DIR; };
-		AC7F584F1DA40E6400939A29 /* Extra.ofx copy-Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; name = "Extra.ofx copy-Info.plist"; path = "/Users/alexandre/development/openfx-arena/Extra.ofx copy-Info.plist"; sourceTree = "<absolute>"; };
 		AC7F58691DA40E6600939A29 /* OCL.ofx.bundle */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = OCL.ofx.bundle; sourceTree = BUILT_PRODUCTS_DIR; };
-		AC7F586A1DA40E6600939A29 /* Extra.ofx copy 2-Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; name = "Extra.ofx copy 2-Info.plist"; path = "/Users/alexandre/development/openfx-arena/Extra.ofx copy 2-Info.plist"; sourceTree = "<absolute>"; };
 		ACE3C98A1BB7E19A0042BAF9 /* LICENSE */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text; path = LICENSE; sourceTree = "<group>"; };
 		ACE3C98B1BB7E19A0042BAF9 /* Makefile */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.make; path = Makefile; sourceTree = "<group>"; };
 		ACE3C98C1BB7E19A0042BAF9 /* Makefile.io */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text; path = Makefile.io; sourceTree = "<group>"; };
@@ -5040,8 +5038,6 @@
 				ACE3CEB81BB7E19D0042BAF9 /* SupportExt */,
 				D74E62481875A7A400D8FA13 /* Frameworks */,
 				D74E62471875A7A400D8FA13 /* Products */,
-				AC7F584F1DA40E6400939A29 /* Extra.ofx copy-Info.plist */,
-				AC7F586A1DA40E6600939A29 /* Extra.ofx copy 2-Info.plist */,
 			);
 			sourceTree = "<group>";
 		};
@@ -6031,6 +6027,8 @@
 					"$(POVRAY_PATH)/include/PovRay",
 					"$(ZIP_PATH)",
 					"$(LIBXML_PATH)/include/libxml2",
+					"$(MAGICK_PATH)/include/ImageMagick-7/Magick++",
+					"$(MAGICK_PATH)/include/ImageMagick-7",
 				);
 				INFOPLIST_FILE = Magick/Info.plist;
 				OTHER_LDFLAGS = (
@@ -6097,6 +6095,8 @@
 					"$(POVRAY_PATH)/include/PovRay",
 					"$(ZIP_PATH)",
 					"$(LIBXML_PATH)/include/libxml2",
+					"$(MAGICK_PATH)/include/ImageMagick-7/Magick++",
+					"$(MAGICK_PATH)/include/ImageMagick-7",
 				);
 				INFOPLIST_FILE = Magick/Info.plist;
 				OTHER_LDFLAGS = (
