@@ -1113,10 +1113,10 @@ void TextFXPlugin::render(const OFX::RenderArguments &args)
     int offset = 0;
     for (int y = 0; y < height; y++) {
         for (int x = 0; x < width; x++) {
-            pixelData[offset] = (float)pixels[offset + 2] / 255.f;
-            pixelData[offset + 1] = (float)pixels[offset + 1] / 255.f;
-            pixelData[offset + 2] = (float)pixels[offset] / 255.f;
-            pixelData[offset + 3] = (float)pixels[offset + 3] / 255.f;
+            pixelData[offset + 0] = pixels[offset + 2] * (1.f / 255);
+            pixelData[offset + 1] = pixels[offset + 1] * (1.f / 255);
+            pixelData[offset + 2] = pixels[offset + 0] * (1.f / 255);
+            pixelData[offset + 3] = pixels[offset + 3] * (1.f / 255);
             offset += 4;
         }
     }
