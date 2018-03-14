@@ -29,7 +29,7 @@
 #define kPluginIdentifier "fr.inria.openfx.ReadMisc"
 #define kPluginVersionMajor 1
 #define kPluginVersionMinor 1
-#define kPluginEvaluation 93
+#define kPluginEvaluation 80 // less than ReadOIIO
 
 #define kSupportsRGBA true
 #define kSupportsRGB false
@@ -177,10 +177,10 @@ void
 ReadMiscPluginFactory::load()
 {
     _extensions.clear();
-    _extensions.push_back("bmp");
+    _extensions.push_back("bmp"); // also handled by ReadOIIO (which has a higher evaluation)
     _extensions.push_back("pcx");
     _extensions.push_back("xpm");
-    _extensions.push_back("gif");
+    //_extensions.push_back("gif"); // may be animated - better handled by ReadFFmpeg
     _extensions.push_back("miff");
 }
 
