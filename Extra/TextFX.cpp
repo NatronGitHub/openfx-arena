@@ -469,28 +469,31 @@ TextFXPlugin::TextFXPlugin(OfxImageEffectHandle handle)
     _genFonts(_fontName, _fontOverride, false, _fcConfig, gHostIsNatron, kParamFontNameDefault, kParamFontNameAltDefault);
 
     // Setup selected font
-    std::string fontString, fontCombo;
-    _font->getValue(fontString);
+    std::string font, fontName;
+    _font->getValue(font);
     int fontID;
     int fontCount = _fontName->getNOptions();
     _fontName->getValue(fontID);
-    _fontName->getOption(fontID,fontCombo);
-    if (!fontString.empty()) {
-        if (std::strcmp(fontCombo.c_str(),fontString.c_str())!=0) {
-            for(int x = 0; x < fontCount; x++) {
-                std::string fontFound;
-                _fontName->getOption(x,fontFound);
-                if (!fontFound.empty()) {
-                    if (std::strcmp(fontFound.c_str(),fontString.c_str())==0) {
-                        _fontName->setValue(x);
-                        break;
-                    }
+    if (fontID < fontCount) {
+        _fontName->getOption(fontID, fontName);
+    }
+    if (font.empty() && !fontName.empty()) {
+        _font->setValue(fontName);
+    } else if (fontName != font) { // always prefer font
+        for (int x = 0; x < fontCount; ++x) {
+            std::string fontFound;
+            _fontName->getOption(x,fontFound);
+            if (!fontFound.empty()) {
+                // cascade menu
+                if (!fontFound.empty() && gHostIsNatron) {
+                    fontFound.erase(0,2);
+                }
+                if (fontFound == font) {
+                    _fontName->setValue(x);
+                    break;
                 }
             }
         }
-    }
-    else if (!fontCombo.empty()) {
-        _font->setValue(fontCombo);
     }
 }
 
@@ -659,8 +662,8 @@ void TextFXPlugin::render(const OFX::RenderArguments &args)
 
     // Get params
     double x, y, r, g, b, a, s_r, s_g, s_b, s_a, strokeWidth, strokeDashX, strokeDashY, strokeDashZ, circleRadius, arcRadius, arcAngle, rotate, scaleX, scaleY, skewX, skewY, scrollX, scrollY, bg_r, bg_g, bg_b, bg_a;
-    int fontSize, fontID, cwidth, cheight, wrap, align, valign, style, stretch, weight, strokeDash, fontAA, subpixel, hintStyle, hintMetrics, circleWords, letterSpace;
-    std::string text, fontName, font, txt, fontOverride;
+    int fontSize, cwidth, cheight, wrap, align, valign, style, stretch, weight, strokeDash, fontAA, subpixel, hintStyle, hintMetrics, circleWords, letterSpace;
+    std::string text, font, txt, fontOverride;
     bool justify = false;
     bool markup = false;
     bool autoSize = false;
@@ -670,11 +673,21 @@ void TextFXPlugin::render(const OFX::RenderArguments &args)
 
     _text->getValueAtTime(args.time, text);
     _fontSize->getValueAtTime(args.time, fontSize);
-    _fontName->getValueAtTime(args.time, fontID);
     _textColor->getValueAtTime(args.time, r, g, b, a);
     _bgColor->getValueAtTime(args.time, bg_r, bg_g, bg_b, bg_a);
     _font->getValueAtTime(args.time, font);
-    _fontName->getOption(fontID,fontName);
+    if ( font.empty() ) { // always prefer font, use fontName if empty
+        int fontID;
+        _fontName->getValueAtTime(args.time, fontID);
+        int fontCount = _fontName->getNOptions();
+        if (fontID < fontCount) {
+            _fontName->getOption(fontID, font);
+            // cascade menu
+            if (!font.length() > 2 && font[2] == '/' && gHostIsNatron) {
+                font.erase(0,2);
+            }
+        }
+    }
     _justify->getValueAtTime(args.time, justify);
     _wrap->getValueAtTime(args.time, wrap);
     _align->getValueAtTime(args.time, align);
@@ -717,17 +730,6 @@ void TextFXPlugin::render(const OFX::RenderArguments &args)
     int tmp_height = dstBounds.y2 - dstBounds.y1;
     ytext = tmp_y + ((tmp_y+tmp_height-1) - ytext);
 
-    if (!font.empty()) {
-        fontName=font;
-    } else {
-        setPersistentMessage(OFX::Message::eMessageError, "", "No fonts found/selected");
-        OFX::throwSuiteStatusException(kOfxStatFailed);
-    }
-
-    if (gHostIsNatron) {
-        fontName.erase(0,2);
-    }
-
     if (!txt.empty()) {
         std::string txt_tmp = textFromFile(txt);
         if (!txt_tmp.empty()) {
@@ -735,8 +737,13 @@ void TextFXPlugin::render(const OFX::RenderArguments &args)
         }
     }
 
+    // no fonts?
+    if ( font.empty() ) {
+        font = kParamFontNameDefault;
+    }
+
     std::ostringstream pangoFont;
-    pangoFont << fontName;
+    pangoFont << font;
     switch(style) {
     case 0:
         pangoFont << " " << "normal";
@@ -1141,23 +1148,32 @@ void TextFXPlugin::changedParam(const OFX::InstanceChangedArgs &args, const std:
     if (paramName == kParamTransformResetCenterOld) {
         resetCenter(args.time);
     } else if (paramName == kParamFontName) {
-        std::string font;
-        int fontID;
-        _fontName->getValueAtTime(args.time, fontID);
-        _fontName->getOption(fontID,font);
-        _font->setValue(font);
+        // set font from fontName
+        int fontCount = _fontName->getNOptions();
+        if (fontCount > 0) {
+            int fontID;
+            _fontName->getValueAtTime(args.time, fontID);
+            if (fontID < fontCount) {
+                std::string fontName;
+                _fontName->getOption(fontID, fontName);
+                _font->setValueAtTime(args.time, fontName);
+            }
+        }
     } else if (paramName == kParamFontOverride && args.reason != OFX::eChangeTime) {
-        int selectedFontIndex  = 0;
-        _fontName->getValueAtTime(args.time, selectedFontIndex);
-        std::string selectedFontName;
-        _fontName->getOption(selectedFontIndex, selectedFontName);
-        if (gHostIsNatron) {
-            selectedFontName.erase(0,2);
+        int fontID ;
+        int fontCount = _fontName->getNOptions();
+        _fontName->getValueAtTime(args.time, fontID);
+        std::string font;
+        _fontName->getOption(fontID, font);
+        // cascade menu
+        if (!font.length() > 2 && font[2] == '/' && gHostIsNatron) {
+            font.erase(0,2);
         }
-        if (selectedFontName.empty()) {
-            selectedFontName = kParamFontNameDefault;
+        // no fonts?
+        if ( font.empty() ) {
+            font = kParamFontNameDefault;
         }
-        _genFonts(_fontName, _fontOverride, false, _fcConfig, gHostIsNatron, selectedFontName, kParamFontNameAltDefault);
+        _genFonts(_fontName, _fontOverride, false, _fcConfig, gHostIsNatron, font, kParamFontNameAltDefault);
     }
 
     clearPersistentMessage();
@@ -1179,14 +1195,12 @@ bool TextFXPlugin::getRegionOfDefinition(const OFX::RegionOfDefinitionArguments 
     if (autoSize) {
         int fontSize, fontID, style, stretch, weight, letterSpace;
         double strokeWidth;
-        std::string text, fontName, font, txt;
+        std::string text, font, txt;
         bool markup = false;
 
         _text->getValueAtTime(args.time, text);
         _fontSize->getValueAtTime(args.time, fontSize);
-        _fontName->getValueAtTime(args.time, fontID);
         _font->getValueAtTime(args.time, font);
-        _fontName->getOption(fontID,fontName);
         _style->getValueAtTime(args.time, style);
         _markup->getValueAtTime(args.time, markup);
         stretch_->getValueAtTime(args.time, stretch);
@@ -1202,14 +1216,26 @@ bool TextFXPlugin::getRegionOfDefinition(const OFX::RegionOfDefinitionArguments 
             }
         }
 
-        if (!font.empty()) {
-            fontName=font;
-            if (gHostIsNatron)
-                fontName.erase(0,2);
+        if ( font.empty() ) { // always prefer font, use fontName if empty
+            int fontID;
+            _fontName->getValueAtTime(args.time, fontID);
+            int fontCount = _fontName->getNOptions();
+            if (fontID < fontCount) {
+                _fontName->getOption(fontID, font);
+                // cascade menu
+                if (!font.length() > 2 && font[2] == '/' && gHostIsNatron) {
+                    font.erase(0,2);
+                }
+            }
+        }
 
-            std::ostringstream pangoFont;
-            pangoFont << fontName;
-            switch(style) {
+        // no fonts?
+        if ( font.empty() ) {
+            font = kParamFontNameDefault;
+        }
+        std::ostringstream pangoFont;
+        pangoFont << font;
+        switch(style) {
             case 0:
                 pangoFont << " " << "normal";
                 break;
@@ -1219,64 +1245,63 @@ bool TextFXPlugin::getRegionOfDefinition(const OFX::RegionOfDefinitionArguments 
             case 2:
                 pangoFont << " " << "italic";
                 break;
-            }
-            pangoFont << " " << fontSize;
-
-            width = rod.x2-rod.x1;
-            height = rod.y2-rod.y1;
-
-            cairo_t *cr;
-            cairo_surface_t *surface;
-            PangoLayout *layout;
-            PangoFontDescription *desc;
-            PangoAttrList *alist;
-            PangoFontMap* fontmap;
-
-            fontmap = pango_cairo_font_map_get_default();
-            if (pango_cairo_font_map_get_font_type((PangoCairoFontMap*)(fontmap)) != CAIRO_FONT_TYPE_FT) {
-                fontmap = pango_cairo_font_map_new_for_font_type(CAIRO_FONT_TYPE_FT);
-            }
-            pango_fc_font_map_set_config((PangoFcFontMap*)fontmap, _fcConfig);
-            pango_cairo_font_map_set_default((PangoCairoFontMap*)(fontmap));
-
-            surface = cairo_image_surface_create(CAIRO_FORMAT_ARGB32, width, height);
-            cr = cairo_create(surface);
-
-            layout = pango_cairo_create_layout(cr);
-            alist = pango_attr_list_new();
-
-            if (markup) {
-                pango_layout_set_markup(layout, text.c_str(), -1);
-            } else {
-                pango_layout_set_text(layout, text.c_str(), -1);
-            }
-
-            desc = pango_font_description_from_string(pangoFont.str().c_str());
-            setFontDesc(stretch, weight, desc);
-
-            pango_layout_set_font_description(layout, desc);
-            pango_font_description_free(desc);
-
-            if (letterSpace != 0) {
-                pango_attr_list_insert(alist,pango_attr_letter_spacing_new(letterSpace*PANGO_SCALE));
-            }
-
-            if (!markup)
-                pango_layout_set_attributes(layout,alist);
-
-            pango_layout_get_pixel_size(layout, &width, &height);
-
-            /// WIP
-            if (strokeWidth>0) {
-                width = width+(strokeWidth*2);
-                height = height+(strokeWidth/2);
-            }
-
-            pango_attr_list_unref(alist);
-            g_object_unref(layout);
-            cairo_destroy(cr);
-            cairo_surface_destroy(surface);
         }
+        pangoFont << " " << fontSize;
+
+        width = rod.x2-rod.x1;
+        height = rod.y2-rod.y1;
+
+        cairo_t *cr;
+        cairo_surface_t *surface;
+        PangoLayout *layout;
+        PangoFontDescription *desc;
+        PangoAttrList *alist;
+        PangoFontMap* fontmap;
+
+        fontmap = pango_cairo_font_map_get_default();
+        if (pango_cairo_font_map_get_font_type((PangoCairoFontMap*)(fontmap)) != CAIRO_FONT_TYPE_FT) {
+            fontmap = pango_cairo_font_map_new_for_font_type(CAIRO_FONT_TYPE_FT);
+        }
+        pango_fc_font_map_set_config((PangoFcFontMap*)fontmap, _fcConfig);
+        pango_cairo_font_map_set_default((PangoCairoFontMap*)(fontmap));
+
+        surface = cairo_image_surface_create(CAIRO_FORMAT_ARGB32, width, height);
+        cr = cairo_create(surface);
+
+        layout = pango_cairo_create_layout(cr);
+        alist = pango_attr_list_new();
+
+        if (markup) {
+            pango_layout_set_markup(layout, text.c_str(), -1);
+        } else {
+            pango_layout_set_text(layout, text.c_str(), -1);
+        }
+
+        desc = pango_font_description_from_string(pangoFont.str().c_str());
+        setFontDesc(stretch, weight, desc);
+
+        pango_layout_set_font_description(layout, desc);
+        pango_font_description_free(desc);
+
+        if (letterSpace != 0) {
+            pango_attr_list_insert(alist,pango_attr_letter_spacing_new(letterSpace*PANGO_SCALE));
+        }
+
+        if (!markup)
+            pango_layout_set_attributes(layout,alist);
+
+        pango_layout_get_pixel_size(layout, &width, &height);
+
+        /// WIP
+        if (strokeWidth>0) {
+            width = width+(strokeWidth*2);
+            height = height+(strokeWidth/2);
+        }
+
+        pango_attr_list_unref(alist);
+        g_object_unref(layout);
+        cairo_destroy(cr);
+        cairo_surface_destroy(surface);
     }
 
     if (width>0 && height>0) {

@@ -180,7 +180,7 @@ private:
     OFX::Double2DParam *position_;
     OFX::StringParam *text_;
     OFX::IntParam *fontSize_;
-    OFX::ChoiceParam *fontName_;
+    OFX::ChoiceParam *_fontName;
     OFX::RGBAParam *textColor_;
     OFX::RGBAParam *strokeColor_;
     OFX::DoubleParam *strokeWidth_;
@@ -197,7 +197,7 @@ private:
     OFX::IntParam *width_;
     OFX::IntParam *height_;
     OFX::ChoiceParam *gravity_;
-    OFX::StringParam *font_;
+    OFX::StringParam *_font;
     bool has_freetype;
     OFX::BooleanParam *enableOpenMP_;
 };
@@ -209,7 +209,7 @@ TextPlugin::TextPlugin(OfxImageEffectHandle handle)
 , position_(NULL)
 , text_(NULL)
 , fontSize_(NULL)
-, fontName_(NULL)
+, _fontName(NULL)
 , textColor_(NULL)
 , strokeColor_(NULL)
 , strokeWidth_(NULL)
@@ -226,7 +226,7 @@ TextPlugin::TextPlugin(OfxImageEffectHandle handle)
 , width_(NULL)
 , height_(NULL)
 , gravity_(NULL)
-, font_(NULL)
+, _font(NULL)
 , has_freetype(false)
 , enableOpenMP_(NULL)
 {
@@ -251,7 +251,7 @@ TextPlugin::TextPlugin(OfxImageEffectHandle handle)
     position_ = fetchDouble2DParam(kParamPosition);
     text_ = fetchStringParam(kParamText);
     fontSize_ = fetchIntParam(kParamFontSize);
-    fontName_ = fetchChoiceParam(kParamFontName);
+    _fontName = fetchChoiceParam(kParamFontName);
     textColor_ = fetchRGBAParam(kParamTextColor);
     strokeColor_ = fetchRGBAParam(kParamStrokeColor);
     strokeWidth_ = fetchDoubleParam(kParamStroke);
@@ -268,27 +268,37 @@ TextPlugin::TextPlugin(OfxImageEffectHandle handle)
     width_ = fetchIntParam(kParamWidth);
     height_ = fetchIntParam(kParamHeight);
     gravity_ = fetchChoiceParam(kParamGravity);
-    font_ = fetchStringParam(kParamFont);
+    _font = fetchStringParam(kParamFont);
     enableOpenMP_ = fetchBooleanParam(kParamOpenMP);
 
-    assert(position_ && text_ && fontSize_ && fontName_ && textColor_ && strokeColor_ && strokeWidth_ && fontOverride_ && shadowOpacity_ && shadowSigma_ && interlineSpacing_ && interwordSpacing_ && textSpacing_ && shadowColor_ && shadowX_ && shadowY_ && shadowBlur_ && width_ && height_ && gravity_ && font_ && enableOpenMP_);
+    assert(position_ && text_ && fontSize_ && _fontName && textColor_ && strokeColor_ && strokeWidth_ && fontOverride_ && shadowOpacity_ && shadowSigma_ && interlineSpacing_ && interwordSpacing_ && textSpacing_ && shadowColor_ && shadowX_ && shadowY_ && shadowBlur_ && width_ && height_ && gravity_ && _font && enableOpenMP_);
 
     // Setup selected font
-    std::string fontString, fontCombo;
-    font_->getValue(fontString);
+    std::string font, fontName;
+    _font->getValue(font);
     int fontID;
-    int fontCount = fontName_->getNOptions();
-    if (fontCount > 0) {
-        fontName_->getValue(fontID);
-        fontName_->getOption(fontID, fontCombo);
-        if (fontString.empty() && !fontCombo.empty()) {
-            font_->setValue(fontCombo);
-        } else if (fontCombo != fontString) {
-            for(int x = 0; x < fontCount; x++) {
-                std::string fontFound;
-                fontName_->getOption(x, fontFound);
-                if (fontFound == fontString) {
-                    fontName_->setValue(x);
+    int fontCount = _fontName->getNOptions();
+    _fontName->getValue(fontID);
+    if (fontID < fontCount) {
+        _fontName->getOption(fontID, fontName);
+        // cascade menu
+        if (!font.length() > 2 && font[2] == '/' && gHostIsNatron) {
+            font.erase(0,2);
+        }
+    }
+    if (font.empty() && !fontName.empty()) {
+        _font->setValue(fontName);
+    } else if (fontName != font) { // always prefer font
+        for (int x = 0; x < fontCount; ++x) {
+            std::string fontFound;
+            _fontName->getOption(x, fontFound);
+            if (!fontFound.empty()) {
+                // cascade menu
+                if (!fontFound.empty() && gHostIsNatron) {
+                    fontFound.erase(0,2);
+                }
+                if (fontFound == font) {
+                    _fontName->setValue(x);
                     break;
                 }
             }
@@ -364,14 +374,13 @@ void TextPlugin::render(const OFX::RenderArguments &args)
 
     // Get params
     double x, y, r, g, b, a, r_s, g_s, b_s, a_s, strokeWidth, shadowOpacity, shadowSigma, interlineSpacing, interwordSpacing, textSpacing, shadowR, shadowG, shadowB, shadowBlur;
-    int fontSize, fontID, shadowX, shadowY, gravity,cwidth,cheight;
-    std::string text, fontOverride, fontName, font;
+    int fontSize, shadowX, shadowY, gravity,cwidth,cheight;
+    std::string text, fontOverride, font;
     bool enableOpenMP = false;
 
     position_->getValueAtTime(args.time, x, y);
     text_->getValueAtTime(args.time, text);
     fontSize_->getValueAtTime(args.time, fontSize);
-    fontName_->getValueAtTime(args.time, fontID);
     strokeWidth_->getValueAtTime(args.time, strokeWidth);
     fontOverride_->getValueAtTime(args.time, fontOverride);
     textColor_->getValueAtTime(args.time, r, g, b, a);
@@ -388,22 +397,25 @@ void TextPlugin::render(const OFX::RenderArguments &args)
     gravity_->getValueAtTime(args.time, gravity);
     width_->getValueAtTime(args.time, cwidth);
     height_->getValueAtTime(args.time, cheight);
-    font_->getValueAtTime(args.time, font);
-    fontName_->getOption(fontID,fontName);
+    _font->getValueAtTime(args.time, font);
+    if ( font.empty() ) { // always prefer font, use fontName if empty
+        int fontID;
+        _fontName->getValueAtTime(args.time, fontID);
+        int fontCount = _fontName->getNOptions();
+        if (fontID < fontCount) {
+            _fontName->getOption(fontID, font);
+            // cascade menu
+            if (!font.length() > 2 && font[2] == '/' && gHostIsNatron) {
+                font.erase(0,2);
+            }
+        }
+    }
     enableOpenMP_->getValueAtTime(args.time, enableOpenMP);
 
-    // always prefer font
-    if (!font.empty())
-        fontName=font;
-
-    // cascade menu
-    if (gHostIsNatron)
-        fontName.erase(0,2);
-
     // use custom font
-    if (!fontOverride.empty())
-        fontName=fontOverride;
-
+    if (!fontOverride.empty()) {
+        font = fontOverride;
+    }
     // OpenMP
 #ifndef LEGACYIM
     unsigned int threads = 1;
@@ -420,9 +432,8 @@ void TextPlugin::render(const OFX::RenderArguments &args)
     Magick::Image output(Magick::Geometry(width,height),Magick::Color("rgba(0,0,0,1)"));
 
     // no fonts?
-    if (fontName.empty()) {
-        setPersistentMessage(OFX::Message::eMessageError, "", "No fonts found, please check installation");
-        OFX::throwSuiteStatusException(kOfxStatFailed);
+    if ( font.empty() ) {
+        font = kParamFontNameDefault;
     }
 
     // Convert colors to int
@@ -479,7 +490,7 @@ void TextPlugin::render(const OFX::RenderArguments &args)
         //
         break;
     }
-    draw.push_back(Magick::DrawableFont(fontName));
+    draw.push_back(Magick::DrawableFont(font));
     draw.push_back(Magick::DrawablePointSize(std::floor(fontSize * args.renderScale.x + 0.5)));
     draw.push_back(Magick::DrawableText(xtext, ytext, text));
     draw.push_back(Magick::DrawableFillColor(Magick::Color(textRGBA.str())));
@@ -560,12 +571,16 @@ void TextPlugin::changedParam(const OFX::InstanceChangedArgs &args, const std::s
     }
 
     if (paramName == kParamFontName) {
-        if (fontName_->getNOptions() > 0) {
-            std::string font;
+        // set font from fontName
+        int fontCount = _fontName->getNOptions();
+        if (fontCount > 0) {
             int fontID;
-            fontName_->getValueAtTime(args.time, fontID);
-            fontName_->getOption(fontID,font);
-            font_->setValueAtTime(args.time, font);
+            _fontName->getValueAtTime(args.time, fontID);
+            if (fontID < fontCount) {
+                std::string fontName;
+                _fontName->getOption(fontID, fontName);
+                _font->setValueAtTime(args.time, fontName);
+            }
         }
     }
 

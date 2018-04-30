@@ -89,8 +89,8 @@ private:
     OFX::StringParam *text_;
     OFX::DoubleParam *angle_;
     OFX::IntParam *fontSize_;
-    OFX::ChoiceParam *fontName_;
-    OFX::StringParam *font_;
+    OFX::ChoiceParam *_fontName;
+    OFX::StringParam *_font;
     bool has_freetype;
     OFX::BooleanParam *enableOpenMP_;
 };
@@ -102,8 +102,8 @@ PolaroidPlugin::PolaroidPlugin(OfxImageEffectHandle handle)
 , text_(NULL)
 , angle_(NULL)
 , fontSize_(NULL)
-, fontName_(NULL)
-, font_(NULL)
+, _fontName(NULL)
+, _font(NULL)
 , has_freetype(false)
 , enableOpenMP_(NULL)
 {
@@ -121,28 +121,30 @@ PolaroidPlugin::PolaroidPlugin(OfxImageEffectHandle handle)
     text_ = fetchStringParam(kParamText);
     angle_ = fetchDoubleParam(kParamAngle);
     fontSize_ = fetchIntParam(kParamFontSize);
-    fontName_ = fetchChoiceParam(kParamFontName);
-    font_ = fetchStringParam(kParamFont);
+    _fontName = fetchChoiceParam(kParamFontName);
+    _font = fetchStringParam(kParamFont);
     enableOpenMP_ = fetchBooleanParam(kParamOpenMP);
 
-    assert(text_ && angle_ && fontSize_ && fontName_ && font_ && enableOpenMP_);
+    assert(text_ && angle_ && fontSize_ && _fontName && _font && enableOpenMP_);
 
     // Setup selected font
-    std::string fontString, fontCombo;
-    font_->getValue(fontString);
-    int fontID;
-    int fontCount = fontName_->getNOptions();
+    std::string font, fontName;
+    _font->getValue(font);
+    int fontCount = _fontName->getNOptions();
     if (fontCount > 0) {
-        fontName_->getValue(fontID);
-        fontName_->getOption(fontID, fontCombo);
-        if (fontString.empty() && !fontCombo.empty()) {
-            font_->setValue(fontCombo);
-        } else if (fontCombo != fontString) {
-            for(int x = 0; x < fontCount; x++) {
+        int fontID;
+        _fontName->getValue(fontID);
+        if (fontID < fontCount) {
+            _fontName->getOption(fontID, fontName);
+        }
+        if (font.empty() && !fontName.empty()) {
+            _font->setValue(fontName);
+        } else if (fontName != font) { // always prefer font
+            for (int x = 0; x < fontCount; ++x) {
                 std::string fontFound;
-                fontName_->getOption(x, fontFound);
-                if (fontFound == fontString) {
-                    fontName_->setValue(x);
+                _fontName->getOption(x, fontFound);
+                if (fontFound == font) {
+                    _fontName->setValue(x);
                     break;
                 }
             }
@@ -233,25 +235,27 @@ void PolaroidPlugin::render(const OFX::RenderArguments &args)
     }
 
     // get params
-    std::string text, fontName, font;
+    std::string text, font;
     double angle;
-    int fontSize,fontID;
+    int fontSize;
     bool enableOpenMP = false;
     text_->getValueAtTime(args.time, text);
     angle_->getValueAtTime(args.time, angle);
     fontSize_->getValueAtTime(args.time, fontSize);
-    fontName_->getValueAtTime(args.time, fontID);
-    font_->getValueAtTime(args.time, font);
-    fontName_->getOption(fontID,fontName);
+    _font->getValueAtTime(args.time, font);
+    if ( font.empty() ) { // always prefer font, use fontName if empty
+        int fontID;
+        _fontName->getValueAtTime(args.time, fontID);
+        int fontCount = _fontName->getNOptions();
+        if (fontID < fontCount) {
+            _fontName->getOption(fontID, font);
+            // cascade menu
+            if (!font.length() > 2 && font[2] == '/' && gHostIsNatron) {
+                font.erase(0,2);
+            }
+        }
+    }
     enableOpenMP_->getValueAtTime(args.time, enableOpenMP);
-
-    // always prefer font
-    if (!font.empty())
-        fontName=font;
-
-    // cascade menu
-    if (gHostIsNatron)
-        fontName.erase(0,2);
 
     // setup
     int width = srcRod.x2-srcRod.x1;
@@ -275,9 +279,8 @@ void PolaroidPlugin::render(const OFX::RenderArguments &args)
         //image.alpha(true);
 
     // no fonts?
-    if (fontName.empty()) {
-        setPersistentMessage(OFX::Message::eMessageError, "", "No fonts found, please check installation");
-        OFX::throwSuiteStatusException(kOfxStatFailed);
+    if ( font.empty() ) {
+        font = kParamFontNameDefault;
     }
 
     // polaroid
@@ -285,7 +288,7 @@ void PolaroidPlugin::render(const OFX::RenderArguments &args)
     image.fontPointsize(std::floor(fontSize * args.renderScale.x + 0.5));
     image.borderColor("white"); // TODO param
     image.backgroundColor("black"); // TODO param
-    image.font(fontName);
+    image.font(font);
 #if MagickLibVersion >= 0x700
     image.polaroid(text,angle,MagickCore::UndefinedInterpolatePixel);
 #else
@@ -325,12 +328,16 @@ void PolaroidPlugin::changedParam(const OFX::InstanceChangedArgs &args, const st
     }
 
     if (paramName == kParamFontName) {
-        if (fontName_->getNOptions() > 0) {
-            std::string font;
+        // set font from fontName
+        int fontCount = _fontName->getNOptions();
+        if (fontCount > 0) {
             int fontID;
-            fontName_->getValueAtTime(args.time, fontID);
-            fontName_->getOption(fontID, font);
-            font_->setValueAtTime(args.time, font);
+            _fontName->getValueAtTime(args.time, fontID);
+            if (fontID < fontCount) {
+                std::string fontName;
+                _fontName->getOption(fontID, fontName);
+                _font->setValueAtTime(args.time, fontName);
+            }
         }
     }
 
