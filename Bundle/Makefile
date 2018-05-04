@@ -166,7 +166,8 @@ endif
 # lodepng version, see https://github.com/lvandeve/lodepng
 # a70c086077c0eaecbae3845e4da4424de5f43361 is Apr 21, 2016
 # c7bb19ad54a53f0d9917da37de7288b1aadf6d0f is Oct 23, 2017
-PNGVERSION = c7bb19ad54a53f0d9917da37de7288b1aadf6d0f
+# d03d7df9888aafb9c7f615895c34b05acf033908 is Mar 26, 2018
+PNGVERSION = d03d7df9888aafb9c7f615895c34b05acf033908
 
 lodepng.cpp:
 	curl -o $@ https://raw.githubusercontent.com/lvandeve/lodepng/$(PNGVERSION)/lodepng.cpp
