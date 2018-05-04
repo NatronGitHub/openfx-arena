@@ -683,7 +683,7 @@ void TextFXPlugin::render(const OFX::RenderArguments &args)
         if (fontID < fontCount) {
             _fontName->getOption(fontID, font);
             // cascade menu
-            if (!font.length() > 2 && font[2] == '/' && gHostIsNatron) {
+            if (font.length() > 2 && font[2] == '/' && gHostIsNatron) {
                 font.erase(0,2);
             }
         }
@@ -1164,10 +1164,12 @@ void TextFXPlugin::changedParam(const OFX::InstanceChangedArgs &args, const std:
         int fontCount = _fontName->getNOptions();
         _fontName->getValueAtTime(args.time, fontID);
         std::string font;
-        _fontName->getOption(fontID, font);
-        // cascade menu
-        if (!font.length() > 2 && font[2] == '/' && gHostIsNatron) {
-            font.erase(0,2);
+        if (fontID < fontCount) {
+            _fontName->getOption(fontID, font);
+            // cascade menu
+            if (font.length() > 2 && font[2] == '/' && gHostIsNatron) {
+                font.erase(0,2);
+            }
         }
         // no fonts?
         if ( font.empty() ) {
@@ -1193,7 +1195,7 @@ bool TextFXPlugin::getRegionOfDefinition(const OFX::RegionOfDefinitionArguments 
     auto_->getValue(autoSize);
 
     if (autoSize) {
-        int fontSize, fontID, style, stretch, weight, letterSpace;
+        int fontSize, style, stretch, weight, letterSpace;
         double strokeWidth;
         std::string text, font, txt;
         bool markup = false;
@@ -1223,7 +1225,7 @@ bool TextFXPlugin::getRegionOfDefinition(const OFX::RegionOfDefinitionArguments 
             if (fontID < fontCount) {
                 _fontName->getOption(fontID, font);
                 // cascade menu
-                if (!font.length() > 2 && font[2] == '/' && gHostIsNatron) {
+                if (font.length() > 2 && font[2] == '/' && gHostIsNatron) {
                     font.erase(0,2);
                 }
             }

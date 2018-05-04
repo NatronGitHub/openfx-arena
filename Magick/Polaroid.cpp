@@ -250,7 +250,7 @@ void PolaroidPlugin::render(const OFX::RenderArguments &args)
         if (fontID < fontCount) {
             _fontName->getOption(fontID, font);
             // cascade menu
-            if (!font.length() > 2 && font[2] == '/' && gHostIsNatron) {
+            if (font.length() > 2 && font[2] == '/' && gHostIsNatron) {
                 font.erase(0,2);
             }
         }
