@@ -363,7 +363,7 @@ ReadPDFPlugin::decodePlane(const std::string& filename, OfxTime time, int /*view
 
 bool ReadPDFPlugin::getFrameBounds(const std::string& filename,
                               OfxTime time,
-                                   int view,
+                                   int /*view*/,
                               OfxRectI *bounds,
                                    OfxRectI* format,
                               double *par,
