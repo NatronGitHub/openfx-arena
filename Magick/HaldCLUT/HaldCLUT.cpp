@@ -214,7 +214,7 @@ public:
                     std::string presetFound;
                     _preset->getOption(x, presetFound);
                     if (!presetFound.empty()) {
-                        if (std::strcmp(presetFound.c_str(), presetSelected.c_str())==0) {
+                        if (presetFound == presetSelected) {
                              _preset->setValue(x);
                             break;
                         }

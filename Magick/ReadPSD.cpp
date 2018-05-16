@@ -114,14 +114,14 @@ void _setupChoice(OFX::ChoiceParam *visible, OFX::StringParam *hidden) {
     int cID;
     int cCount = visible->getNOptions();
     visible->getValue(cID);
-    visible->getOption(cID,cCombo);
+    visible->getOption(cID, cCombo);
     if (!cString.empty()) {
-        if (std::strcmp(cCombo.c_str(),cString.c_str())!=0) {
+        if (cCombo != cString) {
             for(int x = 0; x < cCount; x++) {
                 std::string cFound;
-                visible->getOption(x,cFound);
+                visible->getOption(x, cFound);
                 if (!cFound.empty()) {
-                    if (std::strcmp(cFound.c_str(),cString.c_str())==0) {
+                    if (cFound == cString) {
                         visible->setValue(x);
                         break;
                     }
