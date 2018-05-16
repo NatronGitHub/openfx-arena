@@ -279,10 +279,10 @@ std::list<std::string> _genFonts(OFX::ChoiceParam *fontName, OFX::StringParam *f
         if (fontName) {
             fontName->appendOption(fontItem);
         }
-        if (std::strcmp(fontNameString.c_str(), fontNameDefault.c_str()) == 0) {
+        if (fontNameString == fontNameDefault) {
             defaultFont=fontIndex;
         }
-        if (std::strcmp(fontNameString.c_str(), fontNameAltDefault.c_str()) == 0) {
+        if (fontNameString == fontNameAltDefault) {
             altFont=fontIndex;
         }
 
@@ -476,18 +476,22 @@ TextFXPlugin::TextFXPlugin(OfxImageEffectHandle handle)
     _fontName->getValue(fontID);
     if (fontID < fontCount) {
         _fontName->getOption(fontID, fontName);
+        // cascade menu
+        if (fontName.length() > 2 && fontName[1] == '/' && gHostIsNatron) {
+            fontName.erase(0,2);
+        }
     }
     if (font.empty() && !fontName.empty()) {
         _font->setValue(fontName);
     } else if (fontName != font) { // always prefer font
         for (int x = 0; x < fontCount; ++x) {
             std::string fontFound;
-            _fontName->getOption(x,fontFound);
+            _fontName->getOption(x, fontFound);
+            // cascade menu
+            if (fontFound.length() > 2 && fontFound[1] == '/' && gHostIsNatron) {
+                fontFound.erase(0,2);
+            }
             if (!fontFound.empty()) {
-                // cascade menu
-                if (!fontFound.empty() && gHostIsNatron) {
-                    fontFound.erase(0,2);
-                }
                 if (fontFound == font) {
                     _fontName->setValue(x);
                     break;
@@ -683,10 +687,14 @@ void TextFXPlugin::render(const OFX::RenderArguments &args)
         if (fontID < fontCount) {
             _fontName->getOption(fontID, font);
             // cascade menu
-            if (font.length() > 2 && font[2] == '/' && gHostIsNatron) {
+            if (font.length() > 2 && font[1] == '/' && gHostIsNatron) {
                 font.erase(0,2);
             }
-        }
+       }
+    }
+    // cascade menu
+    if (font.length() > 2 && font[1] == '/' && gHostIsNatron) {
+        font.erase(0,2);
     }
     _justify->getValueAtTime(args.time, justify);
     _wrap->getValueAtTime(args.time, wrap);
@@ -1156,7 +1164,13 @@ void TextFXPlugin::changedParam(const OFX::InstanceChangedArgs &args, const std:
             if (fontID < fontCount) {
                 std::string fontName;
                 _fontName->getOption(fontID, fontName);
-                _font->setValueAtTime(args.time, fontName);
+                // cascade menu
+                if (fontName.length() > 2 && fontName[1] == '/' && gHostIsNatron) {
+                    fontName.erase(0,2);
+                }
+                if ( !fontName.empty() ) {
+                    _font->setValue(fontName);
+                }
             }
         }
     } else if (paramName == kParamFontOverride && args.reason != OFX::eChangeTime) {
@@ -1167,7 +1181,7 @@ void TextFXPlugin::changedParam(const OFX::InstanceChangedArgs &args, const std:
         if (fontID < fontCount) {
             _fontName->getOption(fontID, font);
             // cascade menu
-            if (font.length() > 2 && font[2] == '/' && gHostIsNatron) {
+            if (font.length() > 2 && font[1] == '/' && gHostIsNatron) {
                 font.erase(0,2);
             }
         }
@@ -1225,10 +1239,14 @@ bool TextFXPlugin::getRegionOfDefinition(const OFX::RegionOfDefinitionArguments 
             if (fontID < fontCount) {
                 _fontName->getOption(fontID, font);
                 // cascade menu
-                if (font.length() > 2 && font[2] == '/' && gHostIsNatron) {
+                if (font.length() > 2 && font[1] == '/' && gHostIsNatron) {
                     font.erase(0,2);
                 }
             }
+        }
+        // cascade menu
+        if (font.length() > 2 && font[1] == '/' && gHostIsNatron) {
+            font.erase(0,2);
         }
 
         // no fonts?
@@ -1516,10 +1534,10 @@ void TextFXPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, Co
                     fontItem=fontName;
                 }
                 param->appendOption(fontItem);
-                if (std::strcmp(fontName.c_str(), kParamFontNameDefault) == 0) {
+                if (fontName == kParamFontNameDefault) {
                     defaultFont=fontIndex;
                 }
-                if (std::strcmp(fontName.c_str(), kParamFontNameAltDefault) == 0) {
+                if (fontName == kParamFontNameAltDefault) {
                     altFont=fontIndex;
                 }
             }

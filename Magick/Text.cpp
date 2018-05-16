@@ -282,8 +282,8 @@ TextPlugin::TextPlugin(OfxImageEffectHandle handle)
     if (fontID < fontCount) {
         _fontName->getOption(fontID, fontName);
         // cascade menu
-        if (font.length() > 2 && font[2] == '/' && gHostIsNatron) {
-            font.erase(0,2);
+        if (fontName.length() > 2 && fontName[1] == '/' && gHostIsNatron) {
+            fontName.erase(0,2);
         }
     }
     if (font.empty() && !fontName.empty()) {
@@ -292,11 +292,11 @@ TextPlugin::TextPlugin(OfxImageEffectHandle handle)
         for (int x = 0; x < fontCount; ++x) {
             std::string fontFound;
             _fontName->getOption(x, fontFound);
+            // cascade menu
+            if (fontFound.length() > 2 && fontFound[1] == '/' && gHostIsNatron) {
+                fontFound.erase(0,2);
+            }
             if (!fontFound.empty()) {
-                // cascade menu
-                if (!fontFound.empty() && gHostIsNatron) {
-                    fontFound.erase(0,2);
-                }
                 if (fontFound == font) {
                     _fontName->setValue(x);
                     break;
@@ -405,10 +405,14 @@ void TextPlugin::render(const OFX::RenderArguments &args)
         if (fontID < fontCount) {
             _fontName->getOption(fontID, font);
             // cascade menu
-            if (font.length() > 2 && font[2] == '/' && gHostIsNatron) {
+            if (font.length() > 2 && font[1] == '/' && gHostIsNatron) {
                 font.erase(0,2);
             }
         }
+    }
+    // cascade menu
+    if (font.length() > 2 && font[1] == '/' && gHostIsNatron) {
+        font.erase(0,2);
     }
     enableOpenMP_->getValueAtTime(args.time, enableOpenMP);
 
@@ -579,7 +583,13 @@ void TextPlugin::changedParam(const OFX::InstanceChangedArgs &args, const std::s
             if (fontID < fontCount) {
                 std::string fontName;
                 _fontName->getOption(fontID, fontName);
-                _font->setValueAtTime(args.time, fontName);
+                // cascade menu
+                if (fontName.length() > 2 && fontName[1] == '/' && gHostIsNatron) {
+                    fontName.erase(0,2);
+                }
+                if ( !fontName.empty() ) {
+                    _font->setValue(fontName);
+                }
             }
         }
     }
@@ -753,18 +763,24 @@ void TextPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, Cont
 
             param->appendOption(fontItem);
 
-            if (std::strcmp(fonts[i],kParamFontNameDefault)==0)
-                defaultFont=i;
-            else if (std::strcmp(fonts[i],kParamFontNameAltDefault)==0)
-                altFont=i;
+            std::string fontStr(fonts[i]);
+            if (fontStr == kParamFontNameDefault) {
+                defaultFont = i;
+            } else if (fontStr == kParamFontNameAltDefault) {
+                altFont = i;
+            }
         }
-        for (size_t i = 0; i < fontList; i++)
-            free(fonts[i]);
+        for (size_t i = 0; i < fontList; i++) {
+            MagickCore::MagickRelinquishMemory(fonts[i]);
+            fonts[i] = NULL;
+        }
+        MagickCore::MagickRelinquishMemory(fonts);
 
-        if (defaultFont>0)
+        if (defaultFont > 0) {
             param->setDefault(defaultFont);
-        else if (defaultFont==0&&altFont>0)
+        } else if (defaultFont == 0 && altFont > 0) {
             param->setDefault(altFont);
+        }
 
         param->setAnimates(true);
         page->addChild(*param);
