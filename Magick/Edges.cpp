@@ -403,7 +403,7 @@ void EdgesPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, Con
     dstClip->setSupportsTiles(kSupportsTiles);
 
     // make some pages
-    PageParamDescriptor *page = desc.definePageParam(kPluginName);
+    PageParamDescriptor *page = desc.definePageParam("Controls");
     {
         DoubleParamDescriptor *param = desc.defineDoubleParam(kParamWidth);
         param->setLabel(kParamWidthLabel);

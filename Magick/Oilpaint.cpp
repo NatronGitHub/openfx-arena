@@ -255,7 +255,7 @@ void OilpaintPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, 
     dstClip->setSupportsTiles(kSupportsTiles);
 
     // make some pages
-    PageParamDescriptor *page = desc.definePageParam(kPluginName);
+    PageParamDescriptor *page = desc.definePageParam("Controls");
     {
         DoubleParamDescriptor *param = desc.defineDoubleParam(kParamRadius);
         param->setLabel(kParamRadiusLabel);

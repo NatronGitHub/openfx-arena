@@ -274,7 +274,7 @@ void SketchPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, Co
     dstClip->setSupportsTiles(kSupportsTiles);
 
     // make some pages
-    PageParamDescriptor *page = desc.definePageParam(kPluginName);
+    PageParamDescriptor *page = desc.definePageParam("Controls");
     {
         DoubleParamDescriptor *param = desc.defineDoubleParam(kParamRadius);
         param->setLabel(kParamRadiusLabel);

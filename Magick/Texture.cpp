@@ -365,7 +365,7 @@ void TexturePluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, C
     dstClip->setSupportsTiles(kSupportsTiles);
 
     // make some pages
-    PageParamDescriptor *page = desc.definePageParam(kPluginName);
+    PageParamDescriptor *page = desc.definePageParam("Controls");
     GroupParamDescriptor *groupCanvas = desc.defineGroupParam("Canvas");
     groupCanvas->setOpen(false);
     {

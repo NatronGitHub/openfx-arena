@@ -294,7 +294,7 @@ void ModulatePluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, 
     dstClip->setSupportsTiles(kSupportsTiles);
 
     // make some pages
-    PageParamDescriptor *page = desc.definePageParam(kPluginName);
+    PageParamDescriptor *page = desc.definePageParam("Controls");
     {
         DoubleParamDescriptor *param = desc.defineDoubleParam(kParamBrightness);
         param->setLabel(kParamBrightnessLabel);

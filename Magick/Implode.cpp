@@ -286,7 +286,7 @@ void ImplodePluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, C
     dstClip->setSupportsTiles(kSupportsTiles);
 
     // make some pages
-    PageParamDescriptor *page = desc.definePageParam(kPluginName);
+    PageParamDescriptor *page = desc.definePageParam("Controls");
     {
         DoubleParamDescriptor *param = desc.defineDoubleParam(kParamImplode);
         param->setLabel(kParamImplodeLabel);

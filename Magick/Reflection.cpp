@@ -450,7 +450,7 @@ void ReflectionPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc
     dstClip->setSupportsTiles(kSupportsTiles);
 
     // make pages and params
-    PageParamDescriptor *page = desc.definePageParam(kPluginName);
+    PageParamDescriptor *page = desc.definePageParam("Controls");
     {
         IntParamDescriptor *param = desc.defineIntParam(kParamOffset);
         param->setLabel(kParamOffsetLabel);

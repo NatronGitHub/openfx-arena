@@ -409,7 +409,7 @@ void ArcPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, Conte
     dstClip->setSupportsTiles(kSupportsTiles);
 
     // make some pages
-    PageParamDescriptor *page = desc.definePageParam(kPluginName);
+    PageParamDescriptor *page = desc.definePageParam("Controls");
     {
         DoubleParamDescriptor *param = desc.defineDoubleParam(kParamArcAngle);
         param->setLabel(kParamArcAngleLabel);

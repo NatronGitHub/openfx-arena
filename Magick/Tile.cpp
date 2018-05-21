@@ -368,7 +368,7 @@ void TilePluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, Cont
     dstClip->setSupportsTiles(kSupportsTiles);
 
     // make pages and params
-    PageParamDescriptor *page = desc.definePageParam(kPluginName);
+    PageParamDescriptor *page = desc.definePageParam("Controls");
     {
         IntParamDescriptor *param = desc.defineIntParam(kParamRows);
         param->setLabel(kParamRowsLabel);

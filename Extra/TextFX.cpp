@@ -1379,7 +1379,7 @@ void TextFXPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, Co
     dstClip->setSupportsTiles(kSupportsTiles);
 
     // make some pages
-    PageParamDescriptor *page = desc.definePageParam(kPluginName);
+    PageParamDescriptor *page = desc.definePageParam("Controls");
     ofxsTransformDescribeParams(desc, page, NULL, /*isOpen=*/ true, /*oldParams=*/ true, /*hasAmount=*/ true, /*noTranslate=*/ true);
     {
         BooleanParamDescriptor *param = desc.defineBooleanParam(kParamPositionMove);
