@@ -36,8 +36,10 @@
 #define kPluginName "ReadSVG"
 #define kPluginGrouping "Image/Readers"
 #define kPluginIdentifier "net.fxarena.openfx.ReadSVG"
+// history:
+// 3.3 the cairo buffer given by rsvg is actually premultiplied
 #define kPluginVersionMajor 3
-#define kPluginVersionMinor 2
+#define kPluginVersionMinor 3
 #define kPluginEvaluation 50
 
 #define kParamDpi "dpi"
@@ -196,13 +198,16 @@ ReadSVGPlugin::getClipComponents(const OFX::ClipComponentsArguments& args, OFX::
 
 void
 ReadSVGPlugin::decodePlane(const std::string& filename, OfxTime time, int /*view*/, bool /*isPlayback*/, const OfxRectI& renderWindow, float *pixelData, const OfxRectI& /*bounds*/,
-                                 OFX::PixelComponentEnum /*pixelComponents*/, int pixelComponentCount, const std::string& rawComponents, int /*rowBytes*/)
+                                 OFX::PixelComponentEnum pixelComponents, int pixelComponentCount, const std::string& rawComponents, int /*rowBytes*/)
 {
     if (pixelComponentCount != 4) {
         setPersistentMessage(OFX::Message::eMessageError, "", "Wrong pixel components");
         OFX::throwSuiteStatusException(kOfxStatErrFormat);
     }
-
+    if (pixelComponents != OFX::ePixelComponentRGBA) {
+        setPersistentMessage(OFX::Message::eMessageError, "", "Wrong pixel format");
+        OFX::throwSuiteStatusException(kOfxStatErrFormat);
+    }
     if (filename.empty()) {
         setPersistentMessage(OFX::Message::eMessageError, "", "No filename");
         OFX::throwSuiteStatusException(kOfxStatErrFormat);
@@ -284,22 +289,23 @@ ReadSVGPlugin::decodePlane(const std::string& filename, OfxTime time, int /*view
     cairo_surface_flush(surface);
 
     unsigned char* cdata = cairo_image_surface_get_data(surface);
-    unsigned char* pixels = new unsigned char[width * height * pixelComponentCount];
-    for (int i = 0; i < width; ++i) {
-        for (int j = 0; j < height; ++j) {
-            for (int k = 0; k < pixelComponentCount; ++k)
-                pixels[(i + j * width) * pixelComponentCount + k] = cdata[(i + (height - 1 - j) * width) * pixelComponentCount + k];
-        }
-    }
-
-    int offset = 0;
-    for (int y = 0; y < height; y++) {
-        for (int x = 0; x < width; x++) {
-            pixelData[offset + 0] = pixels[offset + 2] * (1.f / 255);
-            pixelData[offset + 1] = pixels[offset + 1] * (1.f / 255);
-            pixelData[offset + 2] = pixels[offset + 0] * (1.f / 255);
-            pixelData[offset + 3] = pixels[offset + 3] * (1.f / 255);
-            offset += pixelComponentCount;
+    size_t offset = 0;
+    for (int y = 0; y < height; ++y) {
+        size_t cdataOffset = (height - 1 - y) * width * 4;
+        for (int x = 0; x < width; ++x) {
+#if 0
+            // check on premulttest.svg that the raw data is premultiplied
+            // See also TestImageSVGPremult in Natron-Tests github repository.
+            if (x == 200 && ((y % 50) == 25)) {
+                printf("x=%d y=%d r=%d g=%d b=%d a=%d\n", x, y, cdata[cdataOffset + 2], cdata[cdataOffset + 1], cdata[cdataOffset + 0], cdata[cdataOffset + 3]);
+            }
+#endif
+            pixelData[offset + 0] = intToFloat<256>(cdata[cdataOffset + 2]);
+            pixelData[offset + 1] = intToFloat<256>(cdata[cdataOffset + 1]);
+            pixelData[offset + 2] = intToFloat<256>(cdata[cdataOffset + 0]);
+            pixelData[offset + 3] = intToFloat<256>(cdata[cdataOffset + 3]);
+            offset += 4;
+            cdataOffset += 4;
         }
     }
 
@@ -308,7 +314,6 @@ ReadSVGPlugin::decodePlane(const std::string& filename, OfxTime time, int /*view
     cairo_surface_destroy(surface);
     cdata = NULL;
     error = NULL;
-    delete[] pixels;
 }
 
 bool ReadSVGPlugin::getFrameBounds(const std::string& filename,
@@ -411,7 +416,7 @@ bool ReadSVGPlugin::guessParamsFromFilename(const std::string& /*newFile*/,
     error = NULL;
 
     *components = OFX::ePixelComponentRGBA;
-    *filePremult = OFX::eImageUnPreMultiplied;
+    *filePremult = OFX::eImagePreMultiplied; // the output of rsvg is premultiplied, see premulttest.svg check above
 
     return true;
 }
