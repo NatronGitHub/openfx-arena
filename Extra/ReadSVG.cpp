@@ -416,7 +416,10 @@ bool ReadSVGPlugin::guessParamsFromFilename(const std::string& /*newFile*/,
     error = NULL;
 
     *components = OFX::ePixelComponentRGBA;
-    *filePremult = OFX::eImagePreMultiplied; // the output of rsvg is premultiplied, see premulttest.svg check above
+    // the output of rsvg is premultiplied, see premulttest.svg check above
+    // it was premultiplied until 12 Jun 2016 commit https://github.com/NatronGitHub/openfx-arena/commit/7ab22e08ee93cd55b7cdfd6e8dfd831636973477
+    // and unpremultiplied until 29 May 2018 commit https://github.com/NatronGitHub/openfx-arena/commit/a645fa74533bbeba83ea6134d0c8c6f649cec49d
+    *filePremult = OFX::eImagePreMultiplied;
 
     return true;
 }
