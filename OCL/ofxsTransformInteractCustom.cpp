@@ -878,7 +878,7 @@ TransformInteractCustomHelper::penMotion(const OFX::PenArgs &args)
             const double scaleRatio = (targetCenter.x - currentPos.x) / (targetCenter.x - previousPos.x);
             OfxPointD newScale;
             newScale.x = scale.x * scaleRatio;
-            newScale.x = std::max( minX, std::min(newScale.x, maxX) );
+            newScale.x = (std::max)( minX, (std::min)(newScale.x, maxX) );
             newScale.y = scaleUniform ? newScale.x : scale.y;
             scale = newScale;
             //_scale->setValue(scale.x, scale.y);
@@ -892,7 +892,7 @@ TransformInteractCustomHelper::penMotion(const OFX::PenArgs &args)
             const double scaleRatio = (targetCenter.y - currentPos.y) / (targetCenter.y - previousPos.y);
             OfxPointD newScale;
             newScale.y = scale.y * scaleRatio;
-            newScale.y = std::max( minY, std::min(newScale.y, maxY) );
+            newScale.y = (std::max)( minY, (std::min)(newScale.y, maxY) );
             newScale.x = scaleUniform ? newScale.y : scale.x;
             scale = newScale;
             //_scale->setValue(scale.x, scale.y);
