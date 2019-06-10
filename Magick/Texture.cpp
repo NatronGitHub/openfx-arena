@@ -386,7 +386,7 @@ void TexturePluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, C
             param->appendOption("Misc/Checkerboard");
             param->appendOption("Misc/Stripes");
             param->appendOption("Gradient/Regular");
-            param->appendOption("Gradient/Radial");
+            param->appendOption("Gradient/Linear");
             param->appendOption("Misc/Loops 1");
             param->appendOption("Misc/Loops 2");
             param->appendOption("Misc/Loops 3");
@@ -400,7 +400,7 @@ void TexturePluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, C
             param->appendOption("Checkerboard");
             param->appendOption("Stripes");
             param->appendOption("Gradient");
-            param->appendOption("Gradient Radial");
+            param->appendOption("Gradient Linear");
             param->appendOption("Loops 1");
             param->appendOption("Loops 2");
             param->appendOption("Loops 3");
