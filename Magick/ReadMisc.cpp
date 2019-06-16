@@ -71,12 +71,12 @@ ReadMiscPlugin::~ReadMiscPlugin()
 
 void
 ReadMiscPlugin::decode(const std::string& filename,
-                      OfxTime time,
+                      OfxTime /*time*/,
                       int /*view*/,
                       bool /*isPlayback*/,
                       const OfxRectI& renderWindow,
                       float *pixelData,
-                      const OfxRectI& bounds,
+                      const OfxRectI& /*bounds*/,
                       OFX::PixelComponentEnum /*pixelComponents*/,
                       int /*pixelComponentCount*/,
                       int /*rowBytes*/)
