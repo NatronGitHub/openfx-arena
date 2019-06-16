@@ -1,10 +1,11 @@
 /*
- * This file is part of openfx-arena <https://github.com/olear/openfx-arena>,
+ * openfx-arena <https://github.com/rodlie/openfx-arena>,
  * Copyright (C) 2016 INRIA
  *
  * openfx-arena is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 as published
- * by the Free Software Foundation.
+ * by the Free Software Foundation; either version 2 of the License, or
+ * (at your option) any later version.
  *
  * openfx-arena is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -64,8 +65,8 @@ OFXS_NAMESPACE_ANONYMOUS_ENTER
     "They serve only to inform the user which film stock the given HaldCLUT image is designed to approximate. " \
     "As there is no way to convey this information other than by using the trademarked name, we believe this constitutes fair use. " \
     "Neither the publisher nor the authors are affiliated with or endorsed by the companies that own the trademarks."
-#define kPluginRepoURL "https://raw.githubusercontent.com/olear/clut/master"
-#define kPluginRepoZIP "https://github.com/olear/clut/archive/master.zip"
+#define kPluginRepoURL "https://raw.githubusercontent.com/NatronGitHub/clut/master"
+#define kPluginRepoZIP "https://github.com/NatronGitHub/clut/archive/master.zip"
 #define kPluginVersionMajor 1
 #define kPluginVersionMinor 1
 

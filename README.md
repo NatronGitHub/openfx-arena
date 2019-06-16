@@ -11,7 +11,7 @@ Plugins
  * ReadKrita
  * ReadSVG
  * ReadPDF
- * Text
+ * Text(FX)
  * Arc
  * Charcoal
  * Edges
@@ -29,15 +29,16 @@ Plugins
  * Texture
  * Tile
  * Wave
- * Looks
- * Bulge
- * Glare
- * Ripple
- * Twirl
- * Sharpen
- * Cartoon
- * Duotone
- * Edge
+ * Bulge (OCL)
+ * Glare (OCL)
+ * Ripple (OCL)
+ * Twirl (OCL)
+ * Sharpen (OCL)
+ * Cartoon (OCL)
+ * Duotone (OCL)
+ * Edge (OCL)
+ * CLFilter (OCL)
+ * HaldCLUT
 
 Requirements
 ============
@@ -58,20 +59,27 @@ Requirements
    * Quantum depth under 32 will work, but it not recommended, note that most distros ship 16
    * Will work without HDRI, but it's not recommended
  * OpenCL 1.2 compatible hardware and drivers (OCL plugins)
-
+ * libcurl (HaldCLUT)
 
 Build
 =====
 
 ```
-git clone https://github.com/olear/openfx-arena
+git clone https://github.com/NatronGitHub/openfx-arena
 cd openfx-arena
 git submodule update -i --recursive
 make CONFIG=release IM=7
 sudo make CONFIG=release IM=7 install
 ```
 
+Only plugins included in the official Natron binaries are built, additional plugins can be built using:
+
+```
+make CONFIG=release -C OCL
+make CONFIG=release IM=7 -C Magick/HaldCLUT
+```
+
 License
 =======
 
-openfx-arena is free software: you can redistribute it and/or modify it under the terms of the GNU General Public License version 2 as published by the Free Software Foundation.
+openfx-arena is free software: you can redistribute it and/or modify it under the terms of the GNU General Public License version 2 (or later) as published by the Free Software Foundation.
