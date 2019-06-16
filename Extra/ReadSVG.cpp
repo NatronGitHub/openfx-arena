@@ -233,8 +233,8 @@ ReadSVGPlugin::decodePlane(const std::string& filename, OfxTime time, int /*view
     int dpi, width, height, renderWidth, renderHeight;
     _dpi->getValueAtTime(time, dpi);
 
-    rsvg_set_default_dpi_x_y(dpi, dpi);
-    handle=rsvg_handle_new_from_file(filename.c_str(), &error);
+    handle = rsvg_handle_new_from_file(filename.c_str(), &error);
+    rsvg_handle_set_dpi_x_y(handle, dpi, dpi);
 
     if (error != NULL) {
         setPersistentMessage(OFX::Message::eMessageError, "", "Failed to read SVG");
@@ -338,9 +338,8 @@ bool ReadSVGPlugin::getFrameBounds(const std::string& filename,
     double imageWidth, imageHeight;
     int width, height;
 
-    rsvg_set_default_dpi_x_y(dpi, dpi);
-
-    handle=rsvg_handle_new_from_file(filename.c_str(), &error);
+    handle = rsvg_handle_new_from_file(filename.c_str(), &error);
+    rsvg_handle_set_dpi_x_y(handle, dpi, dpi);
 
     if (error != NULL) {
         setPersistentMessage(OFX::Message::eMessageError, "", "Failed to read SVG");
