@@ -91,6 +91,7 @@ FILE(GLOB SOURCES
     "Ripple/Ripple.cpp"
     "Twirl/Twirl.cpp"
     "Vibrance/Vibrance.cpp"
+    "Bloom/Bloom.cpp"
     "CLFilter/CLFilter.cpp"
     "OCLPlugin.cpp"
 )
@@ -111,6 +112,9 @@ FILE(GLOB RESOURCES
     "Vibrance/net.fxarena.opencl.Vibrance.png"
     "Vibrance/net.fxarena.opencl.Vibrance.svg"
     "Vibrance/net.fxarena.opencl.Vibrance.cl"
+    "Bloom/net.fxarena.opencl.Bloom.png"
+    "Bloom/net.fxarena.opencl.Bloom.svg"
+    "Bloom/net.fxarena.opencl.Bloom.cl"
     "CLFilter/net.fxarena.opencl.CLFilter.png"
     "OpenCL.png"
 )

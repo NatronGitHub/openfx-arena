@@ -6,6 +6,7 @@ PLUGINOBJECTS = \
     Ripple.o \
     Twirl.o \
     Vibrance.o \
+    Bloom.o \
     OCLPlugin.o \
     ofxsTransform3x3.o \
     ofxsTransformInteractCustom.o \
@@ -27,21 +28,26 @@ RESOURCES = \
     Duotone/net.fxarena.opencl.Duotone.cl \
     Vibrance/net.fxarena.opencl.Vibrance.png \
     Vibrance/net.fxarena.opencl.Vibrance.svg \
-    Vibrance/net.fxarena.opencl.Vibrance.cl
+    Vibrance/net.fxarena.opencl.Vibrance.cl \
+    Bloom/net.fxarena.opencl.Bloom.png \
+    Bloom/net.fxarena.opencl.Bloom.svg \
+    Bloom/net.fxarena.opencl.Bloom.cl
 
 VPATH += \
     Bulge \
     Duotone \
     Ripple \
     Twirl \
-    Vibrance
+    Vibrance \
+    Bloom
 
 CXXFLAGS += \
     -IBulge \
     -IDuotone \
     -IRipple \
     -ITwirl \
-    -IVibrance
+    -IVibrance \
+    -IBloom
 
 SRCDIR = ..
 include $(SRCDIR)/Makefile.master
@@ -54,5 +60,6 @@ $(OBJECTPATH)/Duotone.o: Duotone.cpp OCLPlugin.h
 $(OBJECTPATH)/Ripple.o: Ripple.cpp OCLPlugin.h
 $(OBJECTPATH)/Twirl.o: Twirl.cpp OCLPlugin.h
 $(OBJECTPATH)/Vibrance.o: Vibrance.cpp OCLPlugin.h
+$(OBJECTPATH)/Bloom.o: Bloom.cpp OCLPlugin.h
 $(OBJECTPATH)/CLFilter.o: CLFilter.cpp OCLPlugin.h
 
