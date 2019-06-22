@@ -1,19 +1,20 @@
 SRCDIR = ../..
 
+PLUGINNAME = Twirl
+
 PLUGINOBJECTS = \
-        Twirl.o \
+        $(PLUGINNAME).o \
         OCLPlugin.o \
         ofxsTransform3x3.o \
         ofxsTransformInteractCustom.o \
         ofxsShutter.o
 
-PLUGINNAME = Twirl
-
 RESOURCES = \
 $(SRCDIR)/LICENSE \
-net.fxarena.opencl.Twirl.png \
-net.fxarena.opencl.Twirl.svg \
-net.fxarena.opencl.Twirl.cl
+$(SRCDIR)/OCL/OpenCL.png \
+net.fxarena.opencl.$(PLUGINNAME).png \
+net.fxarena.opencl.$(PLUGINNAME).svg \
+net.fxarena.opencl.$(PLUGINNAME).cl
 
 include $(SRCDIR)/Makefile.master
 

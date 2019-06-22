@@ -1,14 +1,15 @@
 SRCDIR = ../..
 
-PLUGINOBJECTS = \
-        CLFilter.o \
-        OCLPlugin.o
-
 PLUGINNAME = CLFilter
+
+PLUGINOBJECTS = \
+        $(PLUGINNAME).o \
+        OCLPlugin.o
 
 RESOURCES = \
 $(SRCDIR)/LICENSE \
-net.fxarena.opencl.CLFilter.png
+$(SRCDIR)/OCL/OpenCL.png \
+net.fxarena.opencl.$(PLUGINNAME).png
 
 include $(SRCDIR)/Makefile.master
 

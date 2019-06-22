@@ -1,16 +1,17 @@
 SRCDIR = ../..
 
-PLUGINOBJECTS = \
-        Duotone.o \
-        OCLPlugin.o
-
 PLUGINNAME = Duotone
+
+PLUGINOBJECTS = \
+        $(PLUGINNAME).o \
+        OCLPlugin.o
 
 RESOURCES = \
 $(SRCDIR)/LICENSE \
-net.fxarena.opencl.Duotone.png \
-net.fxarena.opencl.Duotone.svg \
-net.fxarena.opencl.Duotone.cl
+$(SRCDIR)/OCL/OpenCL.png \
+net.fxarena.opencl.$(PLUGINNAME).png \
+net.fxarena.opencl.$(PLUGINNAME).svg \
+net.fxarena.opencl.$(PLUGINNAME).cl
 
 include $(SRCDIR)/Makefile.master
 

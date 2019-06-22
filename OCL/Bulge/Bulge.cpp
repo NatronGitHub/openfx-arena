@@ -24,7 +24,7 @@ using namespace OFX;
 OFXS_NAMESPACE_ANONYMOUS_ENTER
 
 #define kPluginName "Bulge"
-#define kPluginGrouping "Transform"
+#define kPluginGrouping "OpenCL"
 #define kPluginIdentifier "net.fxarena.opencl.Bulge"
 #define kPluginDescription "Bulge (implode/explode) transform effect using OpenCL."
 #define kPluginVersionMajor 1

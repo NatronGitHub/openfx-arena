@@ -1,16 +1,17 @@
 SRCDIR = ../..
 
-PLUGINOBJECTS = \
-        Cartoon.o \
-        OCLPlugin.o
+PLUGINNAME = Edge
 
-PLUGINNAME = Cartoon
+PLUGINOBJECTS = \
+        $(PLUGINNAME).o \
+        OCLPlugin.o
 
 RESOURCES = \
 $(SRCDIR)/LICENSE \
-net.fxarena.opencl.Cartoon.png \
-net.fxarena.opencl.Cartoon.svg \
-net.fxarena.opencl.Cartoon.cl
+$(SRCDIR)/OCL/OpenCL.png \
+net.fxarena.opencl.$(PLUGINNAME).png \
+net.fxarena.opencl.$(PLUGINNAME).svg \
+net.fxarena.opencl.$(PLUGINNAME).cl
 
 include $(SRCDIR)/Makefile.master
 

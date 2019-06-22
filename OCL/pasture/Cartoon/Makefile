@@ -1,6 +1,6 @@
 SRCDIR = ../..
 
-PLUGINNAME = Ripple
+PLUGINNAME = Cartoon
 
 PLUGINOBJECTS = \
         $(PLUGINNAME).o \

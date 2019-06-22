@@ -30,14 +30,15 @@ Plugins
  * Tile
  * Wave
  * Bulge (OCL)
- * Glare (OCL)
+ * Glare (OCL) (missing!)
  * Ripple (OCL)
  * Twirl (OCL)
- * Sharpen (OCL)
- * Cartoon (OCL)
+ * Sharpen (OCL) (pasture)
+ * Cartoon (OCL) (pasture)
  * Duotone (OCL)
- * Edge (OCL)
+ * Edge (OCL) (pasture)
  * CLFilter (OCL)
+ * Vibrance (OCL)
  * HaldCLUT
 
 Requirements

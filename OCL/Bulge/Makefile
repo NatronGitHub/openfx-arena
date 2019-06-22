@@ -1,19 +1,20 @@
 SRCDIR = ../..
 
+PLUGINNAME = Bulge
+
 PLUGINOBJECTS = \
-        Bulge.o \
+        $(PLUGINNAME).o \
         OCLPlugin.o \
         ofxsTransform3x3.o \
         ofxsTransformInteractCustom.o \
         ofxsShutter.o
 
-PLUGINNAME = Bulge
-
 RESOURCES = \
 $(SRCDIR)/LICENSE \
-net.fxarena.opencl.Bulge.png \
-net.fxarena.opencl.Bulge.svg \
-net.fxarena.opencl.Bulge.cl
+$(SRCDIR)/OCL/OpenCL.png \
+net.fxarena.opencl.$(PLUGINNAME).png \
+net.fxarena.opencl.$(PLUGINNAME).svg \
+net.fxarena.opencl.$(PLUGINNAME).cl
 
 include $(SRCDIR)/Makefile.master
 

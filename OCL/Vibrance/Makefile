@@ -1,16 +1,17 @@
 SRCDIR = ../..
 
-PLUGINOBJECTS = \
-        Edge.o \
-        OCLPlugin.o
+PLUGINNAME= Vibrance
 
-PLUGINNAME = Edge
+PLUGINOBJECTS = \
+        $(PLUGINNAME).o \
+        OCLPlugin.o
 
 RESOURCES = \
 $(SRCDIR)/LICENSE \
-net.fxarena.opencl.Edge.png \
-net.fxarena.opencl.Edge.svg \
-net.fxarena.opencl.Edge.cl
+net.fxarena.opencl.$(PLUGINNAME).png \
+net.fxarena.opencl.$(PLUGINNAME).svg \
+net.fxarena.opencl.$(PLUGINNAME).cl \
+$(SRCDIR)/OCL/OpenCL.png
 
 include $(SRCDIR)/Makefile.master
 
