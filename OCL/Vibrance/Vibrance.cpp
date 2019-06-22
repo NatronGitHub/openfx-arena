@@ -1,5 +1,4 @@
 #include "OCLPlugin.h"
-#include <cmath>
 
 using namespace OFX;
 OFXS_NAMESPACE_ANONYMOUS_ENTER
