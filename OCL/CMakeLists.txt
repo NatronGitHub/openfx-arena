@@ -53,7 +53,6 @@ INCLUDE_DIRECTORIES(${CMAKE_CURRENT_SOURCE_DIR}/../SupportExt)
 INCLUDE_DIRECTORIES(${OPENFX_PATH}/include)
 INCLUDE_DIRECTORIES(${OPENFX_PATH}/Support/include)
 INCLUDE_DIRECTORIES(${OPENFX_PATH}/Support/Plugins/include)
-#INCLUDE_DIRECTORIES(${CMAKE_CURRENT_SOURCE_DIR}/OCL)
 INCLUDE_DIRECTORIES(${CMAKE_CURRENT_SOURCE_DIR}/OpenCL)
 
 # Define "DEBUG" on debug builds
@@ -86,36 +85,20 @@ FILE(GLOB SUPPORT_SOURCES
 )
 
 FILE(GLOB SOURCES
-    "Bulge/Bulge.cpp"
-    "Duotone/Duotone.cpp"
-    "Ripple/Ripple.cpp"
-    "Twirl/Twirl.cpp"
-    "Vibrance/Vibrance.cpp"
-    "Bloom/Bloom.cpp"
-    "CLFilter/CLFilter.cpp"
+    "Bulge.cpp"
+    "Duotone.cpp"
+    "Ripple.cpp"
+    "Twirl.cpp"
+    "Vibrance.cpp"
+    "Bloom.cpp"
+    "CLFilter.cpp"
     "OCLPlugin.cpp"
 )
 
 FILE(GLOB RESOURCES
-    "Bulge/net.fxarena.opencl.Bulge.png"
-    "Bulge/net.fxarena.opencl.Bulge.svg"
-    "Bulge/net.fxarena.opencl.Bulge.cl"
-    "Duotone/net.fxarena.opencl.Duotone.png"
-    "Duotone/net.fxarena.opencl.Duotone.svg"
-    "Duotone/net.fxarena.opencl.Duotone.cl"
-    "Ripple/net.fxarena.opencl.Ripple.png"
-    "Ripple/net.fxarena.opencl.Ripple.svg"
-    "Ripple/net.fxarena.opencl.Ripple.cl"
-    "Twirl/net.fxarena.opencl.Twirl.png"
-    "Twirl/net.fxarena.opencl.Twirl.svg"
-    "Twirl/net.fxarena.opencl.Twirl.cl"
-    "Vibrance/net.fxarena.opencl.Vibrance.png"
-    "Vibrance/net.fxarena.opencl.Vibrance.svg"
-    "Vibrance/net.fxarena.opencl.Vibrance.cl"
-    "Bloom/net.fxarena.opencl.Bloom.png"
-    "Bloom/net.fxarena.opencl.Bloom.svg"
-    "Bloom/net.fxarena.opencl.Bloom.cl"
-    "CLFilter/net.fxarena.opencl.CLFilter.png"
+    "net.fxarena.opencl.*.png"
+    "net.fxarena.opencl.*.svg"
+    "net.fxarena.opencl.*.cl"
     "OpenCL.png"
 )
 
@@ -171,7 +154,7 @@ if(MINGW)
     if(${CMAKE_SYSTEM_PROCESSOR} STREQUAL "x86_64")
         set(OFX_ARCH "Win64")
     endif()
-# Visual Studio    
+# Visual Studio
 elseif(MSVC)
     set(OFX_ARCH "Win32")
     if((${CMAKE_SYSTEM_PROCESSOR} STREQUAL "IA64") OR (${CMAKE_SYSTEM_PROCESSOR} STREQUAL "AMD64"))
