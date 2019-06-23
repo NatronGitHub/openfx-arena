@@ -130,9 +130,15 @@ TARGET_COMPILE_DEFINITIONS(
 )
 TARGET_LINK_LIBRARIES(${PROJECT_NAME} ${OPENGL_gl_LIBRARY})
 
+# we have our own (dummy) libraries on some platforms to make the build process as easy as possible
 if(APPLE)
+    # untested
     target_link_libraries(${PROJECT_NAME} -framework OpenCL)
+elseif(${CMAKE_SYSTEM_NAME} STREQUAL "FreeBSD")
+    # untested
+    target_link_libraries(${PROJECT_NAME} -lOpenCL)
 else()
+    # on Windows(MINGW)/Linux use dummy library
     set(BIT "32")
     if(${CMAKE_SYSTEM_PROCESSOR} STREQUAL "x86_64")
         set(BIT "64")
