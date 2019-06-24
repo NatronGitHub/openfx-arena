@@ -3,8 +3,8 @@
 using namespace OFX;
 OFXS_NAMESPACE_ANONYMOUS_ENTER
 
-#define kPluginName "Vibrance"
-#define kPluginGrouping "OpenCL"
+#define kPluginName "VibranceCL"
+#define kPluginGrouping "Extra/OpenCL"
 #define kPluginIdentifier "net.fxarena.opencl.Vibrance"
 #define kPluginDescription "Vibrance filter using OpenCL."
 #define kPluginVersionMajor 1

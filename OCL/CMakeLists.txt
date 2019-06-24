@@ -54,6 +54,7 @@ INCLUDE_DIRECTORIES(${OPENFX_PATH}/include)
 INCLUDE_DIRECTORIES(${OPENFX_PATH}/Support/include)
 INCLUDE_DIRECTORIES(${OPENFX_PATH}/Support/Plugins/include)
 INCLUDE_DIRECTORIES(${CMAKE_CURRENT_SOURCE_DIR}/OpenCL)
+INCLUDE_DIRECTORIES(${CMAKE_CURRENT_SOURCE_DIR}/src)
 
 # Define "DEBUG" on debug builds
 SET(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} -DDEBUG")
@@ -78,28 +79,30 @@ FILE(GLOB SUPPORT_SOURCES
     "${OFX_SUPPORT_LIBRARY_DIR}/ofxsPropertyValidation.cpp"
     "${OFX_SUPPORT_LIBRARY_DIR}/*.h"
     "${CMAKE_CURRENT_SOURCE_DIR}/../SupportExt/ofxsTransform3x3.cpp"
-    "${CMAKE_CURRENT_SOURCE_DIR}/ofxsTransformInteractCustom.cpp"
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/ofxsTransformInteractCustom.cpp"
     "${CMAKE_CURRENT_SOURCE_DIR}/../SupportExt/ofxsShutter.cpp"
     "${CMAKE_CURRENT_SOURCE_DIR}/../SupportExt/ofxsMultiPlane.cpp"
     "${CMAKE_CURRENT_SOURCE_DIR}/../SupportExt/*.h"
 )
 
 FILE(GLOB SOURCES
-    "Bulge.cpp"
-    "Duotone.cpp"
-    "Ripple.cpp"
-    "Twirl.cpp"
-    "Vibrance.cpp"
-    "Bloom.cpp"
-    "CLFilter.cpp"
-    "OCLPlugin.cpp"
+    "src/Bulge.cpp"
+    "src/Duotone.cpp"
+    "src/Ripple.cpp"
+    "src/Twirl.cpp"
+    "src/Vibrance.cpp"
+    "src/Bloom.cpp"
+    "src/CLFilter.cpp"
+    "src/OCLPlugin.cpp"
 )
 
 FILE(GLOB RESOURCES
-    "net.fxarena.opencl.*.png"
-    "net.fxarena.opencl.*.svg"
-    "net.fxarena.opencl.*.cl"
-    "OpenCL.png"
+    "share/net.fxarena.opencl.*.png"
+    "share/net.fxarena.opencl.*.svg"
+    "share/net.fxarena.opencl.*.cl"
+    "share/OpenCL.png"
+    "${CMAKE_CURRENT_SOURCE_DIR}/../Magick/Extra.png"
+    "${CMAKE_CURRENT_SOURCE_DIR}/../Magick/Extra.svg"
 )
 
 ADD_LIBRARY(${PROJECT_NAME} SHARED ${SOURCES} ${SUPPORT_SOURCES})
@@ -208,7 +211,7 @@ ELSE()
   INSTALL(FILES ${RESOURCES}
     DESTINATION OFX/Plugins/${PROJECT_NAME}.ofx.bundle/Contents/Resources
   )
-  INSTALL(FILES Info.plist
+  INSTALL(FILES share/Info.plist
     DESTINATION OFX/Plugins/${PROJECT_NAME}.ofx.bundle/Contents
   )
 ENDIF()

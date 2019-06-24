@@ -3,8 +3,8 @@
 using namespace OFX;
 OFXS_NAMESPACE_ANONYMOUS_ENTER
 
-#define kPluginName "Bloom"
-#define kPluginGrouping "OpenCL"
+#define kPluginName "BloomCL"
+#define kPluginGrouping "Extra/OpenCL"
 #define kPluginIdentifier "net.fxarena.opencl.Bloom"
 #define kPluginDescription "Bloom filter using OpenCL."
 #define kPluginVersionMajor 1
