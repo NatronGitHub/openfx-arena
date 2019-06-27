@@ -84,17 +84,17 @@
 
 #define kParamWrap "wrap"
 #define kParamWrapLabel "Wrap"
-#define kParamWrapHint "Word wrap. Disabled if auto size or custom (transform) position is enabled."
+#define kParamWrapHint "Word wrap. Disabled if auto size and/or custom position is enabled."
 #define kParamWrapDefault 0
 
 #define kParamAlign "align"
 #define kParamAlignLabel "Horizontal align"
-#define kParamAlignHint "Horizontal text align. Disabled if custom position is enabled."
+#define kParamAlignHint "Horizontal text align. Custom position and auto size must be disabled and word wrap must be enabled (any option except none) to get anything else than left align."
 #define kParamAlignDefault 0
 
 #define kParamVAlign "valign"
 #define kParamVAlignLabel "Vertical align"
-#define kParamVAlignHint "Vertical text align. Disabled if custom position is enabled."
+#define kParamVAlignHint "Vertical text align. Disabled if custom position and/or auto size is enabled."
 #define kParamVAlignDefault 0
 
 #define kParamMarkup "markup"
