@@ -1,13 +1,9 @@
 PLUGINNAME = Magick
 
-ifneq ($(LEGACYIM),1)
-PLUGINOBJECTS += \
+PLUGINOBJECTS = \
     Sketch.o \
     Polaroid.o \
-    Edges.o
-endif
-
-PLUGINOBJECTS = \
+    Edges.o \
     Texture.o \
     Tile.o \
     Reflection.o \
@@ -22,8 +18,9 @@ PLUGINOBJECTS = \
     ReadPSD.o \
     Modulate.o \
     ReadMisc.o \
-    Text.o \
-    HaldCLUT.o \
+    Text.o
+
+PLUGINOBJECTS += \
     MagickPlugin.o \
     ofxsOGLTextRenderer.o \
     ofxsOGLFontData.o \
@@ -43,12 +40,6 @@ RESOURCES = \
     net.fxarena.openfx.Arc.svg \
     net.fxarena.openfx.Polar.png \
     net.fxarena.openfx.Polar.svg \
-    Roll/net.fxarena.openfx.Roll.png \
-    Roll/net.fxarena.openfx.Roll.svg \
-    Wave/net.fxarena.openfx.Wave.png \
-    Wave/net.fxarena.openfx.Wave.svg \
-    Swirl/net.fxarena.openfx.Swirl.png \
-    Swirl/net.fxarena.openfx.Swirl.svg \
     net.fxarena.openfx.Implode.png \
     net.fxarena.openfx.Implode.svg \
     net.fxarena.openfx.Charcoal.png \
@@ -65,26 +56,24 @@ RESOURCES = \
     net.fxarena.openfx.Text.svg \
     net.fxarena.openfx.Texture.png \
     net.fxarena.openfx.Texture.svg \
-    HaldCLUT/net.fxarena.openfx.HaldCLUT.png \
-    HaldCLUT/net.fxarena.openfx.HaldCLUT.svg \
-    HaldCLUT/net.fxarena.openfx.HaldCLUT.xml
-
-ifneq ($(LEGACYIM),1)
-RESOURCES += \
     net.fxarena.openfx.Sketch.png \
     net.fxarena.openfx.Sketch.svg \
     net.fxarena.openfx.Polaroid.png \
     net.fxarena.openfx.Polaroid.svg \
     net.fxarena.openfx.Edges.png \
-    net.fxarena.openfx.Edges.svg
-endif
+    net.fxarena.openfx.Edges.svg \
+    Roll/net.fxarena.openfx.Roll.png \
+    Roll/net.fxarena.openfx.Roll.svg \
+    Wave/net.fxarena.openfx.Wave.png \
+    Wave/net.fxarena.openfx.Wave.svg \
+    Swirl/net.fxarena.openfx.Swirl.png \
+    Swirl/net.fxarena.openfx.Swirl.svg
 
 SRCDIR = ..
 include $(SRCDIR)/Makefile.master
 include $(SRCDIR)/Makefile.io
 
 VPATH += \
-    $(SRCDIR)/Magick/HaldCLUT \
     $(SRCDIR)/Magick/Swirl \
     $(SRCDIR)/Magick/Roll \
     $(SRCDIR)/Magick/Wave
@@ -94,14 +83,10 @@ CXXFLAGS += \
 
 CXXFLAGS  += \
     $(MAGICK_CXXFLAGS) \
-    $(LCMS_CXXFLAGS) \
-    $(CURL_CXXFLAGS) \
-    $(XML_CXXFLAGS)
+    $(LCMS_CXXFLAGS)
 LINKFLAGS += \
     $(MAGICK_LINKFLAGS) \
-    $(LCMS_LINKFLAGS) \
-    $(CURL_LINKFLAGS) \
-    $(XML_LINKFLAGS)
+    $(LCMS_LINKFLAGS)
 
 ifeq ($(LEGACYIM),1)
 CXXFLAGS += -DLEGACYIM -DNOMAGICKSEED
