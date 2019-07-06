@@ -83,8 +83,8 @@ RESOURCES += \
     ../Magick/Wave/net.fxarena.openfx.Wave.svg \
     ../Magick/Swirl/net.fxarena.openfx.Swirl.png \
     ../Magick/Swirl/net.fxarena.openfx.Swirl.svg \
-    ../Magick/net.fxarena.openfx.Implode.png \
-    ../Magick/net.fxarena.openfx.Implode.svg \
+    ../Magick/Implode/net.fxarena.openfx.Implode.png \
+    ../Magick/Implode/net.fxarena.openfx.Implode.svg \
     ../Magick/net.fxarena.openfx.Charcoal.png \
     ../Magick/net.fxarena.openfx.Charcoal.svg \
     ../Magick/net.fxarena.openfx.Oilpaint.png \
@@ -118,7 +118,8 @@ VPATH += \
     $(SRCDIR)/Magick \
     $(SRCDIR)/Magick/Swirl \
     $(SRCDIR)/Magick/Roll \
-    $(SRCDIR)/Magick/Wave
+    $(SRCDIR)/Magick/Wave \
+    $(SRCDIR)/Magick/Implode
 
 CXXFLAGS += \
     -I$(SRCDIR)/Extra \

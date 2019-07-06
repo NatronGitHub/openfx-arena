@@ -40,8 +40,8 @@ RESOURCES = \
     net.fxarena.openfx.Arc.svg \
     net.fxarena.openfx.Polar.png \
     net.fxarena.openfx.Polar.svg \
-    net.fxarena.openfx.Implode.png \
-    net.fxarena.openfx.Implode.svg \
+    Implode/net.fxarena.openfx.Implode.png \
+    Implode/net.fxarena.openfx.Implode.svg \
     net.fxarena.openfx.Charcoal.png \
     net.fxarena.openfx.Charcoal.svg \
     net.fxarena.openfx.Oilpaint.png \
@@ -76,7 +76,8 @@ include $(SRCDIR)/Makefile.io
 VPATH += \
     $(SRCDIR)/Magick/Swirl \
     $(SRCDIR)/Magick/Roll \
-    $(SRCDIR)/Magick/Wave
+    $(SRCDIR)/Magick/Wave \
+    $(SRCDIR)/Magick/Implode
 
 CXXFLAGS += \
     -I.
