@@ -39,7 +39,8 @@ MagickPluginHelperBase::MagickPluginHelperBase(OfxImageEffectHandle handle)
 }
 
 void
-MagickPluginHelperBase::changedParam(const OFX::InstanceChangedArgs &args, const std::string &/*paramName*/)
+MagickPluginHelperBase::changedParam(const OFX::InstanceChangedArgs &args,
+                                     const std::string &/*paramName*/)
 {
     if (!_renderscale && (args.renderScale.x != 1. || args.renderScale.y != 1.)) {
         OFX::throwSuiteStatusException(kOfxStatFailed);
@@ -49,7 +50,8 @@ MagickPluginHelperBase::changedParam(const OFX::InstanceChangedArgs &args, const
 }
 
 OFX::PageParamDescriptor*
-MagickPluginHelperBase::describeInContextBegin(OFX::ImageEffectDescriptor &desc, OFX::ContextEnum /*context*/)
+MagickPluginHelperBase::describeInContextBegin(OFX::ImageEffectDescriptor &desc,
+                                               OFX::ContextEnum /*context*/)
 {
     OFX::ClipDescriptor *srcClip = desc.defineClip(kOfxImageEffectSimpleSourceClipName);
     srcClip->addSupportedComponent(OFX::ePixelComponentRGBA);
@@ -121,6 +123,8 @@ MagickPluginHelperBase::describeInContextBegin(OFX::ImageEffectDescriptor &desc,
 }
 
 void
-MagickPluginHelperBase::describeInContextEnd(OFX::ImageEffectDescriptor &/*desc*/, OFX::ContextEnum /*context*/, OFX::PageParamDescriptor* /*page*/)
+MagickPluginHelperBase::describeInContextEnd(OFX::ImageEffectDescriptor &/*desc*/,
+                                             OFX::ContextEnum /*context*/,
+                                             OFX::PageParamDescriptor* /*page*/)
 {
 }

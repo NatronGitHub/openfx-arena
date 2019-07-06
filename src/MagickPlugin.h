@@ -36,7 +36,7 @@
 #define kParamVPixel "vpixel"
 #define kParamVPixelLabel "Virtual Pixel"
 #define kParamVPixelHint "Virtual Pixel Method."
-#define kParamVPixelDefault 12
+#define kParamVPixelDefault 12 // transparent
 
 static bool _hasMP = false;
 
@@ -44,11 +44,14 @@ class MagickPluginHelperBase
     : public OFX::ImageEffect
 {
 public:
-
     MagickPluginHelperBase(OfxImageEffectHandle handle);
-    virtual void changedParam(const OFX::InstanceChangedArgs &args, const std::string &paramName) OVERRIDE;
-    static OFX::PageParamDescriptor* describeInContextBegin(OFX::ImageEffectDescriptor &desc, OFX::ContextEnum context);
-    static void describeInContextEnd(OFX::ImageEffectDescriptor &desc, OFX::ContextEnum context, OFX::PageParamDescriptor* page);
+    virtual void changedParam(const OFX::InstanceChangedArgs &args,
+                              const std::string &paramName) OVERRIDE;
+    static OFX::PageParamDescriptor* describeInContextBegin(OFX::ImageEffectDescriptor &desc,
+                                                            OFX::ContextEnum context);
+    static void describeInContextEnd(OFX::ImageEffectDescriptor &desc,
+                                     OFX::ContextEnum context,
+                                     OFX::PageParamDescriptor* page);
 
 protected:
     OFX::Clip *_dstClip;
@@ -64,7 +67,6 @@ class MagickPluginHelper
     : public MagickPluginHelperBase
 {
 public:
-
     MagickPluginHelper(OfxImageEffectHandle handle)
         : MagickPluginHelperBase(handle)
     {
@@ -72,9 +74,12 @@ public:
     }
 
     virtual void render(const OFX::RenderArguments &args) OVERRIDE FINAL;
-    virtual bool getRegionOfDefinition(const OFX::RegionOfDefinitionArguments &args, OfxRectD &rod) OVERRIDE FINAL;
-    virtual void render(const OFX::RenderArguments &args, Magick::Image &image) = 0;
-    static OFX::PageParamDescriptor* describeInContextBegin(OFX::ImageEffectDescriptor &desc, OFX::ContextEnum context)
+    virtual bool getRegionOfDefinition(const OFX::RegionOfDefinitionArguments &args,
+                                       OfxRectD &rod) OVERRIDE FINAL;
+    virtual void render(const OFX::RenderArguments &args,
+                        Magick::Image &image) = 0;
+    static OFX::PageParamDescriptor* describeInContextBegin(OFX::ImageEffectDescriptor &desc,
+                                                            OFX::ContextEnum context)
     {
         return MagickPluginHelperBase::describeInContextBegin(desc, context);
     }
@@ -102,8 +107,10 @@ void MagickPluginHelper<SupportsRenderScale>::render(const OFX::RenderArguments 
         srcBounds = srcImg->getBounds();
         if (srcImg->getRenderScale().x != args.renderScale.x ||
             srcImg->getRenderScale().y != args.renderScale.y ||
-            srcImg->getField() != args.fieldToRender) {
-            setPersistentMessage(OFX::Message::eMessageError, "", "OFX Host gave image with wrong scale or field properties");
+            ((srcImg->getField() != OFX::eFieldNone) && (srcImg->getField() != args.fieldToRender))) {
+            setPersistentMessage(OFX::Message::eMessageError,
+                                 "",
+                                 "OFX Host gave image with wrong scale or field properties");
             OFX::throwSuiteStatusException(kOfxStatFailed);
             return;
         }
@@ -125,7 +132,7 @@ void MagickPluginHelper<SupportsRenderScale>::render(const OFX::RenderArguments 
     }
     if (dstImg->getRenderScale().x != args.renderScale.x ||
         dstImg->getRenderScale().y != args.renderScale.y ||
-        dstImg->getField() != args.fieldToRender) {
+        ((dstImg->getField() != OFX::eFieldNone) && (dstImg->getField() != args.fieldToRender))) {
         setPersistentMessage(OFX::Message::eMessageError, "", "OFX Host gave image with wrong scale or field properties");
         OFX::throwSuiteStatusException(kOfxStatFailed);
         return;
@@ -165,90 +172,130 @@ void MagickPluginHelper<SupportsRenderScale>::render(const OFX::RenderArguments 
     _vpixel->getValueAtTime(args.time, vpixel);
 
     // OpenMP
-#ifndef DISABLE_OPENMP
     unsigned int threads = 1;
     if (_hasMP && enableMP) {
         threads = OFX::MultiThread::getNumCPUs();
     }
     Magick::ResourceLimits::thread(threads);
-#endif
 
-    // render
-    Magick::Image image(Magick::Geometry(width, height), Magick::Color("rgba(0,0,0,0)"));
-    Magick::Image output(Magick::Geometry(width, height), Magick::Color("rgba(0,0,0,1)"));
-    if (_srcClip && _srcClip->isConnected()) {
-        image.read(width, height, "RGBA", Magick::FloatPixel, (float*)srcImg->getPixelData());
-        image.flip();
-        switch (vpixel) {
-        case 0:
-            image.virtualPixelMethod(Magick::UndefinedVirtualPixelMethod);
-            break;
-        case 1:
-            image.virtualPixelMethod(Magick::BackgroundVirtualPixelMethod);
-            break;
-        case 2:
-            image.virtualPixelMethod(Magick::BlackVirtualPixelMethod);
-            break;
-        case 3:
-            image.virtualPixelMethod(Magick::CheckerTileVirtualPixelMethod);
-            break;
-        case 4:
-            image.virtualPixelMethod(Magick::DitherVirtualPixelMethod);
-            break;
-        case 5:
-            image.virtualPixelMethod(Magick::EdgeVirtualPixelMethod);
-            break;
-        case 6:
-            image.virtualPixelMethod(Magick::GrayVirtualPixelMethod);
-            break;
-        case 7:
-            image.virtualPixelMethod(Magick::HorizontalTileVirtualPixelMethod);
-            break;
-        case 8:
-            image.virtualPixelMethod(Magick::HorizontalTileEdgeVirtualPixelMethod);
-            break;
-        case 9:
-            image.virtualPixelMethod(Magick::MirrorVirtualPixelMethod);
-            break;
-        case 10:
-            image.virtualPixelMethod(Magick::RandomVirtualPixelMethod);
-            break;
-        case 11:
-            image.virtualPixelMethod(Magick::TileVirtualPixelMethod);
-            break;
-        case 12:
-            image.virtualPixelMethod(Magick::TransparentVirtualPixelMethod);
-            break;
-        case 13:
-            image.virtualPixelMethod(Magick::VerticalTileVirtualPixelMethod);
-            break;
-        case 14:
-            image.virtualPixelMethod(Magick::VerticalTileEdgeVirtualPixelMethod);
-            break;
-        case 15:
-            image.virtualPixelMethod(Magick::WhiteVirtualPixelMethod);
-            break;
-        }
-        if (matte) {
-#if MagickLibVersion >= 0x700
-            image.alpha(false);
-            image.alpha(true);
+    // setup image
+    Magick::Image image(Magick::Geometry(width, height),
+                        Magick::Color("rgba(0,0,0,0)"));
+    Magick::Image output(Magick::Geometry(width, height),
+                         Magick::Color("rgba(0,0,0,1)"));
+    // be quiet?
+#ifdef DEBUG
+    image.quiet(false);
+    output.quiet(false);
 #else
-            image.matte(false);
-            image.matte(true);
+    image.quiet(true);
+    output.quiet(true);
+#endif
+    if (_srcClip && _srcClip->isConnected()) {
+        try { // read image buffer
+            image.read(width,
+                       height,
+                       "RGBA",
+                       Magick::FloatPixel,
+                       (float*)srcImg->getPixelData());
+            image.flip(); // flip it
+            switch (vpixel) { // set virtual pixel (transparent is default)
+            case 0:
+                image.virtualPixelMethod(Magick::UndefinedVirtualPixelMethod);
+                break;
+            case 1:
+                image.virtualPixelMethod(Magick::BackgroundVirtualPixelMethod);
+                break;
+            case 2:
+                image.virtualPixelMethod(Magick::BlackVirtualPixelMethod);
+                break;
+            case 3:
+                image.virtualPixelMethod(Magick::CheckerTileVirtualPixelMethod);
+                break;
+            case 4:
+                image.virtualPixelMethod(Magick::DitherVirtualPixelMethod);
+                break;
+            case 5:
+                image.virtualPixelMethod(Magick::EdgeVirtualPixelMethod);
+                break;
+            case 6:
+                image.virtualPixelMethod(Magick::GrayVirtualPixelMethod);
+                break;
+            case 7:
+                image.virtualPixelMethod(Magick::HorizontalTileVirtualPixelMethod);
+                break;
+            case 8:
+                image.virtualPixelMethod(Magick::HorizontalTileEdgeVirtualPixelMethod);
+                break;
+            case 9:
+                image.virtualPixelMethod(Magick::MirrorVirtualPixelMethod);
+                break;
+            case 10:
+                image.virtualPixelMethod(Magick::RandomVirtualPixelMethod);
+                break;
+            case 11:
+                image.virtualPixelMethod(Magick::TileVirtualPixelMethod);
+                break;
+            case 12:
+                image.virtualPixelMethod(Magick::TransparentVirtualPixelMethod);
+                break;
+            case 13:
+                image.virtualPixelMethod(Magick::VerticalTileVirtualPixelMethod);
+                break;
+            case 14:
+                image.virtualPixelMethod(Magick::VerticalTileEdgeVirtualPixelMethod);
+                break;
+            case 15:
+                image.virtualPixelMethod(Magick::WhiteVirtualPixelMethod);
+                break;
+            }
+            if (matte) { // remove alpha if requested
+#if MagickLibVersion >= 0x700
+                image.alpha(false);
+                image.alpha(true);
+#else
+                image.matte(false);
+                image.matte(true);
+#endif
+            }
+            render(args, image); // render
+            image.flip(); // flip it back
+        }
+        catch(Magick::Warning &warning) { // show ImageMagick warning
+#ifdef DEBUG
+            setPersistentMessage(OFX::Message::eMessageError, "", warning.what());
 #endif
         }
-        render(args, image);
-        image.flip();
+        catch(Magick::Error &error) { // show ImageMagick error
+            setPersistentMessage(OFX::Message::eMessageError, "", error.what());
+            OFX::throwSuiteStatusException(kOfxStatFailed);
+        }
     }
     if (_dstClip && _dstClip->isConnected()) {
-        output.composite(image, 0, 0, Magick::OverCompositeOp);
+        try { // write image buffer
+            output.composite(image, 0, 0, Magick::OverCompositeOp);
 #if MagickLibVersion >= 0x700
-        output.composite(image, 0, 0, Magick::CopyAlphaCompositeOp);
+            output.composite(image, 0, 0, Magick::CopyAlphaCompositeOp);
 #else
-        output.composite(image, 0, 0, Magick::CopyOpacityCompositeOp);
+            output.composite(image, 0, 0, Magick::CopyOpacityCompositeOp);
 #endif
-        output.write(0, 0, args.renderWindow.x2 - args.renderWindow.x1,args.renderWindow.y2 - args.renderWindow.y1, "RGBA", Magick::FloatPixel, (float*)dstImg->getPixelData());
+            output.write(0,
+                         0,
+                         args.renderWindow.x2 - args.renderWindow.x1,
+                         args.renderWindow.y2 - args.renderWindow.y1,
+                         "RGBA",
+                         Magick::FloatPixel,
+                         (float*)dstImg->getPixelData());
+        }
+        catch(Magick::Warning &warning) { // show ImageMagick warning
+#ifdef DEBUG
+            setPersistentMessage(OFX::Message::eMessageError, "", warning.what());
+#endif
+        }
+        catch(Magick::Error &error) { // show ImageMagick error
+            setPersistentMessage(OFX::Message::eMessageError, "", error.what());
+            OFX::throwSuiteStatusException(kOfxStatFailed);
+        }
     }
 
 }
