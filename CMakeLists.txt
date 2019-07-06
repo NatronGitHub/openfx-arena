@@ -59,26 +59,27 @@ elseif("${CMAKE_CXX_COMPILER_ID}" STREQUAL "Clang")
     set (CMAKE_CXX_FLAGS_RELEASE "-Wall -Wextra -Ofast -DNDEBUG")
     set (CMAKE_C_FLAGS_RELEASE   "-Wall -Wextra -Ofast -DNDEBUG")
 endif()
-set(OPENFX_PATH ${CMAKE_CURRENT_SOURCE_DIR}/OpenFX)
+set(OPENFX_PATH ${CMAKE_CURRENT_SOURCE_DIR}/common/OpenFX)
 
 # Check that submodule have been initialized and updated
-if(NOT EXISTS ${PROJECT_SOURCE_DIR}/OpenFX/include)
+if(NOT EXISTS ${PROJECT_SOURCE_DIR}/common/OpenFX/include)
   message(FATAL_ERROR
     "\n submodule(s) are missing, please update your repository:\n"
-    "  > git submodule update -i\n")
+    "  > git submodule update -i --recursive\n")
 endif()
 
 # C++ Include directories
 include_directories(${CMAKE_CURRENT_SOURCE_DIR})
-include_directories(${CMAKE_CURRENT_SOURCE_DIR}/SupportExt)
+include_directories(${CMAKE_CURRENT_SOURCE_DIR}/common/SupportExt)
 include_directories(${OPENFX_PATH}/include)
 include_directories(${OPENFX_PATH}/Support/include)
 include_directories(${OPENFX_PATH}/Support/Plugins/include)
-include_directories(${CMAKE_CURRENT_SOURCE_DIR}/OpenFX-IO/IOSupport)
-include_directories(${CMAKE_CURRENT_SOURCE_DIR}/OpenFX-IO/IOSupport/SequenceParsing)
-include_directories(${CMAKE_CURRENT_SOURCE_DIR}/OpenFX-IO/IOSupport/SequenceParsing/tinydir)
+include_directories(${CMAKE_CURRENT_SOURCE_DIR}/common/OpenFX-IO/IOSupport)
+include_directories(${CMAKE_CURRENT_SOURCE_DIR}/common/OpenFX-IO/IOSupport/SequenceParsing)
+include_directories(${CMAKE_CURRENT_SOURCE_DIR}/common/OpenFX-IO/IOSupport/SequenceParsing/tinydir)
 include_directories(${CMAKE_CURRENT_SOURCE_DIR}/Magick)
 include_directories(${CMAKE_CURRENT_SOURCE_DIR}/Extra)
+include_directories(${CMAKE_CURRENT_SOURCE_DIR}/src)
 #include_directories(${CMAKE_CURRENT_SOURCE_DIR}/OCL)
 
 # Define "DEBUG" on debug builds
@@ -103,17 +104,17 @@ file(GLOB SUPPORT_SOURCES
     "${OFX_SUPPORT_LIBRARY_DIR}/ofxsProperty.cpp"
     "${OFX_SUPPORT_LIBRARY_DIR}/ofxsPropertyValidation.cpp"
     "${OFX_SUPPORT_LIBRARY_DIR}/*.h"
-    "SupportExt/ofxsOGLTextRenderer.cpp"
-    "SupportExt/ofxsOGLFontData.cpp"
-    "SupportExt/ofxsRectangleInteract.cpp"
-    "SupportExt/ofxsTransform3x3.cpp"
-    "SupportExt/ofxsTransformInteract.cpp"
-    "SupportExt/ofxsShutter.cpp"
-    "SupportExt/ofxsMultiPlane.cpp"
-    "OpenFX-IO/IOSupport/GenericReader.cpp"
-    "OpenFX-IO/IOSupport/GenericOCIO.cpp"
-    "OpenFX-IO/IOSupport/SequenceParsing/SequenceParsing.cpp"
-    "SupportExt/*.h"
+    "common/SupportExt/ofxsOGLTextRenderer.cpp"
+    "common/SupportExt/ofxsOGLFontData.cpp"
+    "common/SupportExt/ofxsRectangleInteract.cpp"
+    "common/SupportExt/ofxsTransform3x3.cpp"
+    "common/SupportExt/ofxsTransformInteract.cpp"
+    "common/SupportExt/ofxsShutter.cpp"
+    "common/SupportExt/ofxsMultiPlane.cpp"
+    "common/OpenFX-IO/IOSupport/GenericReader.cpp"
+    "common/OpenFX-IO/IOSupport/GenericOCIO.cpp"
+    "common/OpenFX-IO/IOSupport/SequenceParsing/SequenceParsing.cpp"
+    "common/SupportExt/*.h"
 )
 
 file(GLOB SOURCES
@@ -145,22 +146,10 @@ file(GLOB SOURCES
 )
 
 file(GLOB RESOURCES
-    "Extra/net.fxarena.openfx.*.png"
-    "Extra/net.fxarena.openfx.*.svg"
-    "Extra/fr.inria.openfx.*.png"
-    "Extra/fr.inria.openfx.*.svg"
-    "Magick/net.fxarena.openfx.*.png"
-    "Magick/net.fxarena.openfx.*.svg"
-    "Magick/Roll/net.fxarena.openfx.*.png"
-    "Magick/Roll/net.fxarena.openfx.*.svg"
-    "Magick/Swirl/net.fxarena.openfx.*.png"
-    "Magick/Swirl/net.fxarena.openfx.*.svg"
-    "Magick/Wave/net.fxarena.openfx.*.png"
-    "Magick/Wave/net.fxarena.openfx.*.svg"
-    "Magick/Implode/net.fxarena.openfx.*.png"
-    "Magick/Implode/net.fxarena.openfx.*.svg"
-    "Magick/Extra.png"
-    "Magick/Extra.svg"
+    "share/images/*.png"
+    "share/images/.*.svg"
+    "share/Arena/*.png"
+    "share/Arena/*.svg"
 )
 
 add_library(${PROJECT_NAME} SHARED ${SOURCES} ${SUPPORT_SOURCES})
@@ -279,14 +268,17 @@ set(OFX_ARCH_NAME ${OFX_ARCH} CACHE STRING "OpenFX target OS and architecture")
 if("${OFX_ARCH_NAME}" EQUAL "UNKNOWN")
   message(SEND_ERROR "OFX_ARCH_NAME was not detected. Install targets will be unavailable. See http://openeffects.org/documentation/reference/ch02s02.html to pick an arch name.")
 else()
-  install(TARGETS ${PROJECT_NAME}
-    RUNTIME DESTINATION OFX/Plugins/${PROJECT_NAME}.ofx.bundle/Contents/${OFX_ARCH_NAME}
-    LIBRARY DESTINATION OFX/Plugins/${PROJECT_NAME}.ofx.bundle/Contents/${OFX_ARCH_NAME}
+  install(
+    TARGETS ${PROJECT_NAME}
+    RUNTIME DESTINATION ${PROJECT_NAME}.ofx.bundle/Contents/${OFX_ARCH_NAME}
+    LIBRARY DESTINATION ${PROJECT_NAME}.ofx.bundle/Contents/${OFX_ARCH_NAME}
   )
-  install(FILES ${RESOURCES}
-    DESTINATION OFX/Plugins/${PROJECT_NAME}.ofx.bundle/Contents/Resources
+  install(
+    FILES ${RESOURCES}
+    DESTINATION ${PROJECT_NAME}.ofx.bundle/Contents/Resources
   )
-  install(FILES Bundle/Info.plist
-    DESTINATION OFX/Plugins/${PROJECT_NAME}.ofx.bundle/Contents
+  install(
+    FILES share/Arena/Info.plist
+    DESTINATION ${PROJECT_NAME}.ofx.bundle/Contents
   )
 endif()

@@ -1,9 +1,9 @@
 [submodule "OpenFX"]
-	path = OpenFX
+	path = common/OpenFX
 	url = https://github.com/NatronGitHub/openfx.git
 [submodule "SupportExt"]
-	path = SupportExt
+	path = common/SupportExt
 	url = https://github.com/NatronGitHub/openfx-supportext.git
 [submodule "OpenFX-IO"]
-	path = OpenFX-IO
+	path = common/OpenFX-IO
 	url = https://github.com/NatronGitHub/openfx-io.git
