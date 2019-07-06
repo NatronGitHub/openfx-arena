@@ -32,7 +32,7 @@
 #include <algorithm>
 #include <fstream>
 
-#include "fx.h"
+#include "TextFX.h"
 
 #define kPluginName "TextOFX"
 #define kPluginGrouping "Draw"

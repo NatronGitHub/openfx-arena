@@ -79,7 +79,7 @@ include_directories(${CMAKE_CURRENT_SOURCE_DIR}/common/OpenFX-IO/IOSupport/Seque
 include_directories(${CMAKE_CURRENT_SOURCE_DIR}/common/OpenFX-IO/IOSupport/SequenceParsing/tinydir)
 include_directories(${CMAKE_CURRENT_SOURCE_DIR}/common/lodepng)
 include_directories(${CMAKE_CURRENT_SOURCE_DIR}/Magick)
-include_directories(${CMAKE_CURRENT_SOURCE_DIR}/Extra)
+#include_directories(${CMAKE_CURRENT_SOURCE_DIR}/Extra)
 include_directories(${CMAKE_CURRENT_SOURCE_DIR}/src)
 #include_directories(${CMAKE_CURRENT_SOURCE_DIR}/OCL)
 
@@ -120,12 +120,13 @@ file(GLOB SUPPORT_SOURCES
 )
 
 file(GLOB SOURCES
-    "Extra/TextFX.cpp"
-    "Extra/ReadSVG.cpp"
-    "Extra/ReadPDF.cpp"
-    "Extra/OpenRaster.cpp"
-    "Extra/ReadCDR.cpp"
-    "Extra/ReadKrita.cpp"
+    "src/Text.cpp"
+    "src/TextFX.cpp"
+    "src/ReadSVG.cpp"
+    "src/ReadPDF.cpp"
+    "src/OpenRaster.cpp"
+    "src/ReadCDR.cpp"
+    "src/ReadKrita.cpp"
     "Magick/Arc.cpp"
     "Magick/Charcoal.cpp"
     "Magick/Edges.cpp"
@@ -133,24 +134,25 @@ file(GLOB SOURCES
     "Magick/Oilpaint.cpp"
     "Magick/Polar.cpp"
     "Magick/Polaroid.cpp"
-    "Magick/ReadMisc.cpp"
-    "Magick/ReadPSD.cpp"
+    "src/ReadMisc.cpp"
+    "src/ReadPSD.cpp"
     "Magick/Reflection.cpp"
     "Magick/Sketch.cpp"
-    "Magick/Text.cpp"
-    "Magick/Texture.cpp"
+    "src/Texture.cpp"
     "Magick/Tile.cpp"
-    "Magick/Roll/Roll.cpp"
-    "Magick/Swirl/Swirl.cpp"
-    "Magick/Wave/Wave.cpp"
-    "Magick/Implode/Implode.cpp"
-    "Magick/MagickPlugin.cpp"
+    "src/Roll.cpp"
+    "src/Swirl.cpp"
+    "src/Wave.cpp"
+    "src/Implode.cpp"
+    "src/MagickPlugin.cpp"
     "common/lodepng/lodepng.cpp"
 )
 
 file(GLOB RESOURCES
-    "share/images/*.png"
-    "share/images/.*.svg"
+    "share/images/fr.inria.openfx.*.png"
+    "share/images/fr.inria.openfx.*.svg"
+    "share/images/net.fxarena.openfx.*.png"
+    "share/images/net.fxarena.openfx.*.svg"
     "share/Arena/*.png"
     "share/Arena/*.svg"
 )
