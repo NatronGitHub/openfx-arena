@@ -61,13 +61,15 @@ public:
         assert(_amp && _length);
     }
 
-    virtual void render(const OFX::RenderArguments &args, Magick::Image &image) OVERRIDE FINAL
+    virtual void render(const OFX::RenderArguments &args,
+                        Magick::Image &image) OVERRIDE FINAL
     {
         double waveAmp, waveLength;
         _amp->getValueAtTime(args.time, waveAmp);
         _length->getValueAtTime(args.time, waveLength);
         image.backgroundColor(Magick::Color("rgba(0,0,0,0)"));
-        image.wave(std::floor(waveAmp * args.renderScale.x + 0.5),std::floor(waveLength * args.renderScale.x + 0.5));
+        image.wave(std::floor(waveAmp * args.renderScale.x + 0.5),
+                   std::floor(waveLength * args.renderScale.x + 0.5));
     }
 private:
     DoubleParam *_amp;
@@ -92,7 +94,8 @@ void WavePluginFactory::describe(ImageEffectDescriptor &desc)
     desc.setHostMixingEnabled(kHostMixing);
 }
 
-void WavePluginFactory::describeInContext(ImageEffectDescriptor &desc, ContextEnum context)
+void WavePluginFactory::describeInContext(ImageEffectDescriptor &desc,
+                                          ContextEnum context)
 {
     OFX::PageParamDescriptor *page = WavePlugin::describeInContextBegin(desc, context);
     {
@@ -102,7 +105,9 @@ void WavePluginFactory::describeInContext(ImageEffectDescriptor &desc, ContextEn
         param->setRange(0, 1000);
         param->setDisplayRange(0, 500);
         param->setDefault(kParamWaveAmpDefault);
-        page->addChild(*param);
+        if (page) {
+            page->addChild(*param);
+        }
     }
     {
         DoubleParamDescriptor *param = desc.defineDoubleParam(kParamWaveLength);
@@ -111,18 +116,23 @@ void WavePluginFactory::describeInContext(ImageEffectDescriptor &desc, ContextEn
         param->setRange(0, 1000);
         param->setDisplayRange(0, 500);
         param->setDefault(kParamWaveLengthDefault);
-        page->addChild(*param);
+        if (page) {
+            page->addChild(*param);
+        }
     }
     WavePlugin::describeInContextEnd(desc, context, page);
 }
 
 OFX::ImageEffect*
-WavePluginFactory::createInstance(OfxImageEffectHandle handle, ContextEnum /*context*/)
+WavePluginFactory::createInstance(OfxImageEffectHandle handle,
+                                  ContextEnum /*context*/)
 {
     return new WavePlugin(handle);
 }
 
-static WavePluginFactory p(kPluginIdentifier, kPluginVersionMajor, kPluginVersionMinor);
+static WavePluginFactory p(kPluginIdentifier,
+                           kPluginVersionMajor,
+                           kPluginVersionMinor);
 mRegisterPluginFactoryInstance(p)
 
 OFXS_NAMESPACE_ANONYMOUS_EXIT
