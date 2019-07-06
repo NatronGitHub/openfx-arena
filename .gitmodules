@@ -7,3 +7,6 @@
 [submodule "OpenFX-IO"]
 	path = common/OpenFX-IO
 	url = https://github.com/NatronGitHub/openfx-io.git
+[submodule "common/lodepng"]
+	path = common/lodepng
+	url = https://github.com/lvandeve/lodepng

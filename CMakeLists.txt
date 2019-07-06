@@ -77,6 +77,7 @@ include_directories(${OPENFX_PATH}/Support/Plugins/include)
 include_directories(${CMAKE_CURRENT_SOURCE_DIR}/common/OpenFX-IO/IOSupport)
 include_directories(${CMAKE_CURRENT_SOURCE_DIR}/common/OpenFX-IO/IOSupport/SequenceParsing)
 include_directories(${CMAKE_CURRENT_SOURCE_DIR}/common/OpenFX-IO/IOSupport/SequenceParsing/tinydir)
+include_directories(${CMAKE_CURRENT_SOURCE_DIR}/common/lodepng)
 include_directories(${CMAKE_CURRENT_SOURCE_DIR}/Magick)
 include_directories(${CMAKE_CURRENT_SOURCE_DIR}/Extra)
 include_directories(${CMAKE_CURRENT_SOURCE_DIR}/src)
@@ -115,15 +116,16 @@ file(GLOB SUPPORT_SOURCES
     "common/OpenFX-IO/IOSupport/GenericOCIO.cpp"
     "common/OpenFX-IO/IOSupport/SequenceParsing/SequenceParsing.cpp"
     "common/SupportExt/*.h"
+    "common/lodepng"
 )
 
 file(GLOB SOURCES
     "Extra/TextFX.cpp"
     "Extra/ReadSVG.cpp"
     "Extra/ReadPDF.cpp"
-#    "Extra/OpenRaster.cpp"
+    "Extra/OpenRaster.cpp"
     "Extra/ReadCDR.cpp"
-#    "Extra/ReadKrita.cpp"
+    "Extra/ReadKrita.cpp"
     "Magick/Arc.cpp"
     "Magick/Charcoal.cpp"
     "Magick/Edges.cpp"
@@ -143,6 +145,7 @@ file(GLOB SOURCES
     "Magick/Wave/Wave.cpp"
     "Magick/Implode/Implode.cpp"
     "Magick/MagickPlugin.cpp"
+    "common/lodepng/lodepng.cpp"
 )
 
 file(GLOB RESOURCES
