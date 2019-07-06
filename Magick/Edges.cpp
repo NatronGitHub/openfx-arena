@@ -229,6 +229,14 @@ void EdgesPlugin::render(const OFX::RenderArguments &args)
     std::ostringstream edgeWidth;
     edgeWidth << edge * args.renderScale.x;
 
+#if MagickLibVersion >= 0x708
+    // https://github.com/ImageMagick/ImageMagick/issues/1298
+    // REMOVE WHEN ISSUE HAS BEEN RESOLVED
+    Magick::Image alphaChannel(image);
+    alphaChannel.channel(Magick::AlphaChannel);
+    image.alpha(false);
+#endif
+
     switch (kernel) {
     case 0:
         image.morphology(Magick::EdgeMorphology,Magick::BinomialKernel,edgeWidth.str());
@@ -318,6 +326,13 @@ void EdgesPlugin::render(const OFX::RenderArguments &args)
         image.morphology(Magick::EdgeMorphology,Magick::EuclideanKernel,edgeWidth.str());
         break;
     }
+
+#if MagickLibVersion >= 0x708
+    // https://github.com/ImageMagick/ImageMagick/issues/1298
+    // REMOVE WHEN ISSUE HAS BEEN RESOLVED
+    image.alpha(true);
+    image.composite(alphaChannel, 0, 0, Magick::CopyAlphaCompositeOp);
+#endif
 
     // multiply
     if (brightness>0) {
