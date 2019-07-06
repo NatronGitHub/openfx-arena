@@ -17,21 +17,22 @@
 # ***** END LICENSE BLOCK *****
 
 ########################################################################
-IF(${CMAKE_SOURCE_DIR} STREQUAL ${CMAKE_BINARY_DIR})
-MESSAGE(FATAL_ERROR "Prevented in-tree built. This is bad practice.")
-ENDIF(${CMAKE_SOURCE_DIR} STREQUAL ${CMAKE_BINARY_DIR})
+if(${CMAKE_SOURCE_DIR} STREQUAL ${CMAKE_BINARY_DIR})
+message(FATAL_ERROR "Prevented in-tree built. This is bad practice.")
+endif(${CMAKE_SOURCE_DIR} STREQUAL ${CMAKE_BINARY_DIR})
 
 ########################################################################
 # Project setup
 ########################################################################
-CMAKE_MINIMUM_REQUIRED(VERSION 3.1)
-PROJECT(Arena CXX)
-ENABLE_TESTING()
+cmake_minimum_required(VERSION 3.1)
+project(Arena CXX)
+enable_testing()
 
 include(FindOpenGL REQUIRED)
+
 # not super portable, but will do for now:
 find_package(PkgConfig REQUIRED)
-pkg_search_module(MAGICK REQUIRED ImageMagick++)
+pkg_search_module(MAGICK REQUIRED Magick++)
 pkg_search_module(LCMS2 REQUIRED lcms2)
 pkg_search_module(FONTCONFIG REQUIRED fontconfig)
 pkg_search_module(PANGO REQUIRED pangocairo)
@@ -41,9 +42,11 @@ pkg_search_module(SVG REQUIRED librsvg-2.0)
 pkg_search_module(GLIB REQUIRED glib-2.0)
 pkg_search_module(CAIRO REQUIRED cairo)
 pkg_search_module(POPPLER REQUIRED poppler-glib)
+pkg_search_module(REVENGE REQUIRED librevenge-0.0)
+pkg_search_module(CDR REQUIRED libcdr-0.1)
 add_compile_options(${MAGICK_CFLAGS}) # we need the magick flags
 
-set (CMAKE_CXX_STANDARD 11)
+set(CMAKE_CXX_STANDARD 11)
 
 # Use -Ofast when applicable (implies -ffast-math)
 if("${CMAKE_CXX_COMPILER_ID}" STREQUAL "GNU")
@@ -56,7 +59,7 @@ elseif("${CMAKE_CXX_COMPILER_ID}" STREQUAL "Clang")
     set (CMAKE_CXX_FLAGS_RELEASE "-Wall -Wextra -Ofast -DNDEBUG")
     set (CMAKE_C_FLAGS_RELEASE   "-Wall -Wextra -Ofast -DNDEBUG")
 endif()
-SET(OPENFX_PATH ${CMAKE_CURRENT_SOURCE_DIR}/OpenFX)
+set(OPENFX_PATH ${CMAKE_CURRENT_SOURCE_DIR}/OpenFX)
 
 # Check that submodule have been initialized and updated
 if(NOT EXISTS ${PROJECT_SOURCE_DIR}/OpenFX/include)
@@ -66,30 +69,30 @@ if(NOT EXISTS ${PROJECT_SOURCE_DIR}/OpenFX/include)
 endif()
 
 # C++ Include directories
-INCLUDE_DIRECTORIES(${CMAKE_CURRENT_SOURCE_DIR})
-INCLUDE_DIRECTORIES(${CMAKE_CURRENT_SOURCE_DIR}/SupportExt)
-INCLUDE_DIRECTORIES(${OPENFX_PATH}/include)
-INCLUDE_DIRECTORIES(${OPENFX_PATH}/Support/include)
-INCLUDE_DIRECTORIES(${OPENFX_PATH}/Support/Plugins/include)
-INCLUDE_DIRECTORIES(${CMAKE_CURRENT_SOURCE_DIR}/OpenFX-IO/IOSupport)
-INCLUDE_DIRECTORIES(${CMAKE_CURRENT_SOURCE_DIR}/OpenFX-IO/IOSupport/SequenceParsing)
-INCLUDE_DIRECTORIES(${CMAKE_CURRENT_SOURCE_DIR}/OpenFX-IO/IOSupport/SequenceParsing/tinydir)
-INCLUDE_DIRECTORIES(${CMAKE_CURRENT_SOURCE_DIR}/Magick)
-INCLUDE_DIRECTORIES(${CMAKE_CURRENT_SOURCE_DIR}/Extra)
-#INCLUDE_DIRECTORIES(${CMAKE_CURRENT_SOURCE_DIR}/OCL)
+include_directories(${CMAKE_CURRENT_SOURCE_DIR})
+include_directories(${CMAKE_CURRENT_SOURCE_DIR}/SupportExt)
+include_directories(${OPENFX_PATH}/include)
+include_directories(${OPENFX_PATH}/Support/include)
+include_directories(${OPENFX_PATH}/Support/Plugins/include)
+include_directories(${CMAKE_CURRENT_SOURCE_DIR}/OpenFX-IO/IOSupport)
+include_directories(${CMAKE_CURRENT_SOURCE_DIR}/OpenFX-IO/IOSupport/SequenceParsing)
+include_directories(${CMAKE_CURRENT_SOURCE_DIR}/OpenFX-IO/IOSupport/SequenceParsing/tinydir)
+include_directories(${CMAKE_CURRENT_SOURCE_DIR}/Magick)
+include_directories(${CMAKE_CURRENT_SOURCE_DIR}/Extra)
+#include_directories(${CMAKE_CURRENT_SOURCE_DIR}/OCL)
 
 # Define "DEBUG" on debug builds
-SET(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} -DDEBUG")
+set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} -DDEBUG")
 
 # /MP on MSVC
-#ADD_COMPILE_OPTIONS($<$<CXX_COMPILER_ID:MSVC>:/MP>)
+add_compile_options($<$<CXX_COMPILER_ID:MSVC>:/MP>)
 
-SET(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} -DDEBUG")
+set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} -DDEBUG")
 
 set(OFX_SUPPORT_HEADER_DIR "${OPENFX_PATH}/Support/include")
 set(OFX_SUPPORT_LIBRARY_DIR "${OPENFX_PATH}/Support/Library")
 
-FILE(GLOB SUPPORT_SOURCES
+file(GLOB SUPPORT_SOURCES
     "${OFX_SUPPORT_HEADER_DIR}/*.h"
     "${OFX_SUPPORT_LIBRARY_DIR}/ofxsCore.cpp"
     "${OFX_SUPPORT_LIBRARY_DIR}/ofxsImageEffect.cpp"
@@ -113,17 +116,16 @@ FILE(GLOB SUPPORT_SOURCES
     "SupportExt/*.h"
 )
 
-FILE(GLOB SOURCES
+file(GLOB SOURCES
     "Extra/TextFX.cpp"
     "Extra/ReadSVG.cpp"
     "Extra/ReadPDF.cpp"
 #    "Extra/OpenRaster.cpp"
-#    "Extra/ReadCDR.cpp"
+    "Extra/ReadCDR.cpp"
 #    "Extra/ReadKrita.cpp"
     "Magick/Arc.cpp"
     "Magick/Charcoal.cpp"
     "Magick/Edges.cpp"
-    "Magick/Implode.cpp"
     "Magick/Modulate.cpp"
     "Magick/Oilpaint.cpp"
     "Magick/Polar.cpp"
@@ -138,10 +140,11 @@ FILE(GLOB SOURCES
     "Magick/Roll/Roll.cpp"
     "Magick/Swirl/Swirl.cpp"
     "Magick/Wave/Wave.cpp"
+    "Magick/Implode/Implode.cpp"
     "Magick/MagickPlugin.cpp"
 )
 
-FILE(GLOB RESOURCES
+file(GLOB RESOURCES
     "Extra/net.fxarena.openfx.*.png"
     "Extra/net.fxarena.openfx.*.svg"
     "Extra/fr.inria.openfx.*.png"
@@ -154,13 +157,15 @@ FILE(GLOB RESOURCES
     "Magick/Swirl/net.fxarena.openfx.*.svg"
     "Magick/Wave/net.fxarena.openfx.*.png"
     "Magick/Wave/net.fxarena.openfx.*.svg"
+    "Magick/Implode/net.fxarena.openfx.*.png"
+    "Magick/Implode/net.fxarena.openfx.*.svg"
     "Magick/Extra.png"
     "Magick/Extra.svg"
 )
 
-ADD_LIBRARY(${PROJECT_NAME} SHARED ${SOURCES} ${SUPPORT_SOURCES})
-SET_TARGET_PROPERTIES(${PROJECT_NAME} PROPERTIES PREFIX "")
-SET_TARGET_PROPERTIES(${PROJECT_NAME} PROPERTIES SUFFIX ".ofx")
+add_library(${PROJECT_NAME} SHARED ${SOURCES} ${SUPPORT_SOURCES})
+set_target_properties(${PROJECT_NAME} PROPERTIES PREFIX "")
+set_target_properties(${PROJECT_NAME} PROPERTIES SUFFIX ".ofx")
 
 # Add extra flags to the link step of the plugin
 if(APPLE)
@@ -174,7 +179,7 @@ elseif(${CMAKE_SYSTEM_NAME} STREQUAL "FreeBSD" OR ${CMAKE_SYSTEM_NAME} STREQUAL 
     set_target_properties(${PROJECT_NAME} PROPERTIES INSTALL_RPATH "$ORIGIN/../../Libraries")
 endif()
 
-TARGET_COMPILE_DEFINITIONS(
+target_compile_definitions(
     ${PROJECT_NAME}
     PRIVATE
     OFX_EXTENSIONS_VEGAS
@@ -184,7 +189,6 @@ TARGET_COMPILE_DEFINITIONS(
     OFX_SUPPORTS_OPENGLRENDER
     NOMINMAX
 )
-TARGET_LINK_LIBRARIES(${PROJECT_NAME} ${OPENGL_gl_LIBRARY})
 
 include_directories(
     ${MAGICK_INCLUDE_DIRS}
@@ -197,10 +201,14 @@ include_directories(
     ${GLIB_INCLUDE_DIRS}
     ${CAIRO_INCLUDE_DIRS}
     ${POPPLER_INCLUDE_DIRS}
+    ${REVENGE_INCLUDE_DIRS}
+    ${CDR_INCLUDE_DIRS}
 )
+
 target_link_libraries(
     ${PROJECT_NAME}
-    ${MAGICK_LIBRARIES}
+    ${OPENGL_gl_LIBRARY}
+    ${MAGICK_STATIC_LIBRARIES}
     ${LCMS2_LIBRARIES}
     ${MAGICK_LDFLAGS}
     ${LCMS2_LDFLAGS}
@@ -212,16 +220,18 @@ target_link_libraries(
     ${GLIB_LDFLAGS}
     ${CAIRO_LDFLAGS}
     ${POPPLER_LDFLAGS}
+    ${REVENGE_LDFLAGS}
+    ${REVENGE_LDFLAGS}
 )
 
-#IF (MSVC)
-#  # Some files require this option. This breaks compatibility with older linkers.
-#  SET_TARGET_PROPERTIES(Misc PROPERTIES COMPILE_FLAGS "/bigobj")
-#ENDIF ()
+if(MSVC)
+  # Some files require this option. This breaks compatibility with older linkers.
+  set_target_properties(${PROJECT_NAME} PROPERTIES COMPILE_FLAGS "/bigobj")
+endif()
 
 # Find and set the arch name.
 # http://openeffects.org/documentation/reference/ch02s02.html
-SET(OFX_ARCH UNKNOWN)
+set(OFX_ARCH UNKNOWN)
 # Win
 if(MINGW)
     set(OFX_ARCH "Win32")
@@ -265,18 +275,18 @@ elseif(${CMAKE_SYSTEM_NAME} STREQUAL "Linux")
     endif()
 endif()
 
-SET(OFX_ARCH_NAME ${OFX_ARCH} CACHE STRING "OpenFX target OS and architecture")
-IF("${OFX_ARCH_NAME}" EQUAL "UNKNOWN")
-  MESSAGE(SEND_ERROR "OFX_ARCH_NAME was not detected. Install targets will be unavailable. See http://openeffects.org/documentation/reference/ch02s02.html to pick an arch name.")
-ELSE()
-  INSTALL(TARGETS ${PROJECT_NAME}
+set(OFX_ARCH_NAME ${OFX_ARCH} CACHE STRING "OpenFX target OS and architecture")
+if("${OFX_ARCH_NAME}" EQUAL "UNKNOWN")
+  message(SEND_ERROR "OFX_ARCH_NAME was not detected. Install targets will be unavailable. See http://openeffects.org/documentation/reference/ch02s02.html to pick an arch name.")
+else()
+  install(TARGETS ${PROJECT_NAME}
     RUNTIME DESTINATION OFX/Plugins/${PROJECT_NAME}.ofx.bundle/Contents/${OFX_ARCH_NAME}
     LIBRARY DESTINATION OFX/Plugins/${PROJECT_NAME}.ofx.bundle/Contents/${OFX_ARCH_NAME}
   )
-  INSTALL(FILES ${RESOURCES}
+  install(FILES ${RESOURCES}
     DESTINATION OFX/Plugins/${PROJECT_NAME}.ofx.bundle/Contents/Resources
   )
-  INSTALL(FILES Bundle/Info.plist
+  install(FILES Bundle/Info.plist
     DESTINATION OFX/Plugins/${PROJECT_NAME}.ofx.bundle/Contents
   )
-ENDIF()
+endif()
