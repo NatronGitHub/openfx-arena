@@ -22,9 +22,9 @@ using namespace OFX;
 OFXS_NAMESPACE_ANONYMOUS_ENTER
 
 #define kPluginName "CLFilter"
-#define kPluginGrouping "Filter"
+#define kPluginGrouping "Extra/OpenCL"
 #define kPluginIdentifier "net.fxarena.opencl.CLFilter"
-#define kPluginDescription "OpenCL filter meta node."
+#define kPluginDescription "Test, develop and script OpenCL kernels in Natron."
 #define kPluginVersionMajor 1
 #define kPluginVersionMinor 0
 

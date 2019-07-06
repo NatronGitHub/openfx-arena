@@ -24,8 +24,8 @@
 using namespace OFX;
 OFXS_NAMESPACE_ANONYMOUS_ENTER
 
-#define kPluginName "Twirl"
-#define kPluginGrouping "Transform"
+#define kPluginName "TwirlCL"
+#define kPluginGrouping "Extra/OpenCL"
 #define kPluginIdentifier "net.fxarena.opencl.Twirl"
 #define kPluginDescription "Twirl (Swirl) transform effect using OpenCL."
 #define kPluginVersionMajor 1

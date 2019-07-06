@@ -72,7 +72,6 @@ install:
 script:
   - git submodule update -i --recursive
   - PKG_CONFIG_PATH=/usr/local/lib/pkgconfig LD_LIBRARY_PATH=/usr/local/lib make IM=7 CONFIG=debug
-  - make -C OCL
 
 # ubuntu-toolchain-r/test contains recent versions of gcc
 addons:

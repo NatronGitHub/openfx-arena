@@ -21,8 +21,8 @@
 using namespace OFX;
 OFXS_NAMESPACE_ANONYMOUS_ENTER
 
-#define kPluginName "Duotone"
-#define kPluginGrouping "Color"
+#define kPluginName "DuotoneCL"
+#define kPluginGrouping "Extra/OpenCL"
 #define kPluginIdentifier "net.fxarena.opencl.Duotone"
 #define kPluginDescription "Duotone color filter using OpenCL."
 #define kPluginVersionMajor 1

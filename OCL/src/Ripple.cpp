@@ -22,8 +22,8 @@
 using namespace OFX;
 OFXS_NAMESPACE_ANONYMOUS_ENTER
 
-#define kPluginName "Ripple"
-#define kPluginGrouping "Transform"
+#define kPluginName "RippleCL"
+#define kPluginGrouping "Extra/OpenCL"
 #define kPluginIdentifier "net.fxarena.opencl.Ripple"
 #define kPluginDescription "Ripple transform effect using OpenCL."
 #define kPluginVersionMajor 1

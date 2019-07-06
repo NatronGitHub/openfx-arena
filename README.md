@@ -29,16 +29,14 @@ Plugins
  * Texture
  * Tile
  * Wave
+ * HaldCLUT
  * Bulge (OCL)
- * Glare (OCL)
  * Ripple (OCL)
  * Twirl (OCL)
- * Sharpen (OCL)
- * Cartoon (OCL)
  * Duotone (OCL)
- * Edge (OCL)
  * CLFilter (OCL)
- * HaldCLUT
+ * Vibrance (OCL)
+ * Bloom (OCL)
 
 Requirements
 ============
@@ -72,11 +70,14 @@ make CONFIG=release IM=7
 sudo make CONFIG=release IM=7 install
 ```
 
-Only plugins included in the official Natron binaries are built, additional plugins can be built using:
+Only plugins included in the official Natron binaries are built, OpenCL plugins can be built using:
 
 ```
-make CONFIG=release -C OCL
-make CONFIG=release IM=7 -C Magick/HaldCLUT
+cd OCL
+mkdir build && cd build
+cmake -DCMAKE_INSTALL_PREFIX=/usr ..
+make
+sudo make install
 ```
 
 License

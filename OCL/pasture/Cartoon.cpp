@@ -21,10 +21,10 @@
 using namespace OFX;
 OFXS_NAMESPACE_ANONYMOUS_ENTER
 
-#define kPluginName "Edge"
-#define kPluginGrouping "Filter"
-#define kPluginIdentifier "net.fxarena.opencl.Edge"
-#define kPluginDescription "Edge filter effect using OpenCL."
+#define kPluginName "Cartoon"
+#define kPluginGrouping "OpenCL"
+#define kPluginIdentifier "net.fxarena.opencl.Cartoon"
+#define kPluginDescription "Cartoon filter using OpenCL."
 #define kPluginVersionMajor 1
 #define kPluginVersionMinor 0
 
@@ -36,11 +36,11 @@ OFXS_NAMESPACE_ANONYMOUS_ENTER
 #define kHostMasking true
 #define kHostMixing true
 
-class EdgeCLPlugin
+class CartoonCLPlugin
     : public OCLPluginHelper<kSupportsRenderScale>
 {
 public:
-    EdgeCLPlugin(OfxImageEffectHandle handle)
+    CartoonCLPlugin(OfxImageEffectHandle handle)
         : OCLPluginHelper<kSupportsRenderScale>(handle, "", kPluginIdentifier)
     {
     }
@@ -50,9 +50,9 @@ public:
     }
 };
 
-mDeclarePluginFactory(EdgeCLPluginFactory, {}, {});
+mDeclarePluginFactory(CartoonCLPluginFactory, {}, {});
 
-void EdgeCLPluginFactory::describe(ImageEffectDescriptor &desc)
+void CartoonCLPluginFactory::describe(ImageEffectDescriptor &desc)
 {
     desc.setLabel(kPluginName);
     desc.setPluginGrouping(kPluginGrouping);
@@ -68,19 +68,19 @@ void EdgeCLPluginFactory::describe(ImageEffectDescriptor &desc)
     desc.setHostMixingEnabled(kHostMixing);
 }
 
-void EdgeCLPluginFactory::describeInContext(ImageEffectDescriptor &desc, ContextEnum context)
+void CartoonCLPluginFactory::describeInContext(ImageEffectDescriptor &desc, ContextEnum context)
 {
-    OFX::PageParamDescriptor *page = EdgeCLPlugin::describeInContextBegin(desc, context);
-    EdgeCLPlugin::describeInContextEnd(desc, context, page);
+    OFX::PageParamDescriptor *page = CartoonCLPlugin::describeInContextBegin(desc, context);
+    CartoonCLPlugin::describeInContextEnd(desc, context, page);
 }
 
 OFX::ImageEffect*
-EdgeCLPluginFactory::createInstance(OfxImageEffectHandle handle, ContextEnum /*context*/)
+CartoonCLPluginFactory::createInstance(OfxImageEffectHandle handle, ContextEnum /*context*/)
 {
-    return new EdgeCLPlugin(handle);
+    return new CartoonCLPlugin(handle);
 }
 
-static EdgeCLPluginFactory p(kPluginIdentifier, kPluginVersionMajor, kPluginVersionMinor);
+static CartoonCLPluginFactory p(kPluginIdentifier, kPluginVersionMajor, kPluginVersionMinor);
 mRegisterPluginFactoryInstance(p)
 
 OFXS_NAMESPACE_ANONYMOUS_EXIT
