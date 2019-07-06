@@ -1,10 +1,26 @@
 # OpenFX-Arena [![Open Hub](https://www.openhub.net/p/openfx-arena/widgets/project_thin_badge?format=gif&ref=Thin+badge)](https://www.openhub.net/p/openfx-arena?ref=Thin+badge) [![Build Status](https://travis-ci.org/NatronGitHub/openfx-arena.svg)](https://travis-ci.org/NatronGitHub/openfx-arena)
 
-A set of [OpenFX](http://openfx.sf.net) plugins (readers, generators, filters, etc) designed for [Natron](https://github.com/NatronGitHub/Natron). Some of the plugins are also compatible with Nuke and DaVinci Resolve.
+A set of [OpenFX](http://openfx.sf.net) image readers, generators and effects for [Natron](https://github.com/NatronGitHub/Natron).
+
+## Features
+
+ * Read Inkscape/SVG documents and layers *(SVG)*
+ * Read MyPaint/OpenRaster images and layers *(ORA)*
+ * Read Krita images and layers *(KRA)*
+ * Read GIMP images and layers *(XCF)*
+ * Read Adobe Photoshop images and layers *(PSD)*
+ * Read CorelDRAW documents *(CDR)*
+ * Read PDF documents *(PDF)*
+ * Advanced text generator using Pango and Cairo
+ * Various image effects using OpenCL
+ * Various image effects using ImageMagick
 
 ## Requirements
 
-
+ * OpenFX host application
+   * Natron 2.x
+   * Nuke 7+ *(some plugins may not work)*
+   * DaVinci Resolve 15+ *(some plugins may not work)*
  * OpenColorIO
  * fontconfig
  * libxml2
@@ -16,11 +32,11 @@ A set of [OpenFX](http://openfx.sf.net) plugins (readers, generators, filters, e
  * librevenge
  * poppler-glib
  * lcms2
- * ImageMagick (MagickCore/Magick++)
+ * ImageMagick (*Magick++)*
    * 6.9.10 or 7.0.8
    * Quantum depth 32
    * HDRI
-   * OpenMP (optional)
+   * OpenMP *(optional)*
    * lcms2
    * zlib
    * bzip2
@@ -28,13 +44,13 @@ A set of [OpenFX](http://openfx.sf.net) plugins (readers, generators, filters, e
    * fontconfig
    * freetype
    * libpng
- * OpenCL 1.2 compatible hardware and drivers (optional plugins)
-   * Nvidia Kepler (or higher)
-   * AMD TeraScale 2 (or higher)
+ * OpenCL 1.2 compatible hardware and drivers *(optional)*
+   * Nvidia Kepler *(or higher)*
+   * AMD TeraScale 2 *(or higher)*
    * Any Intel/AMD CPU using AMD APP SDK
 
 
-## Build
+## Build and install (Linux)
 
 ```
 git clone --recurse-submodules https://github.com/NatronGitHub/openfx-arena
@@ -44,3 +60,18 @@ make -jX
 sudo make install
 ```
 
+## Contribute
+
+Do you known ImageMagick? or are you able to write OpenCL kernels? Then you can definitely contribute! ...
+
+## Creating a new ImageMagick plugin
+
+TODO
+
+## About
+
+Written by Ole-André Rodlie for Natron and INRIA.
+
+Maintained by Frédéric Devernay and Ole-André Rodlie.
+
+Distributed under the GNU General Public License version 2.0 or later.
