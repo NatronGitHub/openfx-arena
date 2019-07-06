@@ -48,13 +48,13 @@ public:
         _swirl->getValueAtTime(args.time, degree);
         _factor->getValueAtTime(args.time, factor);
         image.implode(factor);
-        if (degree != 0) { 
+        if (degree != 0) {
             image.swirl(degree);
         }
     }
 private:
     DoubleParam *_swirl;
-    OFX::DoubleParam *_factor;
+    DoubleParam *_factor;
 };
 
 mDeclarePluginFactory(ImplodePluginFactory, {}, {});
