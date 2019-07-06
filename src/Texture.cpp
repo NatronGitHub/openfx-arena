@@ -160,7 +160,7 @@ void TexturePlugin::render(const OFX::RenderArguments &args)
 
     if (dstImg->getRenderScale().x != args.renderScale.x ||
         dstImg->getRenderScale().y != args.renderScale.y ||
-        dstImg->getField() != args.fieldToRender) {
+        ((dstImg->getField() != OFX::eFieldNone) && (dstImg->getField() != args.fieldToRender))) {
         setPersistentMessage(OFX::Message::eMessageError, "", "OFX Host gave image with wrong scale or field properties");
         OFX::throwSuiteStatusException(kOfxStatFailed);
         return;
@@ -198,13 +198,11 @@ void TexturePlugin::render(const OFX::RenderArguments &args)
     enableOpenMP_->getValueAtTime(args.time, enableOpenMP);
 
     // OpenMP
-#ifndef LEGACYIM
     unsigned int threads = 1;
-    if (_hasOpenMP && enableOpenMP)
+    if (_hasOpenMP && enableOpenMP) {
         threads = OFX::MultiThread::getNumCPUs();
-
+    }
     Magick::ResourceLimits::thread(threads);
-#endif
 
     // Generate empty image
     int width = dstRod.x2-dstRod.x1;
@@ -212,18 +210,17 @@ void TexturePlugin::render(const OFX::RenderArguments &args)
     Magick::Image image(Magick::Geometry(width,height),Magick::Color("rgba(0,0,0,0)"));
 
     // Set seed
-#ifndef NOMAGICKSEED
     Magick::SetRandomSeed(hash((unsigned)(args.time)^seed));
-#endif
 
     // generate background
     try {
         switch (effect) {
         case 0: // Plasma
-            if (fromColor.empty() && toColor.empty())
+            if (fromColor.empty() && toColor.empty()) {
                 image.read("plasma:");
-            else
+            } else {
                 image.read("plasma:"+fromColor+"-"+toColor);
+            }
             break;
         case 1: // Plasma Fractal
             image.read("plasma:fractal");
@@ -248,16 +245,18 @@ void TexturePlugin::render(const OFX::RenderArguments &args)
             image.scale(Magick::Geometry(width,height));
             break;
         case 7: // gradient
-            if (fromColor.empty() && toColor.empty())
+            if (fromColor.empty() && toColor.empty()) {
                 image.read("gradient:");
-            else
+            } else {
                 image.read("gradient:"+fromColor+"-"+toColor);
+            }
             break;
         case 8: // radial-gradient
-            if (fromColor.empty() && toColor.empty())
+            if (fromColor.empty() && toColor.empty()) {
                 image.read("radial-gradient:");
-            else
+            } else {
                 image.read("radial-gradient:"+fromColor+"-"+toColor);
+            }
             break;
         case 9: // loops1
             image.addNoise(Magick::GaussianNoise);
@@ -294,8 +293,15 @@ void TexturePlugin::render(const OFX::RenderArguments &args)
     }
 
     // return image
-    if (dstClip_ && dstClip_->isConnected())
-        image.write(0,0,width,height,"RGBA",Magick::FloatPixel,(float*)dstImg->getPixelData());
+    if (dstClip_ && dstClip_->isConnected()) {
+        image.write(0,
+                    0,
+                    width,
+                    height,
+                    "RGBA",
+                    Magick::FloatPixel,
+                    (float*)dstImg->getPixelData());
+    }
 }
 
 bool TexturePlugin::getRegionOfDefinition(const OFX::RegionOfDefinitionArguments &args, OfxRectD &rod)
@@ -349,8 +355,9 @@ void TexturePluginFactory::describe(OFX::ImageEffectDescriptor &desc)
 void TexturePluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, ContextEnum /*context*/)
 {   
     std::string features = MagickCore::GetMagickFeatures();
-    if (features.find("OpenMP") != std::string::npos)
+    if (features.find("OpenMP") != std::string::npos) {
         _hasOpenMP = true;
+    }
 
     gHostIsNatron = (OFX::getImageEffectHostDescription()->isNatron);
 
@@ -407,7 +414,9 @@ void TexturePluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, C
         }
         param->setDefault(kParamEffectDefault);
         param->setAnimates(true);
-        page->addChild(*param);
+        if (page) {
+            page->addChild(*param);
+        }
     }
     {
         IntParamDescriptor *param = desc.defineIntParam(kParamSeed);
@@ -416,7 +425,9 @@ void TexturePluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, C
         param->setRange(0, 10000);
         param->setDisplayRange(0, 5000);
         param->setDefault(kParamSeedDefault);
-        page->addChild(*param);
+        if (page) {
+            page->addChild(*param);
+        }
     }
     {
         IntParamDescriptor* param = desc.defineIntParam(kParamWidth);
@@ -442,7 +453,9 @@ void TexturePluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, C
         param->setHint(kParamFromColorHint);
         param->setStringType(eStringTypeSingleLine);
         param->setAnimates(true);
-        page->addChild(*param);
+        if (page) {
+            page->addChild(*param);
+        }
     }
     {
         StringParamDescriptor* param = desc.defineStringParam(kParamToColor);
@@ -451,7 +464,9 @@ void TexturePluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, C
         param->setStringType(eStringTypeSingleLine);
         param->setAnimates(true);
         param->setLayoutHint(OFX::eLayoutHintDivider);
-        page->addChild(*param);
+        if (page) {
+            page->addChild(*param);
+        }
     }
     {
         BooleanParamDescriptor *param = desc.defineBooleanParam(kParamOpenMP);
@@ -459,10 +474,13 @@ void TexturePluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, C
         param->setHint(kParamOpenMPHint);
         param->setDefault(kParamOpenMPDefault);
         param->setAnimates(false);
-        if (!_hasOpenMP)
+        if (!_hasOpenMP) {
             param->setEnabled(false);
+        }
         param->setLayoutHint(OFX::eLayoutHintDivider);
-        page->addChild(*param);
+        if (page) {
+            page->addChild(*param);
+        }
     }
 }
 
