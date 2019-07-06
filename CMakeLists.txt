@@ -78,10 +78,8 @@ include_directories(${CMAKE_CURRENT_SOURCE_DIR}/common/OpenFX-IO/IOSupport)
 include_directories(${CMAKE_CURRENT_SOURCE_DIR}/common/OpenFX-IO/IOSupport/SequenceParsing)
 include_directories(${CMAKE_CURRENT_SOURCE_DIR}/common/OpenFX-IO/IOSupport/SequenceParsing/tinydir)
 include_directories(${CMAKE_CURRENT_SOURCE_DIR}/common/lodepng)
-include_directories(${CMAKE_CURRENT_SOURCE_DIR}/Magick)
-#include_directories(${CMAKE_CURRENT_SOURCE_DIR}/Extra)
 include_directories(${CMAKE_CURRENT_SOURCE_DIR}/src)
-#include_directories(${CMAKE_CURRENT_SOURCE_DIR}/OCL)
+INCLUDE_DIRECTORIES(${CMAKE_CURRENT_SOURCE_DIR}/common/OpenCL)
 
 # Define "DEBUG" on debug builds
 set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} -DDEBUG")
@@ -105,76 +103,136 @@ file(GLOB SUPPORT_SOURCES
     "${OFX_SUPPORT_LIBRARY_DIR}/ofxsProperty.cpp"
     "${OFX_SUPPORT_LIBRARY_DIR}/ofxsPropertyValidation.cpp"
     "${OFX_SUPPORT_LIBRARY_DIR}/*.h"
-    "common/SupportExt/ofxsOGLTextRenderer.cpp"
-    "common/SupportExt/ofxsOGLFontData.cpp"
-    "common/SupportExt/ofxsRectangleInteract.cpp"
-    "common/SupportExt/ofxsTransform3x3.cpp"
-    "common/SupportExt/ofxsTransformInteract.cpp"
-    "common/SupportExt/ofxsShutter.cpp"
-    "common/SupportExt/ofxsMultiPlane.cpp"
-    "common/OpenFX-IO/IOSupport/GenericReader.cpp"
-    "common/OpenFX-IO/IOSupport/GenericOCIO.cpp"
-    "common/OpenFX-IO/IOSupport/SequenceParsing/SequenceParsing.cpp"
-    "common/SupportExt/*.h"
-    "common/lodepng"
+    "${CMAKE_CURRENT_SOURCE_DIR}/common/SupportExt/ofxsOGLTextRenderer.cpp"
+    "${CMAKE_CURRENT_SOURCE_DIR}/common/SupportExt/ofxsOGLFontData.cpp"
+    "${CMAKE_CURRENT_SOURCE_DIR}/common/SupportExt/ofxsRectangleInteract.cpp"
+    "${CMAKE_CURRENT_SOURCE_DIR}/common/SupportExt/ofxsTransform3x3.cpp"
+    "${CMAKE_CURRENT_SOURCE_DIR}/common/SupportExt/ofxsTransformInteract.cpp"
+    "${CMAKE_CURRENT_SOURCE_DIR}/common/SupportExt/ofxsShutter.cpp"
+    "${CMAKE_CURRENT_SOURCE_DIR}/common/SupportExt/ofxsMultiPlane.cpp"
+    "${CMAKE_CURRENT_SOURCE_DIR}/common/OpenFX-IO/IOSupport/GenericReader.cpp"
+    "${CMAKE_CURRENT_SOURCE_DIR}/common/OpenFX-IO/IOSupport/GenericOCIO.cpp"
+    "${CMAKE_CURRENT_SOURCE_DIR}/common/OpenFX-IO/IOSupport/SequenceParsing/SequenceParsing.cpp"
+    "${CMAKE_CURRENT_SOURCE_DIR}/common/SupportExt/*.h"
+    "${CMAKE_CURRENT_SOURCE_DIR}/common/lodepng"
+)
+
+file(GLOB SUPPORT_SOURCES_CL
+    "${OFX_SUPPORT_HEADER_DIR}/*.h"
+    "${OFX_SUPPORT_LIBRARY_DIR}/ofxsCore.cpp"
+    "${OFX_SUPPORT_LIBRARY_DIR}/ofxsImageEffect.cpp"
+    "${OFX_SUPPORT_LIBRARY_DIR}/ofxsInteract.cpp"
+    "${OFX_SUPPORT_LIBRARY_DIR}/ofxsLog.cpp"
+    "${OFX_SUPPORT_LIBRARY_DIR}/ofxsMultiThread.cpp"
+    "${OFX_SUPPORT_LIBRARY_DIR}/ofxsParams.cpp"
+    "${OFX_SUPPORT_LIBRARY_DIR}/ofxsProperty.cpp"
+    "${OFX_SUPPORT_LIBRARY_DIR}/ofxsPropertyValidation.cpp"
+    "${OFX_SUPPORT_LIBRARY_DIR}/*.h"
+    "${CMAKE_CURRENT_SOURCE_DIR}/common/SupportExt/ofxsTransform3x3.cpp"
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/ofxsTransformInteractCustom.cpp"
+    "${CMAKE_CURRENT_SOURCE_DIR}/common/SupportExt/ofxsShutter.cpp"
+    "${CMAKE_CURRENT_SOURCE_DIR}/common/SupportExt/ofxsMultiPlane.cpp"
+    "${CMAKE_CURRENT_SOURCE_DIR}/common/SupportExt/*.h"
 )
 
 file(GLOB SOURCES
-    "src/Text.cpp"
-    "src/TextFX.cpp"
-    "src/ReadSVG.cpp"
-    "src/ReadPDF.cpp"
-    "src/OpenRaster.cpp"
-    "src/ReadCDR.cpp"
-    "src/ReadKrita.cpp"
-    "Magick/Arc.cpp"
-    "Magick/Charcoal.cpp"
-    "Magick/Edges.cpp"
-    "Magick/Modulate.cpp"
-    "Magick/Oilpaint.cpp"
-    "Magick/Polar.cpp"
-    "Magick/Polaroid.cpp"
-    "src/ReadMisc.cpp"
-    "src/ReadPSD.cpp"
-    "Magick/Reflection.cpp"
-    "Magick/Sketch.cpp"
-    "src/Texture.cpp"
-    "Magick/Tile.cpp"
-    "src/Roll.cpp"
-    "src/Swirl.cpp"
-    "src/Wave.cpp"
-    "src/Implode.cpp"
-    "src/MagickPlugin.cpp"
-    "common/lodepng/lodepng.cpp"
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/Text.cpp"
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/TextFX.cpp"
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/ReadSVG.cpp"
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/ReadPDF.cpp"
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/OpenRaster.cpp"
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/ReadCDR.cpp"
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/ReadKrita.cpp"
+    "${CMAKE_CURRENT_SOURCE_DIR}/Magick/Arc.cpp"
+    "${CMAKE_CURRENT_SOURCE_DIR}/Magick/Charcoal.cpp"
+    "${CMAKE_CURRENT_SOURCE_DIR}/Magick/Edges.cpp"
+    "${CMAKE_CURRENT_SOURCE_DIR}/Magick/Modulate.cpp"
+    "${CMAKE_CURRENT_SOURCE_DIR}/Magick/Oilpaint.cpp"
+    "${CMAKE_CURRENT_SOURCE_DIR}/Magick/Polar.cpp"
+    "${CMAKE_CURRENT_SOURCE_DIR}/Magick/Polaroid.cpp"
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/ReadMisc.cpp"
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/ReadPSD.cpp"
+    "${CMAKE_CURRENT_SOURCE_DIR}/Magick/Reflection.cpp"
+    "${CMAKE_CURRENT_SOURCE_DIR}/Magick/Sketch.cpp"
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/Texture.cpp"
+    "${CMAKE_CURRENT_SOURCE_DIR}/Magick/Tile.cpp"
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/Roll.cpp"
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/Swirl.cpp"
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/Wave.cpp"
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/Implode.cpp"
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/MagickPlugin.cpp"
+    "${CMAKE_CURRENT_SOURCE_DIR}/common/lodepng/lodepng.cpp"
+)
+
+FILE(GLOB SOURCES_CL
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/Bulge.cpp"
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/Duotone.cpp"
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/Ripple.cpp"
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/Twirl.cpp"
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/Vibrance.cpp"
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/Bloom.cpp"
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/CLFilter.cpp"
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/OCLPlugin.cpp"
 )
 
 file(GLOB RESOURCES
-    "share/images/fr.inria.openfx.*.png"
-    "share/images/fr.inria.openfx.*.svg"
-    "share/images/net.fxarena.openfx.*.png"
-    "share/images/net.fxarena.openfx.*.svg"
-    "share/Arena/*.png"
-    "share/Arena/*.svg"
+    "${CMAKE_CURRENT_SOURCE_DIR}/share/images/fr.inria.openfx.*.png"
+    "${CMAKE_CURRENT_SOURCE_DIR}/share/images/fr.inria.openfx.*.svg"
+    "${CMAKE_CURRENT_SOURCE_DIR}/share/images/net.fxarena.openfx.*.png"
+    "${CMAKE_CURRENT_SOURCE_DIR}/share/images/net.fxarena.openfx.*.svg"
+    "${CMAKE_CURRENT_SOURCE_DIR}/share/Arena/*.png"
+    "${CMAKE_CURRENT_SOURCE_DIR}/share/Arena/*.svg"
 )
 
+file(GLOB RESOURCES_CL
+    "${CMAKE_CURRENT_SOURCE_DIR}/share/images/net.fxarena.opencl.*.png"
+    "${CMAKE_CURRENT_SOURCE_DIR}/share/images/net.fxarena.opencl.*.svg"
+    "${CMAKE_CURRENT_SOURCE_DIR}/share/kernels/net.fxarena.opencl.*.cl"
+    "${CMAKE_CURRENT_SOURCE_DIR}/share/Arena/*.png"
+    "${CMAKE_CURRENT_SOURCE_DIR}/share/Arena/*.svg"
+    "${CMAKE_CURRENT_SOURCE_DIR}/share/ArenaCL/*.png"
+)
+
+# Arena.ofx
 add_library(${PROJECT_NAME} SHARED ${SOURCES} ${SUPPORT_SOURCES})
 set_target_properties(${PROJECT_NAME} PROPERTIES PREFIX "")
 set_target_properties(${PROJECT_NAME} PROPERTIES SUFFIX ".ofx")
+
+# ArenaCL.ofx
+add_library(${PROJECT_NAME}CL SHARED ${SOURCES_CL} ${SUPPORT_SOURCES_CL})
+set_target_properties(${PROJECT_NAME}CL PROPERTIES PREFIX "")
+set_target_properties(${PROJECT_NAME}CL PROPERTIES SUFFIX ".ofx")
 
 # Add extra flags to the link step of the plugin
 if(APPLE)
     set_target_properties(${PROJECT_NAME} PROPERTIES LINK_FLAGS "-fvisibility=hidden -exported_symbols_list,${OFX_SUPPORT_HEADER_DIR}/osxSymbols")
     set_target_properties(${PROJECT_NAME} PROPERTIES INSTALL_RPATH "@loader_path/../Frameworks;@loader_path/../Libraries")
+    set_target_properties(${PROJECT_NAME}CL PROPERTIES LINK_FLAGS "-fvisibility=hidden -exported_symbols_list,${OFX_SUPPORT_HEADER_DIR}/osxSymbols")
+    set_target_properties(${PROJECT_NAME}CL PROPERTIES INSTALL_RPATH "@loader_path/../Frameworks;@loader_path/../Libraries")
 elseif(MINGW)
     set_target_properties(${PROJECT_NAME} PROPERTIES LINK_FLAGS "-shared -fvisibility=hidden -Xlinker --version-script=${OFX_SUPPORT_HEADER_DIR}/linuxSymbols")
+    set_target_properties(${PROJECT_NAME}CL PROPERTIES LINK_FLAGS "-shared -fvisibility=hidden -Xlinker --version-script=${OFX_SUPPORT_HEADER_DIR}/linuxSymbols")
 elseif(${CMAKE_SYSTEM_NAME} STREQUAL "FreeBSD" OR ${CMAKE_SYSTEM_NAME} STREQUAL "Linux")
 # Linux & FreeBSD
     set_target_properties(${PROJECT_NAME} PROPERTIES LINK_FLAGS "-Wl,-fvisibility=hidden,--version-script=${OFX_SUPPORT_HEADER_DIR}/linuxSymbols")
     set_target_properties(${PROJECT_NAME} PROPERTIES INSTALL_RPATH "$ORIGIN/../../Libraries")
+    set_target_properties(${PROJECT_NAME}CL PROPERTIES LINK_FLAGS "-Wl,-fvisibility=hidden,--version-script=${OFX_SUPPORT_HEADER_DIR}/linuxSymbols")
+    set_target_properties(${PROJECT_NAME}CL PROPERTIES INSTALL_RPATH "$ORIGIN/../../Libraries")
 endif()
 
 target_compile_definitions(
     ${PROJECT_NAME}
+    PRIVATE
+    OFX_EXTENSIONS_VEGAS
+    OFX_EXTENSIONS_NUKE
+    OFX_EXTENSIONS_NATRON
+    OFX_EXTENSIONS_TUTTLE
+    OFX_SUPPORTS_OPENGLRENDER
+    NOMINMAX
+)
+
+target_compile_definitions(
+    ${PROJECT_NAME}CL
     PRIVATE
     OFX_EXTENSIONS_VEGAS
     OFX_EXTENSIONS_NUKE
@@ -217,6 +275,21 @@ target_link_libraries(
     ${REVENGE_LDFLAGS}
     ${REVENGE_LDFLAGS}
 )
+target_link_libraries(${PROJECT_NAME}CL ${OPENGL_gl_LIBRARY})
+
+# OpenCL
+if((APPLE) OR (${CMAKE_SYSTEM_NAME} STREQUAL "FreeBSD"))
+    find_package(OpenCL REQUIRED)
+    #link_directories(${OpenCL_LIBRARY})
+    target_link_libraries (${PROJECT_NAME}CL ${OpenCL_LIBRARY})
+else()
+    # on Windows(MINGW)/Linux use dummy library for linking
+    set(BIT "32")
+    if(${CMAKE_SYSTEM_PROCESSOR} STREQUAL "x86_64")
+        set(BIT "64")
+    endif()
+    target_link_libraries(${PROJECT_NAME}CL -L${CMAKE_CURRENT_SOURCE_DIR}/common/OpenCL/lib${BIT} -lOpenCL)
+endif()
 
 if(MSVC)
   # Some files require this option. This breaks compatibility with older linkers.
@@ -279,11 +352,24 @@ else()
     LIBRARY DESTINATION ${PROJECT_NAME}.ofx.bundle/Contents/${OFX_ARCH_NAME}
   )
   install(
+    TARGETS ${PROJECT_NAME}CL
+    RUNTIME DESTINATION ${PROJECT_NAME}CL.ofx.bundle/Contents/${OFX_ARCH_NAME}
+    LIBRARY DESTINATION ${PROJECT_NAME}CL.ofx.bundle/Contents/${OFX_ARCH_NAME}
+  )
+  install(
     FILES ${RESOURCES}
     DESTINATION ${PROJECT_NAME}.ofx.bundle/Contents/Resources
   )
   install(
-    FILES share/Arena/Info.plist
+    FILES ${RESOURCES_CL}
+    DESTINATION ${PROJECT_NAME}CL.ofx.bundle/Contents/Resources
+  )
+  install(
+    FILES ${CMAKE_CURRENT_SOURCE_DIR}/share/Arena/Info.plist
     DESTINATION ${PROJECT_NAME}.ofx.bundle/Contents
+  )
+  install(
+    FILES ${CMAKE_CURRENT_SOURCE_DIR}/share/ArenaCL/Info.plist
+    DESTINATION ${PROJECT_NAME}CL.ofx.bundle/Contents
   )
 endif()
