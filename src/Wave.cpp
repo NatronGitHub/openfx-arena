@@ -27,7 +27,7 @@ OFXS_NAMESPACE_ANONYMOUS_ENTER
 #define kPluginIdentifier "net.fxarena.openfx.Wave"
 #define kPluginDescription "Wave effect using ImageMagick."
 #define kPluginVersionMajor 2
-#define kPluginVersionMinor 9
+#define kPluginVersionMinor 10
 
 #define kSupportsTiles 0
 #define kSupportsMultiResolution 1

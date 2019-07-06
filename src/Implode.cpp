@@ -8,7 +8,7 @@ OFXS_NAMESPACE_ANONYMOUS_ENTER
 #define kPluginIdentifier "net.fxarena.openfx.Implode"
 #define kPluginDescription "Implode transform node."
 #define kPluginVersionMajor 2
-#define kPluginVersionMinor 4
+#define kPluginVersionMinor 5
 
 #define kSupportsTiles 0
 #define kSupportsMultiResolution 1
