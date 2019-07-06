@@ -71,6 +71,7 @@ endif()
 # C++ Include directories
 include_directories(${CMAKE_CURRENT_SOURCE_DIR})
 include_directories(${CMAKE_CURRENT_SOURCE_DIR}/common/SupportExt)
+include_directories(${CMAKE_CURRENT_SOURCE_DIR}/common/SupportExt/glad)
 include_directories(${OPENFX_PATH}/include)
 include_directories(${OPENFX_PATH}/Support/include)
 include_directories(${OPENFX_PATH}/Support/Plugins/include)
@@ -113,6 +114,7 @@ file(GLOB SUPPORT_SOURCES
     "${CMAKE_CURRENT_SOURCE_DIR}/common/OpenFX-IO/IOSupport/GenericReader.cpp"
     "${CMAKE_CURRENT_SOURCE_DIR}/common/OpenFX-IO/IOSupport/GenericOCIO.cpp"
     "${CMAKE_CURRENT_SOURCE_DIR}/common/OpenFX-IO/IOSupport/SequenceParsing/SequenceParsing.cpp"
+    "${CMAKE_CURRENT_SOURCE_DIR}/common/SupportExt/glad"
     "${CMAKE_CURRENT_SOURCE_DIR}/common/SupportExt/*.h"
     "${CMAKE_CURRENT_SOURCE_DIR}/common/lodepng"
 )
