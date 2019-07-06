@@ -277,6 +277,10 @@ target_link_libraries(
     ${REVENGE_LDFLAGS}
     ${REVENGE_LDFLAGS}
 )
+if(MINGW)
+    target_link_libraries(${PROJECT_NAME} -lgdi32 -lfreetype -lexpat -lz -lws2_32)
+endif()
+
 target_link_libraries(${PROJECT_NAME}CL ${OPENGL_gl_LIBRARY})
 
 # OpenCL
