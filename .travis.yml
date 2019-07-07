@@ -51,8 +51,8 @@ install:
   - cd ..
   - git clone https://github.com/ImageMagick/ImageMagick
   - cd ImageMagick
-  - git checkout tags/7.0.8-52
-  - ./configure --prefix=/usr --disable-docs --disable-deprecated --with-magick-plus-plus=yes --with-quantum-depth=32 --without-dps --without-djvu --without-fftw --without-fpx --without-gslib --without-gvc --without-jbig --without-jpeg --with-lcms --without-openjp2 --without-lqr --without-lzma --without-openexr --without-pango --with-png --without-rsvg --without-tiff --without-webp --without-xml --with-zlib --without-bzlib --enable-static --enable-shared --enable-hdri --with-freetype --with-fontconfig --without-x --without-modules --without-wmf
+  - git checkout tags/7.0.8-12
+  - ./configure --prefix=/usr --enable-zero-configuration --disable-docs --disable-deprecated --with-magick-plus-plus=yes --with-quantum-depth=32 --without-dps --without-djvu --without-fftw --without-fpx --without-gslib --without-gvc --without-jbig --without-jpeg --with-lcms --without-openjp2 --without-lqr --without-lzma --without-openexr --without-pango --with-png --without-rsvg --without-tiff --without-webp --without-xml --with-zlib --without-bzlib --enable-static --enable-shared --enable-hdri --with-freetype --with-fontconfig --without-x --without-modules --without-wmf
   - make -j2
   - sudo make install
   - cd ..
