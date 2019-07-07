@@ -69,7 +69,7 @@ Do you known ImageMagick (Magick++)? or are you able to write OpenCL kernels? Th
 
 ## Creating a new ImageMagick plugin
 
-We will start with a skeleton based on the ``MagickPlugin`` template.
+We will start with a simple plugin based on the ``MagickPlugin`` template.
 
 ```
 #include "MagickPlugin.h"
