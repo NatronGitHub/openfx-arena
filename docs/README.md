@@ -166,7 +166,7 @@ A good reference for ImageMagick documentation can be found at:
 
 ### Creating OpenCL plugins
 
-The process is more or less the same, but you use the ``OCLPlugin`` template instead. More documentation will be added in the future. It's recommended to use the ``OCLFilter`` plugin to test kernels. As always it's recommended to look at existing plugins when you develop your own.
+The process is more or less the same as for ImageMagick, but you use the ``OCLPlugin`` template instead. More documentation will be added in the future. It's recommended to use the ``OCLFilter`` plugin to test kernels. It's also recommended to look at existing plugins when you develop your own.
 
 ## About
 
