@@ -155,7 +155,7 @@ file(GLOB SOURCES
     "${CMAKE_CURRENT_SOURCE_DIR}/src/ReadMisc.cpp"
     "${CMAKE_CURRENT_SOURCE_DIR}/src/ReadPSD.cpp"
     "${CMAKE_CURRENT_SOURCE_DIR}/Magick/Reflection.cpp"
-    "${CMAKE_CURRENT_SOURCE_DIR}/Magick/Sketch.cpp"
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/Sketch.cpp"
     "${CMAKE_CURRENT_SOURCE_DIR}/src/Texture.cpp"
     "${CMAKE_CURRENT_SOURCE_DIR}/Magick/Tile.cpp"
     "${CMAKE_CURRENT_SOURCE_DIR}/src/Roll.cpp"
