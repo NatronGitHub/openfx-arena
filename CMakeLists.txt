@@ -162,6 +162,7 @@ file(GLOB SOURCES
     "${CMAKE_CURRENT_SOURCE_DIR}/src/Swirl.cpp"
     "${CMAKE_CURRENT_SOURCE_DIR}/src/Wave.cpp"
     "${CMAKE_CURRENT_SOURCE_DIR}/src/Implode.cpp"
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/Compare.cpp"
     "${CMAKE_CURRENT_SOURCE_DIR}/src/MagickPlugin.cpp"
     "${CMAKE_CURRENT_SOURCE_DIR}/common/lodepng/lodepng.cpp"
 )
@@ -182,6 +183,8 @@ file(GLOB RESOURCES
     "${CMAKE_CURRENT_SOURCE_DIR}/share/images/fr.inria.openfx.*.svg"
     "${CMAKE_CURRENT_SOURCE_DIR}/share/images/net.fxarena.openfx.*.png"
     "${CMAKE_CURRENT_SOURCE_DIR}/share/images/net.fxarena.openfx.*.svg"
+    "${CMAKE_CURRENT_SOURCE_DIR}/share/images/org.imagemagick.*.png"
+    "${CMAKE_CURRENT_SOURCE_DIR}/share/images/org.imagemagick.*.svg"
     "${CMAKE_CURRENT_SOURCE_DIR}/share/Arena/*.png"
     "${CMAKE_CURRENT_SOURCE_DIR}/share/Arena/*.svg"
 )

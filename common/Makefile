@@ -24,6 +24,7 @@ PLUGINOBJECTS = \
     Modulate.o \
     ReadMisc.o \
     Text.o \
+    Compare.o \
     lodepng.o \
     MagickPlugin.o \
     ofxsOGLTextRenderer.o \
@@ -84,7 +85,9 @@ RESOURCES = \
     ../share/images/net.fxarena.openfx.Polaroid.png \
     ../share/images/net.fxarena.openfx.Polaroid.svg \
     ../share/images/net.fxarena.openfx.Edges.png \
-    ../share/images/net.fxarena.openfx.Edges.svg
+    ../share/images/net.fxarena.openfx.Edges.svg \
+    ../share/images/org.imagemagick.Compare.png \
+    ../share/images/org.imagemagick.Compare.svg
 
 SRCDIR = ..
 VPATH += $(SRCDIR)/src $(SRCDIR)/common/lodepng $(SRCDIR)/Magick
