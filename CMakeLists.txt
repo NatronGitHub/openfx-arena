@@ -163,6 +163,7 @@ file(GLOB SOURCES
     "${CMAKE_CURRENT_SOURCE_DIR}/src/Wave.cpp"
     "${CMAKE_CURRENT_SOURCE_DIR}/src/Implode.cpp"
     "${CMAKE_CURRENT_SOURCE_DIR}/src/Compare.cpp"
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/Morphology.cpp"
     "${CMAKE_CURRENT_SOURCE_DIR}/src/MagickPlugin.cpp"
     "${CMAKE_CURRENT_SOURCE_DIR}/common/lodepng/lodepng.cpp"
 )

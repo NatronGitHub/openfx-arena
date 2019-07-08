@@ -25,6 +25,7 @@ PLUGINOBJECTS = \
     ReadMisc.o \
     Text.o \
     Compare.o \
+    Morphology.o \
     lodepng.o \
     MagickPlugin.o \
     ofxsOGLTextRenderer.o \
@@ -87,7 +88,9 @@ RESOURCES = \
     ../share/images/net.fxarena.openfx.Edges.png \
     ../share/images/net.fxarena.openfx.Edges.svg \
     ../share/images/org.imagemagick.Compare.png \
-    ../share/images/org.imagemagick.Compare.svg
+    ../share/images/org.imagemagick.Compare.svg \
+    ../share/images/org.imagemagick.Morphology.png \
+    ../share/images/org.imagemagick.Morphology.svg
 
 SRCDIR = ..
 VPATH += $(SRCDIR)/src $(SRCDIR)/common/lodepng $(SRCDIR)/Magick
