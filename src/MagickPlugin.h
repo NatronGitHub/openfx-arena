@@ -262,9 +262,7 @@ void MagickPluginHelper<SupportsRenderScale>::render(const OFX::RenderArguments 
             image.flip(); // flip it back
         }
         catch(Magick::Warning &warning) { // show ImageMagick warning
-#ifdef DEBUG
-            setPersistentMessage(OFX::Message::eMessageError, "", warning.what());
-#endif
+            setPersistentMessage(OFX::Message::eMessageWarning, "", warning.what());
         }
         catch(Magick::Error &error) { // show ImageMagick error
             setPersistentMessage(OFX::Message::eMessageError, "", error.what());
@@ -288,9 +286,7 @@ void MagickPluginHelper<SupportsRenderScale>::render(const OFX::RenderArguments 
                          (float*)dstImg->getPixelData());
         }
         catch(Magick::Warning &warning) { // show ImageMagick warning
-#ifdef DEBUG
-            setPersistentMessage(OFX::Message::eMessageError, "", warning.what());
-#endif
+            setPersistentMessage(OFX::Message::eMessageWarning, "", warning.what());
         }
         catch(Magick::Error &error) { // show ImageMagick error
             setPersistentMessage(OFX::Message::eMessageError, "", error.what());
