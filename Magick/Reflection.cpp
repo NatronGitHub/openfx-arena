@@ -413,7 +413,7 @@ void ReflectionPluginFactory::describe(OFX::ImageEffectDescriptor &desc)
     // basic labels
     desc.setLabel(kPluginName);
     desc.setPluginGrouping(kPluginGrouping);
-    desc.setPluginDescription("Mirror/Reflection tranform node.");
+    desc.setPluginDescription("Mirror/Reflection transform node.");
 
     // add the supported contexts
     desc.addSupportedContext(eContextGeneral);
