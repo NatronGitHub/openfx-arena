@@ -38,7 +38,7 @@
 #define kPluginGrouping "Draw"
 #define kPluginIdentifier "net.fxarena.openfx.Text"
 #define kPluginVersionMajor 6
-#define kPluginVersionMinor 9
+#define kPluginVersionMinor 10
 
 #define kSupportsTiles 0
 #define kSupportsMultiResolution 0
@@ -322,6 +322,7 @@ public:
 
 private:
     // do not need to delete these, the ImageEffect is managing them for us
+    OFX::Clip *_srcClip;
     OFX::Clip *_dstClip;
     OFX::StringParam *_text;
     OFX::IntParam *_fontSize;
@@ -369,6 +370,7 @@ private:
 
 TextFXPlugin::TextFXPlugin(OfxImageEffectHandle handle)
 : OFX::ImageEffect(handle)
+, _srcClip(NULL)
 , _dstClip(NULL)
 , _text(NULL)
 , _fontSize(NULL)
@@ -413,6 +415,7 @@ TextFXPlugin::TextFXPlugin(OfxImageEffectHandle handle)
 , _scrollX(NULL)
 , _scrollY(NULL)
 {
+    _srcClip = fetchClip(kOfxImageEffectSimpleSourceClipName);
     _dstClip = fetchClip(kOfxImageEffectOutputClipName);
     assert(_dstClip && _dstClip->getPixelComponents() == OFX::ePixelComponentRGBA);
 
@@ -1126,14 +1129,52 @@ void TextFXPlugin::render(const OFX::RenderArguments &args)
     }
 
     float* pixelData = (float*)dstImg->getPixelData();
-    int offset = 0;
-    for (int y = 0; y < height; y++) {
-        for (int x = 0; x < width; x++) {
-            pixelData[offset + 0] = pixels[offset + 2] * (1.f / 255);
-            pixelData[offset + 1] = pixels[offset + 1] * (1.f / 255);
-            pixelData[offset + 2] = pixels[offset + 0] * (1.f / 255);
-            pixelData[offset + 3] = pixels[offset + 3] * (1.f / 255);
-            offset += 4;
+    bool hasSrcClip = false;
+    // if we have src clip and not using a custom size then add src clip to background
+    if ( _srcClip && !autoSize && (cwidth == 0 && cheight == 0) ) {
+        OFX::auto_ptr<OFX::Image> srcImg(_srcClip->fetchImage(args.time));
+        if (srcImg.get() &&
+            srcImg->getPixelDepth() == OFX::eBitDepthFloat &&
+            srcImg->getPixelComponents() == OFX::ePixelComponentRGBA) {
+            OfxRectI srcBounds = srcImg->getBounds();
+            if (args.renderWindow.x1 < srcBounds.x1 ||
+               args.renderWindow.x1 >= srcBounds.x2 ||
+               args.renderWindow.y1 < srcBounds.y1 ||
+               args.renderWindow.y1 >= srcBounds.y2 ||
+               args.renderWindow.x2 <= srcBounds.x1 ||
+               args.renderWindow.x2 > srcBounds.x2 ||
+               args.renderWindow.y2 <= srcBounds.y1 ||
+               args.renderWindow.y2 > srcBounds.y2)
+            {
+                hasSrcClip = false;
+            } else {
+                hasSrcClip = true;
+            }
+            if (hasSrcClip) {
+                float* srcPixelData = (float*)srcImg->getPixelData();
+                int offset = 0;
+                for (int y = 0; y < height; y++) {
+                    for (int x = 0; x < width; x++) {
+                        pixelData[offset + 0] = srcPixelData[offset + 0] + pixels[offset + 2] * (1.f / 255);
+                        pixelData[offset + 1] = srcPixelData[offset + 1] + pixels[offset + 1] * (1.f / 255);
+                        pixelData[offset + 2] = srcPixelData[offset + 2] + pixels[offset + 0] * (1.f / 255);
+                        pixelData[offset + 3] = srcPixelData[offset + 3] + pixels[offset + 3] * (1.f / 255);
+                        offset += 4;
+                    }
+                }
+            }
+        }
+    }
+    if (!hasSrcClip) {
+        int offset = 0;
+        for (int y = 0; y < height; y++) {
+            for (int x = 0; x < width; x++) {
+                pixelData[offset + 0] = pixels[offset + 2] * (1.f / 255);
+                pixelData[offset + 1] = pixels[offset + 1] * (1.f / 255);
+                pixelData[offset + 2] = pixels[offset + 0] * (1.f / 255);
+                pixelData[offset + 3] = pixels[offset + 3] * (1.f / 255);
+                offset += 4;
+            }
         }
     }
 
@@ -1372,6 +1413,8 @@ void TextFXPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, Co
 
     // there has to be an input clip, even for generators
     ClipDescriptor* srcClip = desc.defineClip(kOfxImageEffectSimpleSourceClipName);
+    srcClip->addSupportedComponent(ePixelComponentRGBA);
+    srcClip->setSupportsTiles(kSupportsTiles);
     srcClip->setOptional(true);
 
     // create the mandated output clip
