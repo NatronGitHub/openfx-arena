@@ -365,6 +365,7 @@ private:
     FcConfig* _fcConfig;
     OFX::DoubleParam *_scrollX;
     OFX::DoubleParam *_scrollY;
+    bool _hostIsResolve;
 };
 
 TextFXPlugin::TextFXPlugin(OfxImageEffectHandle handle)
@@ -413,6 +414,10 @@ TextFXPlugin::TextFXPlugin(OfxImageEffectHandle handle)
 , _scrollX(NULL)
 , _scrollY(NULL)
 {
+    const ImageEffectHostDescription &hostDescription = *getImageEffectHostDescription();
+    _hostIsResolve = (hostDescription.hostName.substr(0, 14) == "DaVinciResolve");  // Resolve gives bad image properties
+
+
     _dstClip = fetchClip(kOfxImageEffectOutputClipName);
     assert(_dstClip && _dstClip->getPixelComponents() == OFX::ePixelComponentRGBA);
 
@@ -634,13 +639,7 @@ void TextFXPlugin::render(const OFX::RenderArguments &args)
     }
 
     // renderscale
-    if (dstImg->getRenderScale().x != args.renderScale.x ||
-        dstImg->getRenderScale().y != args.renderScale.y ||
-        dstImg->getField() != args.fieldToRender) {
-        setPersistentMessage(OFX::Message::eMessageError, "", "OFX Host gave image with wrong scale or field properties");
-        OFX::throwSuiteStatusException(kOfxStatFailed);
-        return;
-    }
+    checkBadRenderScaleOrField(_hostIsResolve, dstImg, args);
 
     // get bitdepth
     OFX::BitDepthEnum dstBitDepth = dstImg->getPixelDepth();

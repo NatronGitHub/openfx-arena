@@ -99,6 +99,7 @@ private:
     OFX::StringParam *fromColor_;
     OFX::StringParam *toColor_;
     OFX::BooleanParam *enableOpenMP_;
+    bool _hostIsResolve;
 };
 
 TexturePlugin::TexturePlugin(OfxImageEffectHandle handle)
@@ -112,6 +113,9 @@ TexturePlugin::TexturePlugin(OfxImageEffectHandle handle)
 , toColor_(NULL)
 , enableOpenMP_(NULL)
 {
+    const ImageEffectHostDescription &hostDescription = *getImageEffectHostDescription();
+    _hostIsResolve = (hostDescription.hostName.substr(0, 14) == "DaVinciResolve");  // Resolve gives bad image properties
+
     Magick::InitializeMagick(NULL);
 
     dstClip_ = fetchClip(kOfxImageEffectOutputClipName);
@@ -158,13 +162,7 @@ void TexturePlugin::render(const OFX::RenderArguments &args)
         return;
     }
 
-    if (dstImg->getRenderScale().x != args.renderScale.x ||
-        dstImg->getRenderScale().y != args.renderScale.y ||
-        dstImg->getField() != args.fieldToRender) {
-        setPersistentMessage(OFX::Message::eMessageError, "", "OFX Host gave image with wrong scale or field properties");
-        OFX::throwSuiteStatusException(kOfxStatFailed);
-        return;
-    }
+    checkBadRenderScaleOrField(_hostIsResolve, dstImg, args);
 
     OFX::BitDepthEnum dstBitDepth = dstImg->getPixelDepth();
     if (dstBitDepth != OFX::eBitDepthFloat && dstBitDepth != OFX::eBitDepthUShort && dstBitDepth != OFX::eBitDepthUByte) {

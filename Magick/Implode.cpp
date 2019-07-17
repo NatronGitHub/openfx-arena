@@ -73,6 +73,7 @@ private:
     OFX::BooleanParam *matte_;
     OFX::DoubleParam *swirl_;
     OFX::BooleanParam *enableOpenMP_;
+    bool _hostIsResolve;
 };
 
 ImplodePlugin::ImplodePlugin(OfxImageEffectHandle handle)
@@ -80,6 +81,9 @@ ImplodePlugin::ImplodePlugin(OfxImageEffectHandle handle)
 , dstClip_(NULL)
 , srcClip_(NULL)
 {
+    const ImageEffectHostDescription &hostDescription = *getImageEffectHostDescription();
+    _hostIsResolve = (hostDescription.hostName.substr(0, 14) == "DaVinciResolve");  // Resolve gives bad image properties
+
     Magick::InitializeMagick(NULL);
     dstClip_ = fetchClip(kOfxImageEffectOutputClipName);
     assert(dstClip_ && dstClip_->getPixelComponents() == OFX::ePixelComponentRGBA);
@@ -117,13 +121,7 @@ void ImplodePlugin::render(const OFX::RenderArguments &args)
     if (srcImg.get()) {
         srcRod = srcImg->getRegionOfDefinition();
         srcBounds = srcImg->getBounds();
-        if (srcImg->getRenderScale().x != args.renderScale.x ||
-            srcImg->getRenderScale().y != args.renderScale.y ||
-            srcImg->getField() != args.fieldToRender) {
-            setPersistentMessage(OFX::Message::eMessageError, "", "OFX Host gave image with wrong scale or field properties");
-            OFX::throwSuiteStatusException(kOfxStatFailed);
-            return;
-        }
+        checkBadRenderScaleOrField(_hostIsResolve, srcImg, args);
     } else {
         OFX::throwSuiteStatusException(kOfxStatFailed);
     }
@@ -139,13 +137,7 @@ void ImplodePlugin::render(const OFX::RenderArguments &args)
         OFX::throwSuiteStatusException(kOfxStatFailed);
         return;
     }
-    if (dstImg->getRenderScale().x != args.renderScale.x ||
-        dstImg->getRenderScale().y != args.renderScale.y ||
-        dstImg->getField() != args.fieldToRender) {
-        setPersistentMessage(OFX::Message::eMessageError, "", "OFX Host gave image with wrong scale or field properties");
-        OFX::throwSuiteStatusException(kOfxStatFailed);
-        return;
-    }
+    checkBadRenderScaleOrField(_hostIsResolve, dstImg, args);
 
     // get bit depth
     OFX::BitDepthEnum dstBitDepth = dstImg->getPixelDepth();

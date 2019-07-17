@@ -94,6 +94,7 @@ private:
     OFX::StringParam *_font;
     bool has_freetype;
     OFX::BooleanParam *enableOpenMP_;
+    bool _hostIsResolve;
 };
 
 PolaroidPlugin::PolaroidPlugin(OfxImageEffectHandle handle)
@@ -108,6 +109,9 @@ PolaroidPlugin::PolaroidPlugin(OfxImageEffectHandle handle)
 , has_freetype(false)
 , enableOpenMP_(NULL)
 {
+    const ImageEffectHostDescription &hostDescription = *getImageEffectHostDescription();
+    _hostIsResolve = (hostDescription.hostName.substr(0, 14) == "DaVinciResolve");  // Resolve gives bad image properties
+
     Magick::InitializeMagick(NULL);
 
     std::string delegates = MagickCore::GetMagickDelegates();
@@ -184,13 +188,7 @@ void PolaroidPlugin::render(const OFX::RenderArguments &args)
     if (srcImg.get()) {
         srcRod = srcImg->getRegionOfDefinition();
         srcBounds = srcImg->getBounds();
-        if (srcImg->getRenderScale().x != args.renderScale.x ||
-            srcImg->getRenderScale().y != args.renderScale.y ||
-            srcImg->getField() != args.fieldToRender) {
-            setPersistentMessage(OFX::Message::eMessageError, "", "OFX Host gave image with wrong scale or field properties");
-            OFX::throwSuiteStatusException(kOfxStatFailed);
-            return;
-        }
+        checkBadRenderScaleOrField(_hostIsResolve, srcImg, args);
     } else {
         OFX::throwSuiteStatusException(kOfxStatFailed);
     }
@@ -206,13 +204,7 @@ void PolaroidPlugin::render(const OFX::RenderArguments &args)
         OFX::throwSuiteStatusException(kOfxStatFailed);
         return;
     }
-    if (dstImg->getRenderScale().x != args.renderScale.x ||
-        dstImg->getRenderScale().y != args.renderScale.y ||
-        dstImg->getField() != args.fieldToRender) {
-        setPersistentMessage(OFX::Message::eMessageError, "", "OFX Host gave image with wrong scale or field properties");
-        OFX::throwSuiteStatusException(kOfxStatFailed);
-        return;
-    }
+    checkBadRenderScaleOrField(_hostIsResolve, dstImg, args);
 
     // font support?
     if (!has_freetype) {

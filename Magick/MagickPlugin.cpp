@@ -19,6 +19,8 @@
 #include "MagickPlugin.h"
 #include <iostream>
 
+using namespace OFX;
+
 MagickPluginHelperBase::MagickPluginHelperBase(OfxImageEffectHandle handle)
     : ImageEffect(handle)
     , _dstClip(NULL)
@@ -27,6 +29,9 @@ MagickPluginHelperBase::MagickPluginHelperBase(OfxImageEffectHandle handle)
     , _matte(NULL)
     , _vpixel(NULL)
 {
+    const ImageEffectHostDescription &hostDescription = *getImageEffectHostDescription();
+    _hostIsResolve = (hostDescription.hostName.substr(0, 14) == "DaVinciResolve");  // Resolve gives bad image properties
+
     _dstClip = fetchClip(kOfxImageEffectOutputClipName);
     assert(_dstClip && _dstClip->getPixelComponents() == OFX::ePixelComponentRGBA);
     _srcClip = fetchClip(kOfxImageEffectSimpleSourceClipName);
