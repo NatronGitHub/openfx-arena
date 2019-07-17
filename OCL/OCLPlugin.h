@@ -53,6 +53,7 @@ protected:
     std::string _source;
     std::string _plugin;
     int _renderscale;
+    bool _hostIsResolve;
 };
 
 template <int SupportsRenderScale>
