@@ -52,6 +52,7 @@
 #define kSupportsTiles false
 #define kIsMultiPlanar false
 
+using namespace OFX;
 using namespace OFX::IO;
 
 #ifdef OFX_IO_USING_OCIO
@@ -67,7 +68,7 @@ public:
     virtual ~ReadCDRPlugin();
 private:
     virtual bool isVideoStream(const std::string& /*filename*/) OVERRIDE FINAL { return false; }
-    virtual void decode(const std::string& filename, OfxTime time, int view, bool isPlayback, const OfxRectI& renderWindow, float *pixelData, const OfxRectI& bounds, OFX::PixelComponentEnum pixelComponents, int pixelComponentCount, int rowBytes) OVERRIDE FINAL;
+    virtual void decode(const std::string& filename, OfxTime time, int view, bool isPlayback, const OfxRectI& renderWindow, const OfxPointD& renderScale, float *pixelData, const OfxRectI& bounds, OFX::PixelComponentEnum pixelComponents, int pixelComponentCount, int rowBytes) OVERRIDE FINAL;
     virtual bool getFrameBounds(const std::string& filename, OfxTime time, int view, OfxRectI *bounds, OfxRectI* format, double *par, std::string *error,int *tile_width, int *tile_height) OVERRIDE FINAL;
     virtual bool guessParamsFromFilename(const std::string& filename, std::string *colorspace, OFX::PreMultiplicationEnum *filePremult, OFX::PixelComponentEnum *components, int *componentCount) OVERRIDE FINAL;
     OFX::IntParam *_dpi;
@@ -91,12 +92,15 @@ ReadCDRPlugin::decode(const std::string& filename,
                       int /*view*/,
                       bool /*isPlayback*/,
                       const OfxRectI& renderWindow,
+                      const OfxPointD& renderScale,
                       float *pixelData,
                       const OfxRectI& /*bounds*/,
                       OFX::PixelComponentEnum /*pixelComponents*/,
                       int pixelComponentCount,
                       int /*rowBytes*/)
 {
+    assert(renderScale.x == 1. && renderScale.y == 1.);
+    unused(renderScale);
     if (pixelComponentCount != 4) {
         setPersistentMessage(OFX::Message::eMessageError, "", "Wrong pixel components");
         OFX::throwSuiteStatusException(kOfxStatErrFormat);

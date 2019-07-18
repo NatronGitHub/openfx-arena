@@ -57,7 +57,6 @@ protected:
     OFX::BooleanParam *_matte;
     OFX::ChoiceParam *_vpixel;
     int _renderscale;
-    bool _hostIsResolve;
 };
 
 template <int SupportsRenderScale>
@@ -101,7 +100,7 @@ void MagickPluginHelper<SupportsRenderScale>::render(const OFX::RenderArguments 
     if (srcImg.get()) {
         srcRod = srcImg->getRegionOfDefinition();
         srcBounds = srcImg->getBounds();
-        checkBadRenderScaleOrField(_hostIsResolve, srcImg, args);
+        checkBadRenderScaleOrField(srcImg, args);
     } else {
         OFX::throwSuiteStatusException(kOfxStatFailed);
         return;
@@ -118,7 +117,7 @@ void MagickPluginHelper<SupportsRenderScale>::render(const OFX::RenderArguments 
         OFX::throwSuiteStatusException(kOfxStatFailed);
         return;
     }
-    checkBadRenderScaleOrField(_hostIsResolve, dstImg, args);
+    checkBadRenderScaleOrField(dstImg, args);
 
     // get bit depth
     OFX::BitDepthEnum dstBitDepth = dstImg->getPixelDepth();

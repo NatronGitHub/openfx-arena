@@ -365,7 +365,6 @@ private:
     FcConfig* _fcConfig;
     OFX::DoubleParam *_scrollX;
     OFX::DoubleParam *_scrollY;
-    bool _hostIsResolve;
 };
 
 TextFXPlugin::TextFXPlugin(OfxImageEffectHandle handle)
@@ -414,10 +413,6 @@ TextFXPlugin::TextFXPlugin(OfxImageEffectHandle handle)
 , _scrollX(NULL)
 , _scrollY(NULL)
 {
-    const ImageEffectHostDescription &hostDescription = *getImageEffectHostDescription();
-    _hostIsResolve = (hostDescription.hostName.substr(0, 14) == "DaVinciResolve");  // Resolve gives bad image properties
-
-
     _dstClip = fetchClip(kOfxImageEffectOutputClipName);
     assert(_dstClip && _dstClip->getPixelComponents() == OFX::ePixelComponentRGBA);
 
@@ -639,7 +634,7 @@ void TextFXPlugin::render(const OFX::RenderArguments &args)
     }
 
     // renderscale
-    checkBadRenderScaleOrField(_hostIsResolve, dstImg, args);
+    checkBadRenderScaleOrField(dstImg, args);
 
     // get bitdepth
     OFX::BitDepthEnum dstBitDepth = dstImg->getPixelDepth();

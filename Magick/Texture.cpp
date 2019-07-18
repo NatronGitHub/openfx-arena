@@ -99,7 +99,6 @@ private:
     OFX::StringParam *fromColor_;
     OFX::StringParam *toColor_;
     OFX::BooleanParam *enableOpenMP_;
-    bool _hostIsResolve;
 };
 
 TexturePlugin::TexturePlugin(OfxImageEffectHandle handle)
@@ -113,9 +112,6 @@ TexturePlugin::TexturePlugin(OfxImageEffectHandle handle)
 , toColor_(NULL)
 , enableOpenMP_(NULL)
 {
-    const ImageEffectHostDescription &hostDescription = *getImageEffectHostDescription();
-    _hostIsResolve = (hostDescription.hostName.substr(0, 14) == "DaVinciResolve");  // Resolve gives bad image properties
-
     Magick::InitializeMagick(NULL);
 
     dstClip_ = fetchClip(kOfxImageEffectOutputClipName);
@@ -162,7 +158,7 @@ void TexturePlugin::render(const OFX::RenderArguments &args)
         return;
     }
 
-    checkBadRenderScaleOrField(_hostIsResolve, dstImg, args);
+    checkBadRenderScaleOrField(dstImg, args);
 
     OFX::BitDepthEnum dstBitDepth = dstImg->getPixelDepth();
     if (dstBitDepth != OFX::eBitDepthFloat && dstBitDepth != OFX::eBitDepthUShort && dstBitDepth != OFX::eBitDepthUByte) {

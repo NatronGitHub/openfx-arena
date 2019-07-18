@@ -53,7 +53,6 @@ protected:
     std::string _source;
     std::string _plugin;
     int _renderscale;
-    bool _hostIsResolve;
 };
 
 template <int SupportsRenderScale>
@@ -97,7 +96,7 @@ void OCLPluginHelper<SupportsRenderScale>::render(const OFX::RenderArguments &ar
     if (srcImg.get()) {
         srcRod = srcImg->getRegionOfDefinition();
         srcBounds = srcImg->getBounds();
-        checkBadRenderScaleOrField(_hostIsResolve, srcImg, args);
+        checkBadRenderScaleOrField(srcImg, args);
     } else {
         OFX::throwSuiteStatusException(kOfxStatFailed);
         return;
@@ -114,7 +113,7 @@ void OCLPluginHelper<SupportsRenderScale>::render(const OFX::RenderArguments &ar
         OFX::throwSuiteStatusException(kOfxStatFailed);
         return;
     }
-    checkBadRenderScaleOrField(_hostIsResolve, dstImg, args);
+    checkBadRenderScaleOrField(dstImg, args);
 
     // get bit depth
     OFX::BitDepthEnum dstBitDepth = dstImg->getPixelDepth();

@@ -85,7 +85,6 @@ private:
     OFX::BooleanParam *reflection_;
     OFX::ChoiceParam *mirror_;
     OFX::BooleanParam *enableOpenMP_;
-    bool _hostIsResolve;
 };
 
 ReflectionPlugin::ReflectionPlugin(OfxImageEffectHandle handle)
@@ -99,9 +98,6 @@ ReflectionPlugin::ReflectionPlugin(OfxImageEffectHandle handle)
 , mirror_(NULL)
 , enableOpenMP_(NULL)
 {
-    const ImageEffectHostDescription &hostDescription = *getImageEffectHostDescription();
-    _hostIsResolve = (hostDescription.hostName.substr(0, 14) == "DaVinciResolve");  // Resolve gives bad image properties
-
     Magick::InitializeMagick(NULL);
     dstClip_ = fetchClip(kOfxImageEffectOutputClipName);
     assert(dstClip_ && dstClip_->getPixelComponents() == OFX::ePixelComponentRGBA);
@@ -141,7 +137,7 @@ void ReflectionPlugin::render(const OFX::RenderArguments &args)
     if (srcImg.get()) {
         srcRod = srcImg->getRegionOfDefinition();
         srcBounds = srcImg->getBounds();
-        checkBadRenderScaleOrField(_hostIsResolve, srcImg, args);
+        checkBadRenderScaleOrField(srcImg, args);
     } else {
         OFX::throwSuiteStatusException(kOfxStatFailed);
     }
@@ -157,7 +153,7 @@ void ReflectionPlugin::render(const OFX::RenderArguments &args)
         OFX::throwSuiteStatusException(kOfxStatFailed);
         return;
     }
-    checkBadRenderScaleOrField(_hostIsResolve, dstImg, args);
+    checkBadRenderScaleOrField(dstImg, args);
 
     // get bit depth
     OFX::BitDepthEnum dstBitDepth = dstImg->getPixelDepth();

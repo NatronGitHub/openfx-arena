@@ -201,7 +201,6 @@ private:
     OFX::StringParam *_font;
     bool has_freetype;
     OFX::BooleanParam *enableOpenMP_;
-    bool _hostIsResolve;
 };
 
 TextPlugin::TextPlugin(OfxImageEffectHandle handle)
@@ -232,9 +231,6 @@ TextPlugin::TextPlugin(OfxImageEffectHandle handle)
 , has_freetype(false)
 , enableOpenMP_(NULL)
 {
-    const ImageEffectHostDescription &hostDescription = *getImageEffectHostDescription();
-    _hostIsResolve = (hostDescription.hostName.substr(0, 14) == "DaVinciResolve");  // Resolve gives bad image properties
-
     try {
         Magick::InitializeMagick(NULL);
     } catch (const std::exception& e) {
@@ -346,7 +342,7 @@ void TextPlugin::render(const OFX::RenderArguments &args)
     }
 
     // renderscale
-    checkBadRenderScaleOrField(_hostIsResolve, dstImg, args);
+    checkBadRenderScaleOrField(dstImg, args);
 
     // get bitdepth
     OFX::BitDepthEnum dstBitDepth = dstImg->getPixelDepth();
