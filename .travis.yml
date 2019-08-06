@@ -61,9 +61,9 @@ install:
   - make -j2
   - sudo make install
   - cd ..
-  - wget http://ftp.gnome.org/pub/GNOME/sources/pango/1.44/pango-1.44.3.tar.xz
-  - tar xf pango-1.44.3.tar.xz
-  - cd pango-1.44.3
+  - wget http://ftp.gnome.org/pub/GNOME/sources/pango/1.42/pango-1.42.4.tar.xz
+  - tar xf pango-1.42.4.tar.xz
+  - cd pango-1.42.4
   - env PKG_CONFIG_PATH=/usr/local/lib/pkgconfig LD_LIBRARY_PATH=/usr/local/lib ./configure --prefix=/usr/local
   - make -j2
   - sudo make install
