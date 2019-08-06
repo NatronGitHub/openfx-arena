@@ -54,16 +54,19 @@ install:
   - make -j2
   - sudo make install
   - cd ..
-  - wget https://www.freedesktop.org/software/harfbuzz/release/harfbuzz-2.5.3.tar.xz
-  - tar xf harfbuzz-2.5.3.tar.xz
-  - cd harfbuzz-2.5.3
+  # a more recont harfbuzz may be necessary if pango is upgraded
+  - wget https://www.freedesktop.org/software/harfbuzz/release/harfbuzz-0.9.42.tar.xz
+  - tar xf harfbuzz-0.9.42.tar.xz
+  - cd harfbuzz-0.9.42
   - ./configure --prefix=/usr/local
   - make -j2
   - sudo make install
   - cd ..
-  - wget http://ftp.gnome.org/pub/GNOME/sources/pango/1.42/pango-1.42.4.tar.xz
-  - tar xf pango-1.42.4.tar.xz
-  - cd pango-1.42.4
+  # pango 1.42.4 requires fribidi
+  # pango 1.44.3 requires also meson to build
+  - wget http://ftp.gnome.org/pub/GNOME/sources/pango/1.38/pango-1.38.1.tar.xz
+  - tar xf pango-1.38.1.tar.xz
+  - cd pango-1.38.1
   - env PKG_CONFIG_PATH=/usr/local/lib/pkgconfig LD_LIBRARY_PATH=/usr/local/lib ./configure --prefix=/usr/local
   - make -j2
   - sudo make install
