@@ -55,8 +55,8 @@ install:
   - sudo make install
   - cd ..
   # a more recont harfbuzz may be necessary if pango is upgraded
-  - wget https://www.freedesktop.org/software/harfbuzz/release/harfbuzz-0.9.42.tar.xz
-  - tar xf harfbuzz-0.9.42.tar.xz
+  - wget https://www.freedesktop.org/software/harfbuzz/release/harfbuzz-0.9.42.tar.bz2
+  - tar xf harfbuzz-0.9.42.tar.bz2
   - cd harfbuzz-0.9.42
   - ./configure --prefix=/usr/local
   - make -j2
