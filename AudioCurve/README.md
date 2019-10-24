@@ -4,14 +4,14 @@ OpenFX Audio Curve Generator.
 
 ![screenshot](screenshot.jpg)
 
-## Requirements
+## Build and install *(Linux)*
+
+### Requirements
 
 * libsox
 * OpenGL
 * cmake *(3.1+)* *(make depend)*
 * pkg-config/pkgconf *(make depend)*
-
-## Build and install *(Linux)*
 
 ```
 git clone https://github.com/NatronGitHub/openfx-arena
@@ -22,6 +22,33 @@ mkdir build && cd build
 cmake -DCMAKE_INSTALL_PREFIX=/usr/OFX/Plugins ..
 make
 sudo make install
+```
+
+## Build for Windows *(on Linux/macOS)*
+
+### Requirements
+
+ * [MXE](https://mxe.cc/#requirements)
+
+
+```
+git clone https://github.com/NatronGitHub/openfx-arena
+cd openfx-arena
+git submodule update -i --recursive
+cd AudioCurve
+git clone https://github.com/mxe/mxe
+cd mxe
+make MXE_TARGETS=x86_64-w64-mingw32.static cc cmake sox
+export PATH=`pwd`/usr/bin:$PATH
+export PKG_CONFIG_PATH=`pwd`/usr/x86_64-w64-mingw32.static/lib/pkgconfig
+cd ..
+```
+```
+mkdir build && cd build
+x86_64-w64-mingw32.static-cmake -DDEPLOY=ON -DCMAKE_INSTALL_PREFIX=/ ..
+make
+x86_64-w64-mingw32.static-strip -s AudioCurve.ofx
+make DESTDIR=`pwd`/pkg install
 ```
 
 ## License *(LGPL)*
