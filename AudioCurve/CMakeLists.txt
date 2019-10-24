@@ -25,6 +25,11 @@ pkg_search_module(SOX REQUIRED sox)
 
 set(CMAKE_CXX_STANDARD 11)
 set(OPENFX_PATH ${CMAKE_CURRENT_SOURCE_DIR}/../OpenFX)
+option(DEPLOY "Deploy build" OFF)
+
+if(MINGW AND ${DEPLOY})
+    find_package(Threads REQUIRED)
+endif()
 
 add_definitions(-DkPluginVersionMajor=${PROJECT_VERSION_MAJOR})
 add_definitions(-DkPluginVersionMinor=${PROJECT_VERSION_MINOR})
@@ -97,11 +102,21 @@ target_compile_definitions(
 
 include_directories(${SOX_INCLUDE_DIRS})
 
+target_compile_options(
+    ${PROJECT_NAME}
+    PRIVATE
+    ${SOX_STATIC_CFLAGS}
+)
+
 target_link_libraries(
     ${PROJECT_NAME}
     ${OPENGL_gl_LIBRARY}
     ${SOX_STATIC_LDFLAGS}
 )
+
+if(MINGW AND ${DEPLOY})
+    target_link_libraries(${PROJECT_NAME} -fopenmp)
+endif()
 
 # Info.plist
 configure_file(
