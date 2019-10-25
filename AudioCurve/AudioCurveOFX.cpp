@@ -21,6 +21,8 @@
 #include "sox.h"
 #include "ofxsImageEffect.h"
 
+#include <stdint.h>
+#include <cstdlib>
 #include <sys/stat.h>
 #include <sys/types.h>
 #include <vector>
