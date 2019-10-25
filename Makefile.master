@@ -63,6 +63,10 @@ POPPLER_LINKFLAGS += $(shell pkg-config poppler-glib --libs --static)
 CURL_CXXFLAGS += $(shell pkg-config libcurl --cflags)
 CURL_LINKFLAGS += $(shell pkg-config libcurl --libs --static)
 
+# sox
+SOX_CXXFLAGS += $(shell pkg-config sox --cflags)
+SOX_LINKFLAGS += $(shell pkg-config sox --libs --static)
+
 # opencl
 OPENCL_CXXFLAGS += -I$(SRCDIR)/OCL
 OS := $(shell uname -s)

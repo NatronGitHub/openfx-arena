@@ -27,6 +27,12 @@
 
 #define kPluginName "AudioCurveOFX"
 #define kPluginIdentifier "net.fxarena.openfx.AudioCurve"
+#ifndef kPluginVersionMajor
+#define kPluginVersionMajor 0
+#endif
+#ifndef kPluginVersionMinor
+#define kPluginVersionMinor 9
+#endif
 #define kPluginGrouping "Other"
 #define kPluginDescription "Generate curve data from audio files using libSoX."
 
