@@ -33,12 +33,13 @@
 #include <fstream>
 
 #include "fx.h"
+#include "RichText.h" // common text related functions
 
 #define kPluginName "TextOFX"
 #define kPluginGrouping "Draw"
 #define kPluginIdentifier "net.fxarena.openfx.Text"
-#define kPluginVersionMajor 6
-#define kPluginVersionMinor 9
+#define kPluginVersionMajor 7
+#define kPluginVersionMinor 0
 
 #define kSupportsTiles 0
 #define kSupportsMultiResolution 0
@@ -191,8 +192,17 @@
 #define kParamPositionMoveDefault true
 
 #define kParamTextFile "file"
-#define kParamTextFileLabel "File"
+#define kParamTextFileLabel "Text File"
 #define kParamTextFileHint "Use text from filename."
+
+#define kParamSubtitleFile "subtitle"
+#define kParamSubtitleFileLabel "Subtitle File"
+#define kParamSubtitleFileHint "Load and animate a subtitle file (SRT)."
+
+#define kParamFPS "fps"
+#define kParamFPSLabel "Frame Rate"
+#define kParamFPSHint "The frame rate of the project, for use with subtitles."
+#define kParamFPSDefault 24.0
 
 #define kParamCenterInteract "centerInteract"
 #define kParamCenterInteractLabel "Center Interact"
@@ -317,6 +327,7 @@ public:
     virtual bool getRegionOfDefinition(const OFX::RegionOfDefinitionArguments &args, OfxRectD &rod) OVERRIDE FINAL;
 
     std::string textFromFile(std::string filename);
+    void loadSRT();
     void resetCenter(double time);
     void setFontDesc(int stretch, int weight, PangoFontDescription* desc);
 
@@ -365,6 +376,8 @@ private:
     FcConfig* _fcConfig;
     OFX::DoubleParam *_scrollX;
     OFX::DoubleParam *_scrollY;
+    OFX::StringParam *_srt;
+    OFX::DoubleParam *_fps;
 };
 
 TextFXPlugin::TextFXPlugin(OfxImageEffectHandle handle)
@@ -412,6 +425,8 @@ TextFXPlugin::TextFXPlugin(OfxImageEffectHandle handle)
 , _fcConfig(NULL)
 , _scrollX(NULL)
 , _scrollY(NULL)
+, _srt(NULL)
+, _fps(NULL)
 {
     _dstClip = fetchClip(kOfxImageEffectOutputClipName);
     assert(_dstClip && _dstClip->getPixelComponents() == OFX::ePixelComponentRGBA);
@@ -457,13 +472,16 @@ TextFXPlugin::TextFXPlugin(OfxImageEffectHandle handle)
     _fontOverride = fetchStringParam(kParamFontOverride);
     _scrollX = fetchDoubleParam(kParamScrollX);
     _scrollY = fetchDoubleParam(kParamScrollY);
+    _srt = fetchStringParam(kParamSubtitleFile);
+    _fps = fetchDoubleParam(kParamFPS);
 
     assert(_text && _fontSize && _fontName && _textColor && _bgColor && _font && _wrap
            && _justify && _align && _valign && _markup && _style && auto_ && stretch_ && weight_ && strokeColor_
            && strokeWidth_ && strokeDash_ && strokeDashPattern_ && fontAA_ && subpixel_ && _hintStyle
            && _hintMetrics && _circleRadius && _circleWords && _letterSpace && _canvas
            && _arcRadius && _arcAngle && _rotate && _scale && _position && _move && _txt
-           && _skewX && _skewY && _scaleUniform && _centerInteract && _fontOverride && _scrollX && _scrollY);
+           && _skewX && _skewY && _scaleUniform && _centerInteract && _fontOverride && _scrollX && _scrollY
+           && _srt && _fps);
 
     _fcConfig = FcInitLoadConfigAndFonts();
 
@@ -536,6 +554,29 @@ std::string TextFXPlugin::textFromFile(std::string filename) {
         }
     }
     return result;
+}
+
+// try to parse subtitle
+void TextFXPlugin::loadSRT()
+{
+    std::string filename;
+    double fps = 0.0;
+    _srt->getValue(filename);
+    _fps->getValue(fps);
+    if (!RichText::fileExists(filename)) { return; }
+    std::vector<RichText::RichTextSubtitle> subtitles = RichText::parseSRT(filename);
+    if (subtitles.size()==0) { return; }
+
+    // remove existing keys
+    _text->deleteAllKeys();
+
+    for (int i=0;i<subtitles.size();++i) { // add each subtitle at given time
+        int startFrame = subtitles.at(i).start*fps;
+        int endFrame = subtitles.at(i).end*fps;
+        std::string textFrame = subtitles.at(i).str;
+        _text->setValueAtTime(startFrame, textFrame); // start frame
+        _text->setValueAtTime(endFrame, ""); // end frame
+    }
 }
 
 void TextFXPlugin::setFontDesc(int stretch, int weight, PangoFontDescription* desc)
@@ -1185,6 +1226,8 @@ void TextFXPlugin::changedParam(const OFX::InstanceChangedArgs &args, const std:
             font = kParamFontNameDefault;
         }
         _genFonts(_fontName, _fontOverride, false, _fcConfig, gHostIsNatron, font, kParamFontNameAltDefault);
+    } else if (paramName == kParamSubtitleFile) {
+        loadSRT(); // load subtitle
     }
 
     clearPersistentMessage();
@@ -1437,6 +1480,28 @@ void TextFXPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, Co
         param->setHint(kParamTextFileHint);
         param->setStringType(eStringTypeFilePath);
         param->setFilePathExists(true);
+        param->setAnimates(false);
+        if (page) {
+            page->addChild(*param);
+        }
+    }
+    {
+        StringParamDescriptor* param = desc.defineStringParam(kParamSubtitleFile);
+        param->setLabel(kParamSubtitleFileLabel);
+        param->setHint(kParamSubtitleFileHint);
+        param->setStringType(eStringTypeFilePath);
+        param->setFilePathExists(true);
+        param->setAnimates(false);
+        param->setLayoutHint(eLayoutHintNoNewLine, 1);
+        if (page) {
+            page->addChild(*param);
+        }
+    }
+    {
+        DoubleParamDescriptor* param = desc.defineDoubleParam(kParamFPS);
+        param->setLabel(kParamFPSLabel);
+        param->setHint(kParamFPSHint);
+        param->setDefault(kParamFPSDefault);
         param->setAnimates(false);
         if (page) {
             page->addChild(*param);
