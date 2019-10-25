@@ -2,6 +2,7 @@ PLUGINNAME = Arena
 
 PLUGINOBJECTS = \
     lodepng.o \
+    RichText.o \
     TextFX.o \
     ReadCDR.o \
     ReadSVG.o \
@@ -115,6 +116,7 @@ SRCDIR = ..
 
 VPATH += \
     $(SRCDIR)/Extra \
+    $(SRCDIR)/Text \
     $(SRCDIR)/Magick \
     $(SRCDIR)/Magick/Swirl \
     $(SRCDIR)/Magick/Roll \
@@ -148,7 +150,7 @@ LINKFLAGS += \
     $(LCMS_LINKFLAGS) \
     $(GLIB_LINKFLAGS)
 
-CXXFLAGS += -I. -I$(SRCDIR)/Magick
+CXXFLAGS += -I. -I$(SRCDIR)/Magick -I$(SRCDIR)/Text
 
 ifneq ($(LICENSE),COMMERCIAL)
 CXXFLAGS += $(POPPLER_CXXFLAGS)
