@@ -55,8 +55,8 @@ PLUGINOBJECTS += \
     SequenceParsing.o
 
 RESOURCES = \
-    ../Extra/net.fxarena.openfx.Text.png \
-    ../Extra/net.fxarena.openfx.Text.svg \
+    ../Text/net.fxarena.openfx.Text.png \
+    ../Text/net.fxarena.openfx.Text.svg \
     ../Extra/fr.inria.openfx.ReadCDR.png \
     ../Extra/fr.inria.openfx.ReadCDR.svg \
     ../Extra/net.fxarena.openfx.ReadSVG.png \

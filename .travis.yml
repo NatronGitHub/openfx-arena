@@ -81,6 +81,7 @@ script:
   - make -C Extra
   - make -C Magick
   - make -C OCL
+  - make -C Text
   - mkdir build && cd build
   - cmake -DAUDIO=ON .. && make
 

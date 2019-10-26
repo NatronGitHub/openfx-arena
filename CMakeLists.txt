@@ -125,7 +125,7 @@ FILE(GLOB SUPPORT_SOURCES
 )
 
 FILE(GLOB SOURCES
-    "Extra/TextFX.cpp"
+    "Text/TextFX.cpp"
     "Text/RichText.cpp"
     "Extra/ReadSVG.cpp"
     "Extra/ReadPDF.cpp"
@@ -159,6 +159,8 @@ FILE(GLOB RESOURCES
     "Extra/net.fxarena.openfx.*.svg"
     "Extra/fr.inria.openfx.*.png"
     "Extra/fr.inria.openfx.*.svg"
+    "Text/net.fxarena.openfx.*.png"
+    "Text/net.fxarena.openfx.*.svg"
     "Magick/net.fxarena.openfx.*.png"
     "Magick/net.fxarena.openfx.*.svg"
     "Magick/Roll/net.fxarena.openfx.*.png"

@@ -2,7 +2,6 @@ PLUGINNAME = Extra
 
 PLUGINOBJECTS = \
     lodepng.o \
-    TextFX.o \
     ReadCDR.o \
     ReadSVG.o \
     ReadKrita.o \
@@ -22,8 +21,6 @@ PLUGINOBJECTS += \
     SequenceParsing.o
 
 RESOURCES = \
-    net.fxarena.openfx.Text.png \
-    net.fxarena.openfx.Text.svg \
     fr.inria.openfx.ReadCDR.png \
     fr.inria.openfx.ReadCDR.svg \
     net.fxarena.openfx.ReadSVG.png \
@@ -45,7 +42,6 @@ include $(SRCDIR)/Makefile.io
 
 CXXFLAGS  += \
     $(FCONFIG_CXXFLAGS) \
-    $(PANGO_CXXFLAGS) \
     $(SVG_CXXFLAGS) \
     $(CDR_CXXFLAGS) \
     $(XML_CXXFLAGS) \
@@ -53,7 +49,6 @@ CXXFLAGS  += \
     $(GLIB_CXXFLAGS)
 LINKFLAGS += \
     $(FCONFIG_LINKFLAGS) \
-    $(PANGO_LINKFLAGS) \
     $(SVG_LINKFLAGS) \
     $(CDR_LINKFLAGS) \
     $(XML_LINKFLAGS) \
