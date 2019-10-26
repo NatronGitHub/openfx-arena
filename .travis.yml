@@ -74,8 +74,12 @@ install:
 
 script:
   - git submodule update -i --recursive
-  - PKG_CONFIG_PATH=/usr/local/lib/pkgconfig LD_LIBRARY_PATH=/usr/local/lib make AUDIO=ON IM=7 CONFIG=debug
+  - export PKG_CONFIG_PATH=/usr/local/lib/pkgconfig
+  - export LD_LIBRARY_PATH=/usr/local/lib
+  - make AUDIO=ON IM=7 CONFIG=debug
   - make -C OCL
+  - mkdir build && cd build
+  - cmake -DAUDIO=ON .. && make
 
 # ubuntu-toolchain-r/test contains recent versions of gcc
 addons:
