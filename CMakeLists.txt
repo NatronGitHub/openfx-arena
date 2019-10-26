@@ -33,7 +33,7 @@ option(AUDIO "Enable AudioCurve" OFF)
 include(FindOpenGL REQUIRED)
 # not super portable, but will do for now:
 find_package(PkgConfig REQUIRED)
-pkg_search_module(MAGICK REQUIRED ImageMagick++)
+pkg_search_module(MAGICK REQUIRED Magick++)
 pkg_search_module(LCMS2 REQUIRED lcms2)
 pkg_search_module(FONTCONFIG REQUIRED fontconfig)
 pkg_search_module(PANGO REQUIRED pangocairo)
