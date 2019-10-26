@@ -9,6 +9,10 @@ PLUGINOBJECTS = \
     ReadKrita.o \
     OpenRaster.o
 
+ifeq ($(AUDIO), ON)
+PLUGINOBJECTS += AudioCurve.o
+endif
+
 ifneq ($(LICENSE),COMMERCIAL)
 PLUGINOBJECTS += \
     ReadPDF.o
@@ -37,6 +41,7 @@ PLUGINOBJECTS += \
     Modulate.o \
     ReadMisc.o \
     Text.o \
+    Morphology.o \
     MagickPlugin.o \
     ofxsOGLTextRenderer.o \
     ofxsOGLFontData.o \
@@ -60,6 +65,10 @@ RESOURCES = \
     ../Extra/fr.inria.openfx.ReadKrita.svg \
     ../Extra/fr.inria.openfx.OpenRaster.png \
     ../Extra/fr.inria.openfx.OpenRaster.svg
+
+ifeq ($(AUDIO), ON)
+RESOURCES += ../Audio/net.fxarena.openfx.AudioCurve.png
+endif
 
 ifneq ($(LICENSE),COMMERCIAL)
 RESOURCES += \
@@ -97,7 +106,9 @@ RESOURCES += \
     ../Magick/fr.inria.openfx.ReadMisc.png \
     ../Magick/fr.inria.openfx.ReadMisc.svg \
     ../Magick/net.fxarena.openfx.Texture.png \
-    ../Magick/net.fxarena.openfx.Texture.svg
+    ../Magick/net.fxarena.openfx.Texture.svg \
+    ../Magick/Morphology/net.fxarena.openfx.Morphology.png \
+    ../Magick/Morphology/net.fxarena.openfx.Morphology.svg
 
     #../Magick/net.fxarena.openfx.Text.png \
     #../Magick/net.fxarena.openfx.Text.svg
@@ -120,7 +131,12 @@ VPATH += \
     $(SRCDIR)/Magick \
     $(SRCDIR)/Magick/Swirl \
     $(SRCDIR)/Magick/Roll \
-    $(SRCDIR)/Magick/Wave
+    $(SRCDIR)/Magick/Wave \
+    $(SRCDIR)/Magick/Morphology
+
+ifeq ($(AUDIO), ON)
+    VPATH += $(SRCDIR)/Audio
+endif
 
 CXXFLAGS += \
     -I$(SRCDIR)/Extra \
@@ -149,6 +165,11 @@ LINKFLAGS += \
     $(MAGICK_LINKFLAGS) \
     $(LCMS_LINKFLAGS) \
     $(GLIB_LINKFLAGS)
+
+ifeq ($(AUDIO), ON)
+CXXFLAGS += $(SOX_CXXFLAGS)
+LINKFLAGS += $(SOX_LINKFLAGS)
+endif
 
 CXXFLAGS += -I. -I$(SRCDIR)/Magick -I$(SRCDIR)/Text
 

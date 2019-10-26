@@ -31,7 +31,7 @@ before_install:
   #- sudo add-apt-repository -y ppa:kubuntu-ppa/backports
   - sudo add-apt-repository -y ppa:jonathonf/inkscape
   - sudo apt-get update
-  - sudo apt-get install -y libfreetype6-dev libfontconfig1-dev libpango1.0-dev librsvg2-dev liblcms2-dev libzip-dev libcdr-dev libicu-dev libcppunit-dev libopencolorio-dev librevenge-dev libboost-all-dev gtk-doc-tools libharfbuzz-dev libselinux1-dev libpoppler-glib-dev libpoppler-private-dev libcurl4-openssl-dev libgl-dev libfftw3-dev
+  - sudo apt-get install -y cmake libsox-dev libfreetype6-dev libfontconfig1-dev libpango1.0-dev librsvg2-dev liblcms2-dev libzip-dev libcdr-dev libicu-dev libcppunit-dev libopencolorio-dev librevenge-dev libboost-all-dev gtk-doc-tools libharfbuzz-dev libselinux1-dev libpoppler-glib-dev libpoppler-private-dev libcurl4-openssl-dev libgl-dev libfftw3-dev
 
 # ppa:jonathonf/inkscape brings librevenge & libcdr for trusty
 install:
@@ -74,8 +74,15 @@ install:
 
 script:
   - git submodule update -i --recursive
-  - PKG_CONFIG_PATH=/usr/local/lib/pkgconfig LD_LIBRARY_PATH=/usr/local/lib make IM=7 CONFIG=debug
+  - export PKG_CONFIG_PATH=/usr/local/lib/pkgconfig
+  - export LD_LIBRARY_PATH=/usr/local/lib
+  - make AUDIO=ON IM=7 CONFIG=debug
+  - make -C Audio
+  - make -C Extra
+  - make -C Magick
   - make -C OCL
+  - mkdir build && cd build
+  - cmake -DAUDIO=ON .. && make
 
 # ubuntu-toolchain-r/test contains recent versions of gcc
 addons:

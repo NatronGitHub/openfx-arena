@@ -28,6 +28,8 @@ CMAKE_MINIMUM_REQUIRED(VERSION 3.1)
 PROJECT(Arena CXX)
 ENABLE_TESTING()
 
+option(AUDIO "Enable AudioCurve" OFF)
+
 include(FindOpenGL REQUIRED)
 # not super portable, but will do for now:
 find_package(PkgConfig REQUIRED)
@@ -41,8 +43,14 @@ pkg_search_module(SVG REQUIRED librsvg-2.0)
 pkg_search_module(GLIB REQUIRED glib-2.0)
 pkg_search_module(CAIRO REQUIRED cairo)
 pkg_search_module(POPPLER REQUIRED poppler-glib)
-add_compile_options(${MAGICK_CFLAGS}) # we need the magick flags
+pkg_search_module(REVENGE REQUIRED librevenge-0.0)
+pkg_search_module(CDR REQUIRED libcdr-0.1)
+add_compile_options(${MAGICK_STATIC_CFLAGS}) # we need the magick flags
 
+if(${AUDIO})
+    pkg_search_module(SOX REQUIRED sox)
+    add_compile_options(${SOX_STATIC_CFLAGS}) # we need the sox flags
+endif()
 set (CMAKE_CXX_STANDARD 11)
 
 # Use -Ofast when applicable (implies -ffast-math)
@@ -76,6 +84,8 @@ INCLUDE_DIRECTORIES(${CMAKE_CURRENT_SOURCE_DIR}/OpenFX-IO/IOSupport/SequencePars
 INCLUDE_DIRECTORIES(${CMAKE_CURRENT_SOURCE_DIR}/OpenFX-IO/IOSupport/SequenceParsing/tinydir)
 INCLUDE_DIRECTORIES(${CMAKE_CURRENT_SOURCE_DIR}/Magick)
 INCLUDE_DIRECTORIES(${CMAKE_CURRENT_SOURCE_DIR}/Extra)
+INCLUDE_DIRECTORIES(${CMAKE_CURRENT_SOURCE_DIR}/Audio)
+INCLUDE_DIRECTORIES(${CMAKE_CURRENT_SOURCE_DIR}/Bundle)
 INCLUDE_DIRECTORIES(${CMAKE_CURRENT_SOURCE_DIR}/Text)
 #INCLUDE_DIRECTORIES(${CMAKE_CURRENT_SOURCE_DIR}/OCL)
 
@@ -119,9 +129,9 @@ FILE(GLOB SOURCES
     "Text/RichText.cpp"
     "Extra/ReadSVG.cpp"
     "Extra/ReadPDF.cpp"
-#    "Extra/OpenRaster.cpp"
-#    "Extra/ReadCDR.cpp"
-#    "Extra/ReadKrita.cpp"
+    "Extra/OpenRaster.cpp"
+    "Extra/ReadCDR.cpp"
+    "Extra/ReadKrita.cpp"
     "Magick/Arc.cpp"
     "Magick/Charcoal.cpp"
     "Magick/Edges.cpp"
@@ -140,6 +150,7 @@ FILE(GLOB SOURCES
     "Magick/Roll/Roll.cpp"
     "Magick/Swirl/Swirl.cpp"
     "Magick/Wave/Wave.cpp"
+    "Magick/Morphology/Morphology.cpp"
     "Magick/MagickPlugin.cpp"
 )
 
@@ -156,9 +167,16 @@ FILE(GLOB RESOURCES
     "Magick/Swirl/net.fxarena.openfx.*.svg"
     "Magick/Wave/net.fxarena.openfx.*.png"
     "Magick/Wave/net.fxarena.openfx.*.svg"
+    "Magick/Morphology/net.fxarena.openfx.*.png"
+    "Magick/Morphology/net.fxarena.openfx.*.svg"
     "Magick/Extra.png"
     "Magick/Extra.svg"
 )
+
+if(${AUDIO})
+    list(APPEND SOURCES "Audio/AudioCurve.cpp")
+    list(APPEND RESOURCES "Audio/net.fxarena.openfx.AudioCurve.png")
+endif()
 
 ADD_LIBRARY(${PROJECT_NAME} SHARED ${SOURCES} ${SUPPORT_SOURCES})
 SET_TARGET_PROPERTIES(${PROJECT_NAME} PROPERTIES PREFIX "")
@@ -199,22 +217,31 @@ include_directories(
     ${GLIB_INCLUDE_DIRS}
     ${CAIRO_INCLUDE_DIRS}
     ${POPPLER_INCLUDE_DIRS}
+    ${REVENGE_INCLUDE_DIRS}
+    ${CDR_INCLUDE_DIRS}
 )
 target_link_libraries(
     ${PROJECT_NAME}
-    ${MAGICK_LIBRARIES}
-    ${LCMS2_LIBRARIES}
-    ${MAGICK_LDFLAGS}
-    ${LCMS2_LDFLAGS}
-    ${FONTCONFIG_LDFLAGS}
-    ${PANGO_LDFLAGS}
-    ${XML_LDFLAGS}
-    ${ZIP_LDFLAGS}
-    ${SVG_LDFLAGS}
-    ${GLIB_LDFLAGS}
-    ${CAIRO_LDFLAGS}
-    ${POPPLER_LDFLAGS}
+    ${MAGICK_STATIC_LIBRARIES}
+    ${LCMS2_STATIC_LIBRARIES}
+    ${MAGICK_STATIC_LDFLAGS}
+    ${LCMS2_STATIC_LDFLAGS}
+    ${FONTCONFIG_STATIC_LDFLAGS}
+    ${PANGO_STATIC_LDFLAGS}
+    ${XML_STATIC_LDFLAGS}
+    ${ZIP_STATIC_LDFLAGS}
+    ${SVG_STATIC_LDFLAGS}
+    ${GLIB_STATIC_LDFLAGS}
+    ${CAIRO_STATIC_LDFLAGS}
+    ${POPPLER_STATIC_LDFLAGS}
+    ${REVENGE_STATIC_LDFLAGS}
+    ${CDR_STATIC_LDFLAGS}
 )
+
+if(${AUDIO})
+    include_directories(${SOX_INCLUDE_DIRS})
+    target_link_libraries(${PROJECT_NAME} ${SOX_STATIC_LDFLAGS})
+endif()
 
 #IF (MSVC)
 #  # Some files require this option. This breaks compatibility with older linkers.
@@ -272,13 +299,13 @@ IF("${OFX_ARCH_NAME}" EQUAL "UNKNOWN")
   MESSAGE(SEND_ERROR "OFX_ARCH_NAME was not detected. Install targets will be unavailable. See http://openeffects.org/documentation/reference/ch02s02.html to pick an arch name.")
 ELSE()
   INSTALL(TARGETS ${PROJECT_NAME}
-    RUNTIME DESTINATION OFX/Plugins/${PROJECT_NAME}.ofx.bundle/Contents/${OFX_ARCH_NAME}
-    LIBRARY DESTINATION OFX/Plugins/${PROJECT_NAME}.ofx.bundle/Contents/${OFX_ARCH_NAME}
+    RUNTIME DESTINATION ${PROJECT_NAME}.ofx.bundle/Contents/${OFX_ARCH_NAME}
+    LIBRARY DESTINATION ${PROJECT_NAME}.ofx.bundle/Contents/${OFX_ARCH_NAME}
   )
   INSTALL(FILES ${RESOURCES}
-    DESTINATION OFX/Plugins/${PROJECT_NAME}.ofx.bundle/Contents/Resources
+    DESTINATION ${PROJECT_NAME}.ofx.bundle/Contents/Resources
   )
   INSTALL(FILES Bundle/Info.plist
-    DESTINATION OFX/Plugins/${PROJECT_NAME}.ofx.bundle/Contents
+    DESTINATION ${PROJECT_NAME}.ofx.bundle/Contents
   )
 ENDIF()

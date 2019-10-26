@@ -2,7 +2,7 @@ PATHTOROOT = $(SRCDIR)/OpenFX/Support
 
 include $(PATHTOROOT)/Plugins/Makefile.master
 
-CXXFLAGS += -DOFX_EXTENSIONS_VEGAS -DOFX_EXTENSIONS_NUKE -DOFX_EXTENSIONS_TUTTLE -DOFX_EXTENSIONS_NATRON -DOFX_SUPPORTS_OPENGLRENDER -I$(SRCDIR)/SupportExt
+CXXFLAGS += -DOFX_EXTENSIONS_VEGAS -DOFX_EXTENSIONS_NUKE -DOFX_EXTENSIONS_TUTTLE -DOFX_EXTENSIONS_NATRON -DOFX_SUPPORTS_OPENGLRENDER -I$(SRCDIR)/SupportExt -std=c++11
 VPATH += $(SRCDIR)/SupportExt
 
 # ImageMagick
@@ -62,6 +62,10 @@ POPPLER_LINKFLAGS += $(shell pkg-config poppler-glib --libs --static)
 # curl
 CURL_CXXFLAGS += $(shell pkg-config libcurl --cflags)
 CURL_LINKFLAGS += $(shell pkg-config libcurl --libs --static)
+
+# sox
+SOX_CXXFLAGS += $(shell pkg-config sox --cflags)
+SOX_LINKFLAGS += $(shell pkg-config sox --libs --static)
 
 # opencl
 OPENCL_CXXFLAGS += -I$(SRCDIR)/OCL
