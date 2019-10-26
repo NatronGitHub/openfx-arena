@@ -294,13 +294,13 @@ IF("${OFX_ARCH_NAME}" EQUAL "UNKNOWN")
   MESSAGE(SEND_ERROR "OFX_ARCH_NAME was not detected. Install targets will be unavailable. See http://openeffects.org/documentation/reference/ch02s02.html to pick an arch name.")
 ELSE()
   INSTALL(TARGETS ${PROJECT_NAME}
-    RUNTIME DESTINATION OFX/Plugins/${PROJECT_NAME}.ofx.bundle/Contents/${OFX_ARCH_NAME}
-    LIBRARY DESTINATION OFX/Plugins/${PROJECT_NAME}.ofx.bundle/Contents/${OFX_ARCH_NAME}
+    RUNTIME DESTINATION ${PROJECT_NAME}.ofx.bundle/Contents/${OFX_ARCH_NAME}
+    LIBRARY DESTINATION ${PROJECT_NAME}.ofx.bundle/Contents/${OFX_ARCH_NAME}
   )
   INSTALL(FILES ${RESOURCES}
-    DESTINATION OFX/Plugins/${PROJECT_NAME}.ofx.bundle/Contents/Resources
+    DESTINATION ${PROJECT_NAME}.ofx.bundle/Contents/Resources
   )
   INSTALL(FILES Bundle/Info.plist
-    DESTINATION OFX/Plugins/${PROJECT_NAME}.ofx.bundle/Contents
+    DESTINATION ${PROJECT_NAME}.ofx.bundle/Contents
   )
 ENDIF()
