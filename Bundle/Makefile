@@ -6,8 +6,11 @@ PLUGINOBJECTS = \
     ReadCDR.o \
     ReadSVG.o \
     ReadKrita.o \
-    OpenRaster.o \
-    AudioCurve.o
+    OpenRaster.o
+
+ifeq ($(AUDIO), ON)
+PLUGINOBJECTS += AudioCurve.o
+endif
 
 ifneq ($(LICENSE),COMMERCIAL)
 PLUGINOBJECTS += \
@@ -59,8 +62,11 @@ RESOURCES = \
     ../Extra/fr.inria.openfx.ReadKrita.png \
     ../Extra/fr.inria.openfx.ReadKrita.svg \
     ../Extra/fr.inria.openfx.OpenRaster.png \
-    ../Extra/fr.inria.openfx.OpenRaster.svg \
-    ../Audio/net.fxarena.openfx.AudioCurve.png
+    ../Extra/fr.inria.openfx.OpenRaster.svg
+
+ifeq ($(AUDIO), ON)
+RESOURCES += ../Audio/net.fxarena.openfx.AudioCurve.png
+endif
 
 ifneq ($(LICENSE),COMMERCIAL)
 RESOURCES += \
@@ -120,8 +126,11 @@ VPATH += \
     $(SRCDIR)/Magick \
     $(SRCDIR)/Magick/Swirl \
     $(SRCDIR)/Magick/Roll \
-    $(SRCDIR)/Magick/Wave \
-    $(SRCDIR)/Audio
+    $(SRCDIR)/Magick/Wave
+
+ifeq ($(AUDIO), ON)
+    VPATH += $(SRCDIR)/Audio
+endif
 
 CXXFLAGS += \
     -I$(SRCDIR)/Extra \
@@ -139,8 +148,7 @@ CXXFLAGS  += \
     $(ZIP_CXXFLAGS) \
     $(MAGICK_CXXFLAGS) \
     $(LCMS_CXXFLAGS) \
-    $(GLIB_CXXFLAGS) \
-    $(SOX_CXXFLAGS)
+    $(GLIB_CXXFLAGS)
 LINKFLAGS += \
     $(FCONFIG_LINKFLAGS) \
     $(PANGO_LINKFLAGS) \
@@ -150,8 +158,12 @@ LINKFLAGS += \
     $(ZIP_LINKFLAGS) \
     $(MAGICK_LINKFLAGS) \
     $(LCMS_LINKFLAGS) \
-    $(GLIB_LINKFLAGS) \
-    $(SOX_LINKFLAGS)
+    $(GLIB_LINKFLAGS)
+
+ifeq ($(AUDIO), ON)
+CXXFLAGS += $(SOX_CXXFLAGS)
+LINKFLAGS += $(SOX_LINKFLAGS)
+endif
 
 CXXFLAGS += -I. -I$(SRCDIR)/Magick
 

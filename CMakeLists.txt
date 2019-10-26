@@ -28,6 +28,8 @@ CMAKE_MINIMUM_REQUIRED(VERSION 3.1)
 PROJECT(Arena CXX)
 ENABLE_TESTING()
 
+option(AUDIO "Enable AudioCurve" OFF)
+
 include(FindOpenGL REQUIRED)
 # not super portable, but will do for now:
 find_package(PkgConfig REQUIRED)
@@ -43,10 +45,12 @@ pkg_search_module(CAIRO REQUIRED cairo)
 pkg_search_module(POPPLER REQUIRED poppler-glib)
 pkg_search_module(REVENGE REQUIRED librevenge-0.0)
 pkg_search_module(CDR REQUIRED libcdr-0.1)
-pkg_search_module(SOX REQUIRED sox)
 add_compile_options(${MAGICK_STATIC_CFLAGS}) # we need the magick flags
-add_compile_options(${SOX_STATIC_CFLAGS}) # we need the sox flags
 
+if(${AUDIO})
+    pkg_search_module(SOX REQUIRED sox)
+    add_compile_options(${SOX_STATIC_CFLAGS}) # we need the sox flags
+endif()
 set (CMAKE_CXX_STANDARD 11)
 
 # Use -Ofast when applicable (implies -ffast-math)
@@ -126,7 +130,6 @@ FILE(GLOB SOURCES
     "Extra/OpenRaster.cpp"
     "Extra/ReadCDR.cpp"
     "Extra/ReadKrita.cpp"
-    "Audio/AudioCurve.cpp"
     "Magick/Arc.cpp"
     "Magick/Charcoal.cpp"
     "Magick/Edges.cpp"
@@ -153,7 +156,6 @@ FILE(GLOB RESOURCES
     "Extra/net.fxarena.openfx.*.svg"
     "Extra/fr.inria.openfx.*.png"
     "Extra/fr.inria.openfx.*.svg"
-    "Audio/nex.fxarena.openfx.*.png"
     "Magick/net.fxarena.openfx.*.png"
     "Magick/net.fxarena.openfx.*.svg"
     "Magick/Roll/net.fxarena.openfx.*.png"
@@ -165,6 +167,11 @@ FILE(GLOB RESOURCES
     "Magick/Extra.png"
     "Magick/Extra.svg"
 )
+
+if(${AUDIO})
+    list(APPEND SOURCES "Audio/AudioCurve.cpp")
+    list(APPEND RESOURCES "Audio/net.fxarena.openfx.AudioCurve.png")
+endif()
 
 ADD_LIBRARY(${PROJECT_NAME} SHARED ${SOURCES} ${SUPPORT_SOURCES})
 SET_TARGET_PROPERTIES(${PROJECT_NAME} PROPERTIES PREFIX "")
@@ -207,7 +214,6 @@ include_directories(
     ${POPPLER_INCLUDE_DIRS}
     ${REVENGE_INCLUDE_DIRS}
     ${CDR_INCLUDE_DIRS}
-    ${SOX_INCLUDE_DIRS}
 )
 target_link_libraries(
     ${PROJECT_NAME}
@@ -225,8 +231,12 @@ target_link_libraries(
     ${POPPLER_STATIC_LDFLAGS}
     ${REVENGE_STATIC_LDFLAGS}
     ${CDR_STATIC_LDFLAGS}
-    ${SOX_STATIC_LDFLAGS}
 )
+
+if(${AUDIO})
+    include_directories(${SOX_INCLUDE_DIRS})
+    target_link_libraries(${PROJECT_NAME} ${SOX_STATIC_LDFLAGS})
+endif()
 
 #IF (MSVC)
 #  # Some files require this option. This breaks compatibility with older linkers.
