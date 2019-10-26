@@ -38,8 +38,8 @@
 #define kPluginName "TextOFX"
 #define kPluginGrouping "Draw"
 #define kPluginIdentifier "net.fxarena.openfx.Text"
-#define kPluginVersionMajor 7
-#define kPluginVersionMinor 0
+#define kPluginVersionMajor 6
+#define kPluginVersionMinor 10
 
 #define kSupportsTiles 0
 #define kSupportsMultiResolution 0
