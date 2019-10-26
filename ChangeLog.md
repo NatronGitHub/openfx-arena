@@ -1,21 +1,37 @@
 # openfx-arena ChangeLog
 
-## 2019.10
+## Natron-2.3.15 (TBA)
 
  * ``Text``: Added support for SRT subtitles
  * ``Morphology``: Added new plugin
  * ``AudioCurve``: Added new plugin
-
-## 2019.07
-
  * Improved Fusion compatibility
  * Improved Resolve compatibility
  * ``Edges``: Fixed ImageMagick compatibility
-
-## 2019.06
-
  * ``ReadCDR/ReadSVG``: Fixed deprecated librsvg API
  * ``Texture``: Rename gradient radial to linear
+ * Updated submodules
 
+## Natron-2.3.14
 
-Changes older than 2019 *(tag Natron-2.3.14)* are available through ``git log``.
+ * Updated OpenFX-IO
+
+## Natron-2.3.13
+
+ * ``ReadCDR/ReadSVG``: Premultiplied fix
+ * Updated submodules
+
+## Natron-2.3.12
+
+ * ``Text``: Fixed font issues
+ * Updated submodules
+ * Various code fixes
+
+## Natron-2.3.11
+
+ * Font fixes
+ * Updated submodules
+
+## Natron-2.3.10
+
+ * Updated submodules
