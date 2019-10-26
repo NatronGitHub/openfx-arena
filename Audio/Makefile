@@ -1,6 +1,6 @@
 PLUGINNAME = AudioCurve
 
-PLUGINOBJECTS = AudioCurveOFX.o
+PLUGINOBJECTS = AudioCurve.o
 
 RESOURCES = net.fxarena.openfx.AudioCurve.png
 
