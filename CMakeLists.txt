@@ -29,11 +29,12 @@ PROJECT(Arena CXX)
 ENABLE_TESTING()
 
 option(AUDIO "Enable AudioCurve" OFF)
+set(MAGICK_PKG_CONFIG "Magick++" CACHE STRING "ImageMagick pkg-config name")
 
 include(FindOpenGL REQUIRED)
 # not super portable, but will do for now:
 find_package(PkgConfig REQUIRED)
-pkg_search_module(MAGICK REQUIRED Magick++)
+pkg_search_module(MAGICK REQUIRED ${MAGICK_PKG_CONFIG})
 pkg_search_module(LCMS2 REQUIRED lcms2)
 pkg_search_module(FONTCONFIG REQUIRED fontconfig)
 pkg_search_module(PANGO REQUIRED pangocairo)
