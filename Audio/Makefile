@@ -1,4 +1,4 @@
-PLUGINNAME = AudioCurve
+PLUGINNAME = Audio
 
 PLUGINOBJECTS = AudioCurve.o
 

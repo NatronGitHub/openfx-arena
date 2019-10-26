@@ -77,6 +77,9 @@ script:
   - export PKG_CONFIG_PATH=/usr/local/lib/pkgconfig
   - export LD_LIBRARY_PATH=/usr/local/lib
   - make AUDIO=ON IM=7 CONFIG=debug
+  - make -C Audio
+  - make -C Extra
+  - make -C Magick
   - make -C OCL
   - mkdir build && cd build
   - cmake -DAUDIO=ON .. && make
