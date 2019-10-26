@@ -40,6 +40,7 @@ PLUGINOBJECTS += \
     Modulate.o \
     ReadMisc.o \
     Text.o \
+    Morphology.o \
     MagickPlugin.o \
     ofxsOGLTextRenderer.o \
     ofxsOGLFontData.o \
@@ -104,7 +105,9 @@ RESOURCES += \
     ../Magick/fr.inria.openfx.ReadMisc.png \
     ../Magick/fr.inria.openfx.ReadMisc.svg \
     ../Magick/net.fxarena.openfx.Texture.png \
-    ../Magick/net.fxarena.openfx.Texture.svg
+    ../Magick/net.fxarena.openfx.Texture.svg \
+    ../Magick/Morphology/net.fxarena.openfx.Morphology.png \
+    ../Magick/Morphology/net.fxarena.openfx.Morphology.svg
 
     #../Magick/net.fxarena.openfx.Text.png \
     #../Magick/net.fxarena.openfx.Text.svg
@@ -126,7 +129,8 @@ VPATH += \
     $(SRCDIR)/Magick \
     $(SRCDIR)/Magick/Swirl \
     $(SRCDIR)/Magick/Roll \
-    $(SRCDIR)/Magick/Wave
+    $(SRCDIR)/Magick/Wave \
+    $(SRCDIR)/Magick/Morphology
 
 ifeq ($(AUDIO), ON)
     VPATH += $(SRCDIR)/Audio

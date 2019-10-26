@@ -148,6 +148,7 @@ FILE(GLOB SOURCES
     "Magick/Roll/Roll.cpp"
     "Magick/Swirl/Swirl.cpp"
     "Magick/Wave/Wave.cpp"
+    "Magick/Morphology/Morphology.cpp"
     "Magick/MagickPlugin.cpp"
 )
 
@@ -164,6 +165,8 @@ FILE(GLOB RESOURCES
     "Magick/Swirl/net.fxarena.openfx.*.svg"
     "Magick/Wave/net.fxarena.openfx.*.png"
     "Magick/Wave/net.fxarena.openfx.*.svg"
+    "Magick/Morphology/net.fxarena.openfx.*.png"
+    "Magick/Morphology/net.fxarena.openfx.*.svg"
     "Magick/Extra.png"
     "Magick/Extra.svg"
 )
