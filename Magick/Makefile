@@ -24,6 +24,7 @@ PLUGINOBJECTS = \
     ReadMisc.o \
     Text.o \
     HaldCLUT.o \
+    Morphology.o \
     MagickPlugin.o \
     ofxsOGLTextRenderer.o \
     ofxsOGLFontData.o \
@@ -67,7 +68,9 @@ RESOURCES = \
     net.fxarena.openfx.Texture.svg \
     HaldCLUT/net.fxarena.openfx.HaldCLUT.png \
     HaldCLUT/net.fxarena.openfx.HaldCLUT.svg \
-    HaldCLUT/net.fxarena.openfx.HaldCLUT.xml
+    HaldCLUT/net.fxarena.openfx.HaldCLUT.xml \
+    Morphology/net.fxarena.openfx.Morphology.png \
+    Morphology/net.fxarena.openfx.Morphology.svg
 
 ifneq ($(LEGACYIM),1)
 RESOURCES += \
@@ -87,7 +90,8 @@ VPATH += \
     $(SRCDIR)/Magick/HaldCLUT \
     $(SRCDIR)/Magick/Swirl \
     $(SRCDIR)/Magick/Roll \
-    $(SRCDIR)/Magick/Wave
+    $(SRCDIR)/Magick/Wave \
+    $(SRCDIR)/Magick/Morphology
 
 CXXFLAGS += \
     -I.
