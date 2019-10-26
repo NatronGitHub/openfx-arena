@@ -16,6 +16,7 @@ before_install:
       echo -n | openssl s_client -connect scan.coverity.com:443 | sed -ne '/-BEGIN CERTIFICATE-/,/-END CERTIFICATE-/p' | sudo tee -a /etc/ssl/certs/ca- ;
     fi
   - git submodule update --init --recursive
+  - sudo apt remove --purge imagemagick imagemagick-common
   - if [ ${TRAVIS_OS_NAME} = "linux" -a "$CC" = "gcc" ];
     then
         if [ "$BUILDDOC" = 1 ]; then
@@ -50,27 +51,28 @@ install:
   - git clone https://github.com/ImageMagick/ImageMagick
   - cd ImageMagick
   - git checkout tags/7.0.3-1
-  - ./configure --prefix=/usr --disable-docs --disable-deprecated --with-magick-plus-plus=yes --with-quantum-depth=32 --without-dps --without-djvu --without-fftw --without-fpx --without-gslib --without-gvc --without-jbig --without-jpeg --with-lcms --without-openjp2 --without-lqr --without-lzma --without-openexr --without-pango --with-png --without-rsvg --without-tiff --without-webp --without-xml --with-zlib --without-bzlib --enable-static --enable-shared --enable-hdri --with-freetype --with-fontconfig --without-x --without-modules --without-wmf
+  - ./configure --prefix=/usr --disable-docs --disable-deprecated --with-magick-plus-plus=yes --with-quantum-depth=32 --without-dps --without-djvu --without-fftw --without-fpx --without-gslib --without-gvc --without-jbig --without-jpeg --with-lcms --without-openjp2 --without-lqr --without-lzma --without-openexr --without-pango --with-png --without-rsvg --without-tiff --without-webp --without-xml --with-zlib --without-bzlib --disable-static --enable-shared --enable-hdri --with-freetype --with-fontconfig --without-x --without-modules --without-wmf
   - make -j2
   - sudo make install
   - cd ..
-  # a more recont harfbuzz may be necessary if pango is upgraded
-  - wget https://www.freedesktop.org/software/harfbuzz/release/harfbuzz-0.9.42.tar.bz2
-  - tar xf harfbuzz-0.9.42.tar.bz2
-  - cd harfbuzz-0.9.42
-  - ./configure --prefix=/usr/local
-  - make -j2
-  - sudo make install
-  - cd ..
-  # pango 1.42.4 requires fribidi
-  # pango 1.44.3 requires also meson to build
-  - wget http://ftp.gnome.org/pub/GNOME/sources/pango/1.38/pango-1.38.1.tar.xz
-  - tar xf pango-1.38.1.tar.xz
-  - cd pango-1.38.1
-  - env PKG_CONFIG_PATH=/usr/local/lib/pkgconfig LD_LIBRARY_PATH=/usr/local/lib ./configure --prefix=/usr/local
-  - make -j2
-  - sudo make install
-  - cd ..
+# Xenial has pango 1.38
+#  # a more recont harfbuzz may be necessary if pango is upgraded
+#  - wget https://www.freedesktop.org/software/harfbuzz/release/harfbuzz-0.9.42.tar.bz2
+#  - tar xf harfbuzz-0.9.42.tar.bz2
+#  - cd harfbuzz-0.9.42
+#  - ./configure --prefix=/usr/local
+#  - make -j2
+#  - sudo make install
+#  - cd ..
+#  # pango 1.42.4 requires fribidi
+#  # pango 1.44.3 requires also meson to build
+#  - wget http://ftp.gnome.org/pub/GNOME/sources/pango/1.38/pango-1.38.1.tar.xz
+#  - tar xf pango-1.38.1.tar.xz
+#  - cd pango-1.38.1
+#  - env PKG_CONFIG_PATH=/usr/local/lib/pkgconfig LD_LIBRARY_PATH=/usr/local/lib ./configure --prefix=/usr/local
+#  - make -j2
+#  - sudo make install
+#  - cd ..
 
 script:
   - git submodule update -i --recursive
