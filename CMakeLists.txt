@@ -41,7 +41,11 @@ pkg_search_module(SVG REQUIRED librsvg-2.0)
 pkg_search_module(GLIB REQUIRED glib-2.0)
 pkg_search_module(CAIRO REQUIRED cairo)
 pkg_search_module(POPPLER REQUIRED poppler-glib)
-add_compile_options(${MAGICK_CFLAGS}) # we need the magick flags
+pkg_search_module(REVENGE REQUIRED librevenge-0.0)
+pkg_search_module(CDR REQUIRED libcdr-0.1)
+pkg_search_module(SOX REQUIRED sox)
+add_compile_options(${MAGICK_STATIC_CFLAGS}) # we need the magick flags
+add_compile_options(${SOX_STATIC_CFLAGS}) # we need the sox flags
 
 set (CMAKE_CXX_STANDARD 11)
 
@@ -76,6 +80,8 @@ INCLUDE_DIRECTORIES(${CMAKE_CURRENT_SOURCE_DIR}/OpenFX-IO/IOSupport/SequencePars
 INCLUDE_DIRECTORIES(${CMAKE_CURRENT_SOURCE_DIR}/OpenFX-IO/IOSupport/SequenceParsing/tinydir)
 INCLUDE_DIRECTORIES(${CMAKE_CURRENT_SOURCE_DIR}/Magick)
 INCLUDE_DIRECTORIES(${CMAKE_CURRENT_SOURCE_DIR}/Extra)
+INCLUDE_DIRECTORIES(${CMAKE_CURRENT_SOURCE_DIR}/Audio)
+INCLUDE_DIRECTORIES(${CMAKE_CURRENT_SOURCE_DIR}/Bundle)
 #INCLUDE_DIRECTORIES(${CMAKE_CURRENT_SOURCE_DIR}/OCL)
 
 # Define "DEBUG" on debug builds
@@ -117,9 +123,10 @@ FILE(GLOB SOURCES
     "Extra/TextFX.cpp"
     "Extra/ReadSVG.cpp"
     "Extra/ReadPDF.cpp"
-#    "Extra/OpenRaster.cpp"
-#    "Extra/ReadCDR.cpp"
-#    "Extra/ReadKrita.cpp"
+    "Extra/OpenRaster.cpp"
+    "Extra/ReadCDR.cpp"
+    "Extra/ReadKrita.cpp"
+    "Audio/AudioCurve.cpp"
     "Magick/Arc.cpp"
     "Magick/Charcoal.cpp"
     "Magick/Edges.cpp"
@@ -146,6 +153,7 @@ FILE(GLOB RESOURCES
     "Extra/net.fxarena.openfx.*.svg"
     "Extra/fr.inria.openfx.*.png"
     "Extra/fr.inria.openfx.*.svg"
+    "Audio/nex.fxarena.openfx.*.png"
     "Magick/net.fxarena.openfx.*.png"
     "Magick/net.fxarena.openfx.*.svg"
     "Magick/Roll/net.fxarena.openfx.*.png"
@@ -197,21 +205,27 @@ include_directories(
     ${GLIB_INCLUDE_DIRS}
     ${CAIRO_INCLUDE_DIRS}
     ${POPPLER_INCLUDE_DIRS}
+    ${REVENGE_INCLUDE_DIRS}
+    ${CDR_INCLUDE_DIRS}
+    ${SOX_INCLUDE_DIRS}
 )
 target_link_libraries(
     ${PROJECT_NAME}
-    ${MAGICK_LIBRARIES}
-    ${LCMS2_LIBRARIES}
-    ${MAGICK_LDFLAGS}
-    ${LCMS2_LDFLAGS}
-    ${FONTCONFIG_LDFLAGS}
-    ${PANGO_LDFLAGS}
-    ${XML_LDFLAGS}
-    ${ZIP_LDFLAGS}
-    ${SVG_LDFLAGS}
-    ${GLIB_LDFLAGS}
-    ${CAIRO_LDFLAGS}
-    ${POPPLER_LDFLAGS}
+    ${MAGICK_STATIC_LIBRARIES}
+    ${LCMS2_STATIC_LIBRARIES}
+    ${MAGICK_STATIC_LDFLAGS}
+    ${LCMS2_STATIC_LDFLAGS}
+    ${FONTCONFIG_STATIC_LDFLAGS}
+    ${PANGO_STATIC_LDFLAGS}
+    ${XML_STATIC_LDFLAGS}
+    ${ZIP_STATIC_LDFLAGS}
+    ${SVG_STATIC_LDFLAGS}
+    ${GLIB_STATIC_LDFLAGS}
+    ${CAIRO_STATIC_LDFLAGS}
+    ${POPPLER_STATIC_LDFLAGS}
+    ${REVENGE_STATIC_LDFLAGS}
+    ${CDR_STATIC_LDFLAGS}
+    ${SOX_STATIC_LDFLAGS}
 )
 
 #IF (MSVC)

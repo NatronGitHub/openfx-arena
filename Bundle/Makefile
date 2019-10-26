@@ -7,7 +7,7 @@ PLUGINOBJECTS = \
     ReadSVG.o \
     ReadKrita.o \
     OpenRaster.o \
-    AudioCurveOFX.o
+    AudioCurve.o
 
 ifneq ($(LICENSE),COMMERCIAL)
 PLUGINOBJECTS += \
@@ -60,7 +60,7 @@ RESOURCES = \
     ../Extra/fr.inria.openfx.ReadKrita.svg \
     ../Extra/fr.inria.openfx.OpenRaster.png \
     ../Extra/fr.inria.openfx.OpenRaster.svg \
-    ../AudioCurve/net.fxarena.openfx.AudioCurve.png
+    ../Audio/net.fxarena.openfx.AudioCurve.png
 
 ifneq ($(LICENSE),COMMERCIAL)
 RESOURCES += \
@@ -121,7 +121,7 @@ VPATH += \
     $(SRCDIR)/Magick/Swirl \
     $(SRCDIR)/Magick/Roll \
     $(SRCDIR)/Magick/Wave \
-    $(SRCDIR)/AudioCurve
+    $(SRCDIR)/Audio
 
 CXXFLAGS += \
     -I$(SRCDIR)/Extra \
