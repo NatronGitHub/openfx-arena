@@ -825,6 +825,10 @@ void TextFXPlugin::render(const OFX::RenderArguments &args)
     layout = pango_cairo_create_layout(cr);
     alist = pango_attr_list_new();
 
+    // flip
+    cairo_scale(cr, 1.0f, -1.0f);
+    cairo_translate(cr, 0.0f, -height);
+
     cairo_font_options_t* options = cairo_font_options_create();
 
     cairo_rectangle(cr, 0, 0, width, height);
@@ -1142,32 +1146,28 @@ void TextFXPlugin::render(const OFX::RenderArguments &args)
         }
     }
 
+    // cairo status?
     status = cairo_status(cr);
-
     if (status) {
         setPersistentMessage(OFX::Message::eMessageError, "", "Render failed");
         OFX::throwSuiteStatusException(kOfxStatErrFormat);
     }
 
+    // flush
     cairo_surface_flush(surface);
 
+    // get pixels
     unsigned char* cdata = cairo_image_surface_get_data(surface);
-    unsigned char* pixels = new unsigned char[width * height * 4];
-    for (int i = 0; i < width; ++i) {
-        for (int j = 0; j < height; ++j) {
-            for (int k = 0; k < 4; ++k)
-                pixels[(i + j * width) * 4 + k] = cdata[(i + (height - 1 - j) * width) * 4 + k];
-        }
-    }
-
     float* pixelData = (float*)dstImg->getPixelData();
+
+    // write output
     int offset = 0;
     for (int y = 0; y < height; y++) {
         for (int x = 0; x < width; x++) {
-            pixelData[offset + 0] = pixels[offset + 2] * (1.f / 255);
-            pixelData[offset + 1] = pixels[offset + 1] * (1.f / 255);
-            pixelData[offset + 2] = pixels[offset + 0] * (1.f / 255);
-            pixelData[offset + 3] = pixels[offset + 3] * (1.f / 255);
+            pixelData[offset + 0] = cdata[offset + 2] * (1.f / 255);
+            pixelData[offset + 1] = cdata[offset + 1] * (1.f / 255);
+            pixelData[offset + 2] = cdata[offset + 0] * (1.f / 255);
+            pixelData[offset + 3] = cdata[offset + 3] * (1.f / 255);
             offset += 4;
         }
     }
@@ -1179,7 +1179,6 @@ void TextFXPlugin::render(const OFX::RenderArguments &args)
     cairo_surface_destroy(surface);
     cdata = NULL;
     pixelData = NULL;
-    delete[] pixels;
 }
 
 void TextFXPlugin::changedParam(const OFX::InstanceChangedArgs &args, const std::string &paramName)
