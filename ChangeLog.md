@@ -11,6 +11,7 @@
  * ``ReadCDR/ReadSVG``: Fixed deprecated librsvg API
  * ``Texture``: Rename gradient radial to linear
  * Updated submodules
+ * CMake support
 
 ## Natron-2.3.14
 
