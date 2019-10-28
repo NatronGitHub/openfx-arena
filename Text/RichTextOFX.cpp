@@ -27,7 +27,7 @@
 #define kPluginVersionMajor 0
 #define kPluginVersionMinor 7
 #define kPluginGrouping "Draw"
-#define kPluginDescription "Rich Text Generator for Natron.\n\nUnder development, require changes in Natron to work as intended."
+#define kPluginDescription "OpenFX Rich Text Generator for Natron.\n\nUnder development, require changes in Natron to work as intended."
 
 #define kSupportsTiles 0
 #define kSupportsMultiResolution 0
@@ -39,6 +39,7 @@
 #define kParamHTMLHint "The text that will be drawn."
 
 // https://doc.qt.io/qt-5/richtext-html-subset.html
+// this is the default html code produced by Qt
 #define kParamHTMLDefault \
 "<!DOCTYPE HTML PUBLIC \"-//W3C//DTD HTML 4.0//EN\" \"http://www.w3.org/TR/REC-html40/strict.dtd\">" \
 "<html>" \
@@ -53,14 +54,20 @@
 "</body>" \
 "</html>" \
 
+// should be done by host editor
+// need to spec something compatible with qrichtext
 #define kParamAlign "align"
 #define kParamAlignLabel "Align"
 #define kParamAlignHint "Text alignment"
 
+// should be done by host editor
+// need to spec something compatible with qrichtext
 #define kParamWrap "wrap"
 #define kParamWrapLabel "Wrap"
 #define kParamWrapHint "Word wrap"
 
+// should be done by host editor
+// need to spec something compatible with qrichtext
 #define kParamJustify "justify"
 #define kParamJustifyLabel "Justify"
 #define kParamJustifyHint "Text justify."
@@ -123,14 +130,12 @@ void RichTextPlugin::render(const RenderArguments &args)
     // renderscale
     if (!kSupportsRenderScale &&
         (args.renderScale.x != 1. || args.renderScale.y != 1.)) {
-        setPersistentMessage(Message::eMessageError, "", "Renderscale (render)");
         throwSuiteStatusException(kOfxStatFailed);
         return;
     }
 
     // dstclip
     if (!_dstClip) {
-        setPersistentMessage(Message::eMessageError, "", "No destination clip!");
         throwSuiteStatusException(kOfxStatFailed);
         return;
     }
@@ -139,7 +144,6 @@ void RichTextPlugin::render(const RenderArguments &args)
     // get dstclip
     auto_ptr<Image> dstImg(_dstClip->fetchImage(args.time));
     if (!dstImg.get()) {
-        setPersistentMessage(Message::eMessageError, "", "No destination image!");
         throwSuiteStatusException(kOfxStatFailed);
         return;
     }
@@ -150,7 +154,6 @@ void RichTextPlugin::render(const RenderArguments &args)
     // get bitdepth
     BitDepthEnum dstBitDepth = dstImg->getPixelDepth();
     if (dstBitDepth != eBitDepthFloat) {
-        setPersistentMessage(Message::eMessageError, "", "Image depth is not float!");
         throwSuiteStatusException(kOfxStatErrFormat);
         return;
     }
@@ -158,7 +161,6 @@ void RichTextPlugin::render(const RenderArguments &args)
     // get channels
     PixelComponentEnum dstComponents  = dstImg->getPixelComponents();
     if (dstComponents != ePixelComponentRGBA) {
-        setPersistentMessage(Message::eMessageError, "", "Image is not RGBA!");
         throwSuiteStatusException(kOfxStatErrFormat);
         return;
     }
@@ -173,8 +175,8 @@ void RichTextPlugin::render(const RenderArguments &args)
         args.renderWindow.x2 <= dstBounds.x1 ||
         args.renderWindow.x2 > dstBounds.x2 ||
         args.renderWindow.y2 <= dstBounds.y1 ||
-        args.renderWindow.y2 > dstBounds.y2) {
-        setPersistentMessage(Message::eMessageError, "", "Image bounds failed!");
+        args.renderWindow.y2 > dstBounds.y2)
+    {
         throwSuiteStatusException(kOfxStatErrValue);
         return;
     }
@@ -192,7 +194,7 @@ void RichTextPlugin::render(const RenderArguments &args)
     _srcWrap->getValueAtTime(args.time, wrap);
     _srcJustify->getValueAtTime(args.time, justify);
 
-    // render
+    // render image
     RichText::RichTextRenderResult result = RichText::renderRichText(width,
                                                                      height,
                                                                      _fc,
@@ -233,7 +235,6 @@ void RichTextPlugin::changedParam(const InstanceChangedArgs &args,
     if (!kSupportsRenderScale &&
         (args.renderScale.x != 1. || args.renderScale.y != 1.))
     {
-        setPersistentMessage(Message::eMessageError, "", "Renderscale (changed param)");
         throwSuiteStatusException(kOfxStatFailed);
         return;
     }
@@ -285,7 +286,7 @@ void RichTextPluginFactory::describeInContext(ImageEffectDescriptor &desc,
         param->setLabel(kParamHTMLLabel);
         param->setHint(kParamHTMLHint);
         param->setStringType(eStringTypeRichTextFormat);
-        param->setAnimates(true); // Don't know if this works...
+        param->setAnimates(false); // Disable for now, don't work on Natron 2.3.15, need modifications
         param->setDefault(kParamHTMLDefault);
         if (page) {
             page->addChild(*param);
