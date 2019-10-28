@@ -13,6 +13,10 @@ ifeq ($(AUDIO), ON)
 PLUGINOBJECTS += AudioCurve.o
 endif
 
+ifeq ($(RICHTEXT), ON)
+PLUGINOBJECTS += RichTextOFX.o
+endif
+
 ifneq ($(LICENSE),COMMERCIAL)
 PLUGINOBJECTS += \
     ReadPDF.o
@@ -68,6 +72,12 @@ RESOURCES = \
 
 ifeq ($(AUDIO), ON)
 RESOURCES += ../Audio/net.fxarena.openfx.AudioCurve.png
+endif
+
+ifeq ($(RICHTEXT),ON)
+RESOURCES += \
+    ../Text/net.fxarena.openfx.RichText.png \
+    ../Text/net.fxarena.openfx.RichText.svg
 endif
 
 ifneq ($(LICENSE),COMMERCIAL)

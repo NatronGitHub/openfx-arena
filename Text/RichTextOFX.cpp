@@ -31,7 +31,7 @@
 
 #define kSupportsTiles 0
 #define kSupportsMultiResolution 0
-#define kSupportsRenderScale 0 // TODO
+#define kSupportsRenderScale 1
 #define kRenderThreadSafety eRenderFullySafe
 
 #define kParamHTML "text"
@@ -77,8 +77,6 @@ public:
     virtual void render(const RenderArguments &args) override final;
     virtual void changedParam(const InstanceChangedArgs &args,
                               const std::string &paramName) override final;
-    virtual bool getRegionOfDefinition(const RegionOfDefinitionArguments &args,
-                                       OfxRectD &rod) override final;
 
 private:
     Clip *_dstClip;
@@ -202,6 +200,8 @@ void RichTextPlugin::render(const RenderArguments &args)
                                                                      wrap,
                                                                      align,
                                                                      justify,
+                                                                     args.renderScale.x,
+                                                                     args.renderScale.y,
                                                                      true /* flip */);
     if (!result.success) {
         setPersistentMessage(Message::eMessageError, "", "RichText Renderer failed");
@@ -237,23 +237,6 @@ void RichTextPlugin::changedParam(const InstanceChangedArgs &args,
         throwSuiteStatusException(kOfxStatFailed);
         return;
     }
-}
-
-bool RichTextPlugin::getRegionOfDefinition(const RegionOfDefinitionArguments &args,
-                                           OfxRectD &rod)
-{
-    if (!kSupportsRenderScale &&
-        (args.renderScale.x != 1. || args.renderScale.y != 1.))
-    {
-        setPersistentMessage(Message::eMessageError, "", "Renderscale (get region of definition)");
-        throwSuiteStatusException(kOfxStatFailed);
-        return false;
-    }
-
-    rod.x1 = rod.y1 = kOfxFlagInfiniteMin;
-    rod.x2 = rod.y2 = kOfxFlagInfiniteMax;
-
-    return true;
 }
 
 mDeclarePluginFactory(RichTextPluginFactory, {}, {});

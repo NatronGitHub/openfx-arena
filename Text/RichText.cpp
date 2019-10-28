@@ -151,7 +151,8 @@ bool RichText::isMarkup(const std::string &str)
 }
 
 // WIP
-const std::string RichText::convertHtmlToMarkup(const std::string &str)
+const std::string RichText::convertHtmlToMarkup(const std::string &str,
+                                                double renderScale)
 {
     std::string result = str;
 
@@ -159,7 +160,7 @@ const std::string RichText::convertHtmlToMarkup(const std::string &str)
         // std::cout << "\n\n==========> THIS VERSION OF NATRON HAS LIMITED SUPPORT FOR RICH TEXT !!!" << std::endl;
     }
 
-    // std::cout << "\n\n==========> CONVERT HTML TO PANGO\n\nHTML SOURCE:\n\n" << result << std::endl;
+    std::cout << "\n\n==========> CONVERT HTML TO PANGO\n\nHTML SOURCE:\n\n" << result << std::endl;
 
     // mark all tags we want to keep
     std::vector<std::string> tags;
@@ -250,6 +251,16 @@ const std::string RichText::convertHtmlToMarkup(const std::string &str)
             if (RichText::contains(fontSize, "pt")) {
                 fontSize.replace(fontSize.find("pt"), sizeof("pt"), "");
             }
+
+            // add render scale
+            if (!fontSize.empty() && renderScale>0) {
+                int fs = std::stoi(fontSize);
+                if (fs>0) {
+                    fs = fs * renderScale + 0.5;
+                    fontSize = std::to_string(fs);
+                }
+            }
+
             // remove style opt if found
             if (hasStyle) {
                 std::string opt = RichText::extract(line, "style=\"", "\"");
@@ -270,7 +281,7 @@ const std::string RichText::convertHtmlToMarkup(const std::string &str)
                 line.replace(line.find(opt), opt.length() + 1, "");
             }
 
-            // std::cout << "FONT FAMILY? " << hasFontFamily << ":" << fontFamily << " SIZE? " << hasFontSize << ":" << fontSize << std::endl;
+            std::cout << "FONT FAMILY? " << hasFontFamily << ":" << fontFamily << " SIZE? " << hasFontSize << ":" << fontSize << std::endl;
 
             // add font family (and size if exists)
             if (hasFontFamily && !fontFamily.empty()) {
@@ -317,7 +328,7 @@ const std::string RichText::convertHtmlToMarkup(const std::string &str)
         markup += line;
     }
     if (!markup.empty()) { result = markup; } // add markup
-    // std::cout << "\n\nPANGO MARKUP RESULT:\n\n" << result << std::endl; // DEBUG
+     std::cout << "\n\nPANGO MARKUP RESULT:\n\n" << result << std::endl; // DEBUG
     return result;
 }
 
@@ -363,12 +374,13 @@ void RichText::setLayoutJustify(PangoLayout *layout,
 }
 
 void RichText::setLayoutMarkup(PangoLayout *layout,
-                               const std::string &str)
+                               const std::string &str,
+                               double renderScale)
 {
     if (!layout || str.empty()) { return; }
     std::string markup = str;
     if (RichText::isHtml(markup)) {
-        markup = RichText::convertHtmlToMarkup(markup);
+        markup = RichText::convertHtmlToMarkup(markup, renderScale);
     }
     pango_layout_set_markup(layout,
                             markup.c_str(),
@@ -562,9 +574,12 @@ RichText::RichTextRenderResult RichText::renderRichText(int width,
                                                         const std::string &html,
                                                         int wrap,
                                                         int align,
-                                                        int justify, bool flip)
+                                                        int justify,
+                                                        double rX,
+                                                        double rY,
+                                                        bool flip)
 {
-    // std::cout << "RICHT TEXT RENDER " << width << " " << height << std::endl;
+    std::cout << "RICHT TEXT RENDER " << width << " " << height << " " << rX << " " << rY <<std::endl;
 
     RichTextRenderResult result;
     result.success = false;
@@ -594,7 +609,7 @@ RichText::RichTextRenderResult RichText::renderRichText(int width,
     }
 
     // render layout
-    RichText::setLayoutMarkup(layout, html);
+    RichText::setLayoutMarkup(layout, html, rX);
     RichText::setLayoutWidth(layout, width);
     RichText::setLayoutWrap(layout, wrap);
     RichText::setLayoutAlign(layout, align);

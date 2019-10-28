@@ -149,7 +149,8 @@ public:
     static bool isMarkup(const std::string &str);
 
     /** @brief convert html to pango markup */
-    static const std::string convertHtmlToMarkup(const std::string &str);
+    static const std::string convertHtmlToMarkup(const std::string &str,
+                                                 double renderScale = 0.0);
 
     /** @brief set pango layout text align */
     static void setLayoutAlign(PangoLayout *layout,
@@ -165,7 +166,8 @@ public:
 
     /** @brief set pango layout markup */
     static void setLayoutMarkup(PangoLayout *layout,
-                                const std::string &str);
+                                const std::string &str,
+                                double renderScale = 0.0);
 
     /** @brief set pango layout width */
     static void setLayoutWidth(PangoLayout *layout,
@@ -207,6 +209,8 @@ public:
                                                int wrap,
                                                int align,
                                                int justify,
+                                               double rX,
+                                               double rY,
                                                bool flip = false);
 
     /** @brief parse SRT subtitle file */
