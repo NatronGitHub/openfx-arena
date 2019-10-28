@@ -157,7 +157,7 @@ const std::string RichText::convertHtmlToMarkup(const std::string &str,
     std::string result = str;
 
     if (RichText::isNatronLegacyRichText(str)) {
-        // std::cout << "\n\n==========> THIS VERSION OF NATRON HAS LIMITED SUPPORT FOR RICH TEXT !!!" << std::endl;
+         std::cout << "\n\n==========> THIS VERSION OF NATRON HAS LIMITED SUPPORT FOR RICH TEXT !!!" << std::endl;
     }
 
     std::cout << "\n\n==========> CONVERT HTML TO PANGO\n\nHTML SOURCE:\n\n" << result << std::endl;
@@ -577,7 +577,8 @@ RichText::RichTextRenderResult RichText::renderRichText(int width,
                                                         int justify,
                                                         double rX,
                                                         double rY,
-                                                        bool flip)
+                                                        bool flip,
+                                                        bool noBuffer)
 {
     std::cout << "RICHT TEXT RENDER " << width << " " << height << " " << rX << " " << rY <<std::endl;
 
@@ -610,7 +611,9 @@ RichText::RichTextRenderResult RichText::renderRichText(int width,
 
     // render layout
     RichText::setLayoutMarkup(layout, html, rX);
-    RichText::setLayoutWidth(layout, width);
+    if (width>0) {
+        RichText::setLayoutWidth(layout, width);
+    }
     RichText::setLayoutWrap(layout, wrap);
     RichText::setLayoutAlign(layout, align);
     RichText::setLayoutJustify(layout, justify);
@@ -619,6 +622,12 @@ RichText::RichTextRenderResult RichText::renderRichText(int width,
     pango_cairo_update_layout(cr, layout);
     pango_cairo_show_layout(cr, layout);
 
+    // add pango layout width/height
+    result.pW = -1;
+    result.pH = -1;
+    pango_layout_get_pixel_size(layout, &result.pW, &result.pH);
+    std::cout << "PANGO SIZE " << result.pW << " " << result.pH << std::endl;
+
     // success?
     status = cairo_status(cr);
     if (!status) { result.success = true; }
@@ -626,8 +635,19 @@ RichText::RichTextRenderResult RichText::renderRichText(int width,
     // flush
     cairo_surface_flush(surface);
 
+    // add cairo surface width/height
+    result.sW = -1;
+    result.sH = -1;
+    result.sW = cairo_image_surface_get_width(surface);
+    result.sH = cairo_image_surface_get_height(surface);
+    std::cout << "SURFACE SIZE " << result.sW << " " << result.sH << std::endl;
+
+    if (result.sW != width || result.sH != height) { // size differ!
+        noBuffer = true; // skip buffer
+    }
+
     // get buffer
-    if (result.success) {
+    if (result.success && !noBuffer) {
         unsigned char* buffer = cairo_image_surface_get_data(surface);
         result.buffer = new unsigned char[width * height * 4];
         int offset = 0;

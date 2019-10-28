@@ -97,6 +97,10 @@ public:
     {
         bool success;
         unsigned char* buffer;
+        int sW; // cairo surface width
+        int sH; // cairo surface height
+        int pW; // pango layout width
+        int pH; // pango layout height
     };
     struct RichTextSubtitle
     {
@@ -211,7 +215,8 @@ public:
                                                int justify,
                                                double rX,
                                                double rY,
-                                               bool flip = false);
+                                               bool flip = false,
+                                               bool noBuffer = false);
 
     /** @brief parse SRT subtitle file */
     static std::vector<RichTextSubtitle> parseSRT(const std::string &filename);

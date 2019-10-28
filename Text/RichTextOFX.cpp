@@ -27,7 +27,7 @@
 #define kPluginVersionMajor 0
 #define kPluginVersionMinor 7
 #define kPluginGrouping "Draw"
-#define kPluginDescription "Rich Text Generator for Natron.\n\nUnder development, also require changes in Natron to work as intended."
+#define kPluginDescription "Rich Text Generator for Natron.\n\nUnder development, require changes in Natron to work as intended."
 
 #define kSupportsTiles 0
 #define kSupportsMultiResolution 0
@@ -203,7 +203,7 @@ void RichTextPlugin::render(const RenderArguments &args)
                                                                      args.renderScale.x,
                                                                      args.renderScale.y,
                                                                      true /* flip */);
-    if (!result.success) {
+    if (!result.success || (result.sW != width || result.sH != height)) {
         setPersistentMessage(Message::eMessageError, "", "RichText Renderer failed");
         throwSuiteStatusException(kOfxStatErrFormat);
         return;
