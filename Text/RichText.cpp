@@ -613,10 +613,19 @@ RichText::RichTextRenderResult RichText::renderRichText(int width,
 
     // get buffer
     if (result.success) {
-        result.buffer = cairo_image_surface_get_data(surface);
-        //cairo_surface_write_to_png(surface, "/tmp/surface.png");
-    } else {
-        // std::cout << "FAIL!" << std::endl;
+        unsigned char* buffer = cairo_image_surface_get_data(surface);
+        result.buffer = new unsigned char[width * height * 4];
+        int offset = 0;
+        for (int y = 0; y < height; y++) {
+            for (int x = 0; x < width; x++) {
+                result.buffer[offset + 0] = buffer[offset + 2];
+                result.buffer[offset + 1] = buffer[offset + 1];
+                result.buffer[offset + 2] = buffer[offset + 0];
+                result.buffer[offset + 3] = buffer[offset + 3];
+                offset += 4;
+            }
+        }
+        buffer = nullptr;
     }
 
     g_object_unref(layout);

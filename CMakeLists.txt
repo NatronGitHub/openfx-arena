@@ -28,7 +28,9 @@ CMAKE_MINIMUM_REQUIRED(VERSION 3.1)
 PROJECT(Arena CXX)
 ENABLE_TESTING()
 
-option(AUDIO "Enable AudioCurve" OFF)
+option(AUDIO "Enable AudioCurve OFX" OFF)
+option(RICHTEXT "Enable RichText OFX" OFF)
+option(BUNDLE_FONTS_CONF "Bundle fonts.conf" OFF)
 set(MAGICK_PKG_CONFIG "Magick++" CACHE STRING "ImageMagick pkg-config name")
 
 include(FindOpenGL REQUIRED)
@@ -126,7 +128,7 @@ FILE(GLOB SUPPORT_SOURCES
 )
 
 FILE(GLOB SOURCES
-    "Text/TextFX.cpp"
+    "Text/TextOFX.cpp"
     "Text/RichText.cpp"
     "Extra/ReadSVG.cpp"
     "Extra/ReadPDF.cpp"
@@ -180,6 +182,31 @@ if(${AUDIO})
     list(APPEND SOURCES "Audio/AudioCurve.cpp")
     list(APPEND RESOURCES "Audio/net.fxarena.openfx.AudioCurve.png")
 endif()
+
+if(${RICHTEXT})
+    list(APPEND SOURCES "Text/RichTextOFX.cpp")
+    list(
+        APPEND
+        RESOURCES
+        "Text/net.fxarena.openfx.RichText.png"
+        "Text/net.fxarena.openfx.RichText.svg")
+endif()
+
+# fonts.conf
+if (APPLE)
+    set(FC_FONTS_DIR "<dir>/System/Library/Fonts</dir><dir>/Library/Fonts</dir><dir>~/Library/Fonts</dir>")
+    set(FC_CACHE_DIR "<cachedir>~/.cache/fontconfig</cachedir>")
+elseif(WIN32)
+    set(FC_FONTS_DIR "<dir>WINDOWSFONTDIR</dir>")
+    set(FC_CACHE_DIR "<cachedir>LOCAL_APPDATA_FONTCONFIG_CACHE</cachedir>")
+else()
+    set(FC_FONTS_DIR "<dir>/usr/share/fonts/OTF</dir><dir>/usr/share/fonts/TTF</dir><dir>/usr/share/fonts/Type1</dir><dir>/usr/share/fonts/Speedo</dir><dir>/usr/share/fonts/cyrillic</dir><dir>/usr/share/fonts/misc</dir><dir prefix=\"xdg\">fonts</dir>")
+    set(FC_CACHE_DIR "<cachedir prefix=\"xdg\">fontconfig</cachedir><cachedir>~/.fontconfig</cachedir>")
+endif()
+configure_file(
+${CMAKE_CURRENT_SOURCE_DIR}/Text/fonts.conf.in
+${CMAKE_CURRENT_BINARY_DIR}/fonts.conf
+@ONLY)
 
 ADD_LIBRARY(${PROJECT_NAME} SHARED ${SOURCES} ${SUPPORT_SOURCES})
 SET_TARGET_PROPERTIES(${PROJECT_NAME} PROPERTIES PREFIX "")
@@ -311,4 +338,10 @@ ELSE()
   INSTALL(FILES Bundle/Info.plist
     DESTINATION ${PROJECT_NAME}.ofx.bundle/Contents
   )
+  if(${BUNDLE_FONTS_CONF})
+    install(
+        FILES ${CMAKE_CURRENT_BINARY_DIR}/fonts.conf
+        DESTINATION ${PROJECT_NAME}.ofx.bundle/Contents/Resources/fonts
+    )
+  endif()
 ENDIF()
