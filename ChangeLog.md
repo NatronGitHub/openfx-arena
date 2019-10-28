@@ -2,9 +2,10 @@
 
 ## Natron-2.3.15 (TBA)
 
+ * ``RichText``: Added new plugin *(Beta, enable with ``RICHTEXT=ON``)*
  * ``Text``: Added support for SRT subtitles
  * ``Morphology``: Added new plugin
- * ``AudioCurve``: Added new plugin
+ * ``AudioCurve``: Added new plugin *(Beta, enable with ``AUDIO=ON``)*
  * Improved Fusion compatibility
  * Improved Resolve compatibility
  * ``Edges``: Fixed ImageMagick compatibility

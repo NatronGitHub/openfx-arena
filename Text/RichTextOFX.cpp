@@ -25,7 +25,7 @@
 #define kPluginName "RichTextOFX"
 #define kPluginIdentifier "net.fxarena.openfx.RichText"
 #define kPluginVersionMajor 0
-#define kPluginVersionMinor 7
+#define kPluginVersionMinor 8
 #define kPluginGrouping "Draw"
 #define kPluginDescription "OpenFX Rich Text Generator for Natron.\n\nUnder development, require changes in Natron to work as intended."
 
@@ -74,15 +74,15 @@
 #define kParamJustifyDefault false
 
 // canvas size
-#define kParamCanvas "canvas"
-#define kParamCanvasLabel "Canvas size"
-#define kParamCanvasHint "Set canvas size, default (0) is project format. Disabled if auto size is active."
+#define kParamCanvas "custom"
+#define kParamCanvasLabel "Custom size"
+#define kParamCanvasHint "Set custom size, default (0) is project format. Disabled if auto size is active."
 #define kParamCanvasDefault 0
 
 // auto size
 #define kParamAutoSize "auto"
 #define kParamAutoSizeLabel "Auto size"
-#define kParamAutoSizeHint "Set canvas sized based on text layout. This will disable custom canvas/project size."
+#define kParamAutoSizeHint "Set sized based on text layout. This will disable custom and project size."
 #define kParamAutoSizeDefault false
 
 static std::string ofxPath;

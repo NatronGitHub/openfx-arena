@@ -39,6 +39,7 @@ A set of [OpenFX](http://openfx.sf.net) plugins designed for [Natron](http://nat
  * HaldCLUT
  * Morphology
  * AudioCurve
+ * RichText
 
 ## Requirements
 
@@ -46,7 +47,7 @@ A set of [OpenFX](http://openfx.sf.net) plugins designed for [Natron](http://nat
  * fontconfig *(Extra.ofx/Magick.ofx/Text.ofx)*
  * libxml2 *(OpenRaster/ReadKrita/HaldCLUT)*
  * libzip 1.x *(OpenRaster/ReadKrita)*
- * pango 1.38 *(Text)*
+ * pango 1.38 *(Text.ofx)*
  * cairo *(Text/ReadCDR/ReadSVG/ReadPDF)*
  * librsvg2 *(ReadCDR/ReadSVG)*
  * libcdr 0.1.x *(ReadCDR)*
@@ -74,6 +75,11 @@ git submodule update -i --recursive
 
 This will build one OFX plugin *(Arena.ofx)*. Only plugins included in the official Natron bundle are built.
 
+Optional options:
+
+  * ``AUDIO=ON``: Enable ``AudioCurve``
+  * ``RICHTEXT=ON``: Enable ``RichText``
+
 ```
 make CONFIG=release
 sudo make CONFIG=release install
@@ -93,6 +99,13 @@ sudo cp -a */*-release/*.ofx.bundle /usr/OFX/Plugins/
 ### CMake
 
 This will build one OFX plugin *(Arena.ofx)*. Only plugins included in the official Natron bundle are built.
+
+Optional options:
+
+  * ``-DAUDIO=ON``: Enable ``AudioCurve``
+  * ``-DRICHTEXT=ON``: Enable ``RichText``
+  * ``-DBUNDLE_FONTS_CONF=ON``: Bundle fonts.conf
+  * ``-DMAGICK_PKG_CONFIG=XXX``: Custom Magick++ pkg-config name
 
 ```
 mkdir build && build
