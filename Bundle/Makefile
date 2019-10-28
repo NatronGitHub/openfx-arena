@@ -3,7 +3,7 @@ PLUGINNAME = Arena
 PLUGINOBJECTS = \
     lodepng.o \
     RichText.o \
-    TextFX.o \
+    TextOFX.o \
     ReadCDR.o \
     ReadSVG.o \
     ReadKrita.o \
