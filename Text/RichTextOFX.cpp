@@ -73,6 +73,18 @@
 #define kParamJustifyHint "Text justify."
 #define kParamJustifyDefault false
 
+// canvas size
+#define kParamCanvas "canvas"
+#define kParamCanvasLabel "Canvas size"
+#define kParamCanvasHint "Set canvas size, default (0) is project format. Disabled if auto size is active."
+#define kParamCanvasDefault 0
+
+// auto size
+#define kParamAutoSize "auto"
+#define kParamAutoSizeLabel "Auto size"
+#define kParamAutoSizeHint "Set canvas sized based on text layout. This will disable custom canvas/project size."
+#define kParamAutoSizeDefault false
+
 static std::string ofxPath;
 
 using namespace OFX;
@@ -84,6 +96,8 @@ public:
     virtual void render(const RenderArguments &args) override final;
     virtual void changedParam(const InstanceChangedArgs &args,
                               const std::string &paramName) override final;
+    virtual bool getRegionOfDefinition(const OFX::RegionOfDefinitionArguments &args,
+                                       OfxRectD &rod) override final;
 
 private:
     Clip *_dstClip;
@@ -92,6 +106,8 @@ private:
     ChoiceParam *_srcWrap;
     BooleanParam *_srcJustify;
     FcConfig *_fc;
+    BooleanParam *_srcAuto;
+    Int2DParam *_srcCanvas;
 };
 
 RichTextPlugin::RichTextPlugin(OfxImageEffectHandle handle)
@@ -101,6 +117,8 @@ RichTextPlugin::RichTextPlugin(OfxImageEffectHandle handle)
 , _srcAlign(nullptr)
 , _srcWrap(nullptr)
 , _srcJustify(nullptr)
+, _srcAuto(nullptr)
+, _srcCanvas(nullptr)
 {
     _dstClip = fetchClip(kOfxImageEffectOutputClipName);
     assert(_dstClip && _dstClip->getPixelComponents() == ePixelComponentRGBA);
@@ -109,7 +127,10 @@ RichTextPlugin::RichTextPlugin(OfxImageEffectHandle handle)
     _srcAlign = fetchChoiceParam(kParamAlign);
     _srcWrap = fetchChoiceParam(kParamWrap);
     _srcJustify = fetchBooleanParam(kParamJustify);
-    assert(_srcText && _srcAlign && _srcWrap && _srcJustify);
+    _srcAuto = fetchBooleanParam(kParamAutoSize);
+    _srcCanvas = fetchInt2DParam(kParamCanvas);
+    assert(_srcText && _srcAlign && _srcWrap &&
+           _srcJustify && _srcAuto && _srcCanvas);
 
     // setup fontconfig
     std::string fontConf = ofxPath;
@@ -240,6 +261,60 @@ void RichTextPlugin::changedParam(const InstanceChangedArgs &args,
     }
 }
 
+bool RichTextPlugin::getRegionOfDefinition(const RegionOfDefinitionArguments &args,
+                                           OfxRectD &rod)
+{
+    if (!kSupportsRenderScale && (args.renderScale.x != 1. || args.renderScale.y != 1.)) {
+        OFX::throwSuiteStatusException(kOfxStatFailed);
+        return false;
+    }
+
+    // get size options
+    int width = -1;
+    int height = -1;
+    bool autoSize = false;
+    _srcCanvas->getValue(width, height);
+    _srcAuto->getValue(autoSize);
+
+    // get layout size?
+    if (autoSize) {
+        // get render options
+        std::string html;
+        int align = RichText::RichTextAlignLeft;
+        int wrap = RichText::RichTextWrapWord;
+        bool justify = kParamJustifyDefault;
+        _srcText->getValueAtTime(args.time, html);
+        _srcAlign->getValueAtTime(args.time, align);
+        _srcWrap->getValueAtTime(args.time, wrap);
+        _srcJustify->getValueAtTime(args.time, justify);
+
+        // render layout
+        RichText::RichTextRenderResult result = RichText::renderRichText(0,
+                                                                         0,
+                                                                         _fc,
+                                                                         html,
+                                                                         wrap,
+                                                                         align,
+                                                                         justify,
+                                                                         0.0,
+                                                                         0.0,
+                                                                         true /* flip */,
+                                                                         true /* no buffer */);
+        if (result.success) {
+            width = result.pW;
+            height = result.pH;
+        }
+    }
+    // set new width/height
+    if (width>0 && height>0) {
+        rod.x1 = rod.y1 = 0;
+        rod.x2 = width;
+        rod.y2 = height;
+    }
+    else { return false; }
+    return true;
+}
+
 mDeclarePluginFactory(RichTextPluginFactory, {}, {});
 
 /** @brief The basic describe function, passed a plugin descriptor */
@@ -325,6 +400,27 @@ void RichTextPluginFactory::describeInContext(ImageEffectDescriptor &desc,
         param->setLabel(kParamJustifyLabel);
         param->setHint(kParamJustifyHint);
         param->setDefault(kParamJustifyDefault);
+        param->setAnimates(false);
+        if (page) {
+            page->addChild(*param);
+        }
+    }
+    {
+        Int2DParamDescriptor *param = desc.defineInt2DParam(kParamCanvas);
+        param->setLabel(kParamCanvasLabel);
+        param->setHint(kParamCanvasHint);
+        param->setDefault(kParamCanvasDefault, kParamCanvasDefault);
+        param->setAnimates(false);
+        param->setLayoutHint(eLayoutHintNoNewLine, 1);
+        if (page) {
+            page->addChild(*param);
+        }
+    }
+    {
+        BooleanParamDescriptor *param = desc.defineBooleanParam(kParamAutoSize);
+        param->setLabel(kParamAutoSizeLabel);
+        param->setHint(kParamAutoSizeHint);
+        param->setDefault(kParamAutoSizeDefault);
         param->setAnimates(false);
         if (page) {
             page->addChild(*param);
