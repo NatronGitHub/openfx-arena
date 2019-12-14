@@ -23,8 +23,11 @@
 #include "ofxsMacros.h"
 #include "ofxsImageEffect.h"
 #include "ofxNatron.h"
+
+#ifdef TEXT_INTERACTIVE
 #include "ofxsTransform3x3.h"
 #include "ofxsTransformInteract.h"
+#endif
 
 #include <iostream>
 #include <cmath>
@@ -362,15 +365,15 @@ private:
     OFX::Int2DParam *_canvas;
     OFX::DoubleParam *_arcRadius;
     OFX::DoubleParam *_arcAngle;
-    OFX::DoubleParam *_rotate;
-    OFX::Double2DParam *_scale;
-    OFX::Double2DParam *_position;
-    OFX::BooleanParam *_move;
+    //OFX::DoubleParam *_rotate;
+    //OFX::Double2DParam *_scale;
+    //OFX::Double2DParam *_position;
+    //OFX::BooleanParam *_move;
     OFX::StringParam *_txt;
-    OFX::DoubleParam *_skewX;
-    OFX::DoubleParam *_skewY;
-    OFX::BooleanParam *_scaleUniform;
-    OFX::BooleanParam *_centerInteract;
+    //OFX::DoubleParam *_skewX;
+    //OFX::DoubleParam *_skewY;
+    //OFX::BooleanParam *_scaleUniform;
+    //OFX::BooleanParam *_centerInteract;
     OFX::ChoiceParam *_fontName;
     OFX::StringParam *_fontOverride;
     FcConfig* _fcConfig;
@@ -411,15 +414,15 @@ TextFXPlugin::TextFXPlugin(OfxImageEffectHandle handle)
 , _canvas(NULL)
 , _arcRadius(NULL)
 , _arcAngle(NULL)
-, _rotate(NULL)
-, _scale(NULL)
-, _position(NULL)
-, _move(NULL)
+//, _rotate(NULL)
+//, _scale(NULL)
+//, _position(NULL)
+//, _move(NULL)
 , _txt(NULL)
-, _skewX(NULL)
-, _skewY(NULL)
-, _scaleUniform(NULL)
-, _centerInteract(NULL)
+//, _skewX(NULL)
+//, _skewY(NULL)
+//, _scaleUniform(NULL)
+//, _centerInteract(NULL)
 , _fontName(NULL)
 , _fontOverride(NULL)
 , _fcConfig(NULL)
@@ -460,15 +463,15 @@ TextFXPlugin::TextFXPlugin(OfxImageEffectHandle handle)
     _canvas = fetchInt2DParam(kParamCanvas);
     _arcRadius = fetchDoubleParam(kParamArcRadius);
     _arcAngle = fetchDoubleParam(kParamArcAngle);
-    _rotate = fetchDoubleParam(kParamTransformRotateOld);
-    _scale = fetchDouble2DParam(kParamTransformScaleOld);
-    _position = fetchDouble2DParam(kParamTransformCenterOld);
-    _move = fetchBooleanParam(kParamPositionMove);
+    //_rotate = fetchDoubleParam(kParamTransformRotateOld);
+    //_scale = fetchDouble2DParam(kParamTransformScaleOld);
+    //_position = fetchDouble2DParam(kParamTransformCenterOld);
+    //_move = fetchBooleanParam(kParamPositionMove);
     _txt = fetchStringParam(kParamTextFile);
-    _skewX = fetchDoubleParam(kParamTransformSkewXOld);
-    _skewY = fetchDoubleParam(kParamTransformSkewYOld);
-    _scaleUniform = fetchBooleanParam(kParamTransformScaleUniformOld);
-    _centerInteract = fetchBooleanParam(kParamCenterInteract);
+    //_skewX = fetchDoubleParam(kParamTransformSkewXOld);
+    //_skewY = fetchDoubleParam(kParamTransformSkewYOld);
+    //_scaleUniform = fetchBooleanParam(kParamTransformScaleUniformOld);
+    //_centerInteract = fetchBooleanParam(kParamCenterInteract);
     _fontOverride = fetchStringParam(kParamFontOverride);
     _scrollX = fetchDoubleParam(kParamScrollX);
     _scrollY = fetchDoubleParam(kParamScrollY);
@@ -479,8 +482,8 @@ TextFXPlugin::TextFXPlugin(OfxImageEffectHandle handle)
            && _justify && _align && _valign && _markup && _style && auto_ && stretch_ && weight_ && strokeColor_
            && strokeWidth_ && strokeDash_ && strokeDashPattern_ && fontAA_ && subpixel_ && _hintStyle
            && _hintMetrics && _circleRadius && _circleWords && _letterSpace && _canvas
-           && _arcRadius && _arcAngle && _rotate && _scale && _position && _move && _txt
-           && _skewX && _skewY && _scaleUniform && _centerInteract && _fontOverride && _scrollX && _scrollY
+           && _arcRadius && _arcAngle /*&& _rotate && _scale && _position && _move*/ && _txt
+           /*&& _skewX && _skewY && _scaleUniform && _centerInteract*/ && _fontOverride && _scrollX && _scrollY
            && _srt && _fps);
 
     _fcConfig = FcInitLoadConfigAndFonts();
@@ -525,7 +528,7 @@ TextFXPlugin::~TextFXPlugin()
 }
 
 void TextFXPlugin::resetCenter(double time) {
-    if (!_dstClip) {
+    /*if (!_dstClip) {
         return;
     }
     OfxRectD rod = _dstClip->getRegionOfDefinition(time);
@@ -538,7 +541,7 @@ void TextFXPlugin::resetCenter(double time) {
     newCenter.y = (rod.y1 + rod.y2) / 2;
     if (_position) {
         _position->setValue(newCenter.x, newCenter.y);
-    }
+    }*/
 }
 
 std::string TextFXPlugin::textFromFile(std::string filename) {
@@ -704,6 +707,12 @@ void TextFXPlugin::render(const OFX::RenderArguments &args)
     double x, y, r, g, b, a, s_r, s_g, s_b, s_a, strokeWidth, strokeDashX, strokeDashY, strokeDashZ, circleRadius, arcRadius, arcAngle, rotate, scaleX, scaleY, skewX, skewY, scrollX, scrollY, bg_r, bg_g, bg_b, bg_a;
     int fontSize, cwidth, cheight, wrap, align, valign, style, stretch, weight, strokeDash, fontAA, subpixel, hintStyle, hintMetrics, circleWords, letterSpace;
     std::string text, font, txt, fontOverride;
+
+    rotate = 0.0;
+    scaleX = 1.0;
+    scaleY = 1.0;
+    skewX = 0.0;
+    skewY = 0.0;
     bool justify = false;
     bool markup = false;
     bool autoSize = false;
@@ -755,15 +764,15 @@ void TextFXPlugin::render(const OFX::RenderArguments &args)
     _canvas->getValueAtTime(args.time, cwidth, cheight);
     _arcRadius->getValueAtTime(args.time, arcRadius);
     _arcAngle->getValueAtTime(args.time, arcAngle);
-    _rotate->getValueAtTime(args.time, rotate);
-    _scale->getValueAtTime(args.time, scaleX, scaleY);
-    _position->getValueAtTime(args.time, x, y);
-    _move->getValueAtTime(args.time, move);
+    //_rotate->getValueAtTime(args.time, rotate);
+    //_scale->getValueAtTime(args.time, scaleX, scaleY);
+    //_position->getValueAtTime(args.time, x, y);
+    //_move->getValueAtTime(args.time, move);
     _txt->getValueAtTime(args.time, txt);
-    _skewX->getValueAtTime(args.time, skewX);
-    _skewY->getValueAtTime(args.time, skewY);
-    _scaleUniform->getValueAtTime(args.time, scaleUniform);
-    _centerInteract->getValueAtTime(args.time, centerInteract);
+    //_skewX->getValueAtTime(args.time, skewX);
+    //_skewY->getValueAtTime(args.time, skewY);
+    //_scaleUniform->getValueAtTime(args.time, scaleUniform);
+    //_centerInteract->getValueAtTime(args.time, centerInteract);
     _fontOverride->getValueAtTime(args.time, fontOverride);
     _scrollX->getValueAtTime(args.time, scrollX);
     _scrollY->getValueAtTime(args.time, scrollY);
@@ -772,7 +781,10 @@ void TextFXPlugin::render(const OFX::RenderArguments &args)
     double xtext = x*args.renderScale.x;
     int tmp_y = dstRod.y2 - dstBounds.y2;
     int tmp_height = dstBounds.y2 - dstBounds.y1;
-    ytext = tmp_y + ((tmp_y+tmp_height-1) - ytext);
+
+    if (move) {
+        ytext = tmp_y + ((tmp_y+tmp_height-1) - ytext);
+    }
 
     if (!txt.empty()) {
         std::string txt_tmp = textFromFile(txt);
@@ -1188,9 +1200,9 @@ void TextFXPlugin::changedParam(const OFX::InstanceChangedArgs &args, const std:
         return;
     }
 
-    if (paramName == kParamTransformResetCenterOld) {
+    /*if (paramName == kParamTransformResetCenterOld) {
         resetCenter(args.time);
-    } else if (paramName == kParamFontName) {
+    } else*/ if (paramName == kParamFontName) {
         // set font from fontName
         int fontCount = _fontName->getNOptions();
         if (fontCount > 0) {
@@ -1396,8 +1408,8 @@ void TextFXPluginFactory::describe(OFX::ImageEffectDescriptor &desc)
     desc.setSupportsMultiResolution(kSupportsMultiResolution);
     desc.setRenderThreadSafety(kRenderThreadSafety);
 
-    Transform3x3Describe(desc, true);
-    desc.setOverlayInteractDescriptor(new TransformOverlayDescriptorOldParams);
+    //Transform3x3Describe(desc, true);
+    //desc.setOverlayInteractDescriptor(new TransformOverlayDescriptorOldParams);
 }
 
 /** @brief The describe in context function, passed a plugin descriptor and a context */
@@ -1417,8 +1429,8 @@ void TextFXPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, Co
 
     // make some pages
     PageParamDescriptor *page = desc.definePageParam("Controls");
-    ofxsTransformDescribeParams(desc, page, NULL, /*isOpen=*/ true, /*oldParams=*/ true, /*hasAmount=*/ true, /*noTranslate=*/ true);
-    {
+    //ofxsTransformDescribeParams(desc, page, NULL, /*isOpen=*/ true, /*oldParams=*/ true, /*hasAmount=*/ true, /*noTranslate=*/ true);
+    /*{
         BooleanParamDescriptor *param = desc.defineBooleanParam(kParamPositionMove);
         param->setLabel(kParamPositionMoveLabel);
         param->setHint(kParamPositionMoveHint);
@@ -1428,7 +1440,7 @@ void TextFXPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, Co
         if (page) {
             page->addChild(*param);
         }
-    }
+    }*/
     {
         BooleanParamDescriptor *param = desc.defineBooleanParam(kParamAutoSize);
         param->setLabel(kParamAutoSizeLabel);
