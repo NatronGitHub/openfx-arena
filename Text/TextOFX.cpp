@@ -488,7 +488,7 @@ TextFXPlugin::TextFXPlugin(OfxImageEffectHandle handle)
 
     _fcConfig = FcInitLoadConfigAndFonts();
 
-    _genFonts(_fontName, _fontOverride, false, _fcConfig, gHostIsNatron, kParamFontNameDefault, kParamFontNameAltDefault);
+    //_genFonts(_fontName, _fontOverride, false, _fcConfig, gHostIsNatron, kParamFontNameDefault, kParamFontNameAltDefault);
 
     // Setup selected font
     std::string font, fontName;
@@ -1255,7 +1255,7 @@ bool TextFXPlugin::getRegionOfDefinition(const OFX::RegionOfDefinitionArguments 
     bool autoSize = false;
 
     _canvas->getValue(width, height);
-    auto_->getValue(autoSize);
+    //auto_->getValue(autoSize);
 
     if (autoSize) {
         int fontSize, style, stretch, weight, letterSpace;
@@ -1590,7 +1590,7 @@ void TextFXPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, Co
             param->setCascading(OFX::getImageEffectHostDescription()->supportsCascadingChoices);
         }
         std::list<std::string>::const_iterator font;
-        std::list<std::string> fonts = _genFonts(NULL, NULL, false, NULL, false, kParamFontNameDefault, kParamFontNameAltDefault);
+        std::list<std::string> fonts;// = _genFonts(NULL, NULL, false, NULL, false, kParamFontNameDefault, kParamFontNameAltDefault);
         int defaultFont = 0;
         int altFont = 0;
         int fontIndex = 0;
