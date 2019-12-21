@@ -142,7 +142,8 @@ VPATH += \
     $(SRCDIR)/Magick/Swirl \
     $(SRCDIR)/Magick/Roll \
     $(SRCDIR)/Magick/Wave \
-    $(SRCDIR)/Magick/Morphology
+    $(SRCDIR)/Magick/Morphology \
+    $(SRCDIR)/lodepng
 
 ifeq ($(AUDIO), ON)
     VPATH += $(SRCDIR)/Audio
@@ -150,7 +151,8 @@ endif
 
 CXXFLAGS += \
     -I$(SRCDIR)/Extra \
-    -I$(SRCDIR)/Magick
+    -I$(SRCDIR)/Magick \
+    -I$(SRCDIR)/lodepng
 
 include $(SRCDIR)/Makefile.master
 include $(SRCDIR)/Makefile.io
@@ -181,7 +183,7 @@ CXXFLAGS += $(SOX_CXXFLAGS)
 LINKFLAGS += $(SOX_LINKFLAGS)
 endif
 
-CXXFLAGS += -I. -I$(SRCDIR)/Magick -I$(SRCDIR)/Text
+CXXFLAGS += -I. -I$(SRCDIR)/Magick -I$(SRCDIR)/Text -I$(SRCDIR)/lodepng
 
 ifneq ($(LICENSE),COMMERCIAL)
 CXXFLAGS += $(POPPLER_CXXFLAGS)
@@ -201,13 +203,13 @@ endif
 # c7bb19ad54a53f0d9917da37de7288b1aadf6d0f is Oct 23, 2017
 # d03d7df9888aafb9c7f615895c34b05acf033908 is Mar 26, 2018
 # bd8f274fb51ef18b6d26b5f106ae4bef2150622e is Jun 24, 2018
-PNGVERSION = bd8f274fb51ef18b6d26b5f106ae4bef2150622e
+#PNGVERSION = bd8f274fb51ef18b6d26b5f106ae4bef2150622e
 
-lodepng.cpp:
-	curl -o $@ https://raw.githubusercontent.com/lvandeve/lodepng/$(PNGVERSION)/lodepng.cpp
+#lodepng.cpp:
+#	curl -o $@ https://raw.githubusercontent.com/lvandeve/lodepng/$(PNGVERSION)/lodepng.cpp
 
-lodepng.h:
-	curl -o $@ https://raw.githubusercontent.com/lvandeve/lodepng/$(PNGVERSION)/lodepng.h
+#lodepng.h:
+#	curl -o $@ https://raw.githubusercontent.com/lvandeve/lodepng/$(PNGVERSION)/lodepng.h
 
 $(OBJECTPATH)/lodepng.o: lodepng.cpp lodepng.h
 $(OBJECTPATH)/ReadKrita.o: ReadKrita.cpp lodepng.h
