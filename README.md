@@ -108,7 +108,7 @@ Optional options:
   * ``-DMAGICK_PKG_CONFIG=XXX``: Custom Magick++ pkg-config name
 
 ```
-mkdir build && build
+mkdir build && cd build
 cmake -DCMAKE_INSTALL_PREFIX=/usr/OFX/Plugins ..
 sudo make install
 ```
