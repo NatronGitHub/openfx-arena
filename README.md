@@ -1,6 +1,6 @@
 # OpenFX-Arena [![GPL2 License](http://img.shields.io/:license-gpl2-blue.svg?style=flat-square)](https://github.com/NatronGitHub/openfx-arena/blob/master/LICENSE) [![Open Hub](https://www.openhub.net/p/openfx-arena/widgets/project_thin_badge?format=gif&ref=Thin+badge)](https://www.openhub.net/p/openfx-arena?ref=Thin+badge) [![Build Status](https://travis-ci.org/NatronGitHub/openfx-arena.svg)](https://travis-ci.org/NatronGitHub/openfx-arena)
 
-A set of [OpenFX](http://openfx.sf.net) plugins designed for [Natron](http://natron.fr), but also compatible with other OpenFX applications.
+A set of [OpenFX](http://openfx.sf.net) plugins designed for [Natron](http://natron.fr).
 
 ## Plugins
 
@@ -60,8 +60,13 @@ A set of [OpenFX](http://openfx.sf.net) plugins designed for [Natron](http://nat
    * Quantum depth under 32 will work, but it not recommended, note that most distros ship 16
    * Will work without HDRI, but it's not recommended
  * OpenCL 1.2 compatible hardware and drivers (OCL plugins)
+   * Compatible hardware or drivers are not required to build these plugins
  * libcurl *(HaldCLUT)*
  * libsox *(AudioCurve)*
+
+## Notes
+
+**Do not use these plugins in DaVinci Resolve or Fusion! Some plugins use OFX features not available in software from BlackMagic Design.**
 
 ## Build
 
@@ -73,19 +78,19 @@ git submodule update -i --recursive
 
 ### Makefiles
 
-This will build one OFX plugin *(Arena.ofx)*. Only plugins included in the official Natron bundle are built.
+This will build one OFX plugin bundle *(Arena.ofx)*. Only plugins included in the official Natron bundle are built.
 
 Optional options:
 
   * ``AUDIO=ON``: Enable ``AudioCurve``
-  * ``RICHTEXT=ON``: Enable ``RichText``
+  * ``RICHTEXT=ON``: Enable ``RichText`` (WIP)
 
 ```
 make CONFIG=release
 sudo make CONFIG=release install
 ```
 
-You can also build each "category" as an OFX plugins:
+You can also build each "category" as an OFX plugin bundle:
 
 ```
 make CONFIG=release -C Audio
@@ -98,18 +103,19 @@ sudo cp -a */*-release/*.ofx.bundle /usr/OFX/Plugins/
 
 ### CMake
 
-This will build one OFX plugin *(Arena.ofx)*. Only plugins included in the official Natron bundle are built.
+This will build one OFX plugin bundle *(Arena.ofx)*. Only plugins included in the official Natron bundle are built.
 
 Optional options:
 
   * ``-DAUDIO=ON``: Enable ``AudioCurve``
-  * ``-DRICHTEXT=ON``: Enable ``RichText``
+  * ``-DRICHTEXT=ON``: Enable ``RichText`` (WIP)
   * ``-DBUNDLE_FONTS_CONF=ON``: Bundle fonts.conf
   * ``-DMAGICK_PKG_CONFIG=XXX``: Custom Magick++ pkg-config name
 
 ```
 mkdir build && cd build
 cmake -DCMAKE_INSTALL_PREFIX=/usr/OFX/Plugins ..
+make
 sudo make install
 ```
 
