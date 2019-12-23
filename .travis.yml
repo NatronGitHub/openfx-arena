@@ -62,6 +62,7 @@ install:
   - cmake -DCMAKE_INSTALL_PREFIX=/usr -DENABLE_UNSTABLE_API_ABI_HEADERS=ON ENABLE_GLIB=ON ENABLE_UTILS=OFF ..
   - make -j2
   - sudo make install
+  - cd $CWD
 
 # Xenial has pango 1.38
 #  # a more recont harfbuzz may be necessary if pango is upgraded
