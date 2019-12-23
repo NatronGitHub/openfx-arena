@@ -52,7 +52,7 @@ A set of [OpenFX](http://openfx.sf.net) plugins designed for [Natron](https://na
  * librsvg2 *(ReadCDR/ReadSVG)*
  * libcdr 0.1.x *(ReadCDR)*
  * librevenge *(ReadCDR)*
- * poppler-glib *(ReadPDF)*
+ * poppler-glib 0.69+ *(ReadPDF)*
  * lcms 2.x *(ReadPSD)*
  * ImageMagick (Magick++) 6.9.2/7.0.3 with Q32, HDRI, lcms2, zlib, freetype, libpng
    * ImageMagick 7.0.8+ recommended
