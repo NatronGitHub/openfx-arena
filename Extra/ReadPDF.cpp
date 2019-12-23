@@ -17,7 +17,7 @@
 */
 
 #include <poppler.h>
-#include <poppler/GlobalParams.h>
+#include <GlobalParams.h>
 #include <cairo.h>
 #include <string>
 
@@ -135,7 +135,7 @@ false
     if (!popplerData.empty()) {
         struct stat sb;
         if (stat(popplerData.c_str(), &sb) == 0 && S_ISDIR(sb.st_mode)) {
-            globalParams = new GlobalParams(popplerData.c_str());
+            globalParams.reset(new GlobalParams(popplerData.c_str()));
         }
     }
 }
