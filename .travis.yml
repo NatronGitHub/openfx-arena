@@ -30,7 +30,7 @@ before_install:
     fi
   - sudo add-apt-repository -y ppa:libreoffice/ppa
   - sudo apt-get update
-  - sudo apt-get install -y cmake libsox-dev libfreetype6-dev libfontconfig1-dev libpango1.0-dev librsvg2-dev liblcms2-dev libzip-dev libcdr-dev libicu-dev libcppunit-dev libopencolorio-dev librevenge-dev libboost-all-dev gtk-doc-tools libharfbuzz-dev libselinux1-dev libcurl4-openssl-dev libidn11-dev librtmp-dev libgl-dev libfftw3-dev libmount-dev libnghttp2-dev libpsl-dev
+  - sudo apt-get install -y cmake libsox-dev libfreetype6-dev libfontconfig1-dev libpango1.0-dev librsvg2-dev liblcms2-dev libzip-dev libcdr-dev libicu-dev libcppunit-dev libopencolorio-dev librevenge-dev libboost-all-dev gtk-doc-tools libharfbuzz-dev libselinux1-dev libcurl4-openssl-dev libidn11-dev librtmp-dev libgl-dev libfftw3-dev libmount-dev libnghttp2-dev libpsl-dev libopenjp2-7-dev
 
   # libpoppler-glib-dev libpoppler-private-dev is too old (0.62)
 
