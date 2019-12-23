@@ -1,6 +1,6 @@
 # OpenFX-Arena [![GPL2 License](http://img.shields.io/:license-gpl2-blue.svg?style=flat-square)](https://github.com/NatronGitHub/openfx-arena/blob/master/LICENSE) [![Open Hub](https://www.openhub.net/p/openfx-arena/widgets/project_thin_badge?format=gif&ref=Thin+badge)](https://www.openhub.net/p/openfx-arena?ref=Thin+badge) [![Build Status](https://travis-ci.org/NatronGitHub/openfx-arena.svg)](https://travis-ci.org/NatronGitHub/openfx-arena)
 
-A set of [OpenFX](http://openfx.sf.net) plugins designed for [Natron](http://natron.fr).
+A set of [OpenFX](http://openfx.sf.net) plugins designed for [Natron](https://natrongithub.github.io/).
 
 ## Plugins
 
