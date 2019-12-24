@@ -1,13 +1,13 @@
 # openfx-arena ChangeLog
 
-## Natron-2.3.15 (TBA)
+## Natron-2.3.15
 
+ * ``ReadPDF`` : Now require poppler-glib 0.69+
  * ``RichText``: Added new plugin *(Beta, enable with ``RICHTEXT=ON``)*
  * ``Text``: Added support for SRT subtitles
  * ``Morphology``: Added new plugin
- * ``AudioCurve``: Added new plugin *(Beta, enable with ``AUDIO=ON``)*
- * Improved Fusion compatibility
- * Improved Resolve compatibility
+ * ``AudioCurve``: Added new plugin
+ * Improved Resolve/Fusion compatibility
  * ``Edges``: Fixed ImageMagick compatibility
  * ``ReadCDR/ReadSVG``: Fixed deprecated librsvg API
  * ``Texture``: Rename gradient radial to linear
