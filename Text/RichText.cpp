@@ -22,6 +22,7 @@
 #include <sstream>
 #include <fstream>
 #include <algorithm>
+#include <cmath>
 #include <sys/stat.h>
 #include <sys/types.h>
 
@@ -40,6 +41,12 @@ const std::string RichText::extract(const std::string &str,
     startIndex += start.length();
     std::string::size_type endIndex = str.find(end, startIndex);
     return str.substr(startIndex, endIndex - startIndex);
+}
+
+bool RichText::compare(const std::string &l,
+                       const std::string &r)
+{
+    return (l==r);
 }
 
 bool RichText::replace(std::string &str,
@@ -580,7 +587,7 @@ RichText::RichTextRenderResult RichText::renderRichText(int width,
                                                         bool flip,
                                                         bool noBuffer)
 {
-    std::cout << "RICHT TEXT RENDER " << width << " " << height << " " << rX << " " << rY <<std::endl;
+    std::cout << "RICHT TEXT WIP RENDER " << width << " " << height << " " << rX << " " << rY <<std::endl;
 
     RichTextRenderResult result;
     result.success = false;
@@ -670,6 +677,184 @@ RichText::RichTextRenderResult RichText::renderRichText(int width,
     return  result;
 }
 
+RichText::RichTextRenderResult RichText::renderText(int width,
+                                                    int height,
+                                                    FcConfig *fc,
+                                                    const std::string &txt,
+                                                    const std::string &font,
+                                                    RichText::RichTextStyle style,
+                                                    double x,
+                                                    double y,
+                                                    double scX,
+                                                    double scY,
+                                                    double skX,
+                                                    double skY,
+                                                    double rX,
+                                                    double rY,
+                                                    double rotate,
+                                                    bool flip,
+                                                    bool noBuffer)
+{
+    RichTextRenderResult result;
+    result.success = false;
+
+    if (!fc) {
+        std::cout << "NO FONTCONFIG!!!" << std::endl;
+        return result;
+    }
+
+    // setup font map
+    PangoFontMap *map = pango_cairo_font_map_get_default();
+    RichText::setupFontmap(fc, map);
+
+    // setup surface and layout
+    cairo_t *cr;
+    cairo_status_t status;
+    cairo_surface_t *surface;
+    PangoLayout *layout;
+    cairo_font_options_t* options;
+    PangoAttrList *alist;
+    surface = cairo_image_surface_create(CAIRO_FORMAT_ARGB32, width, height);
+    cr = cairo_create(surface);
+    layout = pango_cairo_create_layout(cr);
+    options = cairo_font_options_create();
+    alist = pango_attr_list_new();
+
+    // flip
+    if (flip) {
+        cairo_scale(cr, 1.0f, -1.0f);
+        cairo_translate(cr, 0.0f, -height);
+    }
+
+    // set background
+    cairo_rectangle(cr, 0, 0, width, height);
+    cairo_set_source_rgba(cr,
+                          style.backgroundColor.r,
+                          style.backgroundColor.g,
+                          style.backgroundColor.b,
+                          style.backgroundColor.a);
+    cairo_fill(cr);
+
+    // set font options
+    RichText::setFontHintStyleOption(options, style.hint);
+    RichText::setFontHintMetricsOption(options, style.metrics);
+    RichText::setFontAntialiasOption(options, style.aa);
+    RichText::setFontSubpixelOption(options, style.subpixel);
+
+    pango_cairo_context_set_font_options(pango_layout_get_context(layout), options);
+
+    // set text
+    pango_layout_set_text(layout, txt.c_str(), -1);
+
+    // set font desc
+    PangoFontDescription *desc;
+    desc = pango_font_description_from_string(font.c_str());
+    RichText::setFontWeightDescription(desc, style.weight);
+    RichText::setFontStretchDescription(desc, style.stretch);
+    pango_layout_set_font_description(layout, desc);
+    pango_font_description_free(desc);
+
+    // set layout
+    RichText::setLayoutWidth(layout, width);
+    RichText::setLayoutWrap(layout, style.wrap);
+    RichText::setLayoutAlign(layout, style.align);
+
+    if (style.valign != 0) {
+        int text_width, text_height;
+        pango_layout_get_pixel_size(layout, &text_width, &text_height);
+        switch (style.valign) {
+        case 1:
+            cairo_move_to(cr, 0, (height-text_height)/2);
+            break;
+        case 2:
+            cairo_move_to(cr, 0, height-text_height);
+            break;
+        }
+    }
+
+    RichText::setLayoutJustify(layout, style.justify);
+
+    if (style.letterSpace != 0) {
+        pango_attr_list_insert(alist,pango_attr_letter_spacing_new(std::floor((style.letterSpace*PANGO_SCALE) * rX + 0.5)));
+    }
+    pango_layout_set_attributes(layout,alist);
+
+    // set stroke
+    if (style.strokeWidth>0) {
+        cairo_new_path(cr);
+        pango_cairo_layout_path(cr, layout);
+        cairo_set_line_width(cr, std::floor(style.strokeWidth * rX + 0.5));
+        cairo_set_source_rgba(cr,
+                              style.strokeColor.r,
+                              style.strokeColor.g,
+                              style.strokeColor.b,
+                              style.strokeColor.a);
+        cairo_stroke_preserve(cr);
+    }
+
+    // set color
+    cairo_set_source_rgba(cr,
+                          style.textColor.r,
+                          style.textColor.g,
+                          style.textColor.b,
+                          style.textColor.a);
+    cairo_fill(cr);
+
+
+
+
+    // update layout
+    pango_cairo_update_layout(cr, layout);
+    pango_cairo_show_layout(cr, layout);
+
+    // add pango layout width/height
+    result.pW = -1;
+    result.pH = -1;
+    pango_layout_get_pixel_size(layout, &result.pW, &result.pH);
+
+    // success?
+    status = cairo_status(cr);
+    if (!status) { result.success = true; }
+
+    // flush
+    cairo_surface_flush(surface);
+
+    // add cairo surface width/height
+    result.sW = -1;
+    result.sH = -1;
+    result.sW = cairo_image_surface_get_width(surface);
+    result.sH = cairo_image_surface_get_height(surface);
+
+    if (result.sW != width || result.sH != height) { // size differ!
+        noBuffer = true; // skip buffer
+    }
+
+    // get buffer
+    if (result.success && !noBuffer) {
+        unsigned char* buffer = cairo_image_surface_get_data(surface);
+        result.buffer = new unsigned char[width * height * 4];
+        int offset = 0;
+        for (int y = 0; y < height; y++) {
+            for (int x = 0; x < width; x++) {
+                result.buffer[offset + 0] = buffer[offset + 2];
+                result.buffer[offset + 1] = buffer[offset + 1];
+                result.buffer[offset + 2] = buffer[offset + 0];
+                result.buffer[offset + 3] = buffer[offset + 3];
+                offset += 4;
+            }
+        }
+        buffer = nullptr;
+    }
+
+    pango_attr_list_unref(alist);
+    cairo_font_options_destroy(options);
+    g_object_unref(layout);
+    cairo_destroy(cr);
+    cairo_surface_destroy(surface);
+
+    return result;
+}
+
 std::vector<RichText::RichTextSubtitle> RichText::parseSRT(const std::string &filename)
 {
     std::string delimiter = " --> ";
@@ -726,4 +911,55 @@ std::vector<RichText::RichTextSubtitle> RichText::parseSRT(const std::string &fi
     }
     file.close();
     return sdata;
+}
+
+std::list<std::string> RichText::getFontFamilyList(FcConfig *fc,
+                                                   const std::string &extra,
+                                                   bool extraisDir)
+{
+    bool noFC = false;
+    if (!fc) { noFC = true; fc = FcInitLoadConfigAndFonts(); } // init fc
+    if (!extra.empty()) { // add extra font/dir
+        const FcChar8 * custom = (const FcChar8 *)extra.c_str();
+        if (!extraisDir) {
+            FcConfigAppFontAddFile(fc, custom); // add file
+        } else {
+            FcConfigAppFontAddDir(fc, custom); // add dir
+        }
+    }
+
+    // get font families from fc
+    FcPattern *p = FcPatternCreate();
+    FcObjectSet *os = FcObjectSetBuild(FC_FAMILY, nullptr);
+    FcFontSet *fs = FcFontList(fc, p, os);
+    std::list<std::string> fonts;
+    for (int i=0; fs && i < fs->nfont; i++) {
+        FcPattern *font = fs->fonts[i];
+        FcChar8 *s;
+        s = FcPatternFormat(font, (const FcChar8 *)"%{family[0]}");
+        std::string fontName(reinterpret_cast<char*>(s));
+        fonts.push_back(fontName);
+        if (font) { FcPatternDestroy(font); }
+    }
+    FcObjectSetDestroy(os);
+    FcPatternDestroy(p);
+    if (noFC) { FcConfigDestroy(fc); }
+
+    // sort and return
+    fonts.sort();
+    fonts.erase(std::unique(fonts.begin(), fonts.end(), RichText::compare), fonts.end());
+    return fonts;
+}
+
+std::string RichText::readTextFile(const std::string &txt)
+{
+    std::string result;
+    if (txt.empty()) { return result; }
+    std::ifstream f;
+    f.open(txt.c_str());
+    std::ostringstream s;
+    s << f.rdbuf();
+    f.close();
+    if (!s.str().empty()) { result = s.str(); }
+    return result;
 }

@@ -18,6 +18,8 @@
 
 #include <string>
 #include <vector>
+#include <list>
+
 #include <pango/pangocairo.h>
 #include <pango/pangofc-fontmap.h>
 #include <fontconfig/fontconfig.h>
@@ -31,8 +33,15 @@ public:
         RichTextAlignRight,
         RichTextAlignCenter
     };
+    enum RichTextVAligmnet
+    {
+        RichTextAlignTop,
+        RichTextAlignMiddle,
+        RichTextAlignBottom
+    };
     enum RichTextWrap
     {
+        RichTextWrapNone,
         RichTextWrapWord,
         RichTextWrapChar,
         RichTextWrapWordChar
@@ -108,6 +117,31 @@ public:
         double end;
         std::string str;
     };
+    struct RichTextColor
+    {
+        double r;
+        double g;
+        double b;
+        double a;
+    };
+    struct RichTextStyle
+    {
+        int wrap;
+        int align;
+        int valign;
+        bool justify;
+        int stretch;
+        int weight;
+        int hint;
+        int metrics;
+        int aa;
+        int subpixel;
+        int letterSpace;
+        double strokeWidth;
+        RichTextColor textColor;
+        RichTextColor strokeColor;
+        RichTextColor backgroundColor;
+    };
 
     /** @brief file exists? */
     static bool fileExists(const std::string &str);
@@ -116,6 +150,10 @@ public:
     static const std::string extract(const std::string &str,
                                      const std::string &start,
                                      const std::string &end);
+
+    /** @brief compare strings */
+    static bool compare(const std::string & l,
+                        const std::string & r);
 
     /** @brief replace from to in string */
     static bool replace(std::string& str,
@@ -218,6 +256,33 @@ public:
                                                bool flip = false,
                                                bool noBuffer = false);
 
+    /** @brief render text to buffer */
+    static RichTextRenderResult renderText(int width,
+                                           int height,
+                                           FcConfig *fc,
+                                           const std::string &txt,
+                                           const std::string &font,
+                                           RichTextStyle style,
+                                           double x,
+                                           double y,
+                                           double scX,
+                                           double scY,
+                                           double skX,
+                                           double skY,
+                                           double rX,
+                                           double rY,
+                                           double rotate,
+                                           bool flip = false,
+                                           bool noBuffer = false);
+
     /** @brief parse SRT subtitle file */
     static std::vector<RichTextSubtitle> parseSRT(const std::string &filename);
+
+    /** @brief generate font family list */
+    static std::list<std::string> getFontFamilyList(FcConfig *fc,
+                                                    const std::string &extra = std::string(),
+                                                    bool extraisDir = false);
+
+    /** @brief read text from file */
+    static std::string readTextFile(const std::string &txt);
 };
