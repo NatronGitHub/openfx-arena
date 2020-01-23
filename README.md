@@ -122,3 +122,10 @@ sudo make install
 ## License
 
 openfx-arena is free software: you can redistribute it and/or modify it under the terms of the GNU General Public License version 2 (or later) as published by the Free Software Foundation.
+
+Some plug-ins and functions are licensed under the GNU Lesser General Public License 2.1 (or later):
+
+ * Audio/AudioCurve.cpp
+ * Text/RichText.h
+ * Text/RichText.cpp
+ * Text/RichTextOFX.cpp
