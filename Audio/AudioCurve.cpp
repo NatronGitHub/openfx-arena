@@ -29,14 +29,10 @@
 
 #define kPluginName "AudioCurveOFX"
 #define kPluginIdentifier "net.fxarena.openfx.AudioCurve"
-#ifndef kPluginVersionMajor
-#define kPluginVersionMajor 0
-#endif
-#ifndef kPluginVersionMinor
-#define kPluginVersionMinor 9
-#endif
+#define kPluginVersionMajor 1
+#define kPluginVersionMinor 0
 #define kPluginGrouping "Other"
-#define kPluginDescription "Generate curve data from audio files using libSoX."
+#define kPluginDescription "Generate curve data from (stereo) audio files."
 
 #define kSupportsTiles 0
 #define kSupportsMultiResolution 0
@@ -66,11 +62,6 @@
 #define kParamZeroLabel "Curve start at 0"
 #define kParamZeroHint "Curve start at 0, no negative values."
 #define kParamZeroDefault false
-
-#define kParamSmooth "smooth"
-#define kParamSmoothLabel "Curve Smooth"
-#define kParamSmoothHint "Smooth the curves."
-#define kParamSmoothDefault false
 
 #define kParamGenerate "generate"
 #define kParamGenerateLabel "Generate"
@@ -108,7 +99,6 @@ private:
     Double2DParam *_srcCurve;
     Double2DParam *_srcFactor;
     BooleanParam *_srcZero;
-    BooleanParam *_srcSmooth;
 };
 
 AudioCurvePlugin::AudioCurvePlugin(OfxImageEffectHandle handle)
@@ -121,7 +111,6 @@ AudioCurvePlugin::AudioCurvePlugin(OfxImageEffectHandle handle)
  , _srcCurve(nullptr)
  , _srcFactor(nullptr)
  , _srcZero(nullptr)
- , _srcSmooth(nullptr)
 {
     _dstClip = fetchClip(kOfxImageEffectOutputClipName);
     assert(_dstClip && _dstClip->getPixelComponents() == ePixelComponentRGBA);
@@ -133,11 +122,10 @@ AudioCurvePlugin::AudioCurvePlugin(OfxImageEffectHandle handle)
     _srcCurve = fetchDouble2DParam(kParamCurve);
     _srcFactor = fetchDouble2DParam(kParamFactor);
     _srcZero = fetchBooleanParam(kParamZero);
-    _srcSmooth = fetchBooleanParam(kParamSmooth);
 
     assert(_srcFile && _srcFps && _srcFrames &&
            _srcGen && _srcCurve && _srcFactor &&
-           _srcZero && _srcSmooth);
+           _srcZero);
 }
 
 /* Override the render */
@@ -227,26 +215,25 @@ void AudioCurvePlugin::generateCurves()
     int startFrame = 0;
     double factorX = 0.0;
     double factorY = 0.0;
-    bool smooth = false;
     bool zero = false;
 
     _srcZero->getValue(zero);
-    _srcSmooth->getValue(smooth);
     _srcFactor->getValue(factorX, factorY);
     _srcFrames->getValue(startFrame, endFrame);
     _srcFps->getValue(fps);
     _srcFile->getValue(filename);
 
-    if (!fileExists(filename) || endFrame == 0) {
-        setPersistentMessage(Message::eMessageWarning, "", "File does not exist");
+    if (!fileExists(filename) || endFrame == 0 || startFrame == 0 || fps == 0.0) {
+        setPersistentMessage(Message::eMessageWarning, "", "Bad input");
         _srcCurve->deleteAllKeys();
         _srcCurve->setValue(0.0, 0.0);
         return;
     }
 
-    sox_format_t * audio;
-    sox_sample_t * buf;
-    size_t blocks, block_size;
+    sox_format_t *audio;
+    sox_sample_t *buf;
+    size_t blocks;
+    size_t block_size;
     static const double block_period = 0.025;
     double start_secs = startFrame<=1?0:startFrame/fps;
     uint64_t seek;
@@ -286,13 +273,8 @@ void AudioCurvePlugin::generateCurves()
                 for (i = 0; i < block_size; ++i) {
                     SOX_SAMPLE_LOCALS;
                     double sample = SOX_SAMPLE_TO_FLOAT_64BIT(buf[i],);
-                    if (!zero) {
-                        if (i & 1) { right = sample; }
-                        else { left = sample; }
-                    } else {
-                        if (i & 1) { right = std::max(right, fabs(sample)); }
-                        else { left = std::max(left, fabs(sample)); }
-                    }
+                    if (i & 1) { right = zero?std::max(right, fabs(sample)):sample; }
+                    else { left = zero?std::max(left, fabs(sample)):sample; }
                 }
 
                 if (left>maxX) { maxX = left; }
@@ -300,8 +282,7 @@ void AudioCurvePlugin::generateCurves()
 
                 int frame = 0;
                 double secs = start_secs + blocks * block_period;
-                if (smooth) { frame = ((int)secs*fps)+1; }
-                else { frame = (secs*fps)+1; }
+                frame = (secs*fps)+1;
 
                 if (frame>lastFrame) {
                     result.push_back({frame, left, right});
@@ -319,10 +300,11 @@ void AudioCurvePlugin::generateCurves()
         setPersistentMessage(Message::eMessageWarning, "", "Failed to read the file");
     } else {
         _srcCurve->deleteAllKeys();
-        for (int i=0;i<result.size();++i) {
-            _srcCurve->setValueAtTime(result.at(i).frame,
-                                      result.at(i).x*(factorX/maxX),
-                                      result.at(i).y*(factorY/maxY));
+        for (size_t i=0;i<result.size();++i) {
+            CurveData curve = result.at(i);
+            _srcCurve->setValueAtTime(curve.frame,
+                                      curve.x*(factorX/maxX),
+                                      curve.y*(factorY/maxY));
         }
     }
 }
@@ -441,16 +423,6 @@ void AudioCurvePluginFactory::describeInContext(ImageEffectDescriptor &desc,
         param->setDefault(kParamZeroDefault);
         param->setAnimates(false);
         param->setLayoutHint(eLayoutHintNoNewLine, 1);
-        if (page) {
-            page->addChild(*param);
-        }
-    }
-    {
-        BooleanParamDescriptor* param = desc.defineBooleanParam(kParamSmooth);
-        param->setLabel(kParamSmoothLabel);
-        param->setHint(kParamSmoothHint);
-        param->setDefault(kParamSmoothDefault);
-        param->setAnimates(false);
         if (page) {
             page->addChild(*param);
         }
