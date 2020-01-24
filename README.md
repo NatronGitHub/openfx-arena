@@ -52,7 +52,7 @@ A set of [OpenFX](http://openfx.sf.net) plugins designed for [Natron](https://na
  * librsvg2 *(ReadCDR/ReadSVG)*
  * libcdr 0.1.x *(ReadCDR)*
  * librevenge *(ReadCDR)*
- * poppler-glib 0.69+ *(ReadPDF)*
+ * poppler-glib 0.83+ *(ReadPDF)*
  * lcms 2.x *(ReadPSD)*
  * ImageMagick (Magick++) 6.9.2/7.0.3 with Q32, HDRI, lcms2, zlib, freetype, libpng
    * ImageMagick 7.0.8+ recommended
@@ -80,8 +80,9 @@ git submodule update -i --recursive
 
 This will build one OFX plugin bundle *(Arena.ofx)*. Only plugins included in the official Natron bundle are built.
 
-Optional options:
+Optional build options:
 
+  * ``OLD_POPPLER=ON`` : Support poppler-glib < 0.83
   * ``AUDIO=ON``: Enable ``AudioCurve``
   * ``RICHTEXT=ON``: Enable ``RichText`` (WIP)
 
@@ -105,8 +106,9 @@ sudo cp -a */*-release/*.ofx.bundle /usr/OFX/Plugins/
 
 This will build one OFX plugin bundle *(Arena.ofx)*. Only plugins included in the official Natron bundle are built.
 
-Optional options:
+Optional build options:
 
+  * ``-DOLD_POPPLER=ON`` : Support poppler-glib < 0.83
   * ``-DAUDIO=ON``: Enable ``AudioCurve``
   * ``-DRICHTEXT=ON``: Enable ``RichText`` (WIP)
   * ``-DBUNDLE_FONTS_CONF=ON``: Bundle fonts.conf

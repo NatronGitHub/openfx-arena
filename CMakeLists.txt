@@ -28,6 +28,7 @@ CMAKE_MINIMUM_REQUIRED(VERSION 3.1)
 PROJECT(Arena CXX)
 ENABLE_TESTING()
 
+option(OLD_POPPLER "Support poppler-lib < 0.83" OFF)
 option(AUDIO "Enable AudioCurve OFX" OFF)
 option(RICHTEXT "Enable RichText OFX" OFF)
 option(BUNDLE_FONTS_CONF "Bundle fonts.conf" OFF)
@@ -49,6 +50,10 @@ pkg_search_module(POPPLER REQUIRED poppler-glib)
 pkg_search_module(REVENGE REQUIRED librevenge-0.0)
 pkg_search_module(CDR REQUIRED libcdr-0.1)
 add_compile_options(${MAGICK_STATIC_CFLAGS}) # we need the magick flags
+
+if(${OLD_POPPLER})
+    add_definitions(-DLEGACY_POPPLER)
+endif()
 
 if(${AUDIO})
     pkg_search_module(SOX REQUIRED sox)

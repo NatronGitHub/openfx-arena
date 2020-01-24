@@ -135,7 +135,11 @@ false
     if (!popplerData.empty()) {
         struct stat sb;
         if (stat(popplerData.c_str(), &sb) == 0 && S_ISDIR(sb.st_mode)) {
+#ifdef LEGACY_POPPLER
+            globalParams = new GlobalParams(popplerData.c_str());
+#else
             globalParams.reset(new GlobalParams(popplerData.c_str()));
+#endif
         }
     }
 }
