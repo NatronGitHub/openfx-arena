@@ -34,7 +34,15 @@ option(RICHTEXT "Enable RichText OFX" OFF)
 option(BUNDLE_FONTS_CONF "Bundle fonts.conf" OFF)
 set(MAGICK_PKG_CONFIG "Magick++" CACHE STRING "ImageMagick pkg-config name")
 
+# Require OpenGL
+if(POLICY CMP0072)
+    # prefer GLVND ABI. We use the compatibility via OPENGL_LIBRARIES variable
+    # see https://cmake.org/cmake/help/v3.11/policy/CMP0072.html
+    # see https://cmake.org/cmake/help/v3.11/module/FindOpenGL.html#linux-specific
+    cmake_policy(SET CMP0072 NEW)
+endif()
 include(FindOpenGL REQUIRED)
+
 # not super portable, but will do for now:
 find_package(PkgConfig REQUIRED)
 pkg_search_module(MAGICK REQUIRED ${MAGICK_PKG_CONFIG})
@@ -241,7 +249,9 @@ TARGET_COMPILE_DEFINITIONS(
     OFX_SUPPORTS_OPENGLRENDER
     NOMINMAX
 )
-TARGET_LINK_LIBRARIES(${PROJECT_NAME} ${OPENGL_gl_LIBRARY})
+# use compatibiltiy/legacy ABI also on systems based on GLVND
+TARGET_LINK_LIBRARIES(${PROJECT_NAME} ${OPENGL_LIBRARIES})
+#TARGET_LINK_LIBRARIES(${PROJECT_NAME} ${OPENGL_gl_LIBRARY})
 
 include_directories(
     ${MAGICK_INCLUDE_DIRS}
