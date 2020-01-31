@@ -55,7 +55,7 @@ pkg_search_module(SVG REQUIRED librsvg-2.0)
 pkg_search_module(GLIB REQUIRED glib-2.0)
 pkg_search_module(CAIRO REQUIRED cairo)
 pkg_search_module(POPPLER REQUIRED poppler-glib)
-pkg_search_module(REVENGE REQUIRED librevenge-0.0)
+pkg_check_modules(REVENGE REQUIRED librevenge-0.0 librevenge-generators-0.0 librevenge-stream-0.0)
 pkg_search_module(CDR REQUIRED libcdr-0.1)
 add_compile_options(${MAGICK_STATIC_CFLAGS}) # we need the magick flags
 
