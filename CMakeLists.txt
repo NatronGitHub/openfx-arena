@@ -57,6 +57,7 @@ pkg_search_module(CAIRO REQUIRED cairo)
 pkg_search_module(POPPLER REQUIRED poppler-glib)
 pkg_check_modules(REVENGE REQUIRED librevenge-0.0 librevenge-generators-0.0 librevenge-stream-0.0)
 pkg_search_module(CDR REQUIRED libcdr-0.1)
+pkg_search_module(CURL REQUIRED libcurl)
 add_compile_options(${MAGICK_STATIC_CFLAGS}) # we need the magick flags
 
 if(${OLD_POPPLER})
@@ -168,6 +169,7 @@ FILE(GLOB SOURCES
     "Magick/Swirl/Swirl.cpp"
     "Magick/Wave/Wave.cpp"
     "Magick/Morphology/Morphology.cpp"
+    "Magick/HaldCLUT/HaldCLUT.cpp"
     "Magick/MagickPlugin.cpp"
     "lodepng/lodepng.cpp"
 )
@@ -189,6 +191,9 @@ FILE(GLOB RESOURCES
     "Magick/Wave/net.fxarena.openfx.*.svg"
     "Magick/Morphology/net.fxarena.openfx.*.png"
     "Magick/Morphology/net.fxarena.openfx.*.svg"
+    "Magick/HaldCLUT/net.fxarena.openfx.HaldCLUT.png"
+    "Magick/HaldCLUT/net.fxarena.openfx.HaldCLUT.svg"
+    "Magick/HaldCLUT/net.fxarena.openfx.HaldCLUT.xml"
     "Magick/Extra.png"
     "Magick/Extra.svg"
 )
@@ -266,6 +271,7 @@ include_directories(
     ${POPPLER_INCLUDE_DIRS}
     ${REVENGE_INCLUDE_DIRS}
     ${CDR_INCLUDE_DIRS}
+    ${CURL_INCLUDE_DIRS}
 )
 target_link_libraries(
     ${PROJECT_NAME}
@@ -283,6 +289,7 @@ target_link_libraries(
     ${POPPLER_STATIC_LDFLAGS}
     ${REVENGE_STATIC_LDFLAGS}
     ${CDR_STATIC_LDFLAGS}
+    ${CURL_LDFLAGS}
 )
 
 if(${AUDIO})
