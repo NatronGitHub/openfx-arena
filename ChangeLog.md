@@ -2,8 +2,6 @@
 
 ## Natron-2.3.15
 
- * ``ReadPDF`` : Now require poppler-glib 0.69+
- * ``RichText``: Added new plugin *(Beta, enable with ``RICHTEXT=ON``)*
  * ``Text``: Added support for SRT subtitles
  * ``Morphology``: Added new plugin
  * ``AudioCurve``: Added new plugin
