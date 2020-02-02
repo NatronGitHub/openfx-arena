@@ -1,0 +1,37 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE svg PUBLIC "-//W3C//DTD SVG 1.1//EN" "http://www.w3.org/Graphics/SVG/1.1/DTD/svg11.dtd">
+<svg xmlns="http://www.w3.org/2000/svg" xml:space="preserve" width="3in" height="3in" version="1.1" style="shape-rendering:geometricPrecision; text-rendering:geometricPrecision; image-rendering:optimizeQuality; fill-rule:evenodd; clip-rule:evenodd"
+viewBox="0 0 3000 3000"
+ xmlns:xlink="http://www.w3.org/1999/xlink">
+ <defs>
+  <style type="text/css">
+   <![CDATA[
+    .str0 {stroke:black;stroke-width:27.7756}
+    .str1 {stroke:black;stroke-width:13.8858}
+    .str2 {stroke:black;stroke-width:3}
+    .fil1 {fill:white}
+    .fil2 {fill:black}
+    .fil0 {fill:white}
+    .fil3 {fill:black;fill-rule:nonzero}
+   ]]>
+  </style>
+ </defs>
+ <g id="Layer1">
+  <metadata id="Layer2"/>
+  <g id="Layer3">
+   <rect class="fil0 str0" x="468" y="514" width="413" height="1972"/>
+   <rect class="fil0 str0" x="881" y="514" width="413" height="1972"/>
+   <rect class="fil0 str0" x="1294" y="514" width="413" height="1972"/>
+   <rect class="fil0 str0" x="1706" y="514" width="413" height="1972"/>
+   <rect class="fil0 str0" x="2119" y="514" width="413" height="1972"/>
+   <path class="fil1 str1" d="M303 514l165 0 0 1972 -165 0c-136,0 -248,-111 -248,-248l0 -1476c0,-137 112,-248 248,-248z"/>
+   <path class="fil1 str1" d="M2532 514l165 0c136,0 248,111 248,248l0 1476c0,137 -112,248 -248,248l-165 0 0 -1972z"/>
+   <rect class="fil2 str2" x="340" y="514" width="206" height="1255"/>
+   <rect class="fil2 str2" x="778" y="514" width="206" height="1255"/>
+   <rect class="fil2 str2" x="1215" y="514" width="206" height="1255"/>
+   <rect class="fil2 str2" x="1991" y="514" width="206" height="1255"/>
+   <rect class="fil2 str2" x="2453" y="514" width="206" height="1255"/>
+   <path class="fil3" d="M303 459l2394 0c83,0 159,34 214,89 55,54 89,130 89,214l0 1476c0,84 -34,160 -89,214 -55,55 -131,89 -214,89l-2394 0c-83,0 -159,-34 -214,-89 -55,-54 -89,-130 -89,-214l0 -1476c0,-84 34,-160 89,-214 55,-55 131,-89 214,-89zm2394 110l-2394 0c-53,0 -101,22 -136,57 -35,35 -56,83 -56,136l0 1476c0,53 21,101 56,136 35,35 83,57 136,57l2394 0c53,0 101,-22 136,-57 35,-35 56,-83 56,-136l0 -1476c0,-53 -21,-101 -56,-136 -35,-35 -83,-57 -136,-57z"/>
+  </g>
+ </g>
+</svg>
