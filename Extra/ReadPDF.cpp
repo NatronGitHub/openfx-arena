@@ -40,6 +40,12 @@
 #include <Shlwapi.h>
 #endif
 
+#if defined(POPPLER_MAJOR_VERSION) && defined(POPPLER_MINOR_VERSION)
+#if POPPLER_MAJOR_VERSION == 0 && POPPLER_MINOR_VERSION < 83
+#define LEGACY_POPPLER
+#endif
+#endif
+
 #include <ofxNatron.h>
 #include "GenericReader.h"
 #include "GenericOCIO.h"

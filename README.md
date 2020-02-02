@@ -9,7 +9,7 @@ A set of [OpenFX](http://openfx.sf.net) plugins designed for [Natron](https://na
  * ReadKrita
  * ReadSVG
  * ReadPDF
- * Text(FX)
+ * Text
  * Arc
  * Charcoal
  * Edges
@@ -19,7 +19,7 @@ A set of [OpenFX](http://openfx.sf.net) plugins designed for [Natron](https://na
  * Polar
  * Polaroid
  * ReadMisc
- * ReadPSD(XCF)
+ * ReadPSD *(and XCF)*
  * Reflection
  * Roll
  * Sketch
@@ -27,8 +27,12 @@ A set of [OpenFX](http://openfx.sf.net) plugins designed for [Natron](https://na
  * Texture
  * Tile
  * Wave
+ * Morphology
+ * AudioCurve
+
+Optional *(must be built manually)*:
+
  * Bulge (OCL)
- * Glare (OCL)
  * Ripple (OCL)
  * Twirl (OCL)
  * Sharpen (OCL)
@@ -36,10 +40,12 @@ A set of [OpenFX](http://openfx.sf.net) plugins designed for [Natron](https://na
  * Duotone (OCL)
  * Edge (OCL)
  * CLFilter (OCL)
- * HaldCLUT
- * Morphology
- * AudioCurve
- * RichText
+ * HaldCLUT *(similar plugin also included in openfx-gmic)*
+
+Experimental:
+
+ * RichText *(requires modifications to Natron)*
+ * MidiIn
 
 ## Requirements
 
@@ -54,14 +60,9 @@ A set of [OpenFX](http://openfx.sf.net) plugins designed for [Natron](https://na
  * librevenge *(ReadCDR)*
  * poppler-glib 0.83+ *(ReadPDF)*
  * lcms 2.x *(ReadPSD)*
- * ImageMagick (Magick++) 6.9.2/7.0.3 with Q32, HDRI, lcms2, zlib, freetype, libpng
-   * ImageMagick 7.0.8+ recommended
-   * Will build on older versions, but some features/plugins may not be available
-   * Quantum depth under 32 will work, but it not recommended, note that most distros ship 16
-   * Will work without HDRI, but it's not recommended
- * OpenCL 1.2 compatible hardware and drivers (OCL plugins)
-   * Compatible hardware or drivers are not required to build these plugins
- * libcurl *(HaldCLUT)*
+ * ImageMagick (Magick++) 6.9.2/7.0.3 with Q16, HDRI, lcms2, zlib, freetype, libpng
+ * OpenCL 1.2 compatible hardware and drivers *(for optional OCL plugins)*
+ * libcurl *(for optional HaldCLUT plugin)*
  * libsox *(AudioCurve)*
 
 ## Notes
@@ -82,9 +83,8 @@ This will build one OFX plugin bundle *(Arena.ofx)*. Only plugins included in th
 
 Optional build options:
 
-  * ``OLD_POPPLER=ON`` : Support poppler-glib < 0.83
   * ``AUDIO=ON``: Enable ``AudioCurve``
-  * ``RICHTEXT=ON``: Enable ``RichText`` (WIP)
+  * ``RICHTEXT=ON``: Enable ``RichText`` *(WIP, only for developers)*
 
 ```
 make CONFIG=release
@@ -108,10 +108,9 @@ This will build one OFX plugin bundle *(Arena.ofx)*. Only plugins included in th
 
 Optional build options:
 
-  * ``-DOLD_POPPLER=ON`` : Support poppler-glib < 0.83
   * ``-DAUDIO=ON``: Enable ``AudioCurve``
-  * ``-DRICHTEXT=ON``: Enable ``RichText`` (WIP)
-  * ``-DBUNDLE_FONTS_CONF=ON``: Bundle fonts.conf
+  * ``-DRICHTEXT=ON``: Enable ``RichText`` *(WIP, only for developers)*
+  * ``-DBUNDLE_FONTS_CONF=ON``: Bundle fonts.conf *(If not using Natron and on Windows/macOS)*
   * ``-DMAGICK_PKG_CONFIG=XXX``: Custom Magick++ pkg-config name
 
 ```
@@ -127,7 +126,8 @@ openfx-arena is free software: you can redistribute it and/or modify it under th
 
 Some plug-ins and functions are licensed under the GNU Lesser General Public License 2.1 (or later):
 
- * Audio/AudioCurve.cpp
+ * Audio/*
+ * Midi/*
  * Text/RichText.h
  * Text/RichText.cpp
  * Text/RichTextOFX.cpp
