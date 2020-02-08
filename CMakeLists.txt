@@ -31,6 +31,7 @@ ENABLE_TESTING()
 option(OLD_POPPLER "Support poppler-lib < 0.83" OFF)
 option(AUDIO "Enable AudioCurve OFX" OFF)
 option(RICHTEXT "Enable RichText OFX" OFF)
+option(HALDCLUT "Enable HaldCLUT OFX (requires curl)" OFF)
 option(BUNDLE_FONTS_CONF "Bundle fonts.conf" OFF)
 set(MAGICK_PKG_CONFIG "Magick++" CACHE STRING "ImageMagick pkg-config name")
 
@@ -57,7 +58,6 @@ pkg_search_module(CAIRO REQUIRED cairo)
 pkg_search_module(POPPLER REQUIRED poppler-glib)
 pkg_check_modules(REVENGE REQUIRED librevenge-0.0 librevenge-generators-0.0 librevenge-stream-0.0)
 pkg_search_module(CDR REQUIRED libcdr-0.1)
-pkg_search_module(CURL REQUIRED libcurl)
 add_compile_options(${MAGICK_STATIC_CFLAGS}) # we need the magick flags
 
 if(${OLD_POPPLER})
@@ -68,6 +68,12 @@ if(${AUDIO})
     pkg_search_module(SOX REQUIRED sox)
     add_compile_options(${SOX_STATIC_CFLAGS}) # we need the sox flags
 endif()
+
+if(${HALDCLUT})
+    # HaldCLUT uses libCurl to download ~100MiB of CLUT profiles
+    pkg_search_module(CURL REQUIRED libcurl)
+endif()
+
 set (CMAKE_CXX_STANDARD 11)
 
 # Use -Ofast when applicable (implies -ffast-math)
@@ -169,7 +175,6 @@ FILE(GLOB SOURCES
     "Magick/Swirl/Swirl.cpp"
     "Magick/Wave/Wave.cpp"
     "Magick/Morphology/Morphology.cpp"
-    "Magick/HaldCLUT/HaldCLUT.cpp"
     "Magick/MagickPlugin.cpp"
     "lodepng/lodepng.cpp"
 )
@@ -191,9 +196,6 @@ FILE(GLOB RESOURCES
     "Magick/Wave/net.fxarena.openfx.*.svg"
     "Magick/Morphology/net.fxarena.openfx.*.png"
     "Magick/Morphology/net.fxarena.openfx.*.svg"
-    "Magick/HaldCLUT/net.fxarena.openfx.HaldCLUT.png"
-    "Magick/HaldCLUT/net.fxarena.openfx.HaldCLUT.svg"
-    "Magick/HaldCLUT/net.fxarena.openfx.HaldCLUT.xml"
     "Magick/Extra.png"
     "Magick/Extra.svg"
 )
@@ -210,6 +212,16 @@ if(${RICHTEXT})
         RESOURCES
         "Text/net.fxarena.openfx.RichText.png"
         "Text/net.fxarena.openfx.RichText.svg")
+endif()
+
+if(${HALDCLUT})
+    list(APPEND SOURCES "Magick/HaldCLUT/HaldCLUT.cpp")
+    list(
+        APPEND
+        RESOURCES
+        "Magick/HaldCLUT/net.fxarena.openfx.HaldCLUT.png"
+        "Magick/HaldCLUT/net.fxarena.openfx.HaldCLUT.svg"
+        "Magick/HaldCLUT/net.fxarena.openfx.HaldCLUT.xml")
 endif()
 
 # fonts.conf
@@ -271,7 +283,6 @@ include_directories(
     ${POPPLER_INCLUDE_DIRS}
     ${REVENGE_INCLUDE_DIRS}
     ${CDR_INCLUDE_DIRS}
-    ${CURL_INCLUDE_DIRS}
 )
 target_link_libraries(
     ${PROJECT_NAME}
@@ -289,12 +300,16 @@ target_link_libraries(
     ${POPPLER_STATIC_LDFLAGS}
     ${REVENGE_STATIC_LDFLAGS}
     ${CDR_STATIC_LDFLAGS}
-    ${CURL_LDFLAGS}
 )
 
 if(${AUDIO})
     include_directories(${SOX_INCLUDE_DIRS})
     target_link_libraries(${PROJECT_NAME} ${SOX_STATIC_LDFLAGS})
+endif()
+
+if(${HALDCLUT})
+    include_directories(${CURL_INCLUDE_DIRS})
+    target_link_libraries(${PROJECT_NAME} ${CURL_LDFLAGS})
 endif()
 
 #IF (MSVC)
