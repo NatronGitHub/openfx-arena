@@ -31,10 +31,19 @@ ENABLE_TESTING()
 option(OLD_POPPLER "Support poppler-lib < 0.83" OFF)
 option(AUDIO "Enable AudioCurve OFX" OFF)
 option(RICHTEXT "Enable RichText OFX" OFF)
+option(HALDCLUT "Enable HaldCLUT OFX (requires curl)" OFF)
 option(BUNDLE_FONTS_CONF "Bundle fonts.conf" OFF)
 set(MAGICK_PKG_CONFIG "Magick++" CACHE STRING "ImageMagick pkg-config name")
 
+# Require OpenGL
+if(POLICY CMP0072)
+    # prefer GLVND ABI. We use the compatibility via OPENGL_LIBRARIES variable
+    # see https://cmake.org/cmake/help/v3.11/policy/CMP0072.html
+    # see https://cmake.org/cmake/help/v3.11/module/FindOpenGL.html#linux-specific
+    cmake_policy(SET CMP0072 NEW)
+endif()
 include(FindOpenGL REQUIRED)
+
 # not super portable, but will do for now:
 find_package(PkgConfig REQUIRED)
 pkg_search_module(MAGICK REQUIRED ${MAGICK_PKG_CONFIG})
@@ -47,7 +56,7 @@ pkg_search_module(SVG REQUIRED librsvg-2.0)
 pkg_search_module(GLIB REQUIRED glib-2.0)
 pkg_search_module(CAIRO REQUIRED cairo)
 pkg_search_module(POPPLER REQUIRED poppler-glib)
-pkg_search_module(REVENGE REQUIRED librevenge-0.0)
+pkg_check_modules(REVENGE REQUIRED librevenge-0.0 librevenge-generators-0.0 librevenge-stream-0.0)
 pkg_search_module(CDR REQUIRED libcdr-0.1)
 add_compile_options(${MAGICK_STATIC_CFLAGS}) # we need the magick flags
 
@@ -59,6 +68,12 @@ if(${AUDIO})
     pkg_search_module(SOX REQUIRED sox)
     add_compile_options(${SOX_STATIC_CFLAGS}) # we need the sox flags
 endif()
+
+if(${HALDCLUT})
+    # HaldCLUT uses libCurl to download ~100MiB of CLUT profiles
+    pkg_search_module(CURL REQUIRED libcurl)
+endif()
+
 set (CMAKE_CXX_STANDARD 11)
 
 # Use -Ofast when applicable (implies -ffast-math)
@@ -199,6 +214,16 @@ if(${RICHTEXT})
         "Text/net.fxarena.openfx.RichText.svg")
 endif()
 
+if(${HALDCLUT})
+    list(APPEND SOURCES "Magick/HaldCLUT/HaldCLUT.cpp")
+    list(
+        APPEND
+        RESOURCES
+        "Magick/HaldCLUT/net.fxarena.openfx.HaldCLUT.png"
+        "Magick/HaldCLUT/net.fxarena.openfx.HaldCLUT.svg"
+        "Magick/HaldCLUT/net.fxarena.openfx.HaldCLUT.xml")
+endif()
+
 # fonts.conf
 if (APPLE)
     set(FC_FONTS_DIR "<dir>/System/Library/Fonts</dir><dir>/Library/Fonts</dir><dir>~/Library/Fonts</dir>")
@@ -241,7 +266,9 @@ TARGET_COMPILE_DEFINITIONS(
     OFX_SUPPORTS_OPENGLRENDER
     NOMINMAX
 )
-TARGET_LINK_LIBRARIES(${PROJECT_NAME} ${OPENGL_gl_LIBRARY})
+# use compatibiltiy/legacy ABI also on systems based on GLVND
+TARGET_LINK_LIBRARIES(${PROJECT_NAME} ${OPENGL_LIBRARIES})
+#TARGET_LINK_LIBRARIES(${PROJECT_NAME} ${OPENGL_gl_LIBRARY})
 
 include_directories(
     ${MAGICK_INCLUDE_DIRS}
@@ -278,6 +305,11 @@ target_link_libraries(
 if(${AUDIO})
     include_directories(${SOX_INCLUDE_DIRS})
     target_link_libraries(${PROJECT_NAME} ${SOX_STATIC_LDFLAGS})
+endif()
+
+if(${HALDCLUT})
+    include_directories(${CURL_INCLUDE_DIRS})
+    target_link_libraries(${PROJECT_NAME} ${CURL_LDFLAGS})
 endif()
 
 #IF (MSVC)
