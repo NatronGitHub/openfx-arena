@@ -216,6 +216,10 @@ void AudioCurvePlugin::generateCurves()
     double factorX = 0.0;
     double factorY = 0.0;
     bool zero = false;
+    bool success = false;
+    std::vector<CurveData> result;
+    double maxX = 0.0;
+    double maxY = 0.0;
 
     _srcZero->getValue(zero);
     _srcFactor->getValue(factorX, factorY);
@@ -230,25 +234,24 @@ void AudioCurvePlugin::generateCurves()
         return;
     }
 
-    sox_format_t *audio;
-    sox_sample_t *buf;
-    size_t blocks;
-    size_t block_size;
-    static const double block_period = 0.025;
-    double start_secs = startFrame<=1?0:startFrame/fps;
-    uint64_t seek;
-    bool success = false;
-    double period = endFrame/fps;
-    std::vector<CurveData> result;
-    double maxX = 0.0;
-    double maxY = 0.0;
+    if (sox_init() != SOX_SUCCESS) {
+        setPersistentMessage(Message::eMessageWarning, "", "SoX init failed");
+        return;
+    }
 
-    assert(sox_init() == SOX_SUCCESS);
-    audio = sox_open_read(filename.c_str(),
-                          nullptr,
-                          nullptr,
-                          nullptr);
+    sox_format_t *audio = sox_open_read(filename.c_str(),
+                                        nullptr,
+                                        nullptr,
+                                        nullptr);
     if (audio) {
+        sox_sample_t *buf = nullptr;
+        size_t blocks;
+        size_t block_size;
+        static const double block_period = 0.025;
+        double start_secs = startFrame<=1?0:startFrame/fps;
+        uint64_t seek;
+        double period = endFrame/fps;
+
         seek = start_secs * audio->signal.rate * audio->signal.channels + .5;
         seek -= seek % audio->signal.channels;
         if (sox_seek(audio,
@@ -258,9 +261,8 @@ void AudioCurvePlugin::generateCurves()
         {
             block_size = block_period * audio->signal.rate * audio->signal.channels + .5;
             block_size -= block_size % audio->signal.channels;
-            assert(buf = (sox_sample_t*)malloc(sizeof(sox_sample_t) * block_size));
+            buf = (sox_sample_t*)malloc(sizeof(sox_sample_t) * block_size);
 
-            success = true;
             int lastFrame = -1;
             for (blocks = 0; sox_read(audio,
                                       buf,
@@ -286,14 +288,15 @@ void AudioCurvePlugin::generateCurves()
 
                 if (frame>lastFrame) {
                     result.push_back({frame, left, right});
+                    if (!success) { success = true; }
                 }
                 lastFrame = frame;
             }
         }
         sox_close(audio);
+        free(buf);
     }
 
-    free(buf);
     sox_quit();
 
     if (!success) {
@@ -326,7 +329,11 @@ void AudioCurvePlugin::setCurveLength()
         return;
     }
 
-    assert(sox_init() == SOX_SUCCESS);
+    if (sox_init() != SOX_SUCCESS) {
+        setPersistentMessage(Message::eMessageWarning, "", "SoX init failed");
+        return;
+    }
+
     sox_format_t *audio = sox_open_read(filename.c_str(),
                                         nullptr,
                                         nullptr,
