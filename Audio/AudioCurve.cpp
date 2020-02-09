@@ -244,7 +244,6 @@ void AudioCurvePlugin::generateCurves()
                                         nullptr,
                                         nullptr);
     if (audio) {
-        sox_sample_t *buf = nullptr;
         size_t blocks;
         size_t block_size;
         static const double block_period = 0.025;
@@ -261,9 +260,9 @@ void AudioCurvePlugin::generateCurves()
         {
             block_size = block_period * audio->signal.rate * audio->signal.channels + .5;
             block_size -= block_size % audio->signal.channels;
-            buf = (sox_sample_t*)malloc(sizeof(sox_sample_t) * block_size);
-
+            sox_sample_t *buf = (sox_sample_t*)malloc(sizeof(sox_sample_t) * block_size);
             int lastFrame = -1;
+
             for (blocks = 0; sox_read(audio,
                                       buf,
                                       block_size) == block_size &&
@@ -292,9 +291,9 @@ void AudioCurvePlugin::generateCurves()
                 }
                 lastFrame = frame;
             }
+            free(buf);
         }
         sox_close(audio);
-        free(buf);
     }
 
     sox_quit();
