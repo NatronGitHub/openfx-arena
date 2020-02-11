@@ -196,7 +196,7 @@ void AudioCurvePlugin::render(const RenderArguments &args)
     pixelData = nullptr;
 }
 
-void AudioCurvePlugin::changedParam(const InstanceChangedArgs &args,
+void AudioCurvePlugin::changedParam(const InstanceChangedArgs &/*args*/,
                                     const std::string &paramName)
 {
     clearPersistentMessage();

@@ -9,6 +9,10 @@ PLUGINOBJECTS = \
     ReadKrita.o \
     OpenRaster.o
 
+ifeq ($(shell pkg-config --exists sox && echo yes),yes)
+AUDIO = ON
+endif
+
 ifeq ($(AUDIO), ON)
 PLUGINOBJECTS += AudioCurve.o
 endif
