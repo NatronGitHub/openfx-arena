@@ -1,3 +1,8 @@
+
+os:
+  - linux
+  - windows
+
 sudo: required
 dist: bionic
 
@@ -7,94 +12,103 @@ compiler:
   - gcc
 
 before_install:
-  - env
-  - df
-  - date -u
-  - uname -a
-  - export J='-j3'
-  - if [ ${TRAVIS_OS_NAME} = "linux" ]; then
-      echo -n | openssl s_client -connect scan.coverity.com:443 | sed -ne '/-BEGIN CERTIFICATE-/,/-END CERTIFICATE-/p' | sudo tee -a /etc/ssl/certs/ca- ;
-    fi
-  - git submodule update --init --recursive
-  - sudo apt remove --purge imagemagick imagemagick-common
-  - if [ ${TRAVIS_OS_NAME} = "linux" -a "$CC" = "gcc" ];
-    then
+- |-
+    case $TRAVIS_OS_NAME in
+      windows)
+        # remove existing mingw
+        choco uninstall -y mingw
+        # download msys2 snapshot and extract to C:\msys64-20180531
+        wget http://repo.msys2.org/distrib/x86_64/msys2-base-x86_64-20180531.tar.xz
+        7z.exe x msys2-base-x86_64-20180531.tar.xz
+        tar xf msys2-base-x86_64-20180531.tar
+        mv msys64 /c/msys64-20180531
+        # make msys2 use our custom repository
+        sed -i 's/SigLevel    = Required DatabaseOptional/SigLevel = Never/' /c/msys64-20180531/etc/pacman.conf
+        echo "Server = https://downloads.sourceforge.net/project/openfx-arena/MINGW-packages/mingw64" > /c/msys64-20180531/etc/pacman.d/mirrorlist.mingw64
+        echo "Server = https://downloads.sourceforge.net/project/openfx-arena/MINGW-packages/msys" > /c/msys64-20180531/etc/pacman.d/mirrorlist.msys
+        # create msys2/mingw64 wrappers
+        export msys2='cmd //C RefreshEnv.cmd '
+        export msys2+='& set MSYS=winsymlinks:nativestrict '
+        export msys2+='& C:\\msys64-20180531\\msys2_shell.cmd -defterm -no-start'
+        export mingw64="$msys2 -mingw64 -full-path -here -c "\"\$@"\" --"
+        export msys2+=" -msys2 -c "\"\$@"\" --"
+        # setup msys2
+        $msys2 pacman --sync --noconfirm
+        # install required packages, note that Travis may fail to download some packages
+        $msys2 pacman -Syu --noconfirm openfx-arena-sdk || $msys2 pacman -Syu --noconfirm openfx-arena-sdk || $msys2 pacman -Syu --noconfirm openfx-arena-sdk
+        # setup env
+        export PATH=/mingw64/bin:$PATH
+        export PKG_CONFIG_PATH=/mingw64/lib/pkgconfig:/mingw64/share/pkgconfig
+      ;;
+      linux)
+        env
+        df
+        date -u
+        uname -a
+        export J='-j3'
+        echo -n | openssl s_client -connect scan.coverity.com:443 | sed -ne '/-BEGIN CERTIFICATE-/,/-END CERTIFICATE-/p' | sudo tee -a /etc/ssl/certs/ca-
+        git submodule update --init --recursive
+        sudo apt remove --purge imagemagick imagemagick-common
         if [ "$BUILDDOC" = 1 ]; then
-            sudo apt-get install doxygen xsltproc;
-        fi;
-        sudo add-apt-repository -y ppa:ubuntu-toolchain-r/test;
-        sudo apt-get update;
-        sudo apt-get install gcc-8 g++-8;
-        sudo update-alternatives --install /usr/bin/gcc gcc /usr/bin/gcc-8 90;
-        sudo update-alternatives --install /usr/bin/g++ g++ /usr/bin/g++-8 90;
-    fi
-  - sudo add-apt-repository -y ppa:libreoffice/ppa
-  - sudo apt-get update
-  - sudo apt-get install -y cmake libsox-dev libfreetype6-dev libfontconfig1-dev libpango1.0-dev librsvg2-dev liblcms2-dev libzip-dev libcdr-dev libicu-dev libcppunit-dev libopencolorio-dev librevenge-dev libboost-all-dev gtk-doc-tools libharfbuzz-dev libselinux1-dev libcurl4-openssl-dev libidn11-dev librtmp-dev libgl-dev libfftw3-dev libmount-dev libnghttp2-dev libpsl-dev libopenjp2-7-dev
-
-  # libpoppler-glib-dev libpoppler-private-dev is too old (0.62)
+          sudo apt-get install doxygen xsltproc
+        fi
+        sudo add-apt-repository -y ppa:ubuntu-toolchain-r/test
+        sudo apt-get update
+        sudo apt-get install gcc-8 g++-8
+        sudo update-alternatives --install /usr/bin/gcc gcc /usr/bin/gcc-8 90
+        sudo update-alternatives --install /usr/bin/g++ g++ /usr/bin/g++-8 90
+        sudo add-apt-repository -y ppa:libreoffice/ppa
+        sudo apt-get update
+        sudo apt-get install -y cmake libpoppler-glib-dev libpoppler-private-dev libsox-dev libfreetype6-dev libfontconfig1-dev libpango1.0-dev librsvg2-dev liblcms2-dev libzip-dev libcdr-dev libicu-dev libcppunit-dev libopencolorio-dev librevenge-dev libboost-all-dev gtk-doc-tools libharfbuzz-dev libselinux1-dev libcurl4-openssl-dev libidn11-dev librtmp-dev libgl-dev libfftw3-dev libmount-dev libnghttp2-dev libpsl-dev libopenjp2-7-dev
+      ;;
+    esac
 
 install:
-  - if [[ ${COVERITY_BUILD_DISABLED} == 1 ]];
-    then
-        exit 0;
-    fi
-  - export CWD=`pwd`
-  - sudo rm -rf /usr/include/libcdr* /usr/lib*/*cdr* /usr/lib*/pkgconfig/*cdr*
-  - git clone https://github.com/LibreOffice/libcdr
-  - cd libcdr
-  - sh autogen.sh
-  - ./configure --prefix=/usr
-  - make -j2
-  - sudo make install
-  - cd ..
-  - git clone https://github.com/ImageMagick/ImageMagick
-  - cd ImageMagick
-  - git checkout tags/7.0.3-1
-  - ./configure --prefix=/usr --disable-docs --disable-deprecated --with-magick-plus-plus=yes --with-quantum-depth=32 --without-dps --without-djvu --without-fftw --without-fpx --without-gslib --without-gvc --without-jbig --without-jpeg --with-lcms --without-openjp2 --without-lqr --without-lzma --without-openexr --without-pango --with-png --without-rsvg --without-tiff --without-webp --without-xml --with-zlib --without-bzlib --disable-static --enable-shared --enable-hdri --with-freetype --with-fontconfig --without-x --without-modules --without-wmf
-  - make -j2
-  - sudo make install
-  - cd $CWD
-  - git clone https://github.com/freedesktop/poppler
-  - cd poppler
-  - git checkout tags/poppler-0.83.0
-  - mkdir build && cd build
-  - cmake -DCMAKE_INSTALL_PREFIX=/usr -DENABLE_UNSTABLE_API_ABI_HEADERS=ON ENABLE_GLIB=ON ENABLE_UTILS=OFF ..
-  - make -j2
-  - sudo make install
-  - cd $CWD
-
-# Xenial has pango 1.38
-#  # a more recont harfbuzz may be necessary if pango is upgraded
-#  - wget https://www.freedesktop.org/software/harfbuzz/release/harfbuzz-0.9.42.tar.bz2
-#  - tar xf harfbuzz-0.9.42.tar.bz2
-#  - cd harfbuzz-0.9.42
-#  - ./configure --prefix=/usr/local
-#  - make -j2
-#  - sudo make install
-#  - cd ..
-#  # pango 1.42.4 requires fribidi
-#  # pango 1.44.3 requires also meson to build
-#  - wget http://ftp.gnome.org/pub/GNOME/sources/pango/1.38/pango-1.38.1.tar.xz
-#  - tar xf pango-1.38.1.tar.xz
-#  - cd pango-1.38.1
-#  - env PKG_CONFIG_PATH=/usr/local/lib/pkgconfig LD_LIBRARY_PATH=/usr/local/lib ./configure --prefix=/usr/local
-#  - make -j2
-#  - sudo make install
-#  - cd ..
+- |-
+    case $TRAVIS_OS_NAME in
+    linux)
+      if [[ ${COVERITY_BUILD_DISABLED} == 1 ]];
+      then
+          exit 0;
+      fi
+      export CWD=`pwd`
+      sudo rm -rf /usr/include/libcdr* /usr/lib*/*cdr* /usr/lib*/pkgconfig/*cdr*
+      git clone https://github.com/LibreOffice/libcdr
+      cd libcdr
+      sh autogen.sh
+      ./configure --prefix=/usr
+      make -j2
+      sudo make install
+      cd ..
+      git clone https://github.com/ImageMagick/ImageMagick
+      cd ImageMagick
+      git checkout tags/7.0.3-1
+      ./configure --prefix=/usr --disable-docs --disable-deprecated --with-magick-plus-plus=yes --with-quantum-depth=32 --without-dps --without-djvu --without-fftw --without-fpx --without-gslib --without-gvc --without-jbig --without-jpeg --with-lcms --without-openjp2 --without-lqr --without-lzma --without-openexr --without-pango --with-png --without-rsvg --without-tiff --without-webp --without-xml --with-zlib --without-bzlib --disable-static --enable-shared --enable-hdri --with-freetype --with-fontconfig --without-x --without-modules --without-wmf
+      make -j2
+      sudo make install
+      cd $CWD
+      ;;
+    esac
 
 script:
-  - git submodule update -i --recursive
-  - export PKG_CONFIG_PATH=/usr/local/lib/pkgconfig
-  - export LD_LIBRARY_PATH=/usr/local/lib
-  - make AUDIO=ON IM=7 CONFIG=debug
-  - make -C Audio
-  - make -C Extra
-  - make -C Magick
-  - make -C OCL
-  - make -C Text
-  - mkdir build && cd build
-  - cmake -DAUDIO=ON .. && make
+- |-
+    case $TRAVIS_OS_NAME in
+      windows)
+        $mingw64 ./.travis.sh
+      ;;
+      linux)
+        export PKG_CONFIG_PATH=/usr/local/lib/pkgconfig:$PKG_CONFIG_PATH
+        export LD_LIBRARY_PATH=/usr/local/lib:$LD_LIBRARY_PATH
+        make AUDIO=ON IM=7 CONFIG=debug
+        make -C Audio
+        make -C Extra
+        make -C Magick
+        make -C OCL
+        make -C Text
+        mkdir build && cd build
+        cmake -DAUDIO=ON .. && make
+      ;;
+    esac
 
 # ubuntu-toolchain-r/test contains recent versions of gcc
 addons:
