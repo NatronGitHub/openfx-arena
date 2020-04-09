@@ -39,7 +39,7 @@
 #define kPluginGrouping "Draw"
 #define kPluginIdentifier "net.fxarena.openfx.Text"
 #define kPluginVersionMajor 6
-#define kPluginVersionMinor 10
+#define kPluginVersionMinor 11
 
 #define kSupportsTiles 0
 #define kSupportsMultiResolution 0
@@ -223,6 +223,10 @@
 #define kParamScrollYHint "Scroll canvas Y. Only works if Transform, AutoSize, Circle and Arc is disabled/not used."
 #define kParamScrollYDefault 0
 
+#define kParamGeneratorRange "frameRange"
+#define kParamGeneratorRangeLabel "Frame Range"
+#define kParamGeneratorRangeHint "Time domain."
+
 using namespace OFX;
 static bool gHostIsNatron = false;
 
@@ -326,6 +330,9 @@ public:
     // override the rod call
     virtual bool getRegionOfDefinition(const OFX::RegionOfDefinitionArguments &args, OfxRectD &rod) OVERRIDE FINAL;
 
+    /* override the time domain action, only for the general context */
+    virtual bool getTimeDomain(OfxRangeD &range) OVERRIDE FINAL;
+
     std::string textFromFile(std::string filename);
     void loadSRT();
     void resetCenter(double time);
@@ -378,6 +385,7 @@ private:
     OFX::DoubleParam *_scrollY;
     OFX::StringParam *_srt;
     OFX::DoubleParam *_fps;
+    OFX::Int2DParam  *_range;
 };
 
 TextFXPlugin::TextFXPlugin(OfxImageEffectHandle handle)
@@ -427,6 +435,7 @@ TextFXPlugin::TextFXPlugin(OfxImageEffectHandle handle)
 , _scrollY(NULL)
 , _srt(NULL)
 , _fps(NULL)
+, _range(NULL)
 {
     _dstClip = fetchClip(kOfxImageEffectOutputClipName);
     assert(_dstClip && _dstClip->getPixelComponents() == OFX::ePixelComponentRGBA);
@@ -474,6 +483,10 @@ TextFXPlugin::TextFXPlugin(OfxImageEffectHandle handle)
     _scrollY = fetchDoubleParam(kParamScrollY);
     _srt = fetchStringParam(kParamSubtitleFile);
     _fps = fetchDoubleParam(kParamFPS);
+    if (getContext() == eContextGeneral) {
+        _range   = fetchInt2DParam(kParamGeneratorRange);
+        assert(_range);
+    }
 
     assert(_text && _fontSize && _fontName && _textColor && _bgColor && _font && _wrap
            && _justify && _align && _valign && _markup && _style && auto_ && stretch_ && weight_ && strokeColor_
@@ -1375,6 +1388,25 @@ bool TextFXPlugin::getRegionOfDefinition(const OFX::RegionOfDefinitionArguments 
     return true;
 }
 
+bool TextFXPlugin::getTimeDomain(OfxRangeD &range)
+{
+    // this should only be called in the general context, ever!
+    if (getContext() == eContextGeneral) {
+        assert(_range);
+        // how many frames on the input clip
+        //OfxRangeD srcRange = _srcClip->getFrameRange();
+
+        int min, max;
+        _range->getValue(min, max);
+        range.min = min;
+        range.max = max;
+
+        return true;
+    }
+
+    return false;
+}
+
 mDeclarePluginFactory(TextFXPluginFactory, {}, {});
 
 /** @brief The basic describe function, passed a plugin descriptor */
@@ -1386,6 +1418,7 @@ void TextFXPluginFactory::describe(OFX::ImageEffectDescriptor &desc)
     desc.setPluginDescription("Advanced text generator node using Pango and Cairo.");
 
     // add the supported contexts
+    desc.addSupportedContext(eContextGeneral);
     desc.addSupportedContext(eContextGenerator);
 
     // add supported pixel depths
@@ -1401,7 +1434,7 @@ void TextFXPluginFactory::describe(OFX::ImageEffectDescriptor &desc)
 }
 
 /** @brief The describe in context function, passed a plugin descriptor and a context */
-void TextFXPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, ContextEnum /*context*/)
+void TextFXPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, ContextEnum context)
 {
     // natron?
     gHostIsNatron = (OFX::getImageEffectHostDescription()->isNatron);
@@ -1916,6 +1949,18 @@ void TextFXPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, Co
         param->setDisplayRange(-4000, 4000);
         param->setDefault(kParamScrollYDefault);
         param->setAnimates(true);
+        if (page) {
+            page->addChild(*param);
+        }
+    }
+    // range
+    if (context == eContextGeneral) {
+        Int2DParamDescriptor *param = desc.defineInt2DParam(kParamGeneratorRange);
+        param->setLabel(kParamGeneratorRangeLabel);
+        param->setHint(kParamGeneratorRangeHint);
+        param->setDefault(1, 1);
+        param->setDimensionLabels("min", "max");
+        param->setAnimates(false); // can not animate, because it defines the time domain
         if (page) {
             page->addChild(*param);
         }
