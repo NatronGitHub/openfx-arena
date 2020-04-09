@@ -27,7 +27,7 @@
 #define kPluginGrouping "Extra/Draw"
 #define kPluginIdentifier "net.fxarena.openfx.Texture"
 #define kPluginVersionMajor 3
-#define kPluginVersionMinor 7
+#define kPluginVersionMinor 8
 
 #define kSupportsTiles 0
 #define kSupportsMultiResolution 0
@@ -68,6 +68,10 @@
 #define kParamOpenMPHint "Enable/Disable OpenMP support. This will enable the plugin to use as many threads as allowed by host."
 #define kParamOpenMPDefault false
 
+#define kParamGeneratorRange "frameRange"
+#define kParamGeneratorRangeLabel "Frame Range"
+#define kParamGeneratorRangeHint "Time domain."
+
 using namespace OFX;
 static bool gHostIsNatron = false;
 static bool _hasOpenMP = false;
@@ -89,6 +93,7 @@ public:
     virtual ~TexturePlugin();
     virtual void render(const OFX::RenderArguments &args) OVERRIDE FINAL;
     virtual bool getRegionOfDefinition(const OFX::RegionOfDefinitionArguments &args, OfxRectD &rod) OVERRIDE FINAL;
+    virtual bool getTimeDomain(OfxRangeD &range) OVERRIDE FINAL;
     virtual void getClipPreferences(OFX::ClipPreferencesSetter &clipPreferences) OVERRIDE FINAL;
 private:
     OFX::Clip *dstClip_;
@@ -99,6 +104,7 @@ private:
     OFX::StringParam *fromColor_;
     OFX::StringParam *toColor_;
     OFX::BooleanParam *enableOpenMP_;
+    OFX::Int2DParam  *_range;
 };
 
 TexturePlugin::TexturePlugin(OfxImageEffectHandle handle)
@@ -111,6 +117,7 @@ TexturePlugin::TexturePlugin(OfxImageEffectHandle handle)
 , fromColor_(NULL)
 , toColor_(NULL)
 , enableOpenMP_(NULL)
+, _range(NULL)
 {
     Magick::InitializeMagick(NULL);
 
@@ -124,7 +131,10 @@ TexturePlugin::TexturePlugin(OfxImageEffectHandle handle)
     fromColor_ = fetchStringParam(kParamFromColor);
     toColor_ = fetchStringParam(kParamToColor);
     enableOpenMP_ = fetchBooleanParam(kParamOpenMP);
-
+    if (getContext() == eContextGeneral) {
+        _range   = fetchInt2DParam(kParamGeneratorRange);
+        assert(_range);
+    }
     assert(effect_ && seed_ && width_ && height_ && fromColor_ && toColor_ && enableOpenMP_);
 }
 
@@ -316,6 +326,25 @@ bool TexturePlugin::getRegionOfDefinition(const OFX::RegionOfDefinitionArguments
     return true;
 }
 
+bool TexturePlugin::getTimeDomain(OfxRangeD &range)
+{
+    // this should only be called in the general context, ever!
+    if (getContext() == eContextGeneral) {
+        assert(_range);
+        // how many frames on the input clip
+        //OfxRangeD srcRange = _srcClip->getFrameRange();
+
+        int min, max;
+        _range->getValue(min, max);
+        range.min = min;
+        range.max = max;
+
+        return true;
+    }
+
+    return false;
+}
+
 mDeclarePluginFactory(TexturePluginFactory, {}, {});
 
 /** @brief The basic describe function, passed a plugin descriptor */
@@ -340,7 +369,7 @@ void TexturePluginFactory::describe(OFX::ImageEffectDescriptor &desc)
 }
 
 /** @brief The describe in context function, passed a plugin descriptor and a context */
-void TexturePluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, ContextEnum /*context*/)
+void TexturePluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, ContextEnum context)
 {   
     std::string features = MagickCore::GetMagickFeatures();
     if (features.find("OpenMP") != std::string::npos)
@@ -457,6 +486,18 @@ void TexturePluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, C
             param->setEnabled(false);
         param->setLayoutHint(OFX::eLayoutHintDivider);
         page->addChild(*param);
+    }
+    // range
+    if (context == eContextGeneral) {
+        Int2DParamDescriptor *param = desc.defineInt2DParam(kParamGeneratorRange);
+        param->setLabel(kParamGeneratorRangeLabel);
+        param->setHint(kParamGeneratorRangeHint);
+        param->setDefault(1, 1);
+        param->setDimensionLabels("min", "max");
+        param->setAnimates(false); // can not animate, because it defines the time domain
+        if (page) {
+            page->addChild(*param);
+        }
     }
 }
 
