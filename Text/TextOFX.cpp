@@ -39,7 +39,7 @@
 #define kPluginGrouping "Draw"
 #define kPluginIdentifier "net.fxarena.openfx.Text"
 #define kPluginVersionMajor 6
-#define kPluginVersionMinor 11
+#define kPluginVersionMinor 12
 
 #define kSupportsTiles 0
 #define kSupportsMultiResolution 0
@@ -250,6 +250,7 @@ std::list<std::string> _genFonts(OFX::ChoiceParam *fontName, OFX::StringParam *f
         std::string fontCustom;
         fontOverride->getValue(fontCustom);
         if (!fontCustom.empty()) {
+            fontConfig = FcInitLoadConfig();
             const FcChar8 * fileCustom = (const FcChar8 *)fontCustom.c_str();
             if (!fontOverrideDir) {
                 FcConfigAppFontAddFile(fontConfig,fileCustom);
