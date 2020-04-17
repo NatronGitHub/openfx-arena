@@ -210,8 +210,8 @@
 #define kParamCenterInteractDefault false
 
 #define kParamFontOverride "custom"
-#define kParamFontOverrideLabel "Custom font"
-#define kParamFontOverrideHint "Add custom font."
+#define kParamFontOverrideLabel "Custom font(s)"
+#define kParamFontOverrideHint "Add custom font(s) to the font list. This can be a font file or a directory with fonts.\n\nIf you want a portable project copy all used fonts to [Project]/fonts (or similar) and reference them here."
 
 #define kParamScrollX "scrollX"
 #define kParamScrollXLabel "Scroll X"
