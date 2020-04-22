@@ -39,7 +39,7 @@
 #define kPluginGrouping "Draw"
 #define kPluginIdentifier "net.fxarena.openfx.Text"
 #define kPluginVersionMajor 6
-#define kPluginVersionMinor 11
+#define kPluginVersionMinor 12
 
 #define kSupportsTiles 0
 #define kSupportsMultiResolution 0
@@ -1711,8 +1711,8 @@ void TextFXPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, Co
         IntParamDescriptor* param = desc.defineIntParam(kParamLetterSpace);
         param->setLabel(kParamLetterSpaceLabel);
         param->setHint(kParamLetterSpaceHint);
-        param->setRange(0, 10000);
-        param->setDisplayRange(0, 500);
+        param->setRange(-10000, 10000);
+        param->setDisplayRange(-250, 250);
         param->setDefault(kParamLetterSpaceDefault);
         param->setLayoutHint(OFX::eLayoutHintDivider);
         if (page) {
