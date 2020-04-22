@@ -914,8 +914,13 @@ void TextFXPlugin::render(const OFX::RenderArguments &args)
     pango_cairo_context_set_font_options(pango_layout_get_context(layout), options);
 
     if (markup) {
-        pango_layout_set_markup(layout, text.c_str(), -1);
-    } else {
+        if ( pango_parse_markup(text.c_str(), -1, 0, NULL, NULL, NULL, NULL) ) {
+            pango_layout_set_markup(layout, text.c_str(), -1);
+        } else {
+            markup = false; // fallback to plain text
+        }
+    }
+    if (!markup) {
         pango_layout_set_text(layout, text.c_str(), -1);
     }
 
@@ -1342,8 +1347,13 @@ bool TextFXPlugin::getRegionOfDefinition(const OFX::RegionOfDefinitionArguments 
         alist = pango_attr_list_new();
 
         if (markup) {
-            pango_layout_set_markup(layout, text.c_str(), -1);
-        } else {
+            if ( pango_parse_markup(text.c_str(), -1, 0, NULL, NULL, NULL, NULL) ) {
+                pango_layout_set_markup(layout, text.c_str(), -1);
+            } else {
+                markup = false; // fallback to plain text
+            }
+        }
+        if (!markup) {
             pango_layout_set_text(layout, text.c_str(), -1);
         }
 
@@ -1949,6 +1959,7 @@ void TextFXPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, Co
         param->setDisplayRange(-4000, 4000);
         param->setDefault(kParamScrollYDefault);
         param->setAnimates(true);
+        param->setLayoutHint(OFX::eLayoutHintDivider);
         if (page) {
             page->addChild(*param);
         }
