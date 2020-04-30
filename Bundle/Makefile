@@ -53,6 +53,7 @@ PLUGINOBJECTS += \
     MagickPlugin.o \
     ofxsOGLTextRenderer.o \
     ofxsOGLFontData.o \
+    ofxsGenerator.o \
     ofxsRectangleInteract.o \
     ofxsTransform3x3.o \
     ofxsTransformInteract.o \

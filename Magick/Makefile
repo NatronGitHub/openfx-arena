@@ -28,6 +28,7 @@ PLUGINOBJECTS = \
     MagickPlugin.o \
     ofxsOGLTextRenderer.o \
     ofxsOGLFontData.o \
+    ofxsGenerator.o \
     ofxsRectangleInteract.o \
     GenericReader.o \
     GenericOCIO.o \

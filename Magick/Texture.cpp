@@ -17,8 +17,7 @@
 */
 
 #include "ofxsMacros.h"
-#include "ofxsMultiThread.h"
-#include "ofxsImageEffect.h"
+#include "ofxsGenerator.h"
 #include "ofxNatron.h"
 #include <Magick++.h>
 #include <iostream>
@@ -26,14 +25,16 @@
 #define kPluginName "TextureOFX"
 #define kPluginGrouping "Extra/Draw"
 #define kPluginIdentifier "net.fxarena.openfx.Texture"
-#define kPluginVersionMajor 3
-#define kPluginVersionMinor 8
+#define kPluginVersionMajor 4
+#define kPluginVersionMinor 0
 
 #define kSupportsTiles 0
 #define kSupportsMultiResolution 0
 #define kSupportsRenderScale 0
 #define kRenderThreadSafety eRenderFullySafe
 #define kHostFrameThreading false
+#define kSupportsMultipleClipPARs false
+#define kSupportsMultipleClipDepths false
 
 #define kParamEffect "background"
 #define kParamEffectLabel "Background"
@@ -45,16 +46,6 @@
 #define kParamSeedHint "Seed the random generator"
 #define kParamSeedDefault 0
 
-#define kParamWidth "width"
-#define kParamWidthLabel "Width"
-#define kParamWidthHint "Set canvas width, default (0) is project format"
-#define kParamWidthDefault 0
-
-#define kParamHeight "height"
-#define kParamHeightLabel "Height"
-#define kParamHeightHint "Set canvas height, default (0) is project format"
-#define kParamHeightDefault 0
-
 #define kParamFromColor "fromColor"
 #define kParamFromColorLabel "Color from"
 #define kParamFromColorHint "Set start color, you must set a end color for this to work. Valid values are: none (transparent), color name (red, blue etc) or hex colors"
@@ -63,18 +54,8 @@
 #define kParamToColorLabel "Color to"
 #define kParamToColorHint "Set end color, you must set a start color for this to work. Valid values are : none (transparent), color name (red, blue etc) or hex colors"
 
-#define kParamOpenMP "openmp"
-#define kParamOpenMPLabel "OpenMP"
-#define kParamOpenMPHint "Enable/Disable OpenMP support. This will enable the plugin to use as many threads as allowed by host."
-#define kParamOpenMPDefault false
-
-#define kParamGeneratorRange "frameRange"
-#define kParamGeneratorRangeLabel "Frame Range"
-#define kParamGeneratorRangeHint "Time domain."
-
 using namespace OFX;
 static bool gHostIsNatron = false;
-static bool _hasOpenMP = false;
 
 static unsigned int hash(unsigned int a)
 {
@@ -86,99 +67,81 @@ static unsigned int hash(unsigned int a)
     return a;
 }
 
-class TexturePlugin : public OFX::ImageEffect
+class TexturePlugin : public GeneratorPlugin
 {
 public:
     TexturePlugin(OfxImageEffectHandle handle);
-    virtual ~TexturePlugin();
-    virtual void render(const OFX::RenderArguments &args) OVERRIDE FINAL;
-    virtual bool getRegionOfDefinition(const OFX::RegionOfDefinitionArguments &args, OfxRectD &rod) OVERRIDE FINAL;
-    virtual bool getTimeDomain(OfxRangeD &range) OVERRIDE FINAL;
-    virtual void getClipPreferences(OFX::ClipPreferencesSetter &clipPreferences) OVERRIDE FINAL;
+    virtual void render(const RenderArguments &args) OVERRIDE FINAL;
+    virtual bool getRegionOfDefinition(const RegionOfDefinitionArguments &args, OfxRectD &rod) OVERRIDE FINAL;
+    virtual void getClipPreferences(ClipPreferencesSetter &clipPreferences) OVERRIDE FINAL;
 private:
-    OFX::Clip *dstClip_;
-    OFX::ChoiceParam *effect_;
-    OFX::IntParam *seed_;
-    OFX::IntParam *width_;
-    OFX::IntParam *height_;
-    OFX::StringParam *fromColor_;
-    OFX::StringParam *toColor_;
-    OFX::BooleanParam *enableOpenMP_;
-    OFX::Int2DParam  *_range;
+    Clip *_dstClip;
+    ChoiceParam *_effect;
+    IntParam *_seed;
+    StringParam *_fromColor;
+    StringParam *_toColor;
 };
 
-TexturePlugin::TexturePlugin(OfxImageEffectHandle handle)
-: OFX::ImageEffect(handle)
-, dstClip_(NULL)
-, effect_(NULL)
-, seed_(NULL)
-, width_(NULL)
-, height_(NULL)
-, fromColor_(NULL)
-, toColor_(NULL)
-, enableOpenMP_(NULL)
-, _range(NULL)
+TexturePlugin::TexturePlugin(OfxImageEffectHandle handle) :
+    GeneratorPlugin(handle, false, false, false, false, true)
+    , _dstClip(nullptr)
+    , _effect(nullptr)
+    , _seed(nullptr)
+    , _fromColor(nullptr)
+    , _toColor(nullptr)
 {
-    Magick::InitializeMagick(NULL);
+    Magick::InitializeMagick(nullptr);
+    Magick::ResourceLimits::thread(1);
 
-    dstClip_ = fetchClip(kOfxImageEffectOutputClipName);
-    assert(dstClip_ && (dstClip_->getPixelComponents() == OFX::ePixelComponentRGBA || dstClip_->getPixelComponents() == OFX::ePixelComponentRGB));
+    _dstClip = fetchClip(kOfxImageEffectOutputClipName);
+    assert(_dstClip && (_dstClip->getPixelComponents() == ePixelComponentRGBA || _dstClip->getPixelComponents() == ePixelComponentRGB));
 
-    effect_ = fetchChoiceParam(kParamEffect);
-    seed_ = fetchIntParam(kParamSeed);
-    width_ = fetchIntParam(kParamWidth);
-    height_ = fetchIntParam(kParamHeight);
-    fromColor_ = fetchStringParam(kParamFromColor);
-    toColor_ = fetchStringParam(kParamToColor);
-    enableOpenMP_ = fetchBooleanParam(kParamOpenMP);
-    if (getContext() == eContextGeneral) {
-        _range   = fetchInt2DParam(kParamGeneratorRange);
-        assert(_range);
-    }
-    assert(effect_ && seed_ && width_ && height_ && fromColor_ && toColor_ && enableOpenMP_);
+    _effect = fetchChoiceParam(kParamEffect);
+    _seed = fetchIntParam(kParamSeed);
+    _fromColor = fetchStringParam(kParamFromColor);
+    _toColor = fetchStringParam(kParamToColor);
+    assert(_effect && _seed && _fromColor && _toColor);
 }
 
-TexturePlugin::~TexturePlugin()
-{
-}
 
 /* set the frame varying flag */
-void TexturePlugin::getClipPreferences(OFX::ClipPreferencesSetter &clipPreferences)
+void TexturePlugin::getClipPreferences(ClipPreferencesSetter &clipPreferences)
 {
     clipPreferences.setOutputFrameVarying(true);
+    GeneratorPlugin::getClipPreferences(clipPreferences);
 }
 
 /* Override the render */
-void TexturePlugin::render(const OFX::RenderArguments &args)
+void TexturePlugin::render(const RenderArguments &args)
 {
     if (!kSupportsRenderScale && (args.renderScale.x != 1. || args.renderScale.y != 1.)) {
-        OFX::throwSuiteStatusException(kOfxStatFailed);
+        throwSuiteStatusException(kOfxStatFailed);
         return;
     }
 
-    if (!dstClip_) {
-        OFX::throwSuiteStatusException(kOfxStatFailed);
+    if (!_dstClip) {
+        throwSuiteStatusException(kOfxStatFailed);
         return;
     }
-    assert(dstClip_);
+    assert(_dstClip);
 
-    OFX::auto_ptr<OFX::Image> dstImg(dstClip_->fetchImage(args.time));
+    OFX::auto_ptr<OFX::Image> dstImg(_dstClip->fetchImage(args.time));
     if (!dstImg.get()) {
-        OFX::throwSuiteStatusException(kOfxStatFailed);
+        throwSuiteStatusException(kOfxStatFailed);
         return;
     }
 
     checkBadRenderScaleOrField(dstImg, args);
 
-    OFX::BitDepthEnum dstBitDepth = dstImg->getPixelDepth();
-    if (dstBitDepth != OFX::eBitDepthFloat && dstBitDepth != OFX::eBitDepthUShort && dstBitDepth != OFX::eBitDepthUByte) {
-        OFX::throwSuiteStatusException(kOfxStatErrFormat);
+    BitDepthEnum dstBitDepth = dstImg->getPixelDepth();
+    if (dstBitDepth != eBitDepthFloat && dstBitDepth != eBitDepthUShort && dstBitDepth != eBitDepthUByte) {
+        throwSuiteStatusException(kOfxStatErrFormat);
         return;
     }
 
-    OFX::PixelComponentEnum dstComponents  = dstImg->getPixelComponents();
-    if ((dstComponents != OFX::ePixelComponentRGBA && dstComponents != OFX::ePixelComponentRGB && dstComponents != OFX::ePixelComponentAlpha)) {
-        OFX::throwSuiteStatusException(kOfxStatErrFormat);
+    PixelComponentEnum dstComponents  = dstImg->getPixelComponents();
+    if (dstComponents != ePixelComponentRGBA) {
+        throwSuiteStatusException(kOfxStatErrFormat);
         return;
     }
 
@@ -187,47 +150,38 @@ void TexturePlugin::render(const OFX::RenderArguments &args)
     OfxRectI dstRod = dstImg->getRegionOfDefinition();
     if(args.renderWindow.x1 < dstBounds.x1 || args.renderWindow.x1 >= dstBounds.x2 || args.renderWindow.y1 < dstBounds.y1 || args.renderWindow.y1 >= dstBounds.y2 ||
        args.renderWindow.x2 <= dstBounds.x1 || args.renderWindow.x2 > dstBounds.x2 || args.renderWindow.y2 <= dstBounds.y1 || args.renderWindow.y2 > dstBounds.y2) {
-        OFX::throwSuiteStatusException(kOfxStatErrValue);
+        throwSuiteStatusException(kOfxStatErrValue);
         return;
     }
 
     // Get params
     int effect,seed;
-    bool enableOpenMP = false;
     std::string fromColor, toColor;
-    effect_->getValueAtTime(args.time, effect);
-    seed_->getValueAtTime(args.time, seed);
-    fromColor_->getValueAtTime(args.time, fromColor);
-    toColor_->getValueAtTime(args.time, toColor);
-    enableOpenMP_->getValueAtTime(args.time, enableOpenMP);
-
-    // OpenMP
-#ifndef LEGACYIM
-    unsigned int threads = 1;
-    if (_hasOpenMP && enableOpenMP)
-        threads = OFX::MultiThread::getNumCPUs();
-
-    Magick::ResourceLimits::thread(threads);
-#endif
+    _effect->getValueAtTime(args.time, effect);
+    _seed->getValueAtTime(args.time, seed);
+    _fromColor->getValueAtTime(args.time, fromColor);
+    _toColor->getValueAtTime(args.time, toColor);
 
     // Generate empty image
     int width = dstRod.x2-dstRod.x1;
     int height = dstRod.y2-dstRod.y1;
-    Magick::Image image(Magick::Geometry(width,height),Magick::Color("rgba(0,0,0,0)"));
+    //std::cout << "WIDTH: " << width << " HEIGHT: " << height << std::endl;
+    Magick::Image image( Magick::Geometry(width, height), Magick::Color("rgba(0, 0, 0, 0)") );
 
     // Set seed
 #ifndef NOMAGICKSEED
-    Magick::SetRandomSeed(hash((unsigned)(args.time)^seed));
+    Magick::SetRandomSeed( hash((unsigned)(args.time)^seed) );
 #endif
 
     // generate background
     try {
         switch (effect) {
         case 0: // Plasma
-            if (fromColor.empty() && toColor.empty())
+            if (fromColor.empty() && toColor.empty()) {
                 image.read("plasma:");
-            else
+            } else {
                 image.read("plasma:"+fromColor+"-"+toColor);
+            }
             break;
         case 1: // Plasma Fractal
             image.read("plasma:fractal");
@@ -245,23 +199,25 @@ void TexturePlugin::render(const OFX::RenderArguments &args)
             image.read("pattern:checkerboard");
             break;
         case 6: // stripes
-            image.extent(Magick::Geometry(width,1));
+            image.extent( Magick::Geometry(width, 1) );
             image.addNoise(Magick::GaussianNoise);
             image.channel(Magick::GreenChannel);
             image.negate();
-            image.scale(Magick::Geometry(width,height));
+            image.scale( Magick::Geometry(width, height) );
             break;
         case 7: // gradient
-            if (fromColor.empty() && toColor.empty())
+            if ( fromColor.empty() && toColor.empty() ) {
                 image.read("gradient:");
-            else
+            } else {
                 image.read("gradient:"+fromColor+"-"+toColor);
+            }
             break;
         case 8: // radial-gradient
-            if (fromColor.empty() && toColor.empty())
+            if ( fromColor.empty() && toColor.empty() ) {
                 image.read("radial-gradient:");
-            else
+            } else {
                 image.read("radial-gradient:"+fromColor+"-"+toColor);
+            }
             break;
         case 9: // loops1
             image.addNoise(Magick::GaussianNoise);
@@ -291,64 +247,42 @@ void TexturePlugin::render(const OFX::RenderArguments &args)
 #endif
         }
     }
-    catch(Magick::Warning &warning) { // ignore since warns interupt render
+    catch(Magick::Warning &warning) { // ignore
         #ifdef DEBUG
         std::cout << warning.what() << std::endl;
         #endif
     }
 
     // return image
-    if (dstClip_ && dstClip_->isConnected())
-        image.write(0,0,width,height,"RGBA",Magick::FloatPixel,(float*)dstImg->getPixelData());
+    if (_dstClip && _dstClip->isConnected()) {
+        switch (dstBitDepth) {
+        case eBitDepthUByte:
+            image.write( 0, 0, width, height, "RGBA", Magick::CharPixel, (char*)dstImg->getPixelData() );
+            break;
+        case eBitDepthUShort:
+            image.write( 0, 0, width, height, "RGBA", Magick::ShortPixel, (ushort*)dstImg->getPixelData() );
+            break;
+        case eBitDepthFloat:
+            image.write( 0, 0, width, height, "RGBA", Magick::FloatPixel, (float*)dstImg->getPixelData() );
+            break;
+        default:;
+        }
+    }
 }
 
-bool TexturePlugin::getRegionOfDefinition(const OFX::RegionOfDefinitionArguments &args, OfxRectD &rod)
+bool TexturePlugin::getRegionOfDefinition(const RegionOfDefinitionArguments &args, OfxRectD &rod)
 {
     if (!kSupportsRenderScale && (args.renderScale.x != 1. || args.renderScale.y != 1.)) {
-        OFX::throwSuiteStatusException(kOfxStatFailed);
+        throwSuiteStatusException(kOfxStatFailed);
         return false;
     }
-
-    int width,height;
-    width_->getValue(width);
-    height_->getValue(height);
-
-    if (width>0 && height>0) {
-        rod.x1 = rod.y1 = 0;
-        rod.x2 = width;
-        rod.y2 = height;
-    }
-    else {
-        rod.x1 = rod.y1 = kOfxFlagInfiniteMin;
-        rod.x2 = rod.y2 = kOfxFlagInfiniteMax;
-    }
-
-    return true;
-}
-
-bool TexturePlugin::getTimeDomain(OfxRangeD &range)
-{
-    // this should only be called in the general context, ever!
-    if (getContext() == eContextGeneral) {
-        assert(_range);
-        // how many frames on the input clip
-        //OfxRangeD srcRange = _srcClip->getFrameRange();
-
-        int min, max;
-        _range->getValue(min, max);
-        range.min = min;
-        range.max = max;
-
-        return true;
-    }
-
-    return false;
+    return GeneratorPlugin::getRegionOfDefinition(args.time, rod);
 }
 
 mDeclarePluginFactory(TexturePluginFactory, {}, {});
 
 /** @brief The basic describe function, passed a plugin descriptor */
-void TexturePluginFactory::describe(OFX::ImageEffectDescriptor &desc)
+void TexturePluginFactory::describe(ImageEffectDescriptor &desc)
 {
     // basic labels
     desc.setLabel(kPluginName);
@@ -360,22 +294,27 @@ void TexturePluginFactory::describe(OFX::ImageEffectDescriptor &desc)
     desc.addSupportedContext(eContextGenerator);
 
     // add supported pixel depths
+    //desc.addSupportedBitDepth(eBitDepthUByte);
+    //desc.addSupportedBitDepth(eBitDepthUShort);
     desc.addSupportedBitDepth(eBitDepthFloat);
 
-    desc.setSupportsTiles(kSupportsTiles);
     desc.setSupportsMultiResolution(kSupportsMultiResolution);
+    desc.setSupportsTiles(kSupportsTiles);
+    desc.setSupportsMultipleClipPARs(kSupportsMultipleClipPARs);
+    desc.setSupportsMultipleClipDepths(kSupportsMultipleClipDepths);
     desc.setRenderThreadSafety(kRenderThreadSafety);
-    desc.setHostFrameThreading(kHostFrameThreading);
+    desc.setSingleInstance(false);
+    desc.setHostFrameThreading(false);
+    desc.setTemporalClipAccess(false);
+    desc.setRenderTwiceAlways(false);
+
+    generatorDescribe(desc);
 }
 
 /** @brief The describe in context function, passed a plugin descriptor and a context */
-void TexturePluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, ContextEnum context)
+void TexturePluginFactory::describeInContext(ImageEffectDescriptor &desc, ContextEnum context)
 {   
-    std::string features = MagickCore::GetMagickFeatures();
-    if (features.find("OpenMP") != std::string::npos)
-        _hasOpenMP = true;
-
-    gHostIsNatron = (OFX::getImageEffectHostDescription()->isNatron);
+    gHostIsNatron = (getImageEffectHostDescription()->isNatron);
 
     // there has to be an input clip, even for generators
     ClipDescriptor* srcClip = desc.defineClip(kOfxImageEffectSimpleSourceClipName);
@@ -390,11 +329,6 @@ void TexturePluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, C
 
     // make some pages
     PageParamDescriptor *page = desc.definePageParam("Controls");
-    GroupParamDescriptor *groupCanvas = desc.defineGroupParam("Canvas");
-    groupCanvas->setOpen(false);
-    {
-        page->addChild(*groupCanvas);
-    }
     {
         ChoiceParamDescriptor *param = desc.defineChoiceParam(kParamEffect);
         param->setLabel(kParamEffectLabel);
@@ -430,7 +364,9 @@ void TexturePluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, C
         }
         param->setDefault(kParamEffectDefault);
         param->setAnimates(true);
-        page->addChild(*param);
+        if (page) {
+            page->addChild(*param);
+        }
     }
     {
         IntParamDescriptor *param = desc.defineIntParam(kParamSeed);
@@ -439,25 +375,9 @@ void TexturePluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, C
         param->setRange(0, 10000);
         param->setDisplayRange(0, 5000);
         param->setDefault(kParamSeedDefault);
-        page->addChild(*param);
-    }
-    {
-        IntParamDescriptor* param = desc.defineIntParam(kParamWidth);
-        param->setLabel(kParamWidthLabel);
-        param->setHint(kParamWidthHint);
-        param->setRange(0, 10000);
-        param->setDisplayRange(0, 4000);
-        param->setDefault(kParamWidthDefault);
-        param->setParent(*groupCanvas);
-    }
-    {
-        IntParamDescriptor* param = desc.defineIntParam(kParamHeight);
-        param->setLabel(kParamHeightLabel);
-        param->setHint(kParamHeightHint);
-        param->setRange(0, 10000);
-        param->setDisplayRange(0, 4000);
-        param->setDefault(kParamHeightDefault);
-        param->setParent(*groupCanvas);
+        if (page) {
+            page->addChild(*param);
+        }
     }
     {
         StringParamDescriptor* param = desc.defineStringParam(kParamFromColor);
@@ -465,7 +385,9 @@ void TexturePluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, C
         param->setHint(kParamFromColorHint);
         param->setStringType(eStringTypeSingleLine);
         param->setAnimates(true);
-        page->addChild(*param);
+        if (page) {
+            page->addChild(*param);
+        }
     }
     {
         StringParamDescriptor* param = desc.defineStringParam(kParamToColor);
@@ -473,32 +395,12 @@ void TexturePluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, C
         param->setHint(kParamToColorHint);
         param->setStringType(eStringTypeSingleLine);
         param->setAnimates(true);
-        param->setLayoutHint(OFX::eLayoutHintDivider);
-        page->addChild(*param);
-    }
-    {
-        BooleanParamDescriptor *param = desc.defineBooleanParam(kParamOpenMP);
-        param->setLabel(kParamOpenMPLabel);
-        param->setHint(kParamOpenMPHint);
-        param->setDefault(kParamOpenMPDefault);
-        param->setAnimates(false);
-        if (!_hasOpenMP)
-            param->setEnabled(false);
-        param->setLayoutHint(OFX::eLayoutHintDivider);
-        page->addChild(*param);
-    }
-    // range
-    if (context == eContextGeneral) {
-        Int2DParamDescriptor *param = desc.defineInt2DParam(kParamGeneratorRange);
-        param->setLabel(kParamGeneratorRangeLabel);
-        param->setHint(kParamGeneratorRangeHint);
-        param->setDefault(1, 1);
-        param->setDimensionLabels("min", "max");
-        param->setAnimates(false); // can not animate, because it defines the time domain
+        param->setLayoutHint(eLayoutHintDivider);
         if (page) {
             page->addChild(*param);
         }
     }
+    generatorDescribeInContext(page, desc, *dstClip, eGeneratorExtentDefault, ePixelComponentRGBA, false,  context);
 }
 
 /** @brief The create instance function, the plugin must return an object derived from the \ref OFX::ImageEffect class */

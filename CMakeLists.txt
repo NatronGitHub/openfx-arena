@@ -137,6 +137,7 @@ FILE(GLOB SUPPORT_SOURCES
     "${OFX_SUPPORT_LIBRARY_DIR}/*.h"
     "SupportExt/ofxsOGLTextRenderer.cpp"
     "SupportExt/ofxsOGLFontData.cpp"
+    "SupportExt/ofxsGenerator.cpp"
     "SupportExt/ofxsRectangleInteract.cpp"
     "SupportExt/ofxsTransform3x3.cpp"
     "SupportExt/ofxsTransformInteract.cpp"
