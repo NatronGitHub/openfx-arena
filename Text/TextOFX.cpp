@@ -33,13 +33,13 @@
 #include <fstream>
 
 #include "fx.h"
-#include "RichText.h" // common text related functions
+#include "RichText.h" // common text related functions (will be renamed to CommonText in the future)
 
 #define kPluginName "TextOFX"
 #define kPluginGrouping "Draw"
 #define kPluginIdentifier "net.fxarena.openfx.Text"
 #define kPluginVersionMajor 6
-#define kPluginVersionMinor 12
+#define kPluginVersionMinor 13
 
 #define kSupportsTiles 0
 #define kSupportsMultiResolution 0
@@ -56,14 +56,14 @@
 #define kParamFontSizeDefault 64
 
 #define kParamFontName "name"
-#define kParamFontNameLabel "Font family"
-#define kParamFontNameHint "The name of the font to be used."
+#define kParamFontNameLabel "Select font"
+#define kParamFontNameHint "Select font family to be used.\n\nThis parameter is only used to set font family in the 'font' parameter. This parameter does not support animation, use the 'font' parameter for animation."
 #define kParamFontNameDefault "Arial"
 #define kParamFontNameAltDefault "DejaVu Sans" // failsafe on Linux/BSD
 
 #define kParamFont "font"
-#define kParamFontLabel "Font"
-#define kParamFontHint "Selected font."
+#define kParamFontLabel "Font family"
+#define kParamFontHint "The name of the font to be used.\n\nThis parameter can also be used to animate the font family."
 
 #define kParamStyle "style"
 #define kParamStyleLabel "Style"
@@ -531,6 +531,9 @@ TextFXPlugin::TextFXPlugin(OfxImageEffectHandle handle)
             }
         }
     }
+
+    // need to set a default or else font will be empty if we reset to default
+    _font->setDefault(font.empty()? fontName : font);
 }
 
 TextFXPlugin::~TextFXPlugin()
@@ -1650,7 +1653,7 @@ void TextFXPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, Co
         } else if (altFont > 0) {
             param->setDefault(altFont);
         }
-        param->setAnimates(false);
+        param->setAnimates(false); // can not animate, the param is dynamic
         if (fonts.empty()) {
             param->appendOption("N/A");
         }
@@ -1673,13 +1676,13 @@ void TextFXPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, Co
         param->setLabel(kParamFontLabel);
         param->setHint(kParamFontHint);
         param->setStringType(eStringTypeSingleLine);
-        param->setAnimates(false);
+        param->setAnimates(true);
 
-        #ifdef DEBUG
+        /*#ifdef DEBUG
         param->setIsSecret(false);
         #else
         param->setIsSecret(true);
-        #endif
+        #endif*/
 
         if (page) {
             page->addChild(*param);
