@@ -20,9 +20,11 @@ cp natron-windows-installer/mingw64/bin/mt.exe /mingw64/bin/
 
 # do a debug build
 make MINGW=1 CONFIG=debug
+make -C BlackmagicRAW CONFIG=debug
 
 # do a release build
 make MINGW=1 CONFIG=release
+make -C BlackmagicRAW CONFIG=release
 
 # package release build
 cd $CWD/Bundle/*-release

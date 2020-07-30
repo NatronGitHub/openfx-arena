@@ -105,6 +105,7 @@ script:
         make -C Magick
         make -C OCL
         make -C Text
+        make -C BlackmagicRAW
         mkdir build && cd build
         cmake -DAUDIO=ON .. && make
       ;;
