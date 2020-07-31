@@ -49,6 +49,8 @@ BlackmagicRAWHandler::getClipSpecs(const std::string &filename,
 
 #ifdef _WIN32
     BSTR cameraType;
+#elif __APPLE__
+    CFStringRef cameraType;
 #else
     const char* cameraType;
 #endif
@@ -60,6 +62,10 @@ BlackmagicRAWHandler::getClipSpecs(const std::string &filename,
         BSTR libraryPath = SysAllocStringLen(wpath.data(), wpath.size());
         factory = CreateBlackmagicRawFactoryInstanceFromPath(libraryPath);
         SysFreeString(libraryPath);
+#elif __APPLE__
+        CFStringRef cfpath = CFStringCreateWithCString(kCFAllocatorDefault, path.c_str(), kCFStringEncodingUTF8);
+        factory = CreateBlackmagicRawFactoryInstanceFromPath(cfpath);
+        //CFRelease(cfpath);
 #else
         factory = CreateBlackmagicRawFactoryInstanceFromPath(path.c_str());
 #endif
@@ -81,6 +87,10 @@ BlackmagicRAWHandler::getClipSpecs(const std::string &filename,
         BSTR clipName = SysAllocStringLen(wfile.data(), wfile.size());
         result = codec->OpenClip(clipName, &clip);
         SysFreeString(clipName);
+#elif __APPLE__
+        CFStringRef cffile = CFStringCreateWithCString(kCFAllocatorDefault, filename.c_str(), kCFStringEncodingUTF8);
+        result = codec->OpenClip(cffile, &clip);
+        //CFRelease(cffile);
 #else
         result = codec->OpenClip(filename.c_str(), &clip);
 #endif
@@ -124,6 +134,12 @@ BlackmagicRAWHandler::getClipSpecs(const std::string &filename,
                 SysFreeString(bval);
                 std::string val(wval.begin(), wval.end());
                 specs.availableGamut.push_back(val);
+#elif __APPLE__
+                CFIndex bufferSize = CFStringGetLength(colorGamutListVar[i].bstrVal) + 1;
+                char buffer[bufferSize];
+                if (CFStringGetCString(colorGamutListVar[i].bstrVal, buffer, bufferSize, kCFStringEncodingUTF8)) {
+                    specs.availableGamut.push_back(buffer);
+                }
 #else
                 specs.availableGamut.push_back(colorGamutListVar[i].bstrVal);
 #endif
@@ -138,6 +154,15 @@ BlackmagicRAWHandler::getClipSpecs(const std::string &filename,
         std::wstring defaultGamutWString(defaultGamut.bstrVal, SysStringLen(defaultGamut.bstrVal));
         std::string defaultGamutString(defaultGamutWString.begin(), defaultGamutWString.end());
         specs.gamut = defaultGamutString;
+#elif __APPLE__
+        CFStringRef cfgamut = CFStringCreateWithCString(kCFAllocatorDefault, "viewing_gamut", kCFStringEncodingUTF8);
+        result = clip->GetMetadata(cfgamut, &defaultGamut);
+        //CFRelease(cfgamut);
+        CFIndex defaultGamutBufferSize = CFStringGetLength(defaultGamut.bstrVal) + 1;
+        char defaultGamutBuffer[defaultGamutBufferSize];
+        if (CFStringGetCString(defaultGamut.bstrVal, defaultGamutBuffer, defaultGamutBufferSize, kCFStringEncodingUTF8)) {
+            specs.gamut = defaultGamutBuffer;
+        }
 #else
         result = clip->GetMetadata("viewing_gamut", &defaultGamut);
         specs.gamut = defaultGamut.bstrVal;
@@ -159,6 +184,12 @@ BlackmagicRAWHandler::getClipSpecs(const std::string &filename,
                 SysFreeString(bval);
                 std::string val(wval.begin(), wval.end());
                 specs.availableGamma.push_back(val);
+#elif __APPLE__
+                CFIndex bufferSize = CFStringGetLength(colorGammaListVar[i].bstrVal) + 1;
+                char buffer[bufferSize];
+                if (CFStringGetCString(colorGammaListVar[i].bstrVal, buffer, bufferSize, kCFStringEncodingUTF8)) {
+                    specs.availableGamma.push_back(buffer);
+                }
 #else
                 specs.availableGamma.push_back(colorGammaListVar[i].bstrVal);
 #endif
@@ -173,6 +204,15 @@ BlackmagicRAWHandler::getClipSpecs(const std::string &filename,
         std::wstring defaultGammaWString(defaultGamma.bstrVal, SysStringLen(defaultGamma.bstrVal));
         std::string defaultGammaString(defaultGammaWString.begin(), defaultGammaWString.end());
         specs.gamma = defaultGammaString;
+#elif __APPLE__
+        CFStringRef cfgamma = CFStringCreateWithCString(kCFAllocatorDefault, "viewing_gamma", kCFStringEncodingUTF8);
+        result = clip->GetMetadata(cfgamma, &defaultGamma);
+        //CFRelease(cfgamma);
+        CFIndex defaultGammaBufferSize = CFStringGetLength(defaultGamma.bstrVal) + 1;
+        char defaultGammaBuffer[defaultGammaBufferSize];
+        if (CFStringGetCString(defaultGamma.bstrVal, defaultGammaBuffer, defaultGammaBufferSize, kCFStringEncodingUTF8)) {
+            specs.gamma = defaultGammaBuffer;
+        }
 #else
         result = clip->GetMetadata("viewing_gamma", &defaultGamma);
         specs.gamma = defaultGamma.bstrVal;
@@ -297,7 +337,7 @@ BlackmagicRAWHandler::getClipSpecs(const std::string &filename,
     if (factory != nullptr) { factory->Release(); }
     cameraType = nullptr;
 #ifdef _WIN32
-        SysFreeString(cameraType);
+    SysFreeString(cameraType);
 #endif
     return specs;
 }
@@ -397,6 +437,10 @@ void BlackmagickRAWRendererCallback::ReadComplete(IBlackmagicRawJob *readJob,
         BSTR bgamut = SysAllocStringLen(wgamut.data(), wgamut.size());
         gamut.bstrVal = bgamut;
         SysFreeString(bgamut);
+#elif __APPLE__
+        CFStringRef cfgamut = CFStringCreateWithCString(kCFAllocatorDefault, specs.gamut.c_str(), kCFStringEncodingUTF8);
+        gamut.bstrVal = cfgamut;
+        CFRelease(cfgamut);
 #else
         gamut.bstrVal = specs.gamut.c_str();
 #endif
@@ -412,6 +456,10 @@ void BlackmagickRAWRendererCallback::ReadComplete(IBlackmagicRawJob *readJob,
         BSTR bgamma = SysAllocStringLen(wgamma.data(), wgamma.size());
         gamma.bstrVal = bgamma;
         SysFreeString(bgamma);
+#elif __APPLE__
+        CFStringRef cfgamma = CFStringCreateWithCString(kCFAllocatorDefault, specs.gamma.c_str(), kCFStringEncodingUTF8);
+        gamma.bstrVal = cfgamma;
+        CFRelease(cfgamma);
 #else
         gamma.bstrVal = specs.gamma.c_str();
 #endif

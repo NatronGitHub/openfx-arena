@@ -103,6 +103,15 @@ public:
                                            BSTR,
                                            uint32_t,
                                            BSTR) {}
+#elif __APPLE__
+    virtual void SidecarMetadataParseWarning(IBlackmagicRawClip*,
+                                             CFStringRef,
+                                             uint32_t,
+                                             CFStringRef) {}
+    virtual void SidecarMetadataParseError(IBlackmagicRawClip*,
+                                           CFStringRef,
+                                           uint32_t,
+                                           CFStringRef) {}
 #else
     virtual void SidecarMetadataParseWarning(IBlackmagicRawClip*,
                                              const char*,
@@ -137,11 +146,32 @@ public:
     virtual void TrimProgress(IBlackmagicRawJob*, float) {}
     virtual void TrimComplete(IBlackmagicRawJob*, HRESULT) {}
 #ifdef _WIN32
-    virtual void SidecarMetadataParseWarning(IBlackmagicRawClip*, BSTR, uint32_t, BSTR) {}
-    virtual void SidecarMetadataParseError(IBlackmagicRawClip*, BSTR, uint32_t, BSTR) {}
+    virtual void SidecarMetadataParseWarning(IBlackmagicRawClip*,
+                                             BSTR,
+                                             uint32_t,
+                                             BSTR) {}
+    virtual void SidecarMetadataParseError(IBlackmagicRawClip*,
+                                           BSTR,
+                                           uint32_t,
+                                           BSTR) {}
+#elif __APPLE__
+    virtual void SidecarMetadataParseWarning(IBlackmagicRawClip*,
+                                             CFStringRef,
+                                             uint32_t,
+                                             CFStringRef) {}
+    virtual void SidecarMetadataParseError(IBlackmagicRawClip*,
+                                           CFStringRef,
+                                           uint32_t,
+                                           CFStringRef) {}
 #else
-    virtual void SidecarMetadataParseWarning(IBlackmagicRawClip*, const char*, uint32_t, const char*) {}
-    virtual void SidecarMetadataParseError(IBlackmagicRawClip*, const char*, uint32_t, const char*) {}
+    virtual void SidecarMetadataParseWarning(IBlackmagicRawClip*,
+                                             const char*,
+                                             uint32_t,
+                                             const char*) {}
+    virtual void SidecarMetadataParseError(IBlackmagicRawClip*,
+                                           const char*,
+                                           uint32_t,
+                                           const char*) {}
 #endif
     virtual void PreparePipelineComplete(void*, HRESULT) {}
     virtual HRESULT STDMETHODCALLTYPE QueryInterface(REFIID, LPVOID*) { return E_NOTIMPL; }

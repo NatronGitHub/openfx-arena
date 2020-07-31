@@ -20,4 +20,4 @@ Blackmagic RAW is a modern, high performance, professional RAW codec that is ope
 make CONFIG=release
 ```
 
-Then copy ``BlackmagicRAW.ofx.bundle`` where you want it. Note that the plugin expects ``libBlackmagicRawAPI.so`` /``BlackmagicRawAPI.dll`` in ``BlackmagicRAW.ofx.bundle/Contents/Resources/BlackmagicRAW/``.
+Note that the plugin expects ``libBlackmagicRawAPI.so`` or ``BlackmagicRawAPI.dll`` or ``BlackmagicRawAPI.framework`` in ``BlackmagicRAW.ofx.bundle/Contents/Resources/BlackmagicRAW/`` depending on your platform.

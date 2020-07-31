@@ -310,6 +310,10 @@ BlackmagicRAWPlugin::decode(const std::string& filename,
         BSTR libraryPath = SysAllocStringLen(wpath.data(), wpath.size());
         factory = CreateBlackmagicRawFactoryInstanceFromPath(libraryPath);
         SysFreeString(libraryPath);
+#elif __APPLE__
+        CFStringRef cfpath = CFStringCreateWithCString(kCFAllocatorDefault, getLibraryPath().c_str(), kCFStringEncodingUTF8);
+        factory = CreateBlackmagicRawFactoryInstanceFromPath(cfpath);
+        //CFRelease(cfpath);
 #else
         factory = CreateBlackmagicRawFactoryInstanceFromPath(getLibraryPath().c_str());
 #endif
@@ -329,6 +333,10 @@ BlackmagicRAWPlugin::decode(const std::string& filename,
         BSTR clipName = SysAllocStringLen(wfile.data(), wfile.size());
         result = codec->OpenClip(clipName, &clip);
         SysFreeString(clipName);
+#elif __APPLE__
+        CFStringRef cffile = CFStringCreateWithCString(kCFAllocatorDefault, filename.c_str(), kCFStringEncodingUTF8);
+        result = codec->OpenClip(cffile, &clip);
+        //CFRelease(cffile);
 #else
         result = codec->OpenClip(filename.c_str(), &clip);
 #endif
@@ -511,7 +519,8 @@ const std::string BlackmagicRAWPlugin::getLibraryPath()
     // TODO: we should check if file exists
     std::string result = ofxPath;
     result.append("/Contents/Resources/BlackmagicRAW");
-    //result = "/usr/lib/blackmagic/BlackmagicRAWSDK/Linux/Libraries";
+    //"/usr/lib/blackmagic/BlackmagicRAWSDK/Linux/Libraries";
+    //"/Applications/Blackmagic\ RAW/Blackmagic\ RAW\ SDK/Mac/Libraries";
     return result;
 }
 

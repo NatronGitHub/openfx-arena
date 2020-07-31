@@ -26,6 +26,7 @@ endif
 ifeq ($(OS),Darwin)
 VPATH += $(SRCDIR)/BlackmagicRAW/sdk/Mac/Include
 CXXFLAGS += -I$(SRCDIR)/BlackmagicRAW/sdk/Mac/Include
+LINKFLAGS += -framework CoreFoundation
 endif
 ifeq ($(OS:MINGW%=MINGW),MINGW)
 VPATH += $(SRCDIR)/BlackmagicRAW/sdk/Win/Include
