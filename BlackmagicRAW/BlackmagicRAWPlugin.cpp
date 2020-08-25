@@ -516,11 +516,19 @@ bool BlackmagicRAWPlugin::getSequenceTimeDomain(const std::string &filename,
 
 const std::string BlackmagicRAWPlugin::getLibraryPath()
 {
-    // TODO: we should check if file exists
-    std::string result = ofxPath;
-    result.append("/Contents/Resources/BlackmagicRAW");
-    //"/usr/lib/blackmagic/BlackmagicRAWSDK/Linux/Libraries";
-    //"/Applications/Blackmagic\ RAW/Blackmagic\ RAW\ SDK/Mac/Libraries";
+    std::string result;// = ofxPath;
+    //result.append("/Contents/Resources/BlackmagicRAW");
+    // we require the official sdk being installed, that way we don't need to distribute the libraries
+#ifdef _WIN32
+    char const* pfiles = getenv("ProgramFiles");
+    if (pfiles == nullptr) { return result; }
+    result = pfiles;
+    result.append("\\Adobe\\Common\\Plug-ins\\7.0\\MediaCore\\BlackmagicRawAPI");
+#elif __APPLE__
+    result = "/Applications/Blackmagic\\ RAW/Blackmagic\\ RAW\\ SDK/Mac/Libraries";
+#else
+    result = "/usr/lib/blackmagic/BlackmagicRAWSDK/Linux/Libraries";
+#endif
     return result;
 }
 
