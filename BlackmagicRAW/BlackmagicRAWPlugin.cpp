@@ -28,7 +28,7 @@
 
 #define kPluginName "BlackmagicRAWOFX"
 #define kPluginGrouping "Image/Readers"
-#define kPluginIdentifier "fr.inria.openfx.ReadMisc" //"net.sf.openfx.BlackmagicRAW" (fake an "allowed" plugin until we are added in Natron)
+#define kPluginIdentifier "net.sf.openfx.BlackmagicRAW"
 
 // keep version in sync with SDK
 #define kPluginVersionMajor 1
@@ -44,7 +44,7 @@
     " - Blackmagic URSA Broadcast\n" \
     " - Canon EOS C300 Mark II captured by Blackmagic Video Assist 12G HDR\n" \
     " - Panasonic EVA1 captured by Blackmagic Video Assist 12G HDR\n" \
-    " - Sigma fp captured by Blackmagic Video Assist 12G HDR\n"
+    " - Sigma fp captured by Blackmagic Video Assist 12G HDR\n\n" \
 
 #define kParamISO "iso"
 #define kParamISOLabel "ISO"
