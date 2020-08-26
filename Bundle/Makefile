@@ -13,6 +13,13 @@ ifeq ($(shell pkg-config --exists sox && echo yes),yes)
 AUDIO = ON
 endif
 
+ifeq ($(BRAW), ON)
+PLUGINOBJECTS += \
+    BlackmagicRAWHandler.o \
+    BlackmagicRAWPlugin.o \
+    BlackmagicRawAPIDispatch.o
+endif
+
 ifeq ($(AUDIO), ON)
 PLUGINOBJECTS += AudioCurve.o
 endif
@@ -73,6 +80,12 @@ RESOURCES = \
     ../Extra/fr.inria.openfx.ReadKrita.svg \
     ../Extra/fr.inria.openfx.OpenRaster.png \
     ../Extra/fr.inria.openfx.OpenRaster.svg
+
+ifeq ($(BRAW), ON)
+RESOURCES += \
+    ../BlackmagicRAW/net.sf.openfx.BlackmagicRAW.png \
+    ../BlackmagicRAW/net.sf.openfx.BlackmagicRAW.svg
+endif
 
 ifeq ($(AUDIO), ON)
 RESOURCES += ../Audio/net.fxarena.openfx.AudioCurve.png
@@ -149,6 +162,19 @@ VPATH += \
     $(SRCDIR)/Magick/Morphology \
     $(SRCDIR)/lodepng
 
+ifeq ($(BRAW), ON)
+    VPATH += $(SRCDIR)/BlackmagicRAW
+    ifeq ($(OS),Linux)
+        VPATH += $(SRCDIR)/BlackmagicRAW/sdk/Linux/Include
+    endif
+    ifeq ($(OS),Darwin)
+        VPATH += $(SRCDIR)/BlackmagicRAW/sdk/Mac/Include
+    endif
+    ifeq ($(OS:MINGW%=MINGW),MINGW)
+        VPATH += $(SRCDIR)/BlackmagicRAW/sdk/Win/Include
+    endif
+endif
+
 ifeq ($(AUDIO), ON)
     VPATH += $(SRCDIR)/Audio
 endif
@@ -181,6 +207,20 @@ LINKFLAGS += \
     $(MAGICK_LINKFLAGS) \
     $(LCMS_LINKFLAGS) \
     $(GLIB_LINKFLAGS)
+
+ifeq ($(BRAW), ON)
+    ifeq ($(OS),Linux)
+        CXXFLAGS += -I$(SRCDIR)/BlackmagicRAW/sdk/Linux/Include
+    endif
+    ifeq ($(OS),Darwin)
+        CXXFLAGS += -I$(SRCDIR)/BlackmagicRAW/sdk/Mac/Include
+        LINKFLAGS += -framework CoreFoundation
+    endif
+    ifeq ($(OS:MINGW%=MINGW),MINGW)
+        CXXFLAGS += -I$(SRCDIR)/BlackmagicRAW/sdk/Win/Include
+        LINKFLAGS += -lole32 -loleaut32
+    endif
+endif
 
 ifeq ($(AUDIO), ON)
 CXXFLAGS += $(SOX_CXXFLAGS)
