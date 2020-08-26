@@ -15,9 +15,9 @@ endif
 
 ifeq ($(BRAW), ON)
 PLUGINOBJECTS += \
+    BlackmagicRawAPIDispatch.o \
     BlackmagicRAWHandler.o \
-    BlackmagicRAWPlugin.o \
-    BlackmagicRawAPIDispatch.o
+    BlackmagicRAWPlugin.o
 endif
 
 ifeq ($(AUDIO), ON)
