@@ -73,6 +73,7 @@ public:
         _renderscale = SupportsRenderScale;
 
         // set ImageMagick resources
+        Magick::InitializeMagick(NULL);
         Magick::ResourceLimits::disk(0);
         Magick::ResourceLimits::memory(MagickMemoryLimit);
         Magick::ResourceLimits::map(MagickMemoryLimit);
