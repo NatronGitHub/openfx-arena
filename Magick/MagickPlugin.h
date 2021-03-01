@@ -38,6 +38,8 @@
 #define kParamVPixelHint "Virtual Pixel Method."
 #define kParamVPixelDefault 12
 
+#define MagickMemoryLimit 4200000000
+
 static bool _hasMP = false;
 
 class MagickPluginHelperBase
@@ -69,6 +71,11 @@ public:
         : MagickPluginHelperBase(handle)
     {
         _renderscale = SupportsRenderScale;
+
+        // set ImageMagick resources
+        Magick::ResourceLimits::disk(0);
+        Magick::ResourceLimits::memory(MagickMemoryLimit);
+        Magick::ResourceLimits::map(MagickMemoryLimit);
     }
 
     virtual void render(const OFX::RenderArguments &args) OVERRIDE FINAL;
