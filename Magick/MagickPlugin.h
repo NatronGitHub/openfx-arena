@@ -75,8 +75,8 @@ public:
         // set ImageMagick resources
         Magick::InitializeMagick(NULL);
         Magick::ResourceLimits::disk(0);
-        Magick::ResourceLimits::memory(MagickMemoryLimit);
-        Magick::ResourceLimits::map(MagickMemoryLimit);
+        //Magick::ResourceLimits::memory(MagickMemoryLimit);
+        //Magick::ResourceLimits::map(MagickMemoryLimit);
     }
 
     virtual void render(const OFX::RenderArguments &args) OVERRIDE FINAL;
