@@ -24,8 +24,8 @@ before_install:
         mv msys64 /c/msys64-20180531
         # make msys2 use our custom repository
         sed -i 's/SigLevel    = Required DatabaseOptional/SigLevel = Never/' /c/msys64-20180531/etc/pacman.conf
-        echo "Server = https://downloads.sourceforge.net/project/openfx-arena/MINGW-packages/mingw64" > /c/msys64-20180531/etc/pacman.d/mirrorlist.mingw64
-        echo "Server = https://downloads.sourceforge.net/project/openfx-arena/MINGW-packages/msys" > /c/msys64-20180531/etc/pacman.d/mirrorlist.msys
+        echo "Server = https://downloads.sourceforge.net/project/natron/MINGW-packages/mingw64" > /c/msys64-20180531/etc/pacman.d/mirrorlist.mingw64
+        echo "Server = https://downloads.sourceforge.net/project/natron/MINGW-packages/msys" > /c/msys64-20180531/etc/pacman.d/mirrorlist.msys
         # create msys2/mingw64 wrappers
         export msys2='cmd //C RefreshEnv.cmd '
         export msys2+='& set MSYS=winsymlinks:nativestrict '
