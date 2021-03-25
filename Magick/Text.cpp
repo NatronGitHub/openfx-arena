@@ -673,13 +673,6 @@ void TextPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, Cont
 
     // make some pages
     PageParamDescriptor *page = desc.definePageParam("Controls");
-    GroupParamDescriptor *groupCanvas = desc.defineGroupParam("Canvas");
-
-    groupCanvas->setOpen(false);
-    bool hostHasNativeOverlayForPosition;
-    {
-        page->addChild(*groupCanvas);
-    }
     {
         Double2DParamDescriptor* param = desc.defineDouble2DParam(kParamPosition);
         param->setLabel(kParamPositionLabel);
@@ -688,8 +681,7 @@ void TextPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, Cont
         param->setDefaultCoordinateSystem(eCoordinatesNormalised);
         param->setDefault(0.5, 0.5);
         param->setAnimates(true);
-        hostHasNativeOverlayForPosition = param->getHostHasNativeOverlayHandle();
-        if (hostHasNativeOverlayForPosition)
+        if (param->getHostHasNativeOverlayHandle())
             param->setUseHostNativeOverlayHandle(true);
         page->addChild(*param);
     }
@@ -708,11 +700,10 @@ void TextPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, Cont
         param->setLabel(kParamInteractiveLabel);
         param->setHint(kParamInteractiveHint);
         param->setAnimates(false);
-        page->addChild(*param);
-
         //Do not show this parameter if the host handles the interact
-        if (hostHasNativeOverlayForPosition)
+        if (param->getHostHasNativeOverlayHandle())
             param->setIsSecret(true);
+        page->addChild(*param);
     }
     {
         ChoiceParamDescriptor *param = desc.defineChoiceParam(kParamGravity);
@@ -833,6 +824,9 @@ void TextPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, Cont
         param->setDisplayRange(0, 100);
         param->setDefault(kParamStrokeDefault);
         param->setParent(*groupStroke);
+        if (page) {
+            page->addChild(*param);
+        }
     }
     {
         RGBAParamDescriptor* param = desc.defineRGBAParam(kParamStrokeColor);
@@ -841,6 +835,9 @@ void TextPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, Cont
         param->setDefault(1., 1., 1., 1.);
         param->setAnimates(true);
         param->setParent(*groupStroke);
+        if (page) {
+            page->addChild(*param);
+        }
     }
     GroupParamDescriptor *groupSpace = desc.defineGroupParam("Spacing");
     {
@@ -854,6 +851,9 @@ void TextPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, Cont
         param->setDisplayRange(-500, 500);
         param->setDefault(kParamTextSpacingDefault);
         param->setParent(*groupSpace);
+        if (page) {
+            page->addChild(*param);
+        }
     }
     {
         DoubleParamDescriptor *param = desc.defineDoubleParam(kParamInterwordSpacing);
@@ -863,6 +863,9 @@ void TextPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, Cont
         param->setDisplayRange(-500, 500);
         param->setDefault(kParamInterwordSpacingDefault);
         param->setParent(*groupSpace);
+        if (page) {
+            page->addChild(*param);
+        }
     }
     {
         DoubleParamDescriptor *param = desc.defineDoubleParam(kParamInterlineSpacing);
@@ -872,6 +875,9 @@ void TextPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, Cont
         param->setDisplayRange(-500, 500);
         param->setDefault(kParamInterlineSpacingDefault);
         param->setParent(*groupSpace);
+        if (page) {
+            page->addChild(*param);
+        }
     }
     GroupParamDescriptor *groupShadow = desc.defineGroupParam("Shadow");
     {
@@ -885,6 +891,9 @@ void TextPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, Cont
         param->setDisplayRange(0, 100);
         param->setDefault(kParamShadowOpacityDefault);
         param->setParent(*groupShadow);
+        if (page) {
+            page->addChild(*param);
+        }
     }
     {
         DoubleParamDescriptor *param = desc.defineDoubleParam(kParamShadowSigma);
@@ -894,6 +903,9 @@ void TextPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, Cont
         param->setDisplayRange(0, 10);
         param->setDefault(kParamShadowSigmaDefault);
         param->setParent(*groupShadow);
+        if (page) {
+            page->addChild(*param);
+        }
     }
     {
         DoubleParamDescriptor *param = desc.defineDoubleParam(kParamShadowBlur);
@@ -903,6 +915,9 @@ void TextPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, Cont
         param->setDisplayRange(0, 10);
         param->setDefault(kParamShadowBlurDefault);
         param->setParent(*groupShadow);
+        if (page) {
+            page->addChild(*param);
+        }
     }
     {
         IntParamDescriptor* param = desc.defineIntParam(kParamShadowX);
@@ -913,6 +928,9 @@ void TextPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, Cont
         param->setDefault(kParamShadowXDefault);
         param->setAnimates(true);
         param->setParent(*groupShadow);
+        if (page) {
+            page->addChild(*param);
+        }
     }
     {
         IntParamDescriptor* param = desc.defineIntParam(kParamShadowY);
@@ -923,6 +941,9 @@ void TextPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, Cont
         param->setDefault(kParamShadowYDefault);
         param->setAnimates(true);
         param->setParent(*groupShadow);
+        if (page) {
+            page->addChild(*param);
+        }
     }
     {
         RGBParamDescriptor* param = desc.defineRGBParam(kParamShadowColor);
@@ -931,6 +952,14 @@ void TextPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, Cont
         param->setDefault(0., 0., 0.);
         param->setAnimates(true);
         param->setParent(*groupShadow);
+        if (page) {
+            page->addChild(*param);
+        }
+    }
+    GroupParamDescriptor *groupCanvas = desc.defineGroupParam("Canvas");
+    groupCanvas->setOpen(false);
+    {
+        page->addChild(*groupCanvas);
     }
     {
         IntParamDescriptor* param = desc.defineIntParam(kParamWidth);
@@ -940,6 +969,9 @@ void TextPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, Cont
         param->setDisplayRange(0, 4000);
         param->setDefault(kParamWidthDefault);
         param->setParent(*groupCanvas);
+        if (page) {
+            page->addChild(*param);
+        }
     }
     {
         IntParamDescriptor* param = desc.defineIntParam(kParamHeight);
@@ -949,6 +981,9 @@ void TextPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, Cont
         param->setDisplayRange(0, 4000);
         param->setDefault(kParamHeightDefault);
         param->setParent(*groupCanvas);
+        if (page) {
+            page->addChild(*param);
+        }
     }
 }
 
