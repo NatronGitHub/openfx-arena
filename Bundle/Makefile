@@ -202,6 +202,10 @@ ifeq ($(IM),68)
 CXXFLAGS += -DNOMAGICKSEED
 endif
 
+ifeq ($(READMISC_LEGACY),1)
+CXXFLAGS += -DREADMISC_LEGACY
+endif
+
 # lodepng version, see https://github.com/lvandeve/lodepng
 # a70c086077c0eaecbae3845e4da4424de5f43361 is Apr 21, 2016
 # c7bb19ad54a53f0d9917da37de7288b1aadf6d0f is Oct 23, 2017

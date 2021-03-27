@@ -29,7 +29,7 @@
 #define kPluginGrouping "Image/Readers"
 #define kPluginIdentifier "fr.inria.openfx.ReadMisc"
 #define kPluginVersionMajor 1
-#define kPluginVersionMinor 1
+#define kPluginVersionMinor 2
 #define kPluginEvaluation 80 // less than ReadOIIO
 
 #define kSupportsRGBA true
@@ -184,7 +184,9 @@ ReadMiscPluginFactory::load()
 {
     _extensions.clear();
     _extensions.push_back("bmp"); // also handled by ReadOIIO (which has a higher evaluation)
+#ifdef READMISC_LEGACY
     _extensions.push_back("pcx");
+#endif
     _extensions.push_back("xpm");
     //_extensions.push_back("gif"); // may be animated - better handled by ReadFFmpeg
     _extensions.push_back("miff");
@@ -196,7 +198,7 @@ void ReadMiscPluginFactory::describe(OFX::ImageEffectDescriptor &desc)
     GenericReaderDescribe(desc, _extensions, kPluginEvaluation, kSupportsTiles, false);
     desc.setLabel(kPluginName);
 
-    desc.setPluginDescription("Read Misc image format.");
+    desc.setPluginDescription("Read various image formats supported by ImageMagick.");
 }
 
 /** @brief The describe in context function, passed a plugin descriptor and a context */
