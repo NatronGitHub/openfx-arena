@@ -59,7 +59,7 @@ pkg_search_module(CAIRO REQUIRED cairo)
 pkg_search_module(POPPLER REQUIRED poppler-glib)
 pkg_check_modules(REVENGE REQUIRED librevenge-0.0 librevenge-generators-0.0 librevenge-stream-0.0)
 pkg_search_module(CDR REQUIRED libcdr-0.1)
-add_compile_options(${MAGICK_STATIC_CFLAGS}) # we need the magick flags
+add_compile_options(${MAGICK_CFLAGS}) # we need the magick flags
 
 if(${READMISC_LEGACY})
     add_definitions(-DREADMISC_LEGACY)
@@ -71,7 +71,7 @@ endif()
 
 if(${AUDIO})
     pkg_search_module(SOX REQUIRED sox)
-    add_compile_options(${SOX_STATIC_CFLAGS}) # we need the sox flags
+    add_compile_options(${SOX_CFLAGS}) # we need the sox flags
 endif()
 
 if(${HALDCLUT})
@@ -291,25 +291,25 @@ include_directories(
 )
 target_link_libraries(
     ${PROJECT_NAME}
-    ${MAGICK_STATIC_LIBRARIES}
-    ${LCMS2_STATIC_LIBRARIES}
-    ${MAGICK_STATIC_LDFLAGS}
-    ${LCMS2_STATIC_LDFLAGS}
-    ${FONTCONFIG_STATIC_LDFLAGS}
-    ${PANGO_STATIC_LDFLAGS}
-    ${XML_STATIC_LDFLAGS}
-    ${ZIP_STATIC_LDFLAGS}
-    ${SVG_STATIC_LDFLAGS}
-    ${GLIB_STATIC_LDFLAGS}
-    ${CAIRO_STATIC_LDFLAGS}
-    ${POPPLER_STATIC_LDFLAGS}
-    ${REVENGE_STATIC_LDFLAGS}
-    ${CDR_STATIC_LDFLAGS}
+    ${MAGICK_LIBRARIES}
+    ${LCMS2_LIBRARIES}
+    ${MAGICK_LDFLAGS}
+    ${LCMS2_LDFLAGS}
+    ${FONTCONFIG_LDFLAGS}
+    ${PANGO_LDFLAGS}
+    ${XML_LDFLAGS}
+    ${ZIP_LDFLAGS}
+    ${SVG_LDFLAGS}
+    ${GLIB_LDFLAGS}
+    ${CAIRO_LDFLAGS}
+    ${POPPLER_LDFLAGS}
+    ${REVENGE_LDFLAGS}
+    ${CDR_LDFLAGS}
 )
 
 if(${AUDIO})
     include_directories(${SOX_INCLUDE_DIRS})
-    target_link_libraries(${PROJECT_NAME} ${SOX_STATIC_LDFLAGS})
+    target_link_libraries(${PROJECT_NAME} ${SOX_LDFLAGS})
 endif()
 
 if(${HALDCLUT})
