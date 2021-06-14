@@ -1,0 +1,17 @@
+name: C/C++ CI
+
+on: [push, pull_request]
+
+jobs:
+  build:
+
+    runs-on: ubuntu-20.04
+
+    steps:
+    - uses: actions/checkout@v2
+    - name: apt install
+      run: sudo apt-get install libmagick++-dev liblcms2-dev libfontconfig1-dev libpango1.0-dev libxml2-dev libzip-dev librsvg2-dev libglib2.0-dev libcairo-dev libpoppler-dev librevenge-dev libcdr-dev libsox-dev libcurl-dev
+    - name: build (release)
+      run: make CONFIG=release
+    - name: build (debug)
+      run: make CONFIG=debug
