@@ -33,4 +33,4 @@ jobs:
       - name: pacman
         run: |
           uname -a
-          pacman --version
+          env
