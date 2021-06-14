@@ -1,12 +1,11 @@
-name: C/C++ CI
+name: CI
 
 on: [push, pull_request]
 
 jobs:
+
   build:
-
     runs-on: ubuntu-20.04
-
     steps:
     - uses: actions/checkout@v2
     - name: apt install
@@ -17,3 +16,21 @@ jobs:
       run: make CONFIG=release
     - name: build (debug)
       run: make CONFIG=debug
+
+  msys:
+    runs-on: windows-2019
+    defaults:
+      run:
+        shell: bash.exe --login -eo pipefail "{0}"
+    env:
+      MSYSTEM: "MINGW64"
+      CHERE_INVOKING: 1
+    name: MSYS2
+    steps:
+      - name: Set up shell
+        run: echo ::add-path::C:\msys64\usr\bin\
+        shell: pwsh
+      - name: pacman
+        run: |
+          uname -a
+          pacman --version
