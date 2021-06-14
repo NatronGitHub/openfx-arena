@@ -27,17 +27,24 @@ jobs:
       CHERE_INVOKING: 1
     name: MSYS2
     steps:
-      - name: Set up msys
+      - name: Install Natron MSYS2
         run: |
           curl -L http://repo.msys2.org/distrib/x86_64/msys2-base-x86_64-20180531.tar.xz -o msys64.tar.xz
           tar xf msys64.tar.xz
           mv msys64 /c/msys64-20180531
-      - name: Set up shell
+      - name: Setup Natron MSYS2
+        run: echo "C:\msys64-20180531\usr\bin" | Out-File -FilePath $env:GITHUB_PATH -Encoding utf8 -Append
+        shell: pwsh
+      - name: Run Natron MSYS2
         run: echo "C:\msys64-20180531\usr\bin" | Out-File -FilePath $env:GITHUB_PATH -Encoding utf8 -Append
         shell: pwsh
       - name: pacman
         run: |
           uname -a
           export PATH="/c/msys64-20180531/usr/bin:/mingw64/bin:/usr/local/bin:/usr/bin:/bin:/c/Windows/System32:/c/Windows:/c/Windows/System32/Wbem:/c/Windows/System32/WindowsPowerShell/v1.0/:/usr/bin/site_perl:/usr/bin/vendor_perl:/usr/bin/core_perl"
-          ls /usr/bin
-          /usr/bin/pacman --version
+          sed -i 's/SigLevel    = Required DatabaseOptional/SigLevel = Never/' /etc/pacman.conf
+          echo "Server = https://downloads.sourceforge.net/project/natron/MINGW-packages/mingw64" > /etc/pacman.d/mirrorlist.mingw64
+          echo "Server = https://downloads.sourceforge.net/project/natron/MINGW-packages/msys" > /etc/pacman.d/mirrorlist.msys
+          pacman --version
+          pacman -Syu
+          
