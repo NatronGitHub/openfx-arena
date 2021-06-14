@@ -10,7 +10,7 @@ jobs:
     steps:
     - uses: actions/checkout@v2
     - name: apt install
-      run: sudo apt-get install libopencolorio-dev libgl-dev libmagick++-dev liblcms2-dev libfontconfig1-dev libpango1.0-dev libxml2-dev libzip-dev librsvg2-dev libglib2.0-dev libcairo-dev libpoppler-dev libpoppler-glib-dev libpoppler-private-dev librevenge-dev libcdr-dev libsox-dev libcurl4-openssl-dev
+      run: sudo apt-get install libopencolorio-dev libgl-dev libfftw3-dev libmagick++-dev liblcms2-dev libfontconfig1-dev libpango1.0-dev libxml2-dev libzip-dev librsvg2-dev libglib2.0-dev libcairo-dev libpoppler-dev libpoppler-glib-dev libpoppler-private-dev librevenge-dev libcdr-dev libsox-dev libcurl4-openssl-dev
     - name: submodules
       run: git submodule update -i --recursive
     - name: build (release)
