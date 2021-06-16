@@ -54,10 +54,9 @@ jobs:
           env
           gcc -v
           pwd
-          ls
           mv /mingw64/bin/envsubst.exe /mingw64/bin/envsubst.exe.orig
-          cd "$GITHUB_WORKSPACE"
-          pwd
-          ls
+          git clone https://github.com/NatronGitHub/openfx-arena
+          cd openfx-arena
+          git checkout $GITHUB_SHA
           git submodule update -i --recursive
           make -j2 CONFIG=release
