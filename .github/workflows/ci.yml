@@ -53,7 +53,11 @@ jobs:
         run: |
           env
           gcc -v
+          pwd
+          ls
           mv /mingw64/bin/envsubst.exe /mingw64/bin/envsubst.exe.orig
           cd "$GITHUB_WORKSPACE"
+          pwd
+          ls
           git submodule update -i --recursive
           make -j2 CONFIG=release
