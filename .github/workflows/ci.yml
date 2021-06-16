@@ -6,6 +6,7 @@ jobs:
 
   build:
     runs-on: ubuntu-20.04
+    name: Ubuntu 20.04 GCC 9
     steps:
     - uses: actions/checkout@v2
     - name: apt install
@@ -25,7 +26,7 @@ jobs:
     env:
       MSYSTEM: "MINGW64"
       CHERE_INVOKING: 1
-    name: MSYS2
+    name: Windows 10 Custom MSYS2 GCC 7
     steps:
       - name: Install Natron MSYS2
         run: |
@@ -47,11 +48,12 @@ jobs:
           echo "Server = https://downloads.sourceforge.net/project/natron/MINGW-packages/mingw64" > /etc/pacman.d/mirrorlist.mingw64
           echo "Server = https://downloads.sourceforge.net/project/natron/MINGW-packages/msys" > /etc/pacman.d/mirrorlist.msys
           pacman --version
-          pacman -Syu --noconfirm tree openfx-arena-sdk || pacman -Syu --noconfirm tree openfx-arena-sdk || pacman -Syu --noconfirm tree openfx-arena-sdk
+          pacman -Syu --noconfirm tree gettext openfx-arena-sdk || pacman -Syu --noconfirm tree gettext openfx-arena-sdk || pacman -Syu --noconfirm tree gettext openfx-arena-sdk
       - name: Build (release)
         run: |
           env
           gcc -v
+          mv /mingw64/bin/envsubst.exe /mingw64/bin/envsubst.exe.orig
           cd /d/a/openfx-arena/openfx-arena
           git submodule update -i --recursive
           make -j2 CONFIG=release
