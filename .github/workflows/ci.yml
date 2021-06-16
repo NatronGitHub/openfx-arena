@@ -54,6 +54,6 @@ jobs:
           env
           gcc -v
           mv /mingw64/bin/envsubst.exe /mingw64/bin/envsubst.exe.orig
-          cd /d/a/openfx-arena/openfx-arena
+          cd "$GITHUB_WORKSPACE"
           git submodule update -i --recursive
           make -j2 CONFIG=release
