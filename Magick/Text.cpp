@@ -16,12 +16,13 @@
  * along with openfx-arena.  If not, see <http://www.gnu.org/licenses/gpl-2.0.html>
 */
 
+#include "MagickCommon.h"
+
 #include "ofxsPositionInteract.h"
 #include "ofxsMacros.h"
 #include "ofxsMultiThread.h"
 #include "ofxsImageEffect.h"
 #include "ofxNatron.h"
-#include <Magick++.h>
 #include <sstream>
 #include <iostream>
 #include <stdint.h>

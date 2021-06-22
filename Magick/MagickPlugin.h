@@ -18,10 +18,11 @@
 #ifndef MagickPlugin_h
 #define MagickPlugin_h
 
+#include "MagickCommon.h"
+
 #include "ofxsImageEffect.h"
 #include "ofxsMacros.h"
 #include "ofxsMultiThread.h"
-#include <Magick++.h>
 
 #define kParamOpenMP "openmp"
 #define kParamOpenMPLabel "OpenMP"

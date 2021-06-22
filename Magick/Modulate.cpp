@@ -16,11 +16,12 @@
  * along with openfx-arena.  If not, see <http://www.gnu.org/licenses/gpl-2.0.html>
 */
 
+#include "MagickCommon.h"
+
 #include "ofxsMacros.h"
 #include "ofxsMultiThread.h"
 #include "ofxsImageEffect.h"
 #include <iostream>
-#include <Magick++.h>
 
 #define kPluginName "ModulateOFX"
 #define kPluginGrouping "Extra/Color"
