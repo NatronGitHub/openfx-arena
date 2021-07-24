@@ -18,6 +18,7 @@
 
 #include <pango/pangocairo.h>
 #include <pango/pangofc-fontmap.h>
+#include <pango/pango-version-macros.h>
 #include <fontconfig/fontconfig.h>
 
 #include "ofxsMacros.h"
@@ -161,7 +162,7 @@
 #define kParamLetterSpaceHint "Spacing between letters. Disabled if markup is used."
 #define kParamLetterSpaceDefault 0
 
-#ifdef PANGO_AVAILABLE_IN_1_44
+#ifdef PANGO_VERSION_1_44
 #define kParamLineSpace "lineSpace"
 #define kParamLineSpaceLabel "Line spacing"
 #define kParamLineSpaceHint "Spacing between lines. Disabled if markup is used."
@@ -373,7 +374,7 @@ private:
     OFX::DoubleParam *_circleRadius;
     OFX::IntParam *_circleWords;
     OFX::IntParam *_letterSpace;
-#ifdef PANGO_AVAILABLE_IN_1_44
+#ifdef PANGO_VERSION_1_44
     OFX::DoubleParam *_lineSpace;
 #endif
     OFX::Int2DParam *_canvas;
@@ -426,7 +427,7 @@ TextFXPlugin::TextFXPlugin(OfxImageEffectHandle handle)
 , _circleRadius(NULL)
 , _circleWords(NULL)
 , _letterSpace(NULL)
-#ifdef PANGO_AVAILABLE_IN_1_44
+#ifdef PANGO_VERSION_1_44
 , _lineSpace(NULL)
 #endif
 , _canvas(NULL)
@@ -479,7 +480,7 @@ TextFXPlugin::TextFXPlugin(OfxImageEffectHandle handle)
     _circleRadius = fetchDoubleParam(kParamCircleRadius);
     _circleWords = fetchIntParam(kParamCircleWords);
     _letterSpace = fetchIntParam(kParamLetterSpace);
-#ifdef PANGO_AVAILABLE_IN_1_44
+#ifdef PANGO_VERSION_1_44
     _lineSpace = fetchDoubleParam(kParamLineSpace);
 #endif
     _canvas = fetchInt2DParam(kParamCanvas);
@@ -511,7 +512,7 @@ TextFXPlugin::TextFXPlugin(OfxImageEffectHandle handle)
            && _arcRadius && _arcAngle && _rotate && _scale && _position && _move && _txt
            && _skewX && _skewY && _scaleUniform && _centerInteract && _fontOverride && _scrollX && _scrollY
            && _srt && _fps);
-#ifdef PANGO_AVAILABLE_IN_1_44
+#ifdef PANGO_VERSION_1_44
     assert(_lineSpace);
 #endif
 
@@ -737,7 +738,7 @@ void TextFXPlugin::render(const OFX::RenderArguments &args)
 
     // Get params
     double x, y, r, g, b, a, s_r, s_g, s_b, s_a, strokeWidth, strokeDashX, strokeDashY, strokeDashZ, circleRadius, arcRadius, arcAngle, rotate, scaleX, scaleY, skewX, skewY, scrollX, scrollY, bg_r, bg_g, bg_b, bg_a;
-#ifdef PANGO_AVAILABLE_IN_1_44
+#ifdef PANGO_VERSION_1_44
     double lineSpace;
 #endif
     int fontSize, cwidth, cheight, wrap, align, valign, style, stretch, weight, strokeDash, fontAA, subpixel, hintStyle, hintMetrics, circleWords, letterSpace;
@@ -790,7 +791,7 @@ void TextFXPlugin::render(const OFX::RenderArguments &args)
     _circleRadius->getValueAtTime(args.time, circleRadius);
     _circleWords->getValueAtTime(args.time, circleWords);
     _letterSpace->getValueAtTime(args.time, letterSpace);
-#ifdef PANGO_AVAILABLE_IN_1_44
+#ifdef PANGO_VERSION_1_44
     _lineSpace->getValueAtTime(args.time, lineSpace);
 #endif
     _canvas->getValueAtTime(args.time, cwidth, cheight);
@@ -1009,7 +1010,7 @@ void TextFXPlugin::render(const OFX::RenderArguments &args)
         }
     }
 
-#ifdef PANGO_AVAILABLE_IN_1_44
+#ifdef PANGO_VERSION_1_44
     if (lineSpace != 0) {
         pango_layout_set_line_spacing(layout, std::floor((lineSpace*PANGO_SCALE) * args.renderScale.x + 0.5));
     }
@@ -1300,7 +1301,7 @@ bool TextFXPlugin::getRegionOfDefinition(const OFX::RegionOfDefinitionArguments 
     if (autoSize) {
         int fontSize, style, stretch, weight, letterSpace;
         double strokeWidth;
-#ifdef PANGO_AVAILABLE_IN_1_44
+#ifdef PANGO_VERSION_1_44
         double lineSpace;
 #endif
         std::string text, font, txt;
@@ -1315,7 +1316,7 @@ bool TextFXPlugin::getRegionOfDefinition(const OFX::RegionOfDefinitionArguments 
         weight_->getValueAtTime(args.time, weight);
         strokeWidth_->getValueAtTime(args.time, strokeWidth);
         _letterSpace->getValueAtTime(args.time, letterSpace);
-#ifdef PANGO_AVAILABLE_IN_1_44
+#ifdef PANGO_VERSION_1_44
         _lineSpace->getValueAtTime(args.time, lineSpace);
 #endif
         _txt->getValueAtTime(args.time, txt);
@@ -1403,7 +1404,7 @@ bool TextFXPlugin::getRegionOfDefinition(const OFX::RegionOfDefinitionArguments 
         pango_layout_set_font_description(layout, desc);
         pango_font_description_free(desc);
 
-#ifdef PANGO_AVAILABLE_IN_1_44
+#ifdef PANGO_VERSION_
         if (lineSpace != 0) {
             pango_layout_set_line_spacing(layout, std::floor((lineSpace*PANGO_SCALE) * args.renderScale.x + 0.5));
         }
@@ -1775,7 +1776,7 @@ void TextFXPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, Co
             page->addChild(*param);
         }
     }
-#ifdef PANGO_AVAILABLE_IN_1_44
+#ifdef PANGO_VERSION_1_44
     {
         DoubleParamDescriptor* param = desc.defineDoubleParam(kParamLineSpace);
         param->setLabel(kParamLineSpaceLabel);
