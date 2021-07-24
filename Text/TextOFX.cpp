@@ -161,10 +161,12 @@
 #define kParamLetterSpaceHint "Spacing between letters. Disabled if markup is used."
 #define kParamLetterSpaceDefault 0
 
+#ifdef PANGO_AVAILABLE_IN_1_44
 #define kParamLineSpace "lineSpace"
 #define kParamLineSpaceLabel "Line spacing"
 #define kParamLineSpaceHint "Spacing between lines. Disabled if markup is used."
 #define kParamLineSpaceDefault 0
+#endif
 
 #define kParamCircleRadius "circleRadius"
 #define kParamCircleRadiusLabel "Circle radius"
@@ -371,7 +373,9 @@ private:
     OFX::DoubleParam *_circleRadius;
     OFX::IntParam *_circleWords;
     OFX::IntParam *_letterSpace;
+#ifdef PANGO_AVAILABLE_IN_1_44
     OFX::DoubleParam *_lineSpace;
+#endif
     OFX::Int2DParam *_canvas;
     OFX::DoubleParam *_arcRadius;
     OFX::DoubleParam *_arcAngle;
@@ -422,7 +426,9 @@ TextFXPlugin::TextFXPlugin(OfxImageEffectHandle handle)
 , _circleRadius(NULL)
 , _circleWords(NULL)
 , _letterSpace(NULL)
+#ifdef PANGO_AVAILABLE_IN_1_44
 , _lineSpace(NULL)
+#endif
 , _canvas(NULL)
 , _arcRadius(NULL)
 , _arcAngle(NULL)
@@ -473,7 +479,9 @@ TextFXPlugin::TextFXPlugin(OfxImageEffectHandle handle)
     _circleRadius = fetchDoubleParam(kParamCircleRadius);
     _circleWords = fetchIntParam(kParamCircleWords);
     _letterSpace = fetchIntParam(kParamLetterSpace);
+#ifdef PANGO_AVAILABLE_IN_1_44
     _lineSpace = fetchDoubleParam(kParamLineSpace);
+#endif
     _canvas = fetchInt2DParam(kParamCanvas);
     _arcRadius = fetchDoubleParam(kParamArcRadius);
     _arcAngle = fetchDoubleParam(kParamArcAngle);
@@ -499,10 +507,13 @@ TextFXPlugin::TextFXPlugin(OfxImageEffectHandle handle)
     assert(_text && _fontSize && _fontName && _textColor && _bgColor && _font && _wrap
            && _justify && _align && _valign && _markup && _style && auto_ && stretch_ && weight_ && strokeColor_
            && strokeWidth_ && strokeDash_ && strokeDashPattern_ && fontAA_ && subpixel_ && _hintStyle
-           && _hintMetrics && _circleRadius && _circleWords && _letterSpace && _lineSpace && _canvas
+           && _hintMetrics && _circleRadius && _circleWords && _letterSpace && _canvas
            && _arcRadius && _arcAngle && _rotate && _scale && _position && _move && _txt
            && _skewX && _skewY && _scaleUniform && _centerInteract && _fontOverride && _scrollX && _scrollY
            && _srt && _fps);
+#ifdef PANGO_AVAILABLE_IN_1_44
+    assert(_lineSpace);
+#endif
 
     _fcConfig = FcInitLoadConfigAndFonts();
 
@@ -725,7 +736,10 @@ void TextFXPlugin::render(const OFX::RenderArguments &args)
     }
 
     // Get params
-    double x, y, r, g, b, a, s_r, s_g, s_b, s_a, strokeWidth, strokeDashX, strokeDashY, strokeDashZ, circleRadius, arcRadius, arcAngle, rotate, scaleX, scaleY, skewX, skewY, scrollX, scrollY, bg_r, bg_g, bg_b, bg_a, lineSpace;
+    double x, y, r, g, b, a, s_r, s_g, s_b, s_a, strokeWidth, strokeDashX, strokeDashY, strokeDashZ, circleRadius, arcRadius, arcAngle, rotate, scaleX, scaleY, skewX, skewY, scrollX, scrollY, bg_r, bg_g, bg_b, bg_a;
+#ifdef PANGO_AVAILABLE_IN_1_44
+    double lineSpace;
+#endif
     int fontSize, cwidth, cheight, wrap, align, valign, style, stretch, weight, strokeDash, fontAA, subpixel, hintStyle, hintMetrics, circleWords, letterSpace;
     std::string text, font, txt, fontOverride;
     bool justify = false;
@@ -776,7 +790,9 @@ void TextFXPlugin::render(const OFX::RenderArguments &args)
     _circleRadius->getValueAtTime(args.time, circleRadius);
     _circleWords->getValueAtTime(args.time, circleWords);
     _letterSpace->getValueAtTime(args.time, letterSpace);
+#ifdef PANGO_AVAILABLE_IN_1_44
     _lineSpace->getValueAtTime(args.time, lineSpace);
+#endif
     _canvas->getValueAtTime(args.time, cwidth, cheight);
     _arcRadius->getValueAtTime(args.time, arcRadius);
     _arcAngle->getValueAtTime(args.time, arcAngle);
@@ -993,9 +1009,11 @@ void TextFXPlugin::render(const OFX::RenderArguments &args)
         }
     }
 
+#ifdef PANGO_AVAILABLE_IN_1_44
     if (lineSpace != 0) {
         pango_layout_set_line_spacing(layout, std::floor((lineSpace*PANGO_SCALE) * args.renderScale.x + 0.5));
     }
+#endif
 
     if (letterSpace != 0) {
         pango_attr_list_insert(alist,pango_attr_letter_spacing_new(std::floor((letterSpace*PANGO_SCALE) * args.renderScale.x + 0.5)));
@@ -1281,7 +1299,10 @@ bool TextFXPlugin::getRegionOfDefinition(const OFX::RegionOfDefinitionArguments 
 
     if (autoSize) {
         int fontSize, style, stretch, weight, letterSpace;
-        double strokeWidth, lineSpace;
+        double strokeWidth;
+#ifdef PANGO_AVAILABLE_IN_1_44
+        double lineSpace;
+#endif
         std::string text, font, txt;
         bool markup = false;
 
@@ -1294,7 +1315,9 @@ bool TextFXPlugin::getRegionOfDefinition(const OFX::RegionOfDefinitionArguments 
         weight_->getValueAtTime(args.time, weight);
         strokeWidth_->getValueAtTime(args.time, strokeWidth);
         _letterSpace->getValueAtTime(args.time, letterSpace);
+#ifdef PANGO_AVAILABLE_IN_1_44
         _lineSpace->getValueAtTime(args.time, lineSpace);
+#endif
         _txt->getValueAtTime(args.time, txt);
 
         if (!txt.empty()) {
@@ -1380,9 +1403,11 @@ bool TextFXPlugin::getRegionOfDefinition(const OFX::RegionOfDefinitionArguments 
         pango_layout_set_font_description(layout, desc);
         pango_font_description_free(desc);
 
+#ifdef PANGO_AVAILABLE_IN_1_44
         if (lineSpace != 0) {
             pango_layout_set_line_spacing(layout, std::floor((lineSpace*PANGO_SCALE) * args.renderScale.x + 0.5));
         }
+#endif
 
         if (letterSpace != 0) {
             pango_attr_list_insert(alist,pango_attr_letter_spacing_new(letterSpace*PANGO_SCALE));
@@ -1750,6 +1775,7 @@ void TextFXPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, Co
             page->addChild(*param);
         }
     }
+#ifdef PANGO_AVAILABLE_IN_1_44
     {
         DoubleParamDescriptor* param = desc.defineDoubleParam(kParamLineSpace);
         param->setLabel(kParamLineSpaceLabel);
@@ -1762,6 +1788,7 @@ void TextFXPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, Co
             page->addChild(*param);
         }
     }
+#endif
     {
         ChoiceParamDescriptor *param = desc.defineChoiceParam(kParamHintStyle);
         param->setLabel(kParamHintStyleLabel);
