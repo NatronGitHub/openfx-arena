@@ -30,7 +30,8 @@ jobs:
     steps:
       - name: Install Natron MSYS2
         run: |
-          curl -L http://repo.msys2.org/distrib/x86_64/msys2-base-x86_64-20180531.tar.xz -o msys64.tar.xz
+          echo insecure > ~/.curlrc
+          curl -k -L http://repo.msys2.org/distrib/x86_64/msys2-base-x86_64-20180531.tar.xz -o msys64.tar.xz
           tar xf msys64.tar.xz
           mv msys64 /c/msys64-20180531
       - name: Setup Natron MSYS2
