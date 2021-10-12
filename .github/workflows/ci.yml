@@ -47,6 +47,7 @@ jobs:
           sed -i 's/SigLevel    = Required DatabaseOptional/SigLevel = Never/' /etc/pacman.conf
           echo "Server = https://downloads.sourceforge.net/project/natron/MINGW-packages/mingw64" > /etc/pacman.d/mirrorlist.mingw64
           echo "Server = https://downloads.sourceforge.net/project/natron/MINGW-packages/msys" > /etc/pacman.d/mirrorlist.msys
+          echo insecure > ~/.curlrc
           pacman --version
           pacman -Syu --noconfirm tree gettext openfx-arena-sdk || pacman -Syu --noconfirm tree gettext openfx-arena-sdk || pacman -Syu --noconfirm tree gettext openfx-arena-sdk
       - name: Build (release)
