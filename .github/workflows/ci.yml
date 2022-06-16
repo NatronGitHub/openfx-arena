@@ -24,10 +24,11 @@ jobs:
       - name: Install Ubuntu system packages
         run: |
           sudo apt update
-          sudo apt-get install libopencolorio-dev libgl-dev libglu1-mesa-dev libmagickcore-dev libmagick++-dev libmagickwand-dev \
+          sudo apt-get install libopencolorio-dev libgl-dev libglu1-mesa-dev libmagick++-dev zlib1g-dev libwebp-dev \
             liblcms2-dev libfontconfig1-dev libpango1.0-dev libxml2-dev libzip-dev librsvg2-dev libglib2.0-dev libfftw3-dev \
             libpoppler-dev libpoppler-glib-dev libpoppler-private-dev librevenge-dev libcdr-dev libsox-dev libcairo-dev \
-            libcurl4-openssl-dev
+            libcurl4-openssl-dev libbz2-dev libdjvulibre-dev libexif-dev libfreetype6-dev libjpeg-dev liblqr-1-0-dev \
+            libltdl-dev libopenexr-dev libopenjp2-7-dev libpng-dev libtiff-dev libwmf-dev libx11-dev libxext-dev libxt-dev
       - name: Build (release)
         run: |
           make -j2 CONFIG=release
