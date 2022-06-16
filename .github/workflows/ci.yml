@@ -1,19 +1,42 @@
-name: CI
+name: Continous Integration tests
 
-on: [push, pull_request]
+on:
+  push:
+    paths-ignore:
+      - COPYING
+      - LICENSE
+      - README.md
+  pull_request:
+    paths-ignore:
+      - COPYING
+      - LICENSE
+      - README.md
 
 jobs:
-
   build:
-    runs-on: ubuntu-20.04
-    name: Ubuntu 20.04 GCC 9
+    name: Build Ubuntu 22.04
+    runs-on: ubuntu-22.04
     steps:
-    - uses: actions/checkout@v2
-    - name: apt install
-      run: sudo apt-get install libopencolorio-dev libgl-dev libfftw3-dev libmagick++-dev liblcms2-dev libfontconfig1-dev libpango1.0-dev libxml2-dev libzip-dev librsvg2-dev libglib2.0-dev libcairo-dev libpoppler-dev libpoppler-glib-dev libpoppler-private-dev librevenge-dev libcdr-dev libsox-dev libcurl4-openssl-dev
-    - name: submodules
-      run: git submodule update -i --recursive
-    - name: build (release)
-      run: make -j2 CONFIG=release
-    - name: build (debug)
-      run: make -j2 CONFIG=debug
+      - name: Checkout branch
+        uses: actions/checkout@v3
+        with:
+          submodules: recursive
+      - name: Install Ubuntu system packages
+        run: |
+          sudo apt update
+          sudo apt-get install libopencolorio-dev libgl-dev libglu1-mesa-dev libmagickcore-dev libmagick++-dev libmagickwand-dev \
+            liblcms2-dev libfontconfig1-dev libpango1.0-dev libxml2-dev libzip-dev librsvg2-dev libglib2.0-dev libfftw3-dev \
+            libpoppler-dev libpoppler-glib-dev libpoppler-private-dev librevenge-dev libcdr-dev libsox-dev libcairo-dev \
+            libcurl4-openssl-dev
+      - name: Build (release)
+        run: |
+          make -j2 CONFIG=release
+          mkdir -p Bundle/ArenaPlugin
+          mv Bundle/Linux-64-release/Arena.ofx.bundle Bundle/ArenaPlugin
+      - name: Build (debug)
+        run: make -j2 CONFIG=debug
+      - name: Upload artifacts
+        uses: actions/upload-artifact@v3
+        with:
+          name: openfx-arena-build-ubuntu_22-release
+          path: Bundle/ArenaPlugin
