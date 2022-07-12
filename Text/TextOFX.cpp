@@ -39,7 +39,7 @@
 #define kPluginGrouping "Draw"
 #define kPluginIdentifier "net.fxarena.openfx.Text"
 #define kPluginVersionMajor 6
-#define kPluginVersionMinor 13
+#define kPluginVersionMinor 14
 
 #define kSupportsTiles 0
 #define kSupportsMultiResolution 0
@@ -971,10 +971,10 @@ void TextFXPlugin::render(const OFX::RenderArguments &args)
             pango_layout_get_pixel_size(layout, &text_width, &text_height);
             switch (valign) {
             case 1:
-                cairo_move_to(cr, 0, (height-text_height)/2);
+                cairo_translate(cr, 0, (height-text_height)/2);
                 break;
             case 2:
-                cairo_move_to(cr, 0, height-text_height);
+                cairo_translate(cr, 0, height-text_height);
                 break;
             }
         }
