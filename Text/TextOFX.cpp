@@ -17,7 +17,7 @@
 */
 
 #include <pango/pangocairo.h>
-#include <pango/pangofc-fontmap.h>
+//#include <pango/pangofc-fontmap.h>
 #include <fontconfig/fontconfig.h>
 
 #include "ofxsMacros.h"
@@ -826,14 +826,14 @@ void TextFXPlugin::render(const OFX::RenderArguments &args)
     PangoLayout *layout;
     PangoFontDescription *desc;
     PangoAttrList *alist;
-    PangoFontMap* fontmap;
+    //PangoFontMap* fontmap;
 
-    fontmap = pango_cairo_font_map_get_default();
+    /*fontmap = pango_cairo_font_map_get_default();
     if (pango_cairo_font_map_get_font_type((PangoCairoFontMap*)(fontmap)) != CAIRO_FONT_TYPE_FT) {
         fontmap = pango_cairo_font_map_new_for_font_type(CAIRO_FONT_TYPE_FT);
     }
     pango_fc_font_map_set_config((PangoFcFontMap*)fontmap, _fcConfig);
-    pango_cairo_font_map_set_default((PangoCairoFontMap*)(fontmap));
+    pango_cairo_font_map_set_default((PangoCairoFontMap*)(fontmap));*/
 
     surface = cairo_image_surface_create(CAIRO_FORMAT_ARGB32, width, height);
     cr = cairo_create(surface);
@@ -1334,14 +1334,14 @@ bool TextFXPlugin::getRegionOfDefinition(const OFX::RegionOfDefinitionArguments 
         PangoLayout *layout;
         PangoFontDescription *desc;
         PangoAttrList *alist;
-        PangoFontMap* fontmap;
+        //PangoFontMap* fontmap;
 
-        fontmap = pango_cairo_font_map_get_default();
+        /*fontmap = pango_cairo_font_map_get_default();
         if (pango_cairo_font_map_get_font_type((PangoCairoFontMap*)(fontmap)) != CAIRO_FONT_TYPE_FT) {
             fontmap = pango_cairo_font_map_new_for_font_type(CAIRO_FONT_TYPE_FT);
         }
         pango_fc_font_map_set_config((PangoFcFontMap*)fontmap, _fcConfig);
-        pango_cairo_font_map_set_default((PangoCairoFontMap*)(fontmap));
+        pango_cairo_font_map_set_default((PangoCairoFontMap*)(fontmap));*/
 
         surface = cairo_image_surface_create(CAIRO_FORMAT_ARGB32, width, height);
         cr = cairo_create(surface);
