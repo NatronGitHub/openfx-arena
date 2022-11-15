@@ -16,9 +16,6 @@
  * along with openfx-arena.  If not, see <http://www.gnu.org/licenses/gpl-2.0.html>
 */
 
-#include <poppler.h>
-#include <GlobalParams.h>
-#include <cairo.h>
 #include <string>
 
 #include <iostream>
@@ -39,6 +36,17 @@
 #include <windows.h>
 #include <Shlwapi.h>
 #endif
+
+
+#include <poppler.h>
+// GlobalParams is an internal poppler include, and unfortunately
+// it forgets to include <string_view> (at least with versions 21.12 to 22.10).
+// see https://github.com/NatronGitHub/openfx-arena/issues/23
+#if POPPLER_CHECK_VERSION(21,12,0)
+#include <string_view>
+#endif
+#include <GlobalParams.h>
+#include <cairo.h>
 
 #if defined(POPPLER_MAJOR_VERSION) && defined(POPPLER_MINOR_VERSION)
 #if POPPLER_MAJOR_VERSION == 0 && POPPLER_MINOR_VERSION < 83
