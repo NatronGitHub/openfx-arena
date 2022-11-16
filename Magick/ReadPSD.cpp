@@ -27,6 +27,7 @@
 #include "ofxsMultiThread.h"
 #include "ofxsImageEffect.h"
 #include "ofxsMultiPlane.h"
+#define CMS_NO_REGISTER_KEYWORD
 #include <lcms2.h>
 #include <dirent.h>
 #include <ofxNatron.h>
