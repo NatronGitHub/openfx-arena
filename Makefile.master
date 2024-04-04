@@ -7,7 +7,7 @@ VPATH += $(SRCDIR)/SupportExt
 
 # ImageMagick
 MAGICK_CXXFLAGS = $(shell pkg-config Magick++ --cflags)
-MAGICK_LINKFLAGS = $(shell pkg-config Magick++ --libs --static)
+MAGICK_LINKFLAGS = $(shell pkg-config Magick++ --cflags-only-other --libs --static)
 
 #librevenge
 REVENGE_CXXFLAGS = $(shell pkg-config librevenge-0.0 --cflags)
