@@ -49,6 +49,9 @@ public:
     /** @brief apply scale */
     static void applyScale(cairo_t *cr,
                            const _XY &scale);
+    static void applyScale(cairo_t *cr,
+                           const _XY &scale,
+                           const _XY &origin);
     /** @brief apply skew */
     static void applySkew(cairo_t *cr,
                           const _XY &skew,

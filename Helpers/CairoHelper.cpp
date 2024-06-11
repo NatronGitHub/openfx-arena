@@ -46,6 +46,17 @@ CairoHelper::applyScale(cairo_t *cr,
 }
 
 void
+CairoHelper::applyScale(cairo_t *cr,
+                        const _XY &scale,
+                        const _XY &origin)
+{
+    if (!cr || (scale.x == 0. && scale.y == 0.)) { return; }
+    cairo_translate(cr, origin.x, origin.y);
+    cairo_scale(cr, scale.x, scale.y);
+    cairo_translate(cr, -origin.x, -origin.y);
+}
+
+void
 CairoHelper::applySkew(cairo_t *cr,
                        const _XY &skew,
                        const _XY &origin)
@@ -83,7 +94,7 @@ CairoHelper::applyTransform(cairo_t *cr,
     if (!cr) { return; }
     if (transform.flip) { applyFlip(cr, transform.height); }
     if (transform.position) { applyPosition(cr, transform.origin); }
-    applyScale(cr, transform.scale);
+    applyScale(cr, transform.scale, transform.origin);
     applySkew(cr, transform.skew, transform.origin);
     applyRotate(cr, transform.rotate, transform.origin);
 }
