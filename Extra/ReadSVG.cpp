@@ -1,5 +1,5 @@
 /*
- * openfx-arena <https://github.com/rodlie/openfx-arena>,
+ * openfx-arena <https://github.com/NatronGitHub/openfx-arena>,
  * Copyright (C) 2016 INRIA
  *
  * openfx-arena is free software: you can redistribute it and/or modify
@@ -34,19 +34,50 @@
 #include "ofxsMultiPlane.h"
 #include "ofxsImageEffect.h"
 
+// cairo helper functions
+#include "CairoHelper.h"
+
 #define kPluginName "ReadSVG"
 #define kPluginGrouping "Image/Readers"
 #define kPluginIdentifier "net.fxarena.openfx.ReadSVG"
+#define kPluginDescription "Fast SVG (Scalable Vector Graphics) reader using librsvg and Cairo."
+
 // history:
+// 4.0 added transform support
 // 3.3 the cairo buffer given by rsvg is actually premultiplied
-#define kPluginVersionMajor 3
-#define kPluginVersionMinor 3
+#define kPluginVersionMajor 4
+#define kPluginVersionMinor 0
 #define kPluginEvaluation 50
 
 #define kParamDpi "dpi"
 #define kParamDpiLabel "DPI"
 #define kParamDpiHint "Dots-per-inch (90 is default)"
 #define kParamDpiDefault 90
+
+#define kParamPivot "pivot"
+#define kParamPivotLabel "Pivot"
+#define kParamPivotHint "Apply origin on transform, else center of image."
+#define kParamPivotDefault false
+
+#define kParamOrigin "origin"
+#define kParamOriginLabel "Origin"
+#define kParamOriginHint "Origin for transform."
+#define kParamOriginDefault 0.
+
+#define kParamScale "scale"
+#define kParamScaleLabel "Scale"
+#define kParamScaleHint "Transform scale."
+#define kParamScaleDefault 1.
+
+#define kParamSkew "skew"
+#define kParamSkewLabel "Skew"
+#define kParamSkewHint "Transform skew."
+#define kParamSkewDefault 0.
+
+#define kParamRotate "rotate"
+#define kParamRotateLabel "Rotate"
+#define kParamRotateHint "Rotate the surface."
+#define kParamRotateDefault 0.
 
 #define kSupportsRGBA true
 #define kSupportsRGB false
@@ -69,12 +100,24 @@ static bool gHostIsNatron = false;
 class ReadSVGPlugin : public GenericReaderPlugin
 {
 public:
-    ReadSVGPlugin(OfxImageEffectHandle handle, const std::vector<std::string>& extensions);
+    ReadSVGPlugin(OfxImageEffectHandle handle,
+                  const std::vector<std::string>& extensions);
     virtual ~ReadSVGPlugin();
     virtual void restoreStateFromParams() OVERRIDE FINAL;
+
 private:
     virtual bool isVideoStream(const std::string& /*filename*/) OVERRIDE FINAL { return false; }
-    virtual void decode(const std::string& filename, OfxTime time, int view, bool isPlayback, const OfxRectI& renderWindow, const OfxPointD& renderScale, float *pixelData, const OfxRectI& bounds, OFX::PixelComponentEnum pixelComponents, int pixelComponentCount, int rowBytes) OVERRIDE FINAL
+    virtual void decode(const std::string& filename,
+                        OfxTime time,
+                        int view,
+                        bool isPlayback,
+                        const OfxRectI& renderWindow,
+                        const OfxPointD& renderScale,
+                        float *pixelData,
+                        const OfxRectI& bounds,
+                        OFX::PixelComponentEnum pixelComponents,
+                        int pixelComponentCount,
+                        int rowBytes) OVERRIDE FINAL
     {
         std::string rawComps;
         switch (pixelComponents) {
@@ -91,37 +134,97 @@ private:
                 OFX::throwSuiteStatusException(kOfxStatFailed);
                 return;
         }
-        decodePlane(filename, time, view, isPlayback, renderWindow, renderScale, pixelData, bounds, pixelComponents, pixelComponents, pixelComponentCount, rawComps, rowBytes);
+        decodePlane(filename,
+                    time,
+                    view,
+                    isPlayback,
+                    renderWindow,
+                    renderScale,
+                    pixelData,
+                    bounds,
+                    pixelComponents,
+                    pixelComponents,
+                    pixelComponentCount,
+                    rawComps,
+                    rowBytes);
     }
-    virtual void decodePlane(const std::string& filename, OfxTime time, int view, bool isPlayback, const OfxRectI& renderWindow, const OfxPointD& renderScale, float *pixelData, const OfxRectI& bounds, OFX::PixelComponentEnum pixelComponents, OFX::PixelComponentEnum remappedComponents, int pixelComponentCount, const std::string& rawComponents, int rowBytes) OVERRIDE FINAL;
-    virtual OfxStatus getClipComponents(const OFX::ClipComponentsArguments& args, OFX::ClipComponentsSetter& clipComponents) OVERRIDE FINAL;
-    virtual bool getFrameBounds(const std::string& filename, OfxTime time, int view, OfxRectI *bounds, OfxRectI* format, double *par, std::string *error, int *tile_width, int *tile_height) OVERRIDE FINAL;
-    virtual bool guessParamsFromFilename(const std::string& filename, std::string *colorspace, OFX::PreMultiplicationEnum *filePremult, OFX::PixelComponentEnum *components, int *componentCount) OVERRIDE FINAL;
+    virtual void decodePlane(const std::string& filename,
+                             OfxTime time,
+                             int view,
+                             bool isPlayback,
+                             const OfxRectI& renderWindow,
+                             const OfxPointD& renderScale,
+                             float *pixelData,
+                             const OfxRectI& bounds,
+                             OFX::PixelComponentEnum pixelComponents,
+                             OFX::PixelComponentEnum remappedComponents,
+                             int pixelComponentCount,
+                             const std::string& rawComponents,
+                             int rowBytes) OVERRIDE FINAL;
+    virtual OfxStatus getClipComponents(const OFX::ClipComponentsArguments& args,
+                                        OFX::ClipComponentsSetter& clipComponents) OVERRIDE FINAL;
+    virtual bool getFrameBounds(const std::string& filename,
+                                OfxTime time,
+                                int view,
+                                OfxRectI *bounds,
+                                OfxRectI* format,
+                                double *par,
+                                std::string *error,
+                                int *tile_width,
+                                int *tile_height) OVERRIDE FINAL;
+    virtual bool guessParamsFromFilename(const std::string& filename,
+                                         std::string *colorspace,
+                                         OFX::PreMultiplicationEnum *filePremult,
+                                         OFX::PixelComponentEnum *components,
+                                         int *componentCount) OVERRIDE FINAL;
     virtual void changedFilename(const OFX::InstanceChangedArgs &args) OVERRIDE FINAL;
     void getLayers(xmlNode *node, std::vector<std::string> *layers);
     OFX::IntParam *_dpi;
+    OFX::BooleanParam *_pivot;
+    OFX::Double2DParam *_origin;
+    OFX::Double2DParam *_scale;
+    OFX::Double2DParam *_skew;
+    OFX::DoubleParam *_rotate;
     std::vector<std::string> imageLayers;
 };
 
-ReadSVGPlugin::ReadSVGPlugin(OfxImageEffectHandle handle, const std::vector<std::string>& extensions)
-: GenericReaderPlugin(handle, extensions, kSupportsRGBA, kSupportsRGB, kSupportsXY, kSupportsAlpha, kSupportsTiles,
+ReadSVGPlugin::ReadSVGPlugin(OfxImageEffectHandle handle,
+                             const std::vector<std::string>& extensions)
+    : GenericReaderPlugin(handle,
+                          extensions,
+                          kSupportsRGBA,
+                          kSupportsRGB,
+                          kSupportsXY,
+                          kSupportsAlpha,
+                          kSupportsTiles,
 #ifdef OFX_EXTENSIONS_NUKE
-(OFX::getImageEffectHostDescription() && OFX::getImageEffectHostDescription()->isMultiPlanar) ? kIsMultiPlanar : false
+                          (OFX::getImageEffectHostDescription() && OFX::getImageEffectHostDescription()->isMultiPlanar) ? kIsMultiPlanar : false
 #else
-false
+                          false
 #endif
-)
-,_dpi(NULL)
+                          )
+    ,_dpi(nullptr)
+    , _pivot(nullptr)
+    , _origin(nullptr)
+    , _scale(nullptr)
+    , _skew(nullptr)
+    , _rotate(nullptr)
 {
     _dpi = fetchIntParam(kParamDpi);
-    assert(_dpi);
+    _pivot = fetchBooleanParam(kParamPivot);
+    _origin = fetchDouble2DParam(kParamOrigin);
+    _scale = fetchDouble2DParam(kParamScale);
+    _skew = fetchDouble2DParam(kParamSkew);
+    _rotate = fetchDoubleParam(kParamRotate);
+    assert(_dpi && _pivot && _origin && _scale && _skew && _rotate);
 }
 
 ReadSVGPlugin::~ReadSVGPlugin()
 {
 }
 
-void ReadSVGPlugin::restoreStateFromParams()
+void
+ReadSVGPlugin::restoreStateFromParams()
 {
     GenericReaderPlugin::restoreStateFromParams();
 
@@ -140,7 +243,8 @@ void ReadSVGPlugin::restoreStateFromParams()
 }
 
 void
-ReadSVGPlugin::getLayers(xmlNode *node, std::vector<std::string> *layers)
+ReadSVGPlugin::getLayers(xmlNode *node,
+                         std::vector<std::string> *layers)
 {
     xmlNode *cur_node = NULL;
     for (cur_node = node; cur_node; cur_node = cur_node->next) {
@@ -148,7 +252,7 @@ ReadSVGPlugin::getLayers(xmlNode *node, std::vector<std::string> *layers)
             if ((!xmlStrcmp(cur_node->name, (const xmlChar *)"g"))) {
                 xmlChar *xmlID;
                 xmlID = xmlGetProp(cur_node, (const xmlChar *)"id");
-                if (xmlID!=NULL) {
+                if (xmlID != NULL) {
                     std::string layerName;
                     layerName = (reinterpret_cast<char*>(xmlID));
                     layers->push_back(layerName);
@@ -158,7 +262,7 @@ ReadSVGPlugin::getLayers(xmlNode *node, std::vector<std::string> *layers)
             else if ((!xmlStrcmp(cur_node->name, (const xmlChar *)"path"))) {
                 xmlChar *xmlID;
                 xmlID = xmlGetProp(cur_node, (const xmlChar *)"id");
-                if (xmlID!=NULL) {
+                if (xmlID != NULL) {
                     std::string layerName;
                     layerName = (reinterpret_cast<char*>(xmlID));
                     layers->push_back(layerName);
@@ -171,11 +275,12 @@ ReadSVGPlugin::getLayers(xmlNode *node, std::vector<std::string> *layers)
 }
 
 OfxStatus
-ReadSVGPlugin::getClipComponents(const OFX::ClipComponentsArguments& args, OFX::ClipComponentsSetter& clipComponents)
+ReadSVGPlugin::getClipComponents(const OFX::ClipComponentsArguments& args,
+                                 OFX::ClipComponentsSetter& clipComponents)
 {
     assert(isMultiPlanar());
     clipComponents.setPassThroughClip(NULL, args.time, args.view);
-    if (imageLayers.size()>0 && gHostIsNatron) {
+    if (imageLayers.size() > 0 && gHostIsNatron) {
         for (int i = 0; i < (int)imageLayers.size(); i++) {
             if (!imageLayers[i].empty()) {
 
@@ -187,19 +292,32 @@ ReadSVGPlugin::getClipComponents(const OFX::ClipComponentsArguments& args, OFX::
                 }
                 const char* components[4] = {"R","G","B", "A"};
                 OFX::MultiPlane::ImagePlaneDesc plane(layerName, layerName, "", components, 4);
-                clipComponents.addClipPlane(*_outputClip, OFX::MultiPlane::ImagePlaneDesc::mapPlaneToOFXPlaneString(plane));
+                clipComponents.addClipPlane(*_outputClip,
+                                            OFX::MultiPlane::ImagePlaneDesc::mapPlaneToOFXPlaneString(plane));
             }
         }
 
         // Also add the color plane
-        clipComponents.addClipPlane(*_outputClip, OFX::MultiPlane::ImagePlaneDesc::mapPlaneToOFXPlaneString(OFX::MultiPlane::ImagePlaneDesc::getRGBAComponents()));
+        clipComponents.addClipPlane(*_outputClip,
+                                    OFX::MultiPlane::ImagePlaneDesc::mapPlaneToOFXPlaneString(OFX::MultiPlane::ImagePlaneDesc::getRGBAComponents()));
     }
     return kOfxStatOK;
 }
 
 void
-ReadSVGPlugin::decodePlane(const std::string& filename, OfxTime time, int /*view*/, bool /*isPlayback*/, const OfxRectI& renderWindow, const OfxPointD& renderScale, float *pixelData, const OfxRectI& /*bounds*/,
-                                 OFX::PixelComponentEnum /*pixelComponents*/, OFX::PixelComponentEnum remappedComponents, int pixelComponentCount, const std::string& rawComponents, int /*rowBytes*/)
+ReadSVGPlugin::decodePlane(const std::string& filename,
+                           OfxTime time,
+                           int /*view*/,
+                           bool /*isPlayback*/,
+                           const OfxRectI& renderWindow,
+                           const OfxPointD& renderScale,
+                           float *pixelData,
+                           const OfxRectI& /*bounds*/,
+                           OFX::PixelComponentEnum /*pixelComponents*/,
+                           OFX::PixelComponentEnum remappedComponents,
+                           int pixelComponentCount,
+                           const std::string& rawComponents,
+                           int /*rowBytes*/)
 {
     assert(renderScale.x == 1. && renderScale.y == 1.);
     unused(renderScale);
@@ -219,23 +337,37 @@ ReadSVGPlugin::decodePlane(const std::string& filename, OfxTime time, int /*view
     std::string layerID;
     if (gHostIsNatron) {
         OFX::MultiPlane::ImagePlaneDesc plane, pairedPlane;
-        OFX::MultiPlane::ImagePlaneDesc::mapOFXComponentsTypeStringToPlanes(rawComponents, &plane, &pairedPlane);
+        OFX::MultiPlane::ImagePlaneDesc::mapOFXComponentsTypeStringToPlanes(rawComponents,
+                                                                            &plane,
+                                                                            &pairedPlane);
         layerID = plane.getPlaneLabel();
         if (plane.isColorPlane()) {
             layerID.clear();
         }
     }
 
+    // setup
     GError *error = NULL;
     RsvgHandle *handle;
     RsvgDimensionData dimension;
     cairo_surface_t *surface;
     cairo_t *cr;
     cairo_status_t status;
-    double imageWidth, imageHeight, scaleWidth, scaleHeight;
+    double imageWidth, imageHeight, scaleWidth, scaleHeight, originX, originY, scaleX, scaleY, skewX, skewY, rotate;
     int dpi, width, height, renderWidth, renderHeight;
-    _dpi->getValueAtTime(time, dpi);
+    bool pivot;
 
+    _dpi->getValueAtTime(time, dpi);
+    _pivot->getValueAtTime(time, pivot);
+    _origin->getValueAtTime(time, originX, originY);
+    _scale->getValueAtTime(time, scaleX, scaleY);
+    _skew->getValueAtTime(time, skewX, skewY);
+    _rotate->getValueAtTime(time, rotate);
+
+    bool hasTransform = (pivot || scaleX != 1. || scaleY != 1. || skewX != 0. || skewY != 0. || rotate != 0.);
+    bool hasDpi = (dpi != kParamDpiDefault);
+
+    // load svg
     handle = rsvg_handle_new_from_file(filename.c_str(), &error);
     rsvg_handle_set_dpi_x_y(handle, dpi, dpi);
 
@@ -244,6 +376,7 @@ ReadSVGPlugin::decodePlane(const std::string& filename, OfxTime time, int /*view
         OFX::throwSuiteStatusException(kOfxStatErrFormat);
     }
 
+    // set size
     rsvg_handle_get_dimensions(handle, &dimension);
 
     imageWidth = dimension.width;
@@ -251,7 +384,7 @@ ReadSVGPlugin::decodePlane(const std::string& filename, OfxTime time, int /*view
     renderWidth= renderWindow.x2 - renderWindow.x1;
     renderHeight= renderWindow.y2 - renderWindow.y1;
 
-    if (dpi != kParamDpiDefault) {
+    if (hasDpi) {
         width = imageWidth * dpi / kParamDpiDefault;
         height = imageHeight * dpi / kParamDpiDefault;
     }
@@ -265,32 +398,55 @@ ReadSVGPlugin::decodePlane(const std::string& filename, OfxTime time, int /*view
         OFX::throwSuiteStatusException(kOfxStatErrFormat);
     }
 
-    surface=cairo_image_surface_create(CAIRO_FORMAT_ARGB32, width, height);
-    cr=cairo_create(surface);
+    // create surface
+    surface = cairo_image_surface_create(CAIRO_FORMAT_ARGB32,
+                                         width,
+                                         height);
+    cr = cairo_create(surface);
 
+    // set dpi
     scaleWidth = width / imageWidth;
     scaleHeight = height / imageHeight;
+    CairoHelper::applyScale(cr, {scaleWidth, scaleHeight});
 
-    cairo_scale(cr, scaleWidth, scaleHeight);
+    // transform
+    if (hasTransform) {
+        if (!pivot) {
+            originX = hasDpi ? width / scaleWidth / 2. : width / 2.;
+            originY = hasDpi ? height / scaleHeight / 2. : height / 2.;
+        } else {
+            // TODO
+        }
+        CairoHelper::applyTransform(cr, {{originX, originY},
+                                         {scaleX, scaleY},
+                                         {skewX, skewY},
+                                         rotate,
+                                         pivot});
+    }
 
+    // render svg
     if (layerID.empty()) {
         rsvg_handle_render_cairo(handle, cr);
     }
     else {
         std::ostringstream layerSub;
         layerSub << "#" << layerID;
-        rsvg_handle_render_cairo_sub(handle, cr, layerSub.str().c_str());
+        rsvg_handle_render_cairo_sub(handle,
+                                     cr,
+                                     layerSub.str().c_str());
     }
 
+    // success?
     status = cairo_status(cr);
-
     if (status) {
         setPersistentMessage(OFX::Message::eMessageError, "", "Cairo Render failed");
         OFX::throwSuiteStatusException(kOfxStatErrFormat);
     }
 
+    // prepare pixel data
     cairo_surface_flush(surface);
 
+    // write pixel data
     unsigned char* cdata = cairo_image_surface_get_data(surface);
     size_t offset = 0;
     for (int y = 0; y < height; ++y) {
@@ -312,6 +468,7 @@ ReadSVGPlugin::decodePlane(const std::string& filename, OfxTime time, int /*view
         }
     }
 
+    // cleanup
     g_object_unref(handle);
     cairo_destroy(cr);
     cairo_surface_destroy(surface);
@@ -319,13 +476,16 @@ ReadSVGPlugin::decodePlane(const std::string& filename, OfxTime time, int /*view
     error = NULL;
 }
 
-bool ReadSVGPlugin::getFrameBounds(const std::string& filename,
+bool
+ReadSVGPlugin::getFrameBounds(const std::string& filename,
                               OfxTime time,
-                                   int /*view*/,
+                              int /*view*/,
                               OfxRectI *bounds,
-                                   OfxRectI* format,
+                              OfxRectI* format,
                               double *par,
-                              std::string* /*error*/,int *tile_width, int *tile_height)
+                              std::string* /*error*/,
+                              int *tile_width,
+                              int *tile_height)
 {
     if (filename.empty()) {
         setPersistentMessage(OFX::Message::eMessageError, "", "No filename");
@@ -379,7 +539,8 @@ bool ReadSVGPlugin::getFrameBounds(const std::string& filename,
     return true;
 }
 
-bool ReadSVGPlugin::guessParamsFromFilename(const std::string& /*newFile*/,
+bool
+ReadSVGPlugin::guessParamsFromFilename(const std::string& /*newFile*/,
                                        std::string *colorspace,
                                        OFX::PreMultiplicationEnum *filePremult,
                                        OFX::PixelComponentEnum *components,
@@ -426,7 +587,8 @@ bool ReadSVGPlugin::guessParamsFromFilename(const std::string& /*newFile*/,
     return true;
 }
 
-void ReadSVGPlugin::changedFilename(const OFX::InstanceChangedArgs &args)
+void
+ReadSVGPlugin::changedFilename(const OFX::InstanceChangedArgs &args)
 {
     GenericReaderPlugin::changedFilename(args);
 
@@ -446,8 +608,6 @@ void ReadSVGPlugin::changedFilename(const OFX::InstanceChangedArgs &args)
     xmlFreeDoc(doc);
 }
 
-using namespace OFX;
-
 mDeclareReaderPluginFactory(ReadSVGPluginFactory, {}, false);
 
 void
@@ -458,21 +618,35 @@ ReadSVGPluginFactory::load()
     _extensions.push_back("svgz");
 }
 
-
 /** @brief The basic describe function, passed a plugin descriptor */
-void ReadSVGPluginFactory::describe(OFX::ImageEffectDescriptor &desc)
+void
+ReadSVGPluginFactory::describe(OFX::ImageEffectDescriptor &desc)
 {
-    GenericReaderDescribe(desc, _extensions, kPluginEvaluation, kSupportsTiles, kIsMultiPlanar);
+    GenericReaderDescribe(desc,
+                          _extensions,
+                          kPluginEvaluation,
+                          kSupportsTiles,
+                          kIsMultiPlanar);
     desc.setLabel(kPluginName);
-    desc.setPluginDescription("Fast SVG (Scalable Vector Graphics) reader using librsvg and Cairo.");
+    desc.setPluginDescription(kPluginDescription);
 }
 
 /** @brief The describe in context function, passed a plugin descriptor and a context */
-void ReadSVGPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, ContextEnum context)
+void
+ReadSVGPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc,
+                                        ContextEnum context)
 {
     gHostIsNatron = (OFX::getImageEffectHostDescription()->isNatron);
 
-    PageParamDescriptor *page = GenericReaderDescribeInContextBegin(desc, context, isVideoStreamPlugin(), kSupportsRGBA, kSupportsRGB, kSupportsXY,kSupportsAlpha, kSupportsTiles, false);
+    PageParamDescriptor *page = GenericReaderDescribeInContextBegin(desc,
+                                                                    context,
+                                                                    isVideoStreamPlugin(),
+                                                                    kSupportsRGBA,
+                                                                    kSupportsRGB,
+                                                                    kSupportsXY,
+                                                                    kSupportsAlpha,
+                                                                    kSupportsTiles,
+                                                                    false);
     {
         IntParamDescriptor* param = desc.defineIntParam(kParamDpi);
         param->setLabel(kParamDpiLabel);
@@ -482,14 +656,76 @@ void ReadSVGPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, C
         param->setDefault(kParamDpiDefault);
         param->setAnimates(false);
         param->setLayoutHint(OFX::eLayoutHintDivider);
-        page->addChild(*param);
+        if (page) { page->addChild(*param); }
     }
-
-    GenericReaderDescribeInContextEnd(desc, context, page, "sRGB", "scene_linear");
+    {
+        BooleanParamDescriptor* param = desc.defineBooleanParam(kParamPivot);
+        param->setLabel(kParamPivotLabel);
+        param->setHint(kParamPivotHint);
+        param->setDefault(kParamPivotDefault);
+        param->setAnimates(false);
+        param->setLayoutHint(OFX::eLayoutHintNoNewLine);
+        if (page) { page->addChild(*param); }
+    }
+    {
+        Double2DParamDescriptor* param = desc.defineDouble2DParam(kParamOrigin);
+        param->setLabel(kParamOriginLabel);
+        param->setHint(kParamOriginHint);
+        param->setRange(INT_MIN, INT_MIN,
+                        INT_MAX, INT_MAX);
+        param->setDisplayRange(-1000, -1000,
+                               1000, 1000);
+        param->setDefault(kParamOriginDefault,
+                          kParamOriginDefault);
+        param->setAnimates(true);
+        if (page) { page->addChild(*param); }
+    }
+    {
+        Double2DParamDescriptor* param = desc.defineDouble2DParam(kParamScale);
+        param->setLabel(kParamScaleLabel);
+        param->setHint(kParamScaleHint);
+        param->setRange(INT_MIN, INT_MIN,
+                        INT_MAX, INT_MAX);
+        param->setDisplayRange(-5, -5,
+                               5, 5);
+        param->setDefault(kParamScaleDefault,
+                          kParamScaleDefault);
+        param->setAnimates(true);
+        if (page) { page->addChild(*param); }
+    }
+    {
+        Double2DParamDescriptor* param = desc.defineDouble2DParam(kParamSkew);
+        param->setLabel(kParamSkewLabel);
+        param->setHint(kParamSkewHint);
+        param->setRange(INT_MIN, INT_MIN,
+                        INT_MAX, INT_MAX);
+        param->setDisplayRange(-5, -5,
+                               5, 5);
+        param->setDefault(kParamSkewDefault,
+                          kParamSkewDefault);
+        param->setAnimates(true);
+        if (page) { page->addChild(*param); }
+    }
+    {
+        DoubleParamDescriptor* param = desc.defineDoubleParam(kParamRotate);
+        param->setLabel(kParamRotateLabel);
+        param->setHint(kParamRotateHint);
+        param->setRange(-360., 360.);
+        param->setDefault(kParamRotateDefault);
+        param->setAnimates(true);
+        param->setLayoutHint(OFX::eLayoutHintDivider);
+        if (page) { page->addChild(*param); }
+    }
+    GenericReaderDescribeInContextEnd(desc,
+                                      context,
+                                      page,
+                                      "sRGB",
+                                      "scene_linear");
 }
 
 /** @brief The create instance function, the plugin must return an object derived from the \ref OFX::ImageEffect class */
-ImageEffect* ReadSVGPluginFactory::createInstance(OfxImageEffectHandle handle,
+ImageEffect*
+ReadSVGPluginFactory::createInstance(OfxImageEffectHandle handle,
                                      ContextEnum /*context*/)
 {
     ReadSVGPlugin* ret =  new ReadSVGPlugin(handle, _extensions);
@@ -497,7 +733,9 @@ ImageEffect* ReadSVGPluginFactory::createInstance(OfxImageEffectHandle handle,
     return ret;
 }
 
-static ReadSVGPluginFactory p(kPluginIdentifier, kPluginVersionMajor, kPluginVersionMinor);
+static ReadSVGPluginFactory p(kPluginIdentifier,
+                              kPluginVersionMajor,
+                              kPluginVersionMinor);
 mRegisterPluginFactoryInstance(p)
 
 OFXS_NAMESPACE_ANONYMOUS_EXIT
