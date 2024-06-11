@@ -12,6 +12,7 @@ PLUGINOBJECTS += ReadPDF.o
 endif
 
 PLUGINOBJECTS += \
+    CairoHelper.o \
     ofxsTransform3x3.o \
     ofxsTransformInteract.o \
     ofxsShutter.o \
@@ -40,7 +41,7 @@ SRCDIR = ..
 include $(SRCDIR)/Makefile.master
 include $(SRCDIR)/Makefile.io
 
-VPATH += $(SRCDIR)/lodepng
+VPATH += $(SRCDIR)/lodepng $(SRCDIR)/Helpers
 
 CXXFLAGS  += \
     $(FCONFIG_CXXFLAGS) \
@@ -49,6 +50,7 @@ CXXFLAGS  += \
     $(XML_CXXFLAGS) \
     $(ZIP_CXXFLAGS) \
     $(GLIB_CXXFLAGS) \
+    -I$(SRCDIR)/Helpers \
     -I$(SRCDIR)/lodepng
 
 LINKFLAGS += \

@@ -51,6 +51,7 @@ PLUGINOBJECTS += \
     Text.o \
     Morphology.o \
     MagickPlugin.o \
+    CairoHelper.o \
     ofxsOGLTextRenderer.o \
     ofxsOGLFontData.o \
     ofxsRectangleInteract.o \
@@ -147,6 +148,7 @@ VPATH += \
     $(SRCDIR)/Magick/Roll \
     $(SRCDIR)/Magick/Wave \
     $(SRCDIR)/Magick/Morphology \
+    $(SRCDIR)/Helpers \
     $(SRCDIR)/lodepng
 
 ifeq ($(AUDIO), ON)
@@ -156,6 +158,7 @@ endif
 CXXFLAGS += \
     -I$(SRCDIR)/Extra \
     -I$(SRCDIR)/Magick \
+    -I$(SRCDIR)/Helpers \
     -I$(SRCDIR)/lodepng
 
 include $(SRCDIR)/Makefile.master
@@ -187,7 +190,7 @@ CXXFLAGS += $(SOX_CXXFLAGS)
 LINKFLAGS += $(SOX_LINKFLAGS)
 endif
 
-CXXFLAGS += -I. -I$(SRCDIR)/Magick -I$(SRCDIR)/Text -I$(SRCDIR)/lodepng
+CXXFLAGS += -I. -I$(SRCDIR)/Magick -I$(SRCDIR)/Text -I$(SRCDIR)/Helpers -I$(SRCDIR)/lodepng
 
 ifneq ($(LICENSE),COMMERCIAL)
 CXXFLAGS += $(POPPLER_CXXFLAGS)
