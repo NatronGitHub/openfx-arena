@@ -34,11 +34,8 @@ public:
         _XY origin;
         _XY scale;
         _XY skew;
-        int width;
-        int height;
         double rotate;
         bool position;
-        bool flip;
     };
     /** @brief apply flip */
     static void applyFlip(cairo_t *cr,
