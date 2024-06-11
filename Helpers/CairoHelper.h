@@ -24,18 +24,42 @@
 class CairoHelper
 {
 public:
-    struct XY
+    struct _XY
     {
         double x;
         double y;
     };
-    /** @brief apply rotate */
-    static void applyRotate(cairo_t *cr,
-                            double rotate,
-                            XY origin);
+    struct _Transform
+    {
+        _XY origin;
+        _XY scale;
+        _XY skew;
+        int width;
+        int height;
+        double rotate;
+        bool position;
+        bool flip;
+    };
     /** @brief apply flip */
     static void applyFlip(cairo_t *cr,
-                          int height);
+                          const int &height);
+    /** @brief apply position */
+    static void applyPosition(cairo_t *cr,
+                              const _XY &position);
+    /** @brief apply scale */
+    static void applyScale(cairo_t *cr,
+                           const _XY &scale);
+    /** @brief apply skew */
+    static void applySkew(cairo_t *cr,
+                          const _XY &skew,
+                          const _XY &origin);
+    /** @brief apply rotate */
+    static void applyRotate(cairo_t *cr,
+                            const double &rotate,
+                            const _XY &origin);
+    /** @brief apply transform */
+    static void applyTransform(cairo_t *cr,
+                               const _Transform &transform);
 };
 
 #endif // CAIROHELPER_H
