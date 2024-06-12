@@ -165,14 +165,14 @@ private:
     void getLayers(xmlNode *node, std::vector<std::string> *layers);
     IntParam *_dpi;
     BooleanParam *_translateEnabled;
-    Double2DParam* _translate;
-    DoubleParam* _rotate;
-    Double2DParam* _scale;
-    BooleanParam* _scaleUniform;
-    DoubleParam* _skewX;
-    DoubleParam* _skewY;
-    ChoiceParam* _skewOrder;
-    Double2DParam* _center;
+    Double2DParam *_translate;
+    DoubleParam *_rotate;
+    Double2DParam *_scale;
+    BooleanParam *_scaleUniform;
+    DoubleParam *_skewX;
+    DoubleParam *_skewY;
+    ChoiceParam *_skewOrder;
+    Double2DParam *_center;
     std::vector<std::string> imageLayers;
 };
 
@@ -412,7 +412,7 @@ ReadSVGPlugin::decodePlane(const std::string& filename,
     CairoHelper::applyTransform(cr, {{translateX, translateY},
                                      {(translateEnabled ? translateX : centerX),
                                       (translateEnabled ? translateY : centerY)},
-                                     {scaleX, scaleY},
+                                     {scaleX, (scaleUniform ? scaleX : scaleY)},
                                      {(skewO == 1 ? skewY : skewX),
                                       (skewO == 1 ? skewX : skewY)},
                                      rotate,
