@@ -34,7 +34,11 @@
 #include "ofxsMultiPlane.h"
 #include "ofxsImageEffect.h"
 
-// cairo helper functions
+// transform helper
+#include "ofxsTransform3x3.h"
+#include "ofxsTransformInteract.h"
+
+// cairo helper
 #include "CairoHelper.h"
 
 #define kPluginName "ReadSVG"
@@ -54,30 +58,10 @@
 #define kParamDpiHint "Dots-per-inch (90 is default)"
 #define kParamDpiDefault 90
 
-#define kParamPivot "pivot"
-#define kParamPivotLabel "Pivot"
-#define kParamPivotHint "Apply origin on transform, else center of image."
-#define kParamPivotDefault false
-
-#define kParamOrigin "origin"
-#define kParamOriginLabel "Origin"
-#define kParamOriginHint "Origin for transform."
-#define kParamOriginDefault 0.
-
-#define kParamScale "scale"
-#define kParamScaleLabel "Scale"
-#define kParamScaleHint "Transform scale."
-#define kParamScaleDefault 1.
-
-#define kParamSkew "skew"
-#define kParamSkewLabel "Skew"
-#define kParamSkewHint "Transform skew."
-#define kParamSkewDefault 0.
-
-#define kParamRotate "rotate"
-#define kParamRotateLabel "Rotate"
-#define kParamRotateHint "Rotate the surface."
-#define kParamRotateDefault 0.
+#define kParamTranslateEnabled "translateEnabled"
+#define kParamTranslateEnabledLabel "Translate"
+#define kParamTranslateEnabledHint "Enable translate."
+#define kParamTranslateEnabledDefault false
 
 #define kSupportsRGBA true
 #define kSupportsRGB false
@@ -179,12 +163,16 @@ private:
                                          int *componentCount) OVERRIDE FINAL;
     virtual void changedFilename(const OFX::InstanceChangedArgs &args) OVERRIDE FINAL;
     void getLayers(xmlNode *node, std::vector<std::string> *layers);
-    OFX::IntParam *_dpi;
-    OFX::BooleanParam *_pivot;
-    OFX::Double2DParam *_origin;
-    OFX::Double2DParam *_scale;
-    OFX::Double2DParam *_skew;
-    OFX::DoubleParam *_rotate;
+    IntParam *_dpi;
+    BooleanParam *_translateEnabled;
+    Double2DParam* _translate;
+    DoubleParam* _rotate;
+    Double2DParam* _scale;
+    BooleanParam* _scaleUniform;
+    DoubleParam* _skewX;
+    DoubleParam* _skewY;
+    ChoiceParam* _skewOrder;
+    Double2DParam* _center;
     std::vector<std::string> imageLayers;
 };
 
@@ -203,20 +191,29 @@ ReadSVGPlugin::ReadSVGPlugin(OfxImageEffectHandle handle,
                           false
 #endif
                           )
-    ,_dpi(nullptr)
-    , _pivot(nullptr)
-    , _origin(nullptr)
-    , _scale(nullptr)
-    , _skew(nullptr)
+    , _dpi(nullptr)
+    , _translateEnabled(nullptr)
+    , _translate(nullptr)
     , _rotate(nullptr)
+    , _scale(nullptr)
+    , _scaleUniform(nullptr)
+    , _skewX(nullptr)
+    , _skewY(nullptr)
+    , _skewOrder(nullptr)
+    , _center(nullptr)
 {
     _dpi = fetchIntParam(kParamDpi);
-    _pivot = fetchBooleanParam(kParamPivot);
-    _origin = fetchDouble2DParam(kParamOrigin);
-    _scale = fetchDouble2DParam(kParamScale);
-    _skew = fetchDouble2DParam(kParamSkew);
-    _rotate = fetchDoubleParam(kParamRotate);
-    assert(_dpi && _pivot && _origin && _scale && _skew && _rotate);
+    _translateEnabled = fetchBooleanParam(kParamTranslateEnabled);
+    assert(_dpi && _translateEnabled);
+
+    _translate = fetchDouble2DParam(kParamTransformTranslateOld);
+    _rotate = fetchDoubleParam(kParamTransformRotateOld);
+    _scale = fetchDouble2DParam(kParamTransformScaleOld);
+    _scaleUniform = fetchBooleanParam(kParamTransformScaleUniformOld);
+    _skewX = fetchDoubleParam(kParamTransformSkewXOld);
+    _skewY = fetchDoubleParam(kParamTransformSkewYOld);
+    _skewOrder = fetchChoiceParam(kParamTransformSkewOrderOld);
+    _center = fetchDouble2DParam(kParamTransformCenterOld);
 }
 
 ReadSVGPlugin::~ReadSVGPlugin()
@@ -353,19 +350,22 @@ ReadSVGPlugin::decodePlane(const std::string& filename,
     cairo_surface_t *surface;
     cairo_t *cr;
     cairo_status_t status;
-    double imageWidth, imageHeight, scaleWidth, scaleHeight, originX, originY, scaleX, scaleY, skewX, skewY, rotate;
-    int dpi, width, height, renderWidth, renderHeight;
-    bool pivot;
+    double imageWidth, imageHeight, scaleWidth, scaleHeight;
+    double translateX, translateY, rotate, scaleX, scaleY, skewX, skewY, centerX, centerY;
+    int dpi, width, height, renderWidth, renderHeight, skewO;
+    bool scaleUniform, translateEnabled;
 
     _dpi->getValueAtTime(time, dpi);
-    _pivot->getValueAtTime(time, pivot);
-    _origin->getValueAtTime(time, originX, originY);
-    _scale->getValueAtTime(time, scaleX, scaleY);
-    _skew->getValueAtTime(time, skewX, skewY);
-    _rotate->getValueAtTime(time, rotate);
+    _translateEnabled->getValueAtTime(time, translateEnabled);
 
-    bool hasTransform = (pivot || scaleX != 1. || scaleY != 1. || skewX != 0. || skewY != 0. || rotate != 0.);
-    bool hasDpi = (dpi != kParamDpiDefault);
+    _translate->getValueAtTime(time, translateX, translateY);
+    _rotate->getValueAtTime(time, rotate);
+    _scale->getValueAtTime(time, scaleX, scaleY);
+    _scaleUniform->getValueAtTime(time, scaleUniform);
+    _skewX->getValueAtTime(time, skewX);
+    _skewY->getValueAtTime(time, skewY);;
+    _skewOrder->getValueAtTime(time, skewO);
+    _center->getValueAtTime(time, centerX, centerY);
 
     // load svg
     handle = rsvg_handle_new_from_file(filename.c_str(), &error);
@@ -384,7 +384,7 @@ ReadSVGPlugin::decodePlane(const std::string& filename,
     renderWidth= renderWindow.x2 - renderWindow.x1;
     renderHeight= renderWindow.y2 - renderWindow.y1;
 
-    if (hasDpi) {
+    if (dpi != kParamDpiDefault) {
         width = imageWidth * dpi / kParamDpiDefault;
         height = imageHeight * dpi / kParamDpiDefault;
     }
@@ -392,7 +392,6 @@ ReadSVGPlugin::decodePlane(const std::string& filename,
         width = imageWidth;
         height = imageHeight;
     }
-
     if (width != renderWidth || height != renderHeight) {
         setPersistentMessage(OFX::Message::eMessageError, "", "Image don't match RenderWindow");
         OFX::throwSuiteStatusException(kOfxStatErrFormat);
@@ -410,19 +409,14 @@ ReadSVGPlugin::decodePlane(const std::string& filename,
     CairoHelper::applyScale(cr, {scaleWidth, scaleHeight});
 
     // transform
-    if (hasTransform) {
-        if (!pivot) {
-            originX = hasDpi ? width / scaleWidth / 2. : width / 2.;
-            originY = hasDpi ? height / scaleHeight / 2. : height / 2.;
-        } else {
-            // TODO
-        }
-        CairoHelper::applyTransform(cr, {{originX, originY},
-                                         {scaleX, scaleY},
-                                         {skewX, skewY},
-                                         rotate,
-                                         pivot});
-    }
+    CairoHelper::applyTransform(cr, {{translateX, translateY},
+                                     {(translateEnabled ? translateX : centerX),
+                                      (translateEnabled ? translateY : centerY)},
+                                     {scaleX, scaleY},
+                                     {(skewO == 1 ? skewY : skewX),
+                                      (skewO == 1 ? skewX : skewY)},
+                                     rotate,
+                                     translateEnabled});
 
     // render svg
     if (layerID.empty()) {
@@ -629,6 +623,9 @@ ReadSVGPluginFactory::describe(OFX::ImageEffectDescriptor &desc)
                           kIsMultiPlanar);
     desc.setLabel(kPluginName);
     desc.setPluginDescription(kPluginDescription);
+
+    Transform3x3Describe(desc, true);
+    desc.setOverlayInteractDescriptor(new TransformOverlayDescriptorOldParams);
 }
 
 /** @brief The describe in context function, passed a plugin descriptor and a context */
@@ -655,67 +652,25 @@ ReadSVGPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc,
         param->setDisplayRange(1, 500);
         param->setDefault(kParamDpiDefault);
         param->setAnimates(false);
-        param->setLayoutHint(OFX::eLayoutHintDivider);
-        if (page) { page->addChild(*param); }
-    }
-    {
-        BooleanParamDescriptor* param = desc.defineBooleanParam(kParamPivot);
-        param->setLabel(kParamPivotLabel);
-        param->setHint(kParamPivotHint);
-        param->setDefault(kParamPivotDefault);
-        param->setAnimates(false);
         param->setLayoutHint(OFX::eLayoutHintNoNewLine);
         if (page) { page->addChild(*param); }
     }
     {
-        Double2DParamDescriptor* param = desc.defineDouble2DParam(kParamOrigin);
-        param->setLabel(kParamOriginLabel);
-        param->setHint(kParamOriginHint);
-        param->setRange(INT_MIN, INT_MIN,
-                        INT_MAX, INT_MAX);
-        param->setDisplayRange(-1000, -1000,
-                               1000, 1000);
-        param->setDefault(kParamOriginDefault,
-                          kParamOriginDefault);
-        param->setAnimates(true);
-        if (page) { page->addChild(*param); }
-    }
-    {
-        Double2DParamDescriptor* param = desc.defineDouble2DParam(kParamScale);
-        param->setLabel(kParamScaleLabel);
-        param->setHint(kParamScaleHint);
-        param->setRange(INT_MIN, INT_MIN,
-                        INT_MAX, INT_MAX);
-        param->setDisplayRange(-5, -5,
-                               5, 5);
-        param->setDefault(kParamScaleDefault,
-                          kParamScaleDefault);
-        param->setAnimates(true);
-        if (page) { page->addChild(*param); }
-    }
-    {
-        Double2DParamDescriptor* param = desc.defineDouble2DParam(kParamSkew);
-        param->setLabel(kParamSkewLabel);
-        param->setHint(kParamSkewHint);
-        param->setRange(INT_MIN, INT_MIN,
-                        INT_MAX, INT_MAX);
-        param->setDisplayRange(-5, -5,
-                               5, 5);
-        param->setDefault(kParamSkewDefault,
-                          kParamSkewDefault);
-        param->setAnimates(true);
-        if (page) { page->addChild(*param); }
-    }
-    {
-        DoubleParamDescriptor* param = desc.defineDoubleParam(kParamRotate);
-        param->setLabel(kParamRotateLabel);
-        param->setHint(kParamRotateHint);
-        param->setRange(-360., 360.);
-        param->setDefault(kParamRotateDefault);
-        param->setAnimates(true);
+        BooleanParamDescriptor* param = desc.defineBooleanParam(kParamTranslateEnabled);
+        param->setLabel(kParamTranslateEnabledLabel);
+        param->setHint(kParamTranslateEnabledHint);
+        param->setDefault(kParamTranslateEnabledDefault);
+        param->setAnimates(false);
         param->setLayoutHint(OFX::eLayoutHintDivider);
         if (page) { page->addChild(*param); }
     }
+    ofxsTransformDescribeParams(desc,
+                                page,
+                                NULL,
+                                true,
+                                true,
+                                false,
+                                false);
     GenericReaderDescribeInContextEnd(desc,
                                       context,
                                       page,

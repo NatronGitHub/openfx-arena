@@ -31,18 +31,17 @@ public:
     };
     struct _Transform
     {
+        _XY translate;
         _XY origin;
         _XY scale;
         _XY skew;
         double rotate;
         bool position;
     };
-    /** @brief apply flip */
-    static void applyFlip(cairo_t *cr,
-                          const int &height);
     /** @brief apply position */
     static void applyPosition(cairo_t *cr,
-                              const _XY &position);
+                              const _XY &position,
+                              const bool translate = false);
     /** @brief apply scale */
     static void applyScale(cairo_t *cr,
                            const _XY &scale);
