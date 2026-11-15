@@ -20,6 +20,7 @@
 
 #include <fstream>
 #include <iostream>
+#include <sstream>
 
 OCLPluginHelperBase::OCLPluginHelperBase(OfxImageEffectHandle handle, const std::string &kernelSource, const std::string &pluginID)
     : ImageEffect(handle)
@@ -45,12 +46,20 @@ OCLPluginHelperBase::OCLPluginHelperBase(OfxImageEffectHandle handle, const std:
 void
 OCLPluginHelperBase::setupContext(bool context, std::string kernelString)
 {
+    _setupError.clear();
     cl::Device device;
     if (getSelectedDevice(&device)) {
+        cl_int err = CL_SUCCESS;
         if (context) {
             cl::Platform platform(device.getInfo<CL_DEVICE_PLATFORM>());
             cl_context_properties properties[] = { CL_CONTEXT_PLATFORM, (cl_context_properties)(platform)(), 0};
-            _context = cl::Context(CL_DEVICE_TYPE_ALL, properties);
+            _context = cl::Context(CL_DEVICE_TYPE_ALL, properties, NULL, NULL, &err);
+            if (err != CL_SUCCESS) {
+                std::ostringstream msg;
+                msg << "Failed to create OpenCL context (error " << err << ")";
+                setupFailed( msg.str() );
+                return;
+            }
 #ifdef DEBUG
             std::cout << "setup OpenCL context for: " << platform.getInfo<CL_PLATFORM_VENDOR>() << std::endl;
 #endif
@@ -75,22 +84,55 @@ OCLPluginHelperBase::setupContext(bool context, std::string kernelString)
             if (!s.str().empty()) {
                 kSource = s.str();
             } else {
-                std::cout << "Failed to read OpenCL kernel!" << std::endl;
+                setupFailed("Failed to read OpenCL kernel " + kSourcePath);
+                return;
             }
         }
         if (!kSource.empty()) {
             cl::Program::Sources sources(1, std::make_pair(kSource.c_str(), kSource.length()+1));
-            _program = cl::Program(_context,sources);
+            _program = cl::Program(_context, sources, &err);
+            if (err != CL_SUCCESS) {
+                std::ostringstream msg;
+                msg << "Failed to create OpenCL program (error " << err << ")";
+                setupFailed( msg.str() );
+                return;
+            }
             std::string buildOptions;
 
             std::vector<cl::Device> platformDevices = _context.getInfo<CL_CONTEXT_DEVICES>();
-            if(_program.build(platformDevices, buildOptions.c_str()) == CL_BUILD_PROGRAM_FAILURE){
-                setPersistentMessage(OFX::Message::eMessageError, "", "Failed to build kernel, see terminal for log");
-                std::cout << "Failed to build OpenCL kernel: "<< _program.getBuildInfo<CL_PROGRAM_BUILD_LOG>(device) << std::endl;
+            err = _program.build(platformDevices, buildOptions.c_str());
+            if (err != CL_SUCCESS) {
+                std::ostringstream msg;
+                msg << "Failed to build OpenCL kernel (error " << err << "):\n"
+                    << _program.getBuildInfo<CL_PROGRAM_BUILD_LOG>(device);
+                setupFailed( msg.str() );
+                return;
             }
         }
     } else {
-        std::cout << "No OpenCL devices found!" << std::endl;
+        setupFailed("No OpenCL device found");
+    }
+}
+
+// Record why the context or program could not be set up, so that render()
+// fails with this message instead of running an invalid program.
+void
+OCLPluginHelperBase::setupFailed(const std::string& error)
+{
+    _setupError = error;
+    std::cerr << _plugin << ": " << error << std::endl;
+    setPersistentMessage(OFX::Message::eMessageError, "", error);
+}
+
+// Set a persistent error message and throw kOfxStatFailed if an OpenCL call failed.
+void
+OCLPluginHelperBase::checkCLError(cl_int err, const char* what)
+{
+    if (err != CL_SUCCESS) {
+        std::ostringstream msg;
+        msg << what << " failed (OpenCL error " << err << ")";
+        setPersistentMessage( OFX::Message::eMessageError, "", msg.str() );
+        OFX::throwSuiteStatusException(kOfxStatFailed);
     }
 }
 
@@ -140,10 +182,11 @@ OCLPluginHelperBase::changedParam(const OFX::InstanceChangedArgs &args, const st
         OFX::throwSuiteStatusException(kOfxStatFailed);
         return;
     }
+    // clear first: setupContext() may set a new error message
+    clearPersistentMessage();
     if (paramName == kParamOCLDevice) {
         setupContext(true, "");
     }
-    clearPersistentMessage();
 }
 
 OFX::PageParamDescriptor*

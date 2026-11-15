@@ -69,10 +69,10 @@ public:
             s = s/10;
         }
         // the kernel takes float args: double needs cl_khr_fp64, which many devices lack
-        kernel.setArg(2, (cl_float)xpos);
-        kernel.setArg(3, (cl_float)ypos);
-        kernel.setArg(4, (cl_float)r);
-        kernel.setArg(5, (cl_float)s);
+        setKernelArg(kernel, 2, (cl_float)xpos);
+        setKernelArg(kernel, 3, (cl_float)ypos);
+        setKernelArg(kernel, 4, (cl_float)r);
+        setKernelArg(kernel, 5, (cl_float)s);
     }
     virtual void changedParam(const OFX::InstanceChangedArgs &args, const std::string &paramName) OVERRIDE FINAL;
     void resetCenter(double time);
@@ -106,14 +106,14 @@ void BulgeCLPlugin::changedParam(const OFX::InstanceChangedArgs &args, const std
         return;
     }
 
+    // clear first: setupContext() may set a new error message
+    clearPersistentMessage();
     if (paramName == kParamOCLDevice) {
         setupContext(true, "");
     }
     else if (paramName == kParamTransformResetCenterOld) {
         resetCenter(args.time);
     }
-
-    clearPersistentMessage();
 }
 
 mDeclarePluginFactory(BulgeCLPluginFactory, {}, {});

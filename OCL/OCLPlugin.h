@@ -44,6 +44,12 @@ public:
     void setupContext(bool context, std::string kernelString);
     static std::vector<cl::Device> getDevices();
     bool getSelectedDevice(cl::Device* device) const;
+    void checkCLError(cl_int err, const char* what);
+    template <typename T>
+    void setKernelArg(cl::Kernel& kernel, cl_uint index, const T& value)
+    {
+        checkCLError(kernel.setArg(index, value), "clSetKernelArg");
+    }
 
 protected:
     OFX::Clip *_dstClip;
@@ -54,6 +60,9 @@ protected:
     std::string _source;
     std::string _plugin;
     int _renderscale;
+    std::string _setupError; // why setupContext() failed, empty on success
+
+    void setupFailed(const std::string& error);
 };
 
 template <int SupportsRenderScale>
@@ -154,14 +163,26 @@ void OCLPluginHelper<SupportsRenderScale>::render(const OFX::RenderArguments &ar
     std::cout << "rendering using OpenCL device: " << device.getInfo<CL_DEVICE_NAME>() << std::endl;
 #endif
 
-    // render
-    cl::ImageFormat format(CL_RGBA, CL_FLOAT);
-    cl::Image2D in(_context, CL_MEM_READ_ONLY | CL_MEM_COPY_HOST_PTR, format, width, height, 0, (float*)srcImg->getPixelData());
-    cl::Image2D out(_context, CL_MEM_WRITE_ONLY, format, width, height, 0, NULL);
+    // the context or program could not be set up: report why instead of
+    // returning an uninitialised image
+    if ( !_setupError.empty() ) {
+        setPersistentMessage(OFX::Message::eMessageError, "", _setupError);
+        OFX::throwSuiteStatusException(kOfxStatFailed);
+        return;
+    }
 
-    cl::Kernel kernel(_program, "filter");
-    kernel.setArg(0, in);
-    kernel.setArg(1, out);
+    // render
+    cl_int err = CL_SUCCESS;
+    cl::ImageFormat format(CL_RGBA, CL_FLOAT);
+    cl::Image2D in(_context, CL_MEM_READ_ONLY | CL_MEM_COPY_HOST_PTR, format, width, height, 0, (float*)srcImg->getPixelData(), &err);
+    checkCLError(err, "clCreateImage2D");
+    cl::Image2D out(_context, CL_MEM_WRITE_ONLY, format, width, height, 0, NULL, &err);
+    checkCLError(err, "clCreateImage2D");
+
+    cl::Kernel kernel(_program, "filter", &err);
+    checkCLError(err, "clCreateKernel");
+    setKernelArg(kernel, 0, in);
+    setKernelArg(kernel, 1, out);
     render(args, kernel);
 
     cl::Event timer;
@@ -174,11 +195,12 @@ void OCLPluginHelper<SupportsRenderScale>::render(const OFX::RenderArguments &ar
     size[1] = height;
     size[2] = 1;
 
-    cl::CommandQueue queue = cl::CommandQueue(_context, device);
-    queue.enqueueNDRangeKernel(kernel, cl::NullRange, cl::NDRange(width, height), cl::NullRange, NULL, &timer);
-    timer.wait();
-    queue.enqueueReadImage(out, CL_TRUE, origin, size, 0, 0, (float*)dstImg->getPixelData());
-    queue.finish();
+    cl::CommandQueue queue = cl::CommandQueue(_context, device, 0, &err);
+    checkCLError(err, "clCreateCommandQueue");
+    checkCLError(queue.enqueueNDRangeKernel(kernel, cl::NullRange, cl::NDRange(width, height), cl::NullRange, NULL, &timer), "clEnqueueNDRangeKernel");
+    checkCLError(timer.wait(), "clWaitForEvents");
+    checkCLError(queue.enqueueReadImage(out, CL_TRUE, origin, size, 0, 0, (float*)dstImg->getPixelData()), "clEnqueueReadImage");
+    checkCLError(queue.finish(), "clFinish");
 }
 
 template <int SupportsRenderScale>

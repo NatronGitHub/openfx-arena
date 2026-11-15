@@ -65,12 +65,12 @@ public:
         _darkColor->getValueAtTime(args.time, dr, dg, db);
         _lightColor->getValueAtTime(args.time, lr, lg, lb);
         // the kernel takes float args: double needs cl_khr_fp64, which many devices lack
-        kernel.setArg(2, (cl_float)dr);
-        kernel.setArg(3, (cl_float)dg);
-        kernel.setArg(4, (cl_float)db);
-        kernel.setArg(5, (cl_float)lr);
-        kernel.setArg(6, (cl_float)lg);
-        kernel.setArg(7, (cl_float)lb);
+        setKernelArg(kernel, 2, (cl_float)dr);
+        setKernelArg(kernel, 3, (cl_float)dg);
+        setKernelArg(kernel, 4, (cl_float)db);
+        setKernelArg(kernel, 5, (cl_float)lr);
+        setKernelArg(kernel, 6, (cl_float)lg);
+        setKernelArg(kernel, 7, (cl_float)lb);
     }
 private:
     RGBParam *_darkColor;

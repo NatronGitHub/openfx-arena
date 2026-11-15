@@ -67,8 +67,8 @@ public:
         _waveAmp->getValueAtTime(args.time, waveAmp);
         _waveLength->getValueAtTime(args.time, waveLength);
         // the kernel takes float args: double needs cl_khr_fp64, which many devices lack
-        kernel.setArg(2, (cl_float)std::floor(waveAmp * args.renderScale.x + 0.5));
-        kernel.setArg(3, (cl_float)std::floor(waveLength * args.renderScale.x + 0.5));
+        setKernelArg(kernel, 2, (cl_float)std::floor(waveAmp * args.renderScale.x + 0.5));
+        setKernelArg(kernel, 3, (cl_float)std::floor(waveLength * args.renderScale.x + 0.5));
     }
 private:
     DoubleParam *_waveAmp;

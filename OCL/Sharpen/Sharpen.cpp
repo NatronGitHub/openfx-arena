@@ -58,7 +58,7 @@ public:
         double factor = 0.0;
         _factor->getValueAtTime(args.time, factor);
         // the kernel takes a float arg: double needs cl_khr_fp64, which many devices lack
-        kernel.setArg(2, (cl_float)factor);
+        setKernelArg(kernel, 2, (cl_float)factor);
     }
 private:
     DoubleParam *_factor;
