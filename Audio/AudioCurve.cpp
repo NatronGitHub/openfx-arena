@@ -269,15 +269,20 @@ void AudioCurvePlugin::generateCurves()
             sox_sample_t *buf = (sox_sample_t*)malloc(sizeof(sox_sample_t) * block_size);
             int lastFrame = -1;
 
-            for (blocks = 0; sox_read(audio,
-                                      buf,
-                                      block_size) == block_size &&
-                 blocks * block_period < period; ++blocks)
+            // period is the absolute end time, while blocks are counted from
+            // start_secs: stop at the end time, not period seconds after the
+            // start (#51). A short read (end of file) is still processed.
+            for (blocks = 0; start_secs + blocks * block_period < period; ++blocks)
             {
+                size_t nread = sox_read(audio, buf, block_size);
+                nread -= nread % audio->signal.channels; // whole sample frames only
+                if (nread == 0) {
+                    break;
+                }
                 double left = 0.0;
                 double right = 0.0;
                 size_t i;
-                for (i = 0; i < block_size; ++i) {
+                for (i = 0; i < nread; ++i) {
                     SOX_SAMPLE_LOCALS;
                     double sample = SOX_SAMPLE_TO_FLOAT_64BIT(buf[i],);
                     if (i & 1) { right = zero?std::max(right, fabs(sample)):sample; }
@@ -296,6 +301,9 @@ void AudioCurvePlugin::generateCurves()
                     if (!success) { success = true; }
                 }
                 lastFrame = frame;
+                if (nread < block_size) {
+                    break; // end of file
+                }
             }
             free(buf);
         }
