@@ -321,27 +321,45 @@ public:
             presetFile = custom;
         }
 
-        if (_lut.comment() != presetFile) {
-            try {
-                _lut.read(presetFile.c_str());
-            } catch(Magick::Exception &exp) {
-                if (custom.empty()) {
-                    _lut.comment("N/A");
-                    if (!getFile(url, clut, false)) {
-                        setPersistentMessage(OFX::Message::eMessageError, "", "Unable to download LUT");
-                        OFX::throwSuiteStatusException(kOfxStatFailed);
-                    } else {
-                        _lut.read(presetFile.c_str());
+        // The plugin is eRenderFullySafe, so several render threads may run on
+        // this instance: _lut (the cached CLUT, keyed by its comment) is only
+        // read or modified with _lutMutex held, and rendering uses a reference
+        // to it (Magick::Image copies are reference-counted and copy-on-write,
+        // so a later update of _lut does not modify lut).
+        Magick::Image lut;
+        {
+            AutoMutex lock(_lutMutex);
+            if (_lut.comment() != presetFile) {
+                try {
+                    _lut.read(presetFile.c_str());
+                } catch(Magick::Exception &exp) {
+                    if (custom.empty()) {
+                        _lut.comment("N/A");
+                        if (!getFile(url, clut, false)) {
+                            setPersistentMessage(OFX::Message::eMessageError, "", "Unable to download LUT");
+                            OFX::throwSuiteStatusException(kOfxStatFailed);
+                        } else {
+                            // This read used to be outside the try block, so its
+                            // exception escaped render without an error message.
+                            try {
+                                _lut.read(presetFile.c_str());
+                            } catch(Magick::Exception &) {
+                                _lut.comment("N/A");
+                                setPersistentMessage(OFX::Message::eMessageError, "", "Unable to read CLUT");
+                                OFX::throwSuiteStatusException(kOfxStatFailed);
+                            }
+                        }
                     }
                 }
+                _lut.colorSpace(Magick::RGBColorspace);
+                _lut.comment(presetFile);
             }
-            _lut.colorSpace(Magick::RGBColorspace);
-            _lut.comment(presetFile);
+            lut = _lut;
         }
 
-        if (_lut.rows() >= 512 && _lut.rows() == _lut.columns() && _lut.comment() == presetFile) {
+        if (lut.rows() >= 512 && lut.rows() == lut.columns() && lut.comment() == presetFile) {
             image.gamma(2.2);
-            image.haldClut(_lut);
+            image.haldClut(lut);
         } else {
             setPersistentMessage(OFX::Message::eMessageError, "", "Unable to read CLUT");
             OFX::throwSuiteStatusException(kOfxStatFailed);
@@ -442,7 +460,8 @@ public:
 private:
     std::vector<HaldCLUTPreset> _presets;
     ChoiceParam *_preset;
-    Magick::Image _lut;
+    Magick::Image _lut; // protected by _lutMutex
+    Mutex _lutMutex;
     StringParam *_custom;
     StringParam *_path;
 };
@@ -455,6 +474,7 @@ HaldCLUTPlugin::changedParam(const OFX::InstanceChangedArgs &args, const std::st
         return;
     }
     if (paramName == kParamCustom) {
+        AutoMutex lock(_lutMutex);
         _lut.comment("N/A");
     }
     clearPersistentMessage();
