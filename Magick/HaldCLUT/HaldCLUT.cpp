@@ -100,43 +100,54 @@ existsFile(const std::string &filename)
     return (stat(filename.c_str(), &st) == 0);
 }
 
-std::vector<std::string>
-parsePreset(xmlDocPtr doc, xmlNodePtr cur)
+struct HaldCLUTPreset
+{
+    std::string title;
+    std::string category;
+    std::string file;
+    std::string checksum;
+};
+
+// Returns the text content of an XML node, or an empty string if it has none
+// (xmlNodeListGetString returns NULL for an empty element).
+static std::string
+nodeString(xmlDocPtr doc, xmlNodePtr cur)
+{
+    std::string ret;
+    xmlChar *key = xmlNodeListGetString(doc, cur->xmlChildrenNode, 1);
+    if (key) {
+        ret = reinterpret_cast<const char*>(key);
+        xmlFree(key);
+    }
+    return ret;
+}
+
+// Fields are looked up by element name, not by position. Returns false if the
+// preset is unusable (a missing title, category or file).
+static bool
+parsePreset(xmlDocPtr doc, xmlNodePtr cur, HaldCLUTPreset* preset)
 {
     cur = cur->xmlChildrenNode;
-    xmlChar *key;
-    std::vector<std::string> preset;
     while (cur != NULL) {
         if ((!xmlStrcmp(cur->name, (const xmlChar *)"title"))) {
-            key = xmlNodeListGetString(doc, cur->xmlChildrenNode, 1);
-            preset.push_back((reinterpret_cast<char*>(key)));
-            xmlFree(key);
-        }
-        if ((!xmlStrcmp(cur->name, (const xmlChar *)"file"))) {
-            key = xmlNodeListGetString(doc, cur->xmlChildrenNode, 1);
-            preset.push_back((reinterpret_cast<char*>(key)));
-            xmlFree(key);
-        }
-        if ((!xmlStrcmp(cur->name, (const xmlChar *)"checksum"))) {
-            key = xmlNodeListGetString(doc, cur->xmlChildrenNode, 1);
-            preset.push_back((reinterpret_cast<char*>(key)));
-            xmlFree(key);
-        }
-        if ((!xmlStrcmp(cur->name, (const xmlChar *)"category"))) {
-            key = xmlNodeListGetString(doc, cur->xmlChildrenNode, 1);
-            preset.push_back((reinterpret_cast<char*>(key)));
-            xmlFree(key);
+            preset->title = nodeString(doc, cur);
+        } else if ((!xmlStrcmp(cur->name, (const xmlChar *)"file"))) {
+            preset->file = nodeString(doc, cur);
+        } else if ((!xmlStrcmp(cur->name, (const xmlChar *)"checksum"))) {
+            preset->checksum = nodeString(doc, cur);
+        } else if ((!xmlStrcmp(cur->name, (const xmlChar *)"category"))) {
+            preset->category = nodeString(doc, cur);
         }
         cur = cur->next;
     }
-    if (preset.size() != 4) {
-        preset.clear();
-    }
-    return preset;
+    return !preset->title.empty() && !preset->category.empty() && !preset->file.empty();
 }
 
+// Both describeInContext (choice options) and the instance (render) build their
+// table with this function, so choice index i always maps to (*presets)[i].
+// Invalid presets are skipped instead of being stored as empty entries.
 void
-parseXML(const std::string &filename, std::vector<std::vector<std::string> >* presets)
+parseXML(const std::string &filename, std::vector<HaldCLUTPreset>* presets)
 {
     xmlDocPtr doc;
     xmlNodePtr cur;
@@ -165,7 +176,10 @@ parseXML(const std::string &filename, std::vector<std::vector<std::string> >* pr
     cur = cur->xmlChildrenNode;
     while (cur != NULL) {
         if ((!xmlStrcmp(cur->name, (const xmlChar *)"preset"))) {
-            presets->push_back(parsePreset(doc, cur));
+            HaldCLUTPreset preset;
+            if (parsePreset(doc, cur, &preset)) {
+                presets->push_back(preset);
+            }
         }
         cur = cur->next;
     }
@@ -248,11 +262,11 @@ public:
         std::string presetFile;
 
         if (custom.empty()) {
-            if (_presets.size() > 0) {
-                category = _presets[preset][1];
-                filename = _presets[preset][2];
+            if (preset >= 0 && preset < (int)_presets.size()) {
+                category = _presets[preset].category;
+                filename = _presets[preset].file;
             }
-            //checksum = _presets[preset][3];
+            //checksum = _presets[preset].checksum;
             if (category.empty() || filename.empty() /*|| checksum.empty()*/) {
                 setPersistentMessage(OFX::Message::eMessageError, "", "Unable to read XML");
                 OFX::throwSuiteStatusException(kOfxStatFailed);
@@ -352,7 +366,7 @@ public:
         return path;
     }
 private:
-    std::vector<std::vector<std::string> > _presets;
+    std::vector<HaldCLUTPreset> _presets;
     ChoiceParam *_preset;
     Magick::Image _lut;
     StringParam *_custom;
@@ -401,7 +415,7 @@ HaldCLUTPluginFactory::describeInContext(ImageEffectDescriptor &desc, ContextEnu
     filename.append("/Contents/Resources/");
     filename.append(kPluginIdentifier);
     filename.append(".xml");
-    std::vector<std::vector<std::string> > presets;
+    std::vector<HaldCLUTPreset> presets;
     parseXML(filename, &presets);
 
     PageParamDescriptor *page = HaldCLUTPlugin::describeInContextBegin(desc, context);
@@ -413,12 +427,14 @@ HaldCLUTPluginFactory::describeInContext(ImageEffectDescriptor &desc, ContextEnu
         if (gHostIsNatron) {
             param->setCascading(getImageEffectHostDescription()->supportsCascadingChoices);
         }
+        // One option per entry of presets (all have a non-empty title, see
+        // parsePreset), so that option indices match the instance's _presets.
         for (size_t i = 0; i < presets.size(); i++) {
-            std::string presetTitle = presets[i][0];
-            if (!presetTitle.empty()) {
+            std::string presetTitle = presets[i].title;
+            {
                 if (gHostIsNatron) {
                     std::string tmp = presetTitle;
-                    std::string presetCategory = presets[i][1];
+                    std::string presetCategory = presets[i].category;
                     if (presetCategory == "bw") {
                         presetCategory = "Black and White";
                     } else if (presetCategory == "colorslide") {
