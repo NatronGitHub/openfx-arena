@@ -28,6 +28,19 @@
 #include <sys/stat.h>
 #include <sys/types.h>
 #include <cstring>
+#include <sstream>
+#ifdef _WIN32
+#include <process.h>
+#else
+#include <unistd.h>
+#endif
+
+#include "ofxsMultiThread.h"
+// fast_mutex can be constructed statically, before the host's multithread
+// suite is available.
+#include "fast_mutex.h"
+typedef tthread::fast_mutex Mutex;
+typedef OFX::MultiThread::AutoMutexT<tthread::fast_mutex> AutoMutex;
 
 using namespace OFX;
 OFXS_NAMESPACE_ANONYMOUS_ENTER
@@ -92,6 +105,19 @@ OFXS_NAMESPACE_ANONYMOUS_ENTER
 #define kParamCustomPathHint "Add a custom path where the presets are located (or will be downloaded)."
 
 static bool gHostIsNatron = false;
+
+// Shared by all instances, since they download to the same preset directory.
+static Mutex gDownloadMutex;
+
+static int
+currentProcessId()
+{
+#ifdef _WIN32
+    return _getpid();
+#else
+    return (int)getpid();
+#endif
+}
 
 bool
 existsFile(const std::string &filename)
@@ -280,7 +306,7 @@ public:
                 OFX::throwSuiteStatusException(kOfxStatFailed);
             }
             if (!existsFile(clut)) {
-                if (!getFile(url, clut)) {
+                if (!getFile(url, clut, true)) {
                     setPersistentMessage(OFX::Message::eMessageError, "", "Unable to download LUT");
                     OFX::throwSuiteStatusException(kOfxStatFailed);
                 }
@@ -296,7 +322,7 @@ public:
             } catch(Magick::Exception &exp) {
                 if (custom.empty()) {
                     _lut.comment("N/A");
-                    if (!getFile(url, clut)) {
+                    if (!getFile(url, clut, false)) {
                         setPersistentMessage(OFX::Message::eMessageError, "", "Unable to download LUT");
                         OFX::throwSuiteStatusException(kOfxStatFailed);
                     } else {
@@ -318,27 +344,59 @@ public:
 
     }
     virtual void changedParam(const OFX::InstanceChangedArgs &args, const std::string &paramName) OVERRIDE FINAL;
-    bool getFile(const std::string location, const std::string &destination)
+    // Download location to destination. If onlyIfMissing is true and destination
+    // already exists (e.g. another render thread just downloaded it), nothing is
+    // done.
+    bool getFile(const std::string &location, const std::string &destination, bool onlyIfMissing)
     {
-        CURL *curl;
-        FILE *fp;
-        CURLcode res;
-        curl = curl_easy_init();
-        if (curl) {
-            fp = fopen(destination.c_str(),"wb");
-            curl_easy_setopt(curl, CURLOPT_URL, location.c_str());
-            curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, curlWriteData);
-            curl_easy_setopt(curl, CURLOPT_WRITEDATA, fp);
-            curl_easy_setopt(curl, CURLOPT_SSL_VERIFYPEER, 0);
-            res = curl_easy_perform(curl);
-            curl_easy_cleanup(curl);
-            fclose(fp);
-        }
-        if (existsFile(destination) && res == CURLE_OK) {
+        // Serialise downloads: concurrent render threads (or instances) would
+        // otherwise fetch and write the same file at the same time, and
+        // curl_easy_init() may run the non-thread-safe curl_global_init().
+        AutoMutex lock(gDownloadMutex);
+
+        if (onlyIfMissing && existsFile(destination)) {
             return true;
-        } else {
+        }
+
+        // Write to a temporary file and rename it on success, so that a failed
+        // or partial download never leaves a file at destination (existsFile()
+        // would then treat it as a valid cached preset).
+        std::stringstream tmpss;
+        tmpss << destination << ".part." << currentProcessId();
+        const std::string tmp = tmpss.str();
+
+        CURL *curl = curl_easy_init();
+        if (!curl) {
             return false;
         }
+        FILE *fp = fopen(tmp.c_str(), "wb");
+        if (!fp) {
+            curl_easy_cleanup(curl);
+            return false;
+        }
+        curl_easy_setopt(curl, CURLOPT_URL, location.c_str());
+        curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, curlWriteData);
+        curl_easy_setopt(curl, CURLOPT_WRITEDATA, fp);
+        // Verify the server certificate (libcurl's default, set explicitly).
+        curl_easy_setopt(curl, CURLOPT_SSL_VERIFYPEER, 1L);
+        curl_easy_setopt(curl, CURLOPT_SSL_VERIFYHOST, 2L);
+        // Treat HTTP errors (e.g. 404) as failures, instead of saving the error
+        // page as the preset file.
+        curl_easy_setopt(curl, CURLOPT_FAILONERROR, 1L);
+        CURLcode res = curl_easy_perform(curl);
+        curl_easy_cleanup(curl);
+        bool ok = (fclose(fp) == 0) && (res == CURLE_OK);
+        if (ok) {
+#ifdef _WIN32
+            // rename() does not overwrite an existing file on Windows.
+            remove(destination.c_str());
+#endif
+            ok = (rename(tmp.c_str(), destination.c_str()) == 0);
+        }
+        if (!ok) {
+            remove(tmp.c_str());
+        }
+        return ok && existsFile(destination);
     }
     std::string presetPath(std::string altpath)
     {
