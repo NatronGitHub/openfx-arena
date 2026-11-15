@@ -163,11 +163,13 @@ const std::string RichText::convertHtmlToMarkup(const std::string &str,
 {
     std::string result = str;
 
+#ifdef DEBUG
     if (RichText::isNatronLegacyRichText(str)) {
          std::cout << "\n\n==========> THIS VERSION OF NATRON HAS LIMITED SUPPORT FOR RICH TEXT !!!" << std::endl;
     }
 
     std::cout << "\n\n==========> CONVERT HTML TO PANGO\n\nHTML SOURCE:\n\n" << result << std::endl;
+#endif
 
     // mark all tags we want to keep
     std::vector<std::string> tags;
@@ -288,7 +290,9 @@ const std::string RichText::convertHtmlToMarkup(const std::string &str,
                 line.replace(line.find(opt), opt.length() + 1, "");
             }
 
+#ifdef DEBUG
             std::cout << "FONT FAMILY? " << hasFontFamily << ":" << fontFamily << " SIZE? " << hasFontSize << ":" << fontSize << std::endl;
+#endif
 
             // add font family (and size if exists)
             if (hasFontFamily && !fontFamily.empty()) {
@@ -335,7 +339,9 @@ const std::string RichText::convertHtmlToMarkup(const std::string &str,
         markup += line;
     }
     if (!markup.empty()) { result = markup; } // add markup
-     std::cout << "\n\nPANGO MARKUP RESULT:\n\n" << result << std::endl; // DEBUG
+#ifdef DEBUG
+     std::cout << "\n\nPANGO MARKUP RESULT:\n\n" << result << std::endl;
+#endif
     return result;
 }
 
@@ -567,12 +573,16 @@ void RichText::setupFontmap(FcConfig *fc,
                             PangoFontMap *map)
 {
     if (!fc) { return; }
-    if (!map) { map = pango_cairo_font_map_get_default(); }
+    if (!map) { map = pango_cairo_font_map_get_default(); } // transfer none
     if (pango_cairo_font_map_get_font_type((PangoCairoFontMap*)(map)) != CAIRO_FONT_TYPE_FT) {
-        map = pango_cairo_font_map_new_for_font_type(CAIRO_FONT_TYPE_FT);
+        // e.g. CoreText on macOS: replace the (per-thread) default by a FreeType fontmap
+        PangoFontMap *ftMap = pango_cairo_font_map_new_for_font_type(CAIRO_FONT_TYPE_FT); // transfer full, may be NULL
+        if (!ftMap) { return; } // pango built without FreeType support
+        pango_cairo_font_map_set_default((PangoCairoFontMap*)(ftMap)); // takes its own reference
+        g_object_unref(ftMap);
+        map = ftMap;
     }
-    pango_fc_font_map_set_config((PangoFcFontMap*)map, fc);
-    pango_cairo_font_map_set_default((PangoCairoFontMap*)(map));
+    pango_fc_font_map_set_config((PangoFcFontMap*)map, fc); // takes its own reference on fc
 }
 
 RichText::RichTextRenderResult RichText::renderRichText(int width,
@@ -587,7 +597,9 @@ RichText::RichTextRenderResult RichText::renderRichText(int width,
                                                         bool flip,
                                                         bool noBuffer)
 {
+#ifdef DEBUG
     std::cout << "RICHT TEXT WIP RENDER " << width << " " << height << " " << rX << " " << rY <<std::endl;
+#endif
 
     RichTextRenderResult result;
     result.success = false;
@@ -633,7 +645,9 @@ RichText::RichTextRenderResult RichText::renderRichText(int width,
     result.pW = -1;
     result.pH = -1;
     pango_layout_get_pixel_size(layout, &result.pW, &result.pH);
+#ifdef DEBUG
     std::cout << "PANGO SIZE " << result.pW << " " << result.pH << std::endl;
+#endif
 
     // success?
     status = cairo_status(cr);
@@ -647,7 +661,9 @@ RichText::RichTextRenderResult RichText::renderRichText(int width,
     result.sH = -1;
     result.sW = cairo_image_surface_get_width(surface);
     result.sH = cairo_image_surface_get_height(surface);
+#ifdef DEBUG
     std::cout << "SURFACE SIZE " << result.sW << " " << result.sH << std::endl;
+#endif
 
     if (result.sW != width || result.sH != height) { // size differ!
         noBuffer = true; // skip buffer
@@ -699,7 +715,9 @@ RichText::RichTextRenderResult RichText::renderText(int width,
     result.success = false;
 
     if (!fc) {
+#ifdef DEBUG
         std::cout << "NO FONTCONFIG!!!" << std::endl;
+#endif
         return result;
     }
 
@@ -934,15 +952,17 @@ std::list<std::string> RichText::getFontFamilyList(FcConfig *fc,
     FcFontSet *fs = FcFontList(fc, p, os);
     std::list<std::string> fonts;
     for (int i=0; fs && i < fs->nfont; i++) {
-        FcPattern *font = fs->fonts[i];
-        FcChar8 *s;
-        s = FcPatternFormat(font, (const FcChar8 *)"%{family[0]}");
-        std::string fontName(reinterpret_cast<char*>(s));
-        fonts.push_back(fontName);
-        if (font) { FcPatternDestroy(font); }
+        FcPattern *font = fs->fonts[i]; // owned by fs
+        FcChar8 *s = font ? FcPatternFormat(font, (const FcChar8 *)"%{family[0]}") : nullptr;
+        if (s) {
+            std::string fontName(reinterpret_cast<char*>(s));
+            fonts.push_back(fontName);
+            FcStrFree(s);
+        }
     }
-    FcObjectSetDestroy(os);
-    FcPatternDestroy(p);
+    if (fs) { FcFontSetDestroy(fs); } // also destroys the patterns it contains
+    if (os) { FcObjectSetDestroy(os); }
+    if (p) { FcPatternDestroy(p); }
     if (noFC) { FcConfigDestroy(fc); }
 
     // sort and return
