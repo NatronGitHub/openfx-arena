@@ -93,6 +93,7 @@ class RichTextPlugin : public ImageEffect
 {
 public:
     RichTextPlugin(OfxImageEffectHandle handle);
+    virtual ~RichTextPlugin();
     virtual void render(const RenderArguments &args) override final;
     virtual void changedParam(const InstanceChangedArgs &args,
                               const std::string &paramName) override final;
@@ -117,6 +118,7 @@ RichTextPlugin::RichTextPlugin(OfxImageEffectHandle handle)
 , _srcAlign(nullptr)
 , _srcWrap(nullptr)
 , _srcJustify(nullptr)
+, _fc(nullptr)
 , _srcAuto(nullptr)
 , _srcCanvas(nullptr)
 {
@@ -143,6 +145,14 @@ RichTextPlugin::RichTextPlugin(OfxImageEffectHandle handle)
 #endif
     }
     _fc = FcInitLoadConfigAndFonts();
+}
+
+RichTextPlugin::~RichTextPlugin()
+{
+    // the render threads' fontmaps hold their own reference, if any
+    if (_fc) {
+        FcConfigDestroy(_fc);
+    }
 }
 
 /* Override the render */
