@@ -185,7 +185,8 @@ parseXML(const std::string &filename, std::vector<HaldCLUTPreset>* presets)
     }
 
     xmlFreeDoc(doc);
-    xmlCleanupParser();
+    // Do not call xmlCleanupParser() here: it frees libxml2's global state,
+    // which the host and other plugins in the same process may still be using.
 }
 
 size_t
