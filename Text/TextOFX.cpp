@@ -963,6 +963,13 @@ void TextFXPlugin::render(const OFX::RenderArguments &args)
         }
     }
 
+    // pango_layout_set_spacing() adds space between lines, in Pango units.
+    // (pango_layout_set_line_spacing() takes a line-height factor instead.)
+    // Set it before the layout is measured for the vertical alignment below.
+    if (lineSpace != 0.) {
+        pango_layout_set_spacing(layout, (int)std::floor((lineSpace*PANGO_SCALE) * args.renderScale.y + 0.5));
+    }
+
     if (!move) {
         switch(align) {
         case 0:
@@ -998,11 +1005,6 @@ void TextFXPlugin::render(const OFX::RenderArguments &args)
         pango_attr_list_insert(alist,pango_attr_letter_spacing_new(std::floor((letterSpace*PANGO_SCALE) * args.renderScale.x + 0.5)));
     }
 
-    // pango_layout_set_spacing() adds space between lines, in Pango units.
-    // (pango_layout_set_line_spacing() takes a line-height factor instead.)
-    if (lineSpace != 0.) {
-        pango_layout_set_spacing(layout, (int)std::floor((lineSpace*PANGO_SCALE) * args.renderScale.y + 0.5));
-    }
 
     if (!markup) {
         pango_layout_set_attributes(layout,alist);
