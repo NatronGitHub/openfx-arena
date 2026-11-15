@@ -28,6 +28,19 @@
 #include <sys/stat.h>
 #include <sys/types.h>
 #include <cstring>
+#include <sstream>
+#ifdef _WIN32
+#include <process.h>
+#else
+#include <unistd.h>
+#endif
+
+#include "ofxsMultiThread.h"
+// fast_mutex can be constructed statically, before the host's multithread
+// suite is available.
+#include "fast_mutex.h"
+typedef tthread::fast_mutex Mutex;
+typedef OFX::MultiThread::AutoMutexT<tthread::fast_mutex> AutoMutex;
 
 using namespace OFX;
 OFXS_NAMESPACE_ANONYMOUS_ENTER
@@ -94,6 +107,19 @@ OFXS_NAMESPACE_ANONYMOUS_ENTER
 
 static bool gHostIsNatron = false;
 
+// Shared by all instances, since they download to the same preset directory.
+static Mutex gDownloadMutex;
+
+static int
+currentProcessId()
+{
+#ifdef _WIN32
+    return _getpid();
+#else
+    return (int)getpid();
+#endif
+}
+
 bool
 existsFile(const std::string &filename)
 {
@@ -101,43 +127,54 @@ existsFile(const std::string &filename)
     return (stat(filename.c_str(), &st) == 0);
 }
 
-std::vector<std::string>
-parsePreset(xmlDocPtr doc, xmlNodePtr cur)
+struct HaldCLUTPreset
+{
+    std::string title;
+    std::string category;
+    std::string file;
+    std::string checksum;
+};
+
+// Returns the text content of an XML node, or an empty string if it has none
+// (xmlNodeListGetString returns NULL for an empty element).
+static std::string
+nodeString(xmlDocPtr doc, xmlNodePtr cur)
+{
+    std::string ret;
+    xmlChar *key = xmlNodeListGetString(doc, cur->xmlChildrenNode, 1);
+    if (key) {
+        ret = reinterpret_cast<const char*>(key);
+        xmlFree(key);
+    }
+    return ret;
+}
+
+// Fields are looked up by element name, not by position. Returns false if the
+// preset is unusable (a missing title, category or file).
+static bool
+parsePreset(xmlDocPtr doc, xmlNodePtr cur, HaldCLUTPreset* preset)
 {
     cur = cur->xmlChildrenNode;
-    xmlChar *key;
-    std::vector<std::string> preset;
     while (cur != NULL) {
         if ((!xmlStrcmp(cur->name, (const xmlChar *)"title"))) {
-            key = xmlNodeListGetString(doc, cur->xmlChildrenNode, 1);
-            preset.push_back((reinterpret_cast<char*>(key)));
-            xmlFree(key);
-        }
-        if ((!xmlStrcmp(cur->name, (const xmlChar *)"file"))) {
-            key = xmlNodeListGetString(doc, cur->xmlChildrenNode, 1);
-            preset.push_back((reinterpret_cast<char*>(key)));
-            xmlFree(key);
-        }
-        if ((!xmlStrcmp(cur->name, (const xmlChar *)"checksum"))) {
-            key = xmlNodeListGetString(doc, cur->xmlChildrenNode, 1);
-            preset.push_back((reinterpret_cast<char*>(key)));
-            xmlFree(key);
-        }
-        if ((!xmlStrcmp(cur->name, (const xmlChar *)"category"))) {
-            key = xmlNodeListGetString(doc, cur->xmlChildrenNode, 1);
-            preset.push_back((reinterpret_cast<char*>(key)));
-            xmlFree(key);
+            preset->title = nodeString(doc, cur);
+        } else if ((!xmlStrcmp(cur->name, (const xmlChar *)"file"))) {
+            preset->file = nodeString(doc, cur);
+        } else if ((!xmlStrcmp(cur->name, (const xmlChar *)"checksum"))) {
+            preset->checksum = nodeString(doc, cur);
+        } else if ((!xmlStrcmp(cur->name, (const xmlChar *)"category"))) {
+            preset->category = nodeString(doc, cur);
         }
         cur = cur->next;
     }
-    if (preset.size() != 4) {
-        preset.clear();
-    }
-    return preset;
+    return !preset->title.empty() && !preset->category.empty() && !preset->file.empty();
 }
 
+// Both describeInContext (choice options) and the instance (render) build their
+// table with this function, so choice index i always maps to (*presets)[i].
+// Invalid presets are skipped instead of being stored as empty entries.
 void
-parseXML(const std::string &filename, std::vector<std::vector<std::string> >* presets)
+parseXML(const std::string &filename, std::vector<HaldCLUTPreset>* presets)
 {
     xmlDocPtr doc;
     xmlNodePtr cur;
@@ -166,13 +203,17 @@ parseXML(const std::string &filename, std::vector<std::vector<std::string> >* pr
     cur = cur->xmlChildrenNode;
     while (cur != NULL) {
         if ((!xmlStrcmp(cur->name, (const xmlChar *)"preset"))) {
-            presets->push_back(parsePreset(doc, cur));
+            HaldCLUTPreset preset;
+            if (parsePreset(doc, cur, &preset)) {
+                presets->push_back(preset);
+            }
         }
         cur = cur->next;
     }
 
     xmlFreeDoc(doc);
-    xmlCleanupParser();
+    // Do not call xmlCleanupParser() here: it frees libxml2's global state,
+    // which the host and other plugins in the same process may still be using.
 }
 
 size_t
@@ -250,24 +291,29 @@ public:
         std::string presetFile;
 
         if (custom.empty()) {
-            if (_presets.size() > 0) {
-                category = _presets[preset][1];
-                filename = _presets[preset][2];
+            if (preset >= 0 && preset < (int)_presets.size()) {
+                category = _presets[preset].category;
+                filename = _presets[preset].file;
             }
-            //checksum = _presets[preset][3];
+            //checksum = _presets[preset].checksum;
             if (category.empty() || filename.empty() /*|| checksum.empty()*/) {
                 setPersistentMessage(OFX::Message::eMessageError, "", "Unable to read XML");
                 OFX::throwSuiteStatusException(kOfxStatFailed);
             }
             url.append(kPluginRepoURL);
             url.append("/" + category + "/" + filename);
-            clut.append(presetPath(customPath) + "/" + filename);
+            std::string dir = presetPath(customPath);
+            if (dir.empty()) {
+                setPersistentMessage(OFX::Message::eMessageError, "", "Unable to find the home directory, please set the 'customPath' param");
+                OFX::throwSuiteStatusException(kOfxStatFailed);
+            }
+            clut.append(dir + "/" + filename);
             if (url.empty() || clut.empty()) {
                 setPersistentMessage(OFX::Message::eMessageError, "", "Missing XML data");
                 OFX::throwSuiteStatusException(kOfxStatFailed);
             }
             if (!existsFile(clut)) {
-                if (!getFile(url, clut)) {
+                if (!getFile(url, clut, true)) {
                     setPersistentMessage(OFX::Message::eMessageError, "", "Unable to download LUT");
                     OFX::throwSuiteStatusException(kOfxStatFailed);
                 }
@@ -277,27 +323,45 @@ public:
             presetFile = custom;
         }
 
-        if (_lut.comment() != presetFile) {
-            try {
-                _lut.read(presetFile.c_str());
-            } catch(Magick::Exception &exp) {
-                if (custom.empty()) {
-                    _lut.comment("N/A");
-                    if (!getFile(url, clut)) {
-                        setPersistentMessage(OFX::Message::eMessageError, "", "Unable to download LUT");
-                        OFX::throwSuiteStatusException(kOfxStatFailed);
-                    } else {
-                        _lut.read(presetFile.c_str());
+        // The plugin is eRenderFullySafe, so several render threads may run on
+        // this instance: _lut (the cached CLUT, keyed by its comment) is only
+        // read or modified with _lutMutex held, and rendering uses a reference
+        // to it (Magick::Image copies are reference-counted and copy-on-write,
+        // so a later update of _lut does not modify lut).
+        Magick::Image lut;
+        {
+            AutoMutex lock(_lutMutex);
+            if (_lut.comment() != presetFile) {
+                try {
+                    _lut.read(presetFile.c_str());
+                } catch(Magick::Exception &exp) {
+                    if (custom.empty()) {
+                        _lut.comment("N/A");
+                        if (!getFile(url, clut, false)) {
+                            setPersistentMessage(OFX::Message::eMessageError, "", "Unable to download LUT");
+                            OFX::throwSuiteStatusException(kOfxStatFailed);
+                        } else {
+                            // This read used to be outside the try block, so its
+                            // exception escaped render without an error message.
+                            try {
+                                _lut.read(presetFile.c_str());
+                            } catch(Magick::Exception &) {
+                                _lut.comment("N/A");
+                                setPersistentMessage(OFX::Message::eMessageError, "", "Unable to read CLUT");
+                                OFX::throwSuiteStatusException(kOfxStatFailed);
+                            }
+                        }
                     }
                 }
+                if (!_srgbTransfer) {
+                    _lut.colorSpace(Magick::RGBColorspace);
+                }
+                _lut.comment(presetFile);
             }
-            if (!_srgbTransfer) {
-                _lut.colorSpace(Magick::RGBColorspace);
-            }
-            _lut.comment(presetFile);
+            lut = _lut;
         }
 
-        if (_lut.rows() >= 512 && _lut.rows() == _lut.columns() && _lut.comment() == presetFile) {
+        if (lut.rows() >= 512 && lut.rows() == lut.columns() && lut.comment() == presetFile) {
             if (_srgbTransfer) {
                 // The input is linear, while Hald CLUT files map sRGB-encoded values to
                 // sRGB-encoded values. Encode the input with the sRGB transfer function, clamp it
@@ -313,11 +377,11 @@ public:
 #endif
                 image.colorSpace(Magick::sRGBColorspace);
                 image.clamp();
-                image.haldClut(_lut);
+                image.haldClut(lut);
                 image.colorSpace(Magick::RGBColorspace);
             } else {
                 image.gamma(2.2);
-                image.haldClut(_lut);
+                image.haldClut(lut);
             }
         } else {
             setPersistentMessage(OFX::Message::eMessageError, "", "Unable to read CLUT");
@@ -326,39 +390,81 @@ public:
 
     }
     virtual void changedParam(const OFX::InstanceChangedArgs &args, const std::string &paramName) OVERRIDE FINAL;
-    bool getFile(const std::string location, const std::string &destination)
+    // Download location to destination. If onlyIfMissing is true and destination
+    // already exists (e.g. another render thread just downloaded it), nothing is
+    // done.
+    bool getFile(const std::string &location, const std::string &destination, bool onlyIfMissing)
     {
-        CURL *curl;
-        FILE *fp;
-        CURLcode res;
-        curl = curl_easy_init();
-        if (curl) {
-            fp = fopen(destination.c_str(),"wb");
-            curl_easy_setopt(curl, CURLOPT_URL, location.c_str());
-            curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, curlWriteData);
-            curl_easy_setopt(curl, CURLOPT_WRITEDATA, fp);
-            curl_easy_setopt(curl, CURLOPT_SSL_VERIFYPEER, 0);
-            res = curl_easy_perform(curl);
-            curl_easy_cleanup(curl);
-            fclose(fp);
-        }
-        if (existsFile(destination) && res == CURLE_OK) {
+        // Serialise downloads: concurrent render threads (or instances) would
+        // otherwise fetch and write the same file at the same time, and
+        // curl_easy_init() may run the non-thread-safe curl_global_init().
+        AutoMutex lock(gDownloadMutex);
+
+        if (onlyIfMissing && existsFile(destination)) {
             return true;
-        } else {
+        }
+
+        // Write to a temporary file and rename it on success, so that a failed
+        // or partial download never leaves a file at destination (existsFile()
+        // would then treat it as a valid cached preset).
+        std::stringstream tmpss;
+        tmpss << destination << ".part." << currentProcessId();
+        const std::string tmp = tmpss.str();
+
+        CURL *curl = curl_easy_init();
+        if (!curl) {
             return false;
         }
+        FILE *fp = fopen(tmp.c_str(), "wb");
+        if (!fp) {
+            curl_easy_cleanup(curl);
+            return false;
+        }
+        curl_easy_setopt(curl, CURLOPT_URL, location.c_str());
+        curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, curlWriteData);
+        curl_easy_setopt(curl, CURLOPT_WRITEDATA, fp);
+        // Verify the server certificate (libcurl's default, set explicitly).
+        curl_easy_setopt(curl, CURLOPT_SSL_VERIFYPEER, 1L);
+        curl_easy_setopt(curl, CURLOPT_SSL_VERIFYHOST, 2L);
+        // Treat HTTP errors (e.g. 404) as failures, instead of saving the error
+        // page as the preset file.
+        curl_easy_setopt(curl, CURLOPT_FAILONERROR, 1L);
+        CURLcode res = curl_easy_perform(curl);
+        curl_easy_cleanup(curl);
+        bool ok = (fclose(fp) == 0) && (res == CURLE_OK);
+        if (ok) {
+#ifdef _WIN32
+            // rename() does not overwrite an existing file on Windows.
+            remove(destination.c_str());
+#endif
+            ok = (rename(tmp.c_str(), destination.c_str()) == 0);
+        }
+        if (!ok) {
+            remove(tmp.c_str());
+        }
+        return ok && existsFile(destination);
     }
     std::string presetPath(std::string altpath)
     {
         std::string path;
         if (altpath.empty()) {
+            // getenv() returns NULL if the variable is unset, and appending NULL
+            // to a std::string is undefined behaviour. Return an empty path then.
 #ifdef _WIN32
-            path.append(getenv("HOMEDRIVE"));
-            path.append(getenv("HOMEPATH"));
+            const char* homeDrive = getenv("HOMEDRIVE");
+            const char* homePath = getenv("HOMEPATH");
+            if (homeDrive && homePath) {
+                path.append(homeDrive);
+                path.append(homePath);
+                path.append("/.clut");
+            }
 #else
-            path.append(getenv("HOME"));
+            const char* home = getenv("HOME");
+            if (home) {
+                path.append(home);
+                path.append("/.clut");
+            }
 #endif
-            path.append("/.clut");
         }
         if (!path.empty()) {
             if (!existsFile(path)) {
@@ -376,9 +482,10 @@ public:
     }
 private:
     bool _srgbTransfer;
-    std::vector<std::vector<std::string> > _presets;
+    std::vector<HaldCLUTPreset> _presets;
     ChoiceParam *_preset;
-    Magick::Image _lut;
+    Magick::Image _lut; // protected by _lutMutex
+    Mutex _lutMutex;
     StringParam *_custom;
     StringParam *_path;
 };
@@ -391,6 +498,7 @@ HaldCLUTPlugin::changedParam(const OFX::InstanceChangedArgs &args, const std::st
         return;
     }
     if (paramName == kParamCustom) {
+        AutoMutex lock(_lutMutex);
         _lut.comment("N/A");
     }
     clearPersistentMessage();
@@ -427,7 +535,7 @@ HaldCLUTPluginFactory<majorVersion>::describeInContext(ImageEffectDescriptor &de
     filename.append("/Contents/Resources/");
     filename.append(kPluginIdentifier);
     filename.append(".xml");
-    std::vector<std::vector<std::string> > presets;
+    std::vector<HaldCLUTPreset> presets;
     parseXML(filename, &presets);
 
     PageParamDescriptor *page = HaldCLUTPlugin::describeInContextBegin(desc, context);
@@ -439,12 +547,14 @@ HaldCLUTPluginFactory<majorVersion>::describeInContext(ImageEffectDescriptor &de
         if (gHostIsNatron) {
             param->setCascading(getImageEffectHostDescription()->supportsCascadingChoices);
         }
+        // One option per entry of presets (all have a non-empty title, see
+        // parsePreset), so that option indices match the instance's _presets.
         for (size_t i = 0; i < presets.size(); i++) {
-            std::string presetTitle = presets[i][0];
-            if (!presetTitle.empty()) {
+            std::string presetTitle = presets[i].title;
+            {
                 if (gHostIsNatron) {
                     std::string tmp = presetTitle;
-                    std::string presetCategory = presets[i][1];
+                    std::string presetCategory = presets[i].category;
                     if (presetCategory == "bw") {
                         presetCategory = "Black and White";
                     } else if (presetCategory == "colorslide") {
