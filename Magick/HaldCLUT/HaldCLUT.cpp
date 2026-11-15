@@ -67,8 +67,9 @@ OFXS_NAMESPACE_ANONYMOUS_ENTER
     "Neither the publisher nor the authors are affiliated with or endorsed by the companies that own the trademarks."
 #define kPluginRepoURL "https://raw.githubusercontent.com/NatronGitHub/clut/master"
 #define kPluginRepoZIP "https://github.com/NatronGitHub/clut/archive/master.zip"
-#define kPluginVersionMajor 1
-#define kPluginVersionMinor 1
+// Version 2 uses the sRGB transfer function to apply the CLUT to linear input (see HaldCLUTPlugin::render).
+#define kPluginVersionMajor 2
+#define kPluginVersionMinor 0
 
 #define kSupportsTiles 0
 #define kSupportsMultiResolution 1
@@ -185,8 +186,9 @@ class HaldCLUTPlugin
     : public MagickPluginHelper<kSupportsRenderScale>
 {
 public:
-    HaldCLUTPlugin(OfxImageEffectHandle handle)
+    HaldCLUTPlugin(OfxImageEffectHandle handle, bool srgbTransfer)
         : MagickPluginHelper<kSupportsRenderScale>(handle)
+        , _srgbTransfer(srgbTransfer)
         , _presets()
         , _preset(NULL)
         , _custom(NULL)
@@ -289,13 +291,29 @@ public:
                     }
                 }
             }
-            _lut.colorSpace(Magick::RGBColorspace);
+            if (!_srgbTransfer) {
+                _lut.colorSpace(Magick::RGBColorspace);
+            }
             _lut.comment(presetFile);
         }
 
         if (_lut.rows() >= 512 && _lut.rows() == _lut.columns() && _lut.comment() == presetFile) {
-            image.gamma(2.2);
-            image.haldClut(_lut);
+            if (_srgbTransfer) {
+                // The input is linear, while Hald CLUT files map sRGB-encoded values to
+                // sRGB-encoded values. Encode the input with the sRGB transfer function, clamp it
+                // to the domain of the CLUT, apply the CLUT unchanged, and decode its output back
+                // to linear. Version 1 encoded the input with a 2.2 power function but decoded the
+                // (linearised) CLUT with the sRGB function, so even an identity CLUT changed the
+                // image (e.g. it lifted the shadows).
+                image.colorSpaceType(Magick::RGBColorspace); // tag as linear, pixels unchanged
+                image.colorSpace(Magick::sRGBColorspace);
+                image.clamp();
+                image.haldClut(_lut);
+                image.colorSpace(Magick::RGBColorspace);
+            } else {
+                image.gamma(2.2);
+                image.haldClut(_lut);
+            }
         } else {
             setPersistentMessage(OFX::Message::eMessageError, "", "Unable to read CLUT");
             OFX::throwSuiteStatusException(kOfxStatFailed);
@@ -352,6 +370,7 @@ public:
         return path;
     }
 private:
+    bool _srgbTransfer;
     std::vector<std::vector<std::string> > _presets;
     ChoiceParam *_preset;
     Magick::Image _lut;
@@ -372,10 +391,11 @@ HaldCLUTPlugin::changedParam(const OFX::InstanceChangedArgs &args, const std::st
     clearPersistentMessage();
 }
 
-mDeclarePluginFactory(HaldCLUTPluginFactory, {}, {});
+mDeclarePluginFactoryVersioned(HaldCLUTPluginFactory, {}, {});
 
+template<unsigned int majorVersion>
 void
-HaldCLUTPluginFactory::describe(ImageEffectDescriptor &desc)
+HaldCLUTPluginFactory<majorVersion>::describe(ImageEffectDescriptor &desc)
 {
     desc.setLabel(kPluginName);
     desc.setPluginGrouping(kPluginGrouping);
@@ -391,8 +411,9 @@ HaldCLUTPluginFactory::describe(ImageEffectDescriptor &desc)
     desc.setHostMixingEnabled(kHostMixing);
 }
 
+template<unsigned int majorVersion>
 void
-HaldCLUTPluginFactory::describeInContext(ImageEffectDescriptor &desc, ContextEnum context)
+HaldCLUTPluginFactory<majorVersion>::describeInContext(ImageEffectDescriptor &desc, ContextEnum context)
 {
     gHostIsNatron = (getImageEffectHostDescription()->isNatron);
 
@@ -473,13 +494,17 @@ HaldCLUTPluginFactory::describeInContext(ImageEffectDescriptor &desc, ContextEnu
     HaldCLUTPlugin::describeInContextEnd(desc, context, page);
 }
 
+template<unsigned int majorVersion>
 OFX::ImageEffect*
-HaldCLUTPluginFactory::createInstance(OfxImageEffectHandle handle, ContextEnum /*context*/)
+HaldCLUTPluginFactory<majorVersion>::createInstance(OfxImageEffectHandle handle, ContextEnum /*context*/)
 {
-    return new HaldCLUTPlugin(handle);
+    return new HaldCLUTPlugin(handle, majorVersion >= 2);
 }
 
-static HaldCLUTPluginFactory p(kPluginIdentifier, kPluginVersionMajor, kPluginVersionMinor);
+static HaldCLUTPluginFactory<kPluginVersionMajor> p(kPluginIdentifier, kPluginVersionMinor);
 mRegisterPluginFactoryInstance(p)
+// Version 1 is kept unchanged so that existing projects render as before.
+static HaldCLUTPluginFactory<1> p1(kPluginIdentifier, 1);
+mRegisterPluginFactoryInstance(p1)
 
 OFXS_NAMESPACE_ANONYMOUS_EXIT
