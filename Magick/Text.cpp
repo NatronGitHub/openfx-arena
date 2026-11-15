@@ -529,8 +529,12 @@ void TextPlugin::render(const OFX::RenderArguments &args)
             dropShadow.blur(0,std::floor(shadowBlur * args.renderScale.x + 0.5));
         // shadow() enlarges the image by about 2*sigma on each side and stores
         // that as a negative page offset; ignoring it put the shadow 2*sigma
-        // to the right of and below its intended position (#38)
-        shadowContainer.composite(dropShadow,std::floor(shadowX * args.renderScale.x + 0.5) + dropShadow.page().xOff(),std::floor(shadowY * args.renderScale.x + 0.5) + dropShadow.page().yOff(),Magick::OverCompositeOp);
+        // to the right of and below its intended position (#38).
+        // Use the raw, signed page offset: in ImageMagick 6, Geometry::xOff()
+        // returns its absolute value (the sign is in xNegative()).
+        const ssize_t shadowPageX = dropShadow.constImage()->page.x;
+        const ssize_t shadowPageY = dropShadow.constImage()->page.y;
+        shadowContainer.composite(dropShadow,std::floor(shadowX * args.renderScale.x + 0.5) + shadowPageX,std::floor(shadowY * args.renderScale.x + 0.5) + shadowPageY,Magick::OverCompositeOp);
         shadowContainer.composite(image,0,0,Magick::OverCompositeOp);
         image=shadowContainer;
     }
