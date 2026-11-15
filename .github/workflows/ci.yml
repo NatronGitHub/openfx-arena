@@ -14,11 +14,11 @@ on:
 
 jobs:
   build:
-    name: Build Ubuntu 22.04
-    runs-on: ubuntu-22.04
+    name: Build Ubuntu 24.04
+    runs-on: ubuntu-24.04
     steps:
       - name: Checkout branch
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
         with:
           submodules: recursive
       - name: Install Ubuntu system packages
@@ -37,7 +37,7 @@ jobs:
       - name: Build (debug)
         run: make -j2 CONFIG=debug
       - name: Upload artifacts
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
-          name: openfx-arena-build-ubuntu_22-release
+          name: openfx-arena-build-ubuntu_24-release
           path: Bundle/ArenaPlugin
