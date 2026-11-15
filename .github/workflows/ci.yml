@@ -70,7 +70,7 @@ jobs:
             git base-devel unzip mingw-w64-x86_64-wget mingw-w64-x86_64-cc mingw-w64-x86_64-pkg-config
             mingw-w64-x86_64-lcms2 mingw-w64-x86_64-fontconfig mingw-w64-x86_64-pango
             mingw-w64-x86_64-librsvg mingw-w64-x86_64-libxml2 mingw-w64-x86_64-libzip mingw-w64-x86_64-libcdr
-            mingw-w64-x86_64-librevenge mingw-w64-x86_64-curl
+            mingw-w64-x86_64-librevenge mingw-w64-x86_64-curl mingw-w64-x86_64-ntldd
       - name: Install Natron pacman repository (ImageMagick, poppler, OpenColorIO, sox)
         run: |
           mkdir ${GITHUB_WORKSPACE}/natron_pacman_repo
@@ -97,7 +97,7 @@ jobs:
             OpenFX/HostSupport/src/ofxhUtilities.cpp -I OpenFX/HostSupport/include/ -I OpenFX/include/
           # on failure, list the DLLs that cannot be found
           ./verify_plugin_loads Bundle/ArenaPlugin/Arena.ofx.bundle/Contents/Win64/Arena.ofx || \
-            { ldd Bundle/ArenaPlugin/Arena.ofx.bundle/Contents/Win64/Arena.ofx | grep -iE "not found|\?\?\?"; exit 1; }
+            { ntldd -R Bundle/ArenaPlugin/Arena.ofx.bundle/Contents/Win64/Arena.ofx | grep -iE "not found|=> *$" ; exit 1; }
       - name: Upload artifacts
         uses: actions/upload-artifact@v4
         with:
