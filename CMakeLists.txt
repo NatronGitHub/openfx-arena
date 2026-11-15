@@ -33,7 +33,6 @@ option(AUDIO "Enable AudioCurve OFX" OFF)
 option(RICHTEXT "Enable RichText OFX" OFF)
 option(HALDCLUT "Enable HaldCLUT OFX (requires curl)" OFF)
 option(BUNDLE_FONTS_CONF "Bundle fonts.conf" OFF)
-option(READMISC_LEGACY "Enable legacy file formats in ReadMisc" OFF)
 set(MAGICK_PKG_CONFIG "Magick++" CACHE STRING "ImageMagick pkg-config name")
 
 # Require OpenGL
@@ -61,9 +60,6 @@ pkg_check_modules(REVENGE REQUIRED librevenge-0.0 librevenge-generators-0.0 libr
 pkg_search_module(CDR REQUIRED libcdr-0.1)
 add_compile_options(${MAGICK_CFLAGS}) # we need the magick flags
 
-if(${READMISC_LEGACY})
-    add_definitions(-DREADMISC_LEGACY)
-endif()
 
 if(${OLD_POPPLER})
     add_definitions(-DLEGACY_POPPLER)

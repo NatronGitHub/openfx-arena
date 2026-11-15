@@ -185,9 +185,10 @@ ReadMiscPluginFactory::load()
 {
     _extensions.clear();
     _extensions.push_back("bmp"); // also handled by ReadOIIO (which has a higher evaluation)
-#ifdef READMISC_LEGACY
+    // PCX was disabled in 2021 (READMISC_LEGACY, #14) because the ImageMagick
+    // in Natron's SDK at the time read it as black; current ImageMagick 6 and 7
+    // read it correctly, and Natron-Tests' TestImagePCX expects it.
     _extensions.push_back("pcx");
-#endif
     _extensions.push_back("xpm");
     //_extensions.push_back("gif"); // may be animated - better handled by ReadFFmpeg
     _extensions.push_back("miff");
