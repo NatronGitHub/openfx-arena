@@ -864,6 +864,7 @@ std::vector<RichText::RichTextSubtitle> RichText::parseSRT(const std::string &fi
     if (file.is_open()) {
         bool found = false;
         RichTextSubtitle tdata = { -1., -1., std::string() }; // start/end < 0 means "no cue yet"
+        bool lastLineAppended = false; // the previous line was appended to tdata.str
         std::string line;
         while (std::getline(file, line)) {
             // strip CR from files with Windows line endings, so that blank
@@ -883,6 +884,17 @@ std::vector<RichText::RichTextSubtitle> RichText::parseSRT(const std::string &fi
                 double endSec = strTimeToSecs(endFrameString);
                 if (startSec>=0.0 && endSec>=0.0) {
                     found = true;
+                    // Files without a blank line between cues: the line just
+                    // before this timing line is the cue index, which was
+                    // appended to the previous cue's text. Drop it.
+                    if (lastLineAppended) {
+                        size_t nl = tdata.str.rfind('\n');
+                        std::string last = (nl == std::string::npos) ? tdata.str : tdata.str.substr(nl + 1);
+                        if (!last.empty() && last.find_first_not_of("0123456789") == std::string::npos) {
+                            tdata.str.erase(nl == std::string::npos ? 0 : nl);
+                        }
+                    }
+                    lastLineAppended = false;
                     if (tdata.start>=0.0 &&
                         tdata.end>=0.0 &&
                         !tdata.str.empty())
@@ -895,8 +907,10 @@ std::vector<RichText::RichTextSubtitle> RichText::parseSRT(const std::string &fi
                     continue;
                 }
             }
-            if (line.empty()) {
+            // whitespace-only lines are blank separators too
+            if (line.find_first_not_of(" \t") == std::string::npos) {
                 found = false;
+                lastLineAppended = false;
                 continue;
             } else {
                 // Lines outside a cue (e.g. the cue index before the timing
@@ -905,6 +919,7 @@ std::vector<RichText::RichTextSubtitle> RichText::parseSRT(const std::string &fi
                 if (!found) { continue; }
                 if (tdata.str.empty()) { tdata.str = line; }
                 else { tdata.str += "\n" + line; }
+                lastLineAppended = true;
             }
         }
         if (tdata.start>=0.0 &&
