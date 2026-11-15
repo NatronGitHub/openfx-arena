@@ -30,7 +30,7 @@
 #define kPluginGrouping "Image/Readers"
 #define kPluginIdentifier "fr.inria.openfx.ReadMisc"
 #define kPluginVersionMajor 1
-#define kPluginVersionMinor 2
+#define kPluginVersionMinor 3
 #define kPluginEvaluation 80 // less than ReadOIIO
 
 #define kSupportsRGBA true
