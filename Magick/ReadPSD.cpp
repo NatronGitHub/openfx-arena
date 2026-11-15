@@ -17,6 +17,7 @@
 */
 
 #include "MagickCommon.h"
+#include "PackedImage.h"
 
 #include <iostream>
 #include <string>
@@ -398,7 +399,7 @@ OfxStatus ReadPSDPlugin::getClipComponents(const OFX::ClipComponentsArguments& a
 }
 
 void ReadPSDPlugin::decodePlane(const std::string& filename, OfxTime time, int /*view*/, bool /*isPlayback*/, const OfxRectI& renderWindow, const OfxPointD& renderScale, float *pixelData, const OfxRectI& bounds,
-                                 OFX::PixelComponentEnum /*pixelComponents*/, OFX::PixelComponentEnum /*remappedComponents*/, int /*pixelComponentCount*/, const std::string& rawComponents, int /*rowBytes*/)
+                                 OFX::PixelComponentEnum /*pixelComponents*/, OFX::PixelComponentEnum /*remappedComponents*/, int /*pixelComponentCount*/, const std::string& rawComponents, int rowBytes)
 {
     assert(renderScale.x == 1. && renderScale.y == 1.);
     unused(renderScale);
@@ -412,8 +413,19 @@ void ReadPSDPlugin::decodePlane(const std::string& filename, OfxTime time, int /
     int offsetX = 0;
     int offsetY = 0;
     int layer = 0;
-    int width = bounds.x2;
-    int height = bounds.y2;
+    // The container below must have the size of the frame, (0,0,maxWidth,maxHeight) as returned by
+    // getFrameBounds(), so that after flip() its pixel (x,y) is the OFX pixel (x,y).
+    // bounds is the bounds of pixelData, which may differ from the frame (and need not start at 0,0).
+    OfxRectI frame = bounds;
+    {
+        OfxRectI format;
+        double par = 1.;
+        std::string error;
+        int tileWidth = 0, tileHeight = 0;
+        getFrameBounds(filename, time, 0, &frame, &format, &par, &error, &tileWidth, &tileHeight);
+    }
+    int width = frame.x2;
+    int height = frame.y2;
     bool color = false;
     int iccRender = 0;
     bool iccBlack = false;
@@ -605,7 +617,9 @@ void ReadPSDPlugin::decodePlane(const std::string& filename, OfxTime time, int /
     Magick::Image container(Magick::Geometry(width,height),Magick::Color("rgba(0,0,0,0)"));
     container.composite(image,offsetX,offsetY,Magick::OverCompositeOp);
     container.flip();
-    container.write(0,0,renderWindow.x2 - renderWindow.x1,renderWindow.y2 - renderWindow.y1,"RGBA",Magick::FloatPixel,pixelData);
+    PackedImage::PackedDst dstPixels(pixelData, bounds, rowBytes, 4, renderWindow);
+    container.write(renderWindow.x1,renderWindow.y1,renderWindow.x2 - renderWindow.x1,renderWindow.y2 - renderWindow.y1,"RGBA",Magick::FloatPixel,dstPixels.data());
+    dstPixels.commit();
 }
 
 void ReadPSDPlugin::changedParam(const OFX::InstanceChangedArgs &args, const std::string &paramName)
