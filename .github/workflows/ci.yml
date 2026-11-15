@@ -71,7 +71,10 @@ jobs:
             mingw-w64-x86_64-lcms2 mingw-w64-x86_64-fontconfig mingw-w64-x86_64-pango
             mingw-w64-x86_64-librsvg mingw-w64-x86_64-libxml2 mingw-w64-x86_64-libzip mingw-w64-x86_64-libcdr
             mingw-w64-x86_64-librevenge mingw-w64-x86_64-curl mingw-w64-x86_64-ntldd
-      - name: Install Natron pacman repository (ImageMagick, poppler, OpenColorIO, sox)
+            mingw-w64-x86_64-poppler
+      # poppler comes from MSYS2: natron_poppler (22.01) was built against older
+      # MSYS2 libraries and libpoppler-glib fails to load (missing entry point)
+      - name: Install Natron pacman repository (ImageMagick, OpenColorIO, sox)
         run: |
           mkdir ${GITHUB_WORKSPACE}/natron_pacman_repo
           cd ${GITHUB_WORKSPACE}/natron_pacman_repo
@@ -80,7 +83,7 @@ jobs:
           NATRON_REPO_PATH=`cygpath -u $GITHUB_WORKSPACE`
           echo -e "#NATRON_REPO_START\n[natron]\nSigLevel = Optional TrustAll\nServer = file://${NATRON_REPO_PATH}/natron_pacman_repo/\n#NATRON_REPO_END" >> /etc/pacman.conf
           pacman -Sy
-          pacman -S --needed --noconfirm --overwrite "*" mingw-w64-x86_64-natron_imagemagick mingw-w64-x86_64-natron_poppler \
+          pacman -S --needed --noconfirm --overwrite "*" mingw-w64-x86_64-natron_imagemagick \
             mingw-w64-x86_64-natron_opencolorio-git mingw-w64-x86_64-natron_sox
       - name: Build (release)
         run: |
