@@ -300,7 +300,12 @@ public:
             }
             url.append(kPluginRepoURL);
             url.append("/" + category + "/" + filename);
-            clut.append(presetPath(customPath) + "/" + filename);
+            std::string dir = presetPath(customPath);
+            if (dir.empty()) {
+                setPersistentMessage(OFX::Message::eMessageError, "", "Unable to find the home directory, please set the 'customPath' param");
+                OFX::throwSuiteStatusException(kOfxStatFailed);
+            }
+            clut.append(dir + "/" + filename);
             if (url.empty() || clut.empty()) {
                 setPersistentMessage(OFX::Message::eMessageError, "", "Missing XML data");
                 OFX::throwSuiteStatusException(kOfxStatFailed);
@@ -402,13 +407,23 @@ public:
     {
         std::string path;
         if (altpath.empty()) {
+            // getenv() returns NULL if the variable is unset, and appending NULL
+            // to a std::string is undefined behaviour. Return an empty path then.
 #ifdef _WIN32
-            path.append(getenv("HOMEDRIVE"));
-            path.append(getenv("HOMEPATH"));
+            const char* homeDrive = getenv("HOMEDRIVE");
+            const char* homePath = getenv("HOMEPATH");
+            if (homeDrive && homePath) {
+                path.append(homeDrive);
+                path.append(homePath);
+                path.append("/.clut");
+            }
 #else
-            path.append(getenv("HOME"));
+            const char* home = getenv("HOME");
+            if (home) {
+                path.append(home);
+                path.append("/.clut");
+            }
 #endif
-            path.append("/.clut");
         }
         if (!path.empty()) {
             if (!existsFile(path)) {
