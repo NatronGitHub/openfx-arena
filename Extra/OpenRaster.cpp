@@ -19,6 +19,7 @@
 #include <iostream>
 #include <stdint.h>
 #include <zip.h>
+#include <cstdlib>
 #include <libxml/xmlmemory.h>
 #include <libxml/parser.h>
 #include <ofxNatron.h>
@@ -151,8 +152,9 @@ OpenRasterPlugin::getImageSize(int *width, int *height, std::string filename)
                     xmlChar *imgHchar;
                     imgWchar = xmlGetProp(cur_node,(const xmlChar*)"w");
                     imgHchar = xmlGetProp(cur_node,(const xmlChar*)"h");
-                    imgW = atoi((const char*)imgWchar);
-                    imgH = atoi((const char*)imgHchar);
+                    // xmlGetProp returns NULL if the attribute is missing
+                    imgW = imgWchar ? atoi((const char*)imgWchar) : 0;
+                    imgH = imgHchar ? atoi((const char*)imgHchar) : 0;
                     xmlFree(imgWchar);
                     xmlFree(imgHchar);
                     if (imgW>0 && imgH>0) {
@@ -349,25 +351,38 @@ OpenRasterPlugin::decodePlane(const std::string& filename, OfxTime /*time*/, int
     int renderHeight= renderWindow.y2 - renderWindow.y1;
 
     int err = 0;
+    // zip_open/zip_fopen return NULL on failure (missing or corrupt file)
     zip *layerOpen = zip_open(filename.c_str(),0,&err);
-    struct zip_stat layerSt;
-    zip_stat_init(&layerSt);
-    err=zip_stat(layerOpen,imageLayers[layer][1].c_str(),0,&layerSt);
-    if (err!=-1) {
-        char *layerData = new char[layerSt.size];
-        zip_file *layerFile = zip_fopen(layerOpen,imageLayers[layer][1].c_str(),0);
-        err=zip_fread(layerFile,layerData,layerSt.size);
-        if (err!=-1) {
-            zip_fclose(layerFile);
-            if ((layerData!=NULL)&&(layerSt.size>0)) {
-                lodepng_decode32(&buffer,(unsigned int*)&width,(unsigned int*)&height,(unsigned char *)layerData,(size_t)layerSt.size);
+    if (layerOpen) {
+        struct zip_stat layerSt;
+        zip_stat_init(&layerSt);
+        err=zip_stat(layerOpen,imageLayers[layer][1].c_str(),0,&layerSt);
+        if (err!=-1 && layerSt.size>0) {
+            zip_file *layerFile = zip_fopen(layerOpen,imageLayers[layer][1].c_str(),0);
+            if (layerFile) {
+                char *layerData = new char[layerSt.size];
+                zip_int64_t nread = zip_fread(layerFile,layerData,layerSt.size);
+                zip_fclose(layerFile);
+                if (nread == (zip_int64_t)layerSt.size) {
+                    unsigned w = 0, h = 0;
+                    unsigned pngErr = lodepng_decode32(&buffer,&w,&h,(unsigned char *)layerData,(size_t)layerSt.size);
+                    if (pngErr) {
+                        // lodepng may allocate the output even on error
+                        free(buffer);
+                        buffer = NULL;
+                    } else {
+                        width = (int)w;
+                        height = (int)h;
+                    }
+                }
+                delete[] layerData;
             }
         }
-        delete[] layerData;
+        zip_close(layerOpen);
     }
-    zip_close(layerOpen);
 
     if (buffer==NULL || width!=renderWidth || height!=renderHeight) {
+        free(buffer); // allocated by lodepng with malloc
         setPersistentMessage(OFX::Message::eMessageError, "", "Unable to read image");
         OFX::throwSuiteStatusException(kOfxStatErrFormat);
     }
@@ -391,6 +406,7 @@ OpenRasterPlugin::decodePlane(const std::string& filename, OfxTime /*time*/, int
         }
     }
 
+    free(buffer); // allocated by lodepng with malloc; was leaked on every render
     buffer = NULL;
     delete[] pixels;
 }
