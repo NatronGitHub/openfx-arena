@@ -67,8 +67,8 @@ OFXS_NAMESPACE_ANONYMOUS_ENTER
     "Neither the publisher nor the authors are affiliated with or endorsed by the companies that own the trademarks."
 #define kPluginRepoURL "https://raw.githubusercontent.com/NatronGitHub/clut/master"
 #define kPluginRepoZIP "https://github.com/NatronGitHub/clut/archive/master.zip"
-#define kPluginVersionMajor 1
-#define kPluginVersionMinor 1
+#define kPluginVersionMajor 2 // 2: unpremultiply the source before ImageMagick (see magickReadRGBA)
+#define kPluginVersionMinor 0
 
 #define kSupportsTiles 0
 #define kSupportsMultiResolution 1
@@ -185,8 +185,8 @@ class HaldCLUTPlugin
     : public MagickPluginHelper<kSupportsRenderScale>
 {
 public:
-    HaldCLUTPlugin(OfxImageEffectHandle handle)
-        : MagickPluginHelper<kSupportsRenderScale>(handle)
+    HaldCLUTPlugin(OfxImageEffectHandle handle, bool unpremultSrc)
+        : MagickPluginHelper<kSupportsRenderScale>(handle, unpremultSrc)
         , _presets()
         , _preset(NULL)
         , _custom(NULL)
@@ -372,11 +372,15 @@ HaldCLUTPlugin::changedParam(const OFX::InstanceChangedArgs &args, const std::st
     clearPersistentMessage();
 }
 
-mDeclarePluginFactory(HaldCLUTPluginFactory, {}, {});
+mDeclarePluginFactoryVersioned(HaldCLUTPluginFactory, {}, {});
 
+template<unsigned int majorVersion>
 void
-HaldCLUTPluginFactory::describe(ImageEffectDescriptor &desc)
+HaldCLUTPluginFactory<majorVersion>::describe(ImageEffectDescriptor &desc)
 {
+    if (majorVersion < kPluginVersionMajor) {
+        desc.setIsDeprecated(true);
+    }
     desc.setLabel(kPluginName);
     desc.setPluginGrouping(kPluginGrouping);
     desc.setPluginDescription(kPluginDescription);
@@ -391,8 +395,9 @@ HaldCLUTPluginFactory::describe(ImageEffectDescriptor &desc)
     desc.setHostMixingEnabled(kHostMixing);
 }
 
+template<unsigned int majorVersion>
 void
-HaldCLUTPluginFactory::describeInContext(ImageEffectDescriptor &desc, ContextEnum context)
+HaldCLUTPluginFactory<majorVersion>::describeInContext(ImageEffectDescriptor &desc, ContextEnum context)
 {
     gHostIsNatron = (getImageEffectHostDescription()->isNatron);
 
@@ -473,13 +478,18 @@ HaldCLUTPluginFactory::describeInContext(ImageEffectDescriptor &desc, ContextEnu
     HaldCLUTPlugin::describeInContextEnd(desc, context, page);
 }
 
+template<unsigned int majorVersion>
 OFX::ImageEffect*
-HaldCLUTPluginFactory::createInstance(OfxImageEffectHandle handle, ContextEnum /*context*/)
+HaldCLUTPluginFactory<majorVersion>::createInstance(OfxImageEffectHandle handle, ContextEnum /*context*/)
 {
-    return new HaldCLUTPlugin(handle);
+    // versions before 2 fed premultiplied pixels to ImageMagick: keep their output
+    return new HaldCLUTPlugin(handle, majorVersion >= 2);
 }
 
-static HaldCLUTPluginFactory p(kPluginIdentifier, kPluginVersionMajor, kPluginVersionMinor);
+static HaldCLUTPluginFactory<kPluginVersionMajor> p(kPluginIdentifier, kPluginVersionMinor);
 mRegisterPluginFactoryInstance(p)
+// version 1, kept so that existing projects render as before
+static HaldCLUTPluginFactory<1> p1(kPluginIdentifier, 1);
+mRegisterPluginFactoryInstance(p1)
 
 OFXS_NAMESPACE_ANONYMOUS_EXIT

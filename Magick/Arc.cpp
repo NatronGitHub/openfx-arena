@@ -28,8 +28,8 @@
 #define kPluginName "ArcOFX"
 #define kPluginGrouping "Extra/Distort"
 #define kPluginIdentifier "net.fxarena.openfx.Arc"
-#define kPluginVersionMajor 4
-#define kPluginVersionMinor 2
+#define kPluginVersionMajor 5 // 5: unpremultiply the source before ImageMagick (see magickReadRGBA)
+#define kPluginVersionMinor 0
 
 #define kParamVPixel "pixel"
 #define kParamVPixelLabel "Virtual Pixel"
@@ -84,11 +84,12 @@ static bool _hasOpenMP = false;
 class ArcPlugin : public OFX::ImageEffect
 {
 public:
-    ArcPlugin(OfxImageEffectHandle handle);
+    ArcPlugin(OfxImageEffectHandle handle, bool unpremultSrc);
     virtual ~ArcPlugin();
     virtual void render(const OFX::RenderArguments &args) OVERRIDE FINAL;
     virtual bool getRegionOfDefinition(const OFX::RegionOfDefinitionArguments &args, OfxRectD &rod) OVERRIDE FINAL;
 private:
+    bool unpremultSrc_; // false in versions released before the premultiplication fix
     OFX::Clip *dstClip_;
     OFX::Clip *srcClip_;
     OFX::ChoiceParam *vpixel_;
@@ -101,8 +102,9 @@ private:
     OFX::BooleanParam *flip_;
 };
 
-ArcPlugin::ArcPlugin(OfxImageEffectHandle handle)
+ArcPlugin::ArcPlugin(OfxImageEffectHandle handle, bool unpremultSrc)
 : OFX::ImageEffect(handle)
+, unpremultSrc_(unpremultSrc)
 , dstClip_(NULL)
 , srcClip_(NULL)
 {
@@ -218,8 +220,11 @@ void ArcPlugin::render(const OFX::RenderArguments &args)
     // read image
     Magick::Image image(Magick::Geometry(width,height),Magick::Color("rgba(0,0,0,0)"));
     Magick::Image output(Magick::Geometry(width,height),Magick::Color("rgba(0,0,0,1)"));
+    // ImageMagick expects straight colour (see magickReadRGBA). With Matte, alpha is
+    // discarded and the premultiplied colour is the intended "flattened over black" input.
     if (srcClip_ && srcClip_->isConnected())
-        image.read(width,height,"RGBA",Magick::FloatPixel,(float*)srcImg->getPixelData());
+        magickReadRGBA(image, width, height, (const float*)srcImg->getPixelData(),
+                       unpremultSrc_ && !matte && srcImg->getPreMultiplication() == OFX::eImagePreMultiplied);
 
     // flip
     image.flip();
@@ -354,11 +359,15 @@ bool ArcPlugin::getRegionOfDefinition(const OFX::RegionOfDefinitionArguments &ar
     return true;
 }
 
-mDeclarePluginFactory(ArcPluginFactory, {}, {});
+mDeclarePluginFactoryVersioned(ArcPluginFactory, {}, {});
 
 /** @brief The basic describe function, passed a plugin descriptor */
-void ArcPluginFactory::describe(OFX::ImageEffectDescriptor &desc)
+template<unsigned int majorVersion>
+void ArcPluginFactory<majorVersion>::describe(OFX::ImageEffectDescriptor &desc)
 {
+    if (majorVersion < kPluginVersionMajor) {
+        desc.setIsDeprecated(true);
+    }
     // basic labels
     desc.setLabel(kPluginName);
     desc.setPluginGrouping(kPluginGrouping);
@@ -380,7 +389,8 @@ void ArcPluginFactory::describe(OFX::ImageEffectDescriptor &desc)
 }
 
 /** @brief The describe in context function, passed a plugin descriptor and a context */
-void ArcPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, ContextEnum /*context*/)
+template<unsigned int majorVersion>
+void ArcPluginFactory<majorVersion>::describeInContext(OFX::ImageEffectDescriptor &desc, ContextEnum /*context*/)
 {
     std::string features = MagickCore::GetMagickFeatures();
     if (features.find("OpenMP") != std::string::npos)
@@ -491,10 +501,15 @@ void ArcPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, Conte
 }
 
 /** @brief The create instance function, the plugin must return an object derived from the \ref OFX::ImageEffect class */
-ImageEffect* ArcPluginFactory::createInstance(OfxImageEffectHandle handle, ContextEnum /*context*/)
+template<unsigned int majorVersion>
+ImageEffect* ArcPluginFactory<majorVersion>::createInstance(OfxImageEffectHandle handle, ContextEnum /*context*/)
 {
-    return new ArcPlugin(handle);
+    // versions before 5 fed premultiplied pixels to ImageMagick: keep their output
+    return new ArcPlugin(handle, majorVersion >= 5);
 }
 
-static ArcPluginFactory p(kPluginIdentifier, kPluginVersionMajor, kPluginVersionMinor);
+static ArcPluginFactory<kPluginVersionMajor> p(kPluginIdentifier, kPluginVersionMinor);
 mRegisterPluginFactoryInstance(p)
+// version 4, kept so that existing projects render as before
+static ArcPluginFactory<4> p4(kPluginIdentifier, 2);
+mRegisterPluginFactoryInstance(p4)

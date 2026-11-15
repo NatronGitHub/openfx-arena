@@ -28,7 +28,7 @@
 #define kPluginName "EdgesOFX"
 #define kPluginGrouping "Extra/Filter"
 #define kPluginIdentifier "net.fxarena.openfx.Edges"
-#define kPluginVersionMajor 2
+#define kPluginVersionMajor 3 // 3: unpremultiply the source before ImageMagick (see magickReadRGBA)
 #define kPluginVersionMinor 0
 
 #define kParamWidth "width"
@@ -73,11 +73,12 @@ static bool _hasOpenMP = false;
 class EdgesPlugin : public OFX::ImageEffect
 {
 public:
-    EdgesPlugin(OfxImageEffectHandle handle);
+    EdgesPlugin(OfxImageEffectHandle handle, bool unpremultSrc);
     virtual ~EdgesPlugin();
     virtual void render(const OFX::RenderArguments &args) OVERRIDE FINAL;
     virtual bool getRegionOfDefinition(const OFX::RegionOfDefinitionArguments &args, OfxRectD &rod) OVERRIDE FINAL;
 private:
+    bool unpremultSrc_; // false in versions released before the premultiplication fix
     OFX::Clip *dstClip_;
     OFX::Clip *srcClip_;
     OFX::DoubleParam *brightness_;
@@ -88,8 +89,9 @@ private:
     OFX::ChoiceParam *kernel_;
 };
 
-EdgesPlugin::EdgesPlugin(OfxImageEffectHandle handle)
+EdgesPlugin::EdgesPlugin(OfxImageEffectHandle handle, bool unpremultSrc)
 : OFX::ImageEffect(handle)
+, unpremultSrc_(unpremultSrc)
 , dstClip_(NULL)
 , srcClip_(NULL)
 {
@@ -201,8 +203,10 @@ void EdgesPlugin::render(const OFX::RenderArguments &args)
     // read image
     Magick::Image image(Magick::Geometry(width,height),Magick::Color("rgba(0,0,0,0)"));
     Magick::Image output(Magick::Geometry(width,height),Magick::Color("rgba(0,0,0,1)"));
+    // ImageMagick expects straight colour (see magickReadRGBA)
     if (srcClip_ && srcClip_->isConnected())
-        image.read(width,height,"RGBA",Magick::FloatPixel,(float*)srcImg->getPixelData());
+        magickReadRGBA(image, width, height, (const float*)srcImg->getPixelData(),
+                       unpremultSrc_ && srcImg->getPreMultiplication() == OFX::eImagePreMultiplied);
 
     // grayscale
     if (gray) {
@@ -363,11 +367,15 @@ bool EdgesPlugin::getRegionOfDefinition(const OFX::RegionOfDefinitionArguments &
     return true;
 }
 
-mDeclarePluginFactory(EdgesPluginFactory, {}, {});
+mDeclarePluginFactoryVersioned(EdgesPluginFactory, {}, {});
 
 /** @brief The basic describe function, passed a plugin descriptor */
-void EdgesPluginFactory::describe(OFX::ImageEffectDescriptor &desc)
+template<unsigned int majorVersion>
+void EdgesPluginFactory<majorVersion>::describe(OFX::ImageEffectDescriptor &desc)
 {
+    if (majorVersion < kPluginVersionMajor) {
+        desc.setIsDeprecated(true);
+    }
     // basic labels
     desc.setLabel(kPluginName);
     desc.setPluginGrouping(kPluginGrouping);
@@ -389,7 +397,8 @@ void EdgesPluginFactory::describe(OFX::ImageEffectDescriptor &desc)
 }
 
 /** @brief The describe in context function, passed a plugin descriptor and a context */
-void EdgesPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, ContextEnum /*context*/)
+template<unsigned int majorVersion>
+void EdgesPluginFactory<majorVersion>::describeInContext(OFX::ImageEffectDescriptor &desc, ContextEnum /*context*/)
 {
     std::string features = MagickCore::GetMagickFeatures();
     if (features.find("OpenMP") != std::string::npos)
@@ -494,10 +503,15 @@ void EdgesPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, Con
 }
 
 /** @brief The create instance function, the plugin must return an object derived from the \ref OFX::ImageEffect class */
-ImageEffect* EdgesPluginFactory::createInstance(OfxImageEffectHandle handle, ContextEnum /*context*/)
+template<unsigned int majorVersion>
+ImageEffect* EdgesPluginFactory<majorVersion>::createInstance(OfxImageEffectHandle handle, ContextEnum /*context*/)
 {
-    return new EdgesPlugin(handle);
+    // versions before 3 fed premultiplied pixels to ImageMagick: keep their output
+    return new EdgesPlugin(handle, majorVersion >= 3);
 }
 
-static EdgesPluginFactory p(kPluginIdentifier, kPluginVersionMajor, kPluginVersionMinor);
+static EdgesPluginFactory<kPluginVersionMajor> p(kPluginIdentifier, kPluginVersionMinor);
 mRegisterPluginFactoryInstance(p)
+// version 2, kept so that existing projects render as before
+static EdgesPluginFactory<2> p2(kPluginIdentifier, 0);
+mRegisterPluginFactoryInstance(p2)

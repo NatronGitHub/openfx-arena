@@ -7,7 +7,7 @@ OFXS_NAMESPACE_ANONYMOUS_ENTER
 #define kPluginGrouping "Extra/Misc"
 #define kPluginIdentifier "net.fxarena.openfx.Morphology"
 #define kPluginDescription "Morphology modifies an image in various ways based on the nearby neighbourhood of the other pixels that surround it. This in turn can provide a huge range of effects, Shape expansion and contraction (dilate/erode), to distance from edge, to thining down to a skeleton, or mid-line axis. For more information read  https://imagemagick.org/Usage/morphology/#basic"
-#define kPluginVersionMajor 1
+#define kPluginVersionMajor 2 // 2: unpremultiply the source before ImageMagick (see magickReadRGBA)
 #define kPluginVersionMinor 0
 
 #define kSupportsTiles 0
@@ -37,8 +37,8 @@ class MorphologyPlugin
     : public MagickPluginHelper<kSupportsRenderScale>
 {
 public:
-    MorphologyPlugin(OfxImageEffectHandle handle)
-        : MagickPluginHelper<kSupportsRenderScale>(handle)
+    MorphologyPlugin(OfxImageEffectHandle handle, bool unpremultSrc)
+        : MagickPluginHelper<kSupportsRenderScale>(handle, unpremultSrc)
         , _iterations(NULL)
         , _method(NULL)
         , _kernel(NULL)
@@ -137,10 +137,14 @@ private:
     StringParam *_kernel;
 };
 
-mDeclarePluginFactory(MorphologyPluginFactory, {}, {});
+mDeclarePluginFactoryVersioned(MorphologyPluginFactory, {}, {});
 
-void MorphologyPluginFactory::describe(ImageEffectDescriptor &desc)
+template<unsigned int majorVersion>
+void MorphologyPluginFactory<majorVersion>::describe(ImageEffectDescriptor &desc)
 {
+    if (majorVersion < kPluginVersionMajor) {
+        desc.setIsDeprecated(true);
+    }
     desc.setLabel(kPluginName);
     desc.setPluginGrouping(kPluginGrouping);
     desc.setPluginDescription(kPluginDescription);
@@ -155,7 +159,8 @@ void MorphologyPluginFactory::describe(ImageEffectDescriptor &desc)
     desc.setHostMixingEnabled(kHostMixing);
 }
 
-void MorphologyPluginFactory::describeInContext(ImageEffectDescriptor &desc,
+template<unsigned int majorVersion>
+void MorphologyPluginFactory<majorVersion>::describeInContext(ImageEffectDescriptor &desc,
                                                 ContextEnum context)
 {
     OFX::PageParamDescriptor *page = MorphologyPlugin::describeInContextBegin(desc, context);
@@ -216,15 +221,18 @@ void MorphologyPluginFactory::describeInContext(ImageEffectDescriptor &desc,
     MorphologyPlugin::describeInContextEnd(desc, context, page);
 }
 
-ImageEffect* MorphologyPluginFactory::createInstance(OfxImageEffectHandle handle,
+template<unsigned int majorVersion>
+ImageEffect* MorphologyPluginFactory<majorVersion>::createInstance(OfxImageEffectHandle handle,
                                                      ContextEnum /*context*/)
 {
-    return new MorphologyPlugin(handle);
+    // versions before 2 fed premultiplied pixels to ImageMagick: keep their output
+    return new MorphologyPlugin(handle, majorVersion >= 2);
 }
 
-static MorphologyPluginFactory p(kPluginIdentifier,
-                                 kPluginVersionMajor,
-                                 kPluginVersionMinor);
+static MorphologyPluginFactory<kPluginVersionMajor> p(kPluginIdentifier, kPluginVersionMinor);
 mRegisterPluginFactoryInstance(p)
+// version 1, kept so that existing projects render as before
+static MorphologyPluginFactory<1> p1(kPluginIdentifier, 0);
+mRegisterPluginFactoryInstance(p1)
 
 OFXS_NAMESPACE_ANONYMOUS_EXIT
