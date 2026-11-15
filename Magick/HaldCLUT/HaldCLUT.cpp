@@ -305,7 +305,12 @@ public:
                 // to linear. Version 1 encoded the input with a 2.2 power function but decoded the
                 // (linearised) CLUT with the sRGB function, so even an identity CLUT changed the
                 // image (e.g. it lifted the shadows).
-                image.colorSpaceType(Magick::RGBColorspace); // tag as linear, pixels unchanged
+                // tag as linear, pixels unchanged (renamed colorSpaceType in IM7)
+#if MagickLibVersion >= 0x700
+                image.colorSpaceType(Magick::RGBColorspace);
+#else
+                image.colorspaceType(Magick::RGBColorspace);
+#endif
                 image.colorSpace(Magick::sRGBColorspace);
                 image.clamp();
                 image.haldClut(_lut);
