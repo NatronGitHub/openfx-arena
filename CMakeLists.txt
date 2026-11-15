@@ -249,10 +249,11 @@ ADD_LIBRARY(${PROJECT_NAME} SHARED ${SOURCES} ${SUPPORT_SOURCES})
 # ReadPDF.cpp includes poppler's C++ headers (GlobalParams.h), which need
 # C++17 since poppler 21.12 (#23) and C++20 (std::span) in recent versions.
 # Only that file is built with this standard (see also Makefile.master).
+# gnu++20 because MinGW GCC 16 headers need GNU extensions in C++20 mode.
 if(MSVC)
     set(POPPLER_CXXSTD_FLAG "/std:c++20")
 else()
-    set(POPPLER_CXXSTD_FLAG "-std=c++20")
+    set(POPPLER_CXXSTD_FLAG "-std=gnu++20")
 endif()
 set_source_files_properties(Extra/ReadPDF.cpp PROPERTIES COMPILE_FLAGS "${POPPLER_CXXSTD_FLAG}")
 SET_TARGET_PROPERTIES(${PROJECT_NAME} PROPERTIES PREFIX "")
