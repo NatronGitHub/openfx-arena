@@ -117,6 +117,10 @@ jobs:
           }
           EOF
           gcc -o loadlib loadlib.c && ./loadlib Bundle/ArenaPlugin/Arena.ofx.bundle/Contents/Win64/Arena.ofx || true
+          # load each DLL Arena.ofx depends on, to find the one with a missing entry point
+          for d in $(ntldd -R Bundle/ArenaPlugin/Arena.ofx.bundle/Contents/Win64/Arena.ofx | grep -i mingw64 | awk '{print $3}' | sort -u); do
+            ./loadlib "$(cygpath -w "$d")" > /dev/null || echo "FAILS: $d: $(./loadlib "$(cygpath -w "$d")")"
+          done
       - name: Upload artifacts
         uses: actions/upload-artifact@v4
         with:
