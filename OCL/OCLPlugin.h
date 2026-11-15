@@ -20,13 +20,16 @@
 
 #include "ofxsImageEffect.h"
 #include "ofxsMacros.h"
+#include "ofxsCoords.h"
 #include "ofxsMultiThread.h"
 #ifndef OFX_USE_MULTITHREAD_MUTEX
 // some OFX hosts do not have mutex handling in the MT-Suite (e.g. Sony Catalyst Edit)
 // prefer using the fast mutex by Marcus Geelnard http://tinythreadpp.bitsnbites.eu/
 #include "fast_mutex.h"
 #endif
+#include <cstring>
 #include <iostream>
+#include <vector>
 
 #if defined(__APPLE__) || defined(__MACOSX)
 #include "OpenCL/mac/cl.hpp"
@@ -168,8 +171,12 @@ void OCLPluginHelper<SupportsRenderScale>::render(const OFX::RenderArguments &ar
     }
 
     // get image size
-    int width = args.renderWindow.x2 - args.renderWindow.x1;
-    int height = args.renderWindow.y2 - args.renderWindow.y1;
+    const OfxRectI& renderWindow = args.renderWindow;
+    int width = renderWindow.x2 - renderWindow.x1;
+    int height = renderWindow.y2 - renderWindow.y1;
+    if (width <= 0 || height <= 0) {
+        return;
+    }
 
     // copy the handles: changedParam() may call setupContext() concurrently
     cl::Device device;
@@ -196,10 +203,27 @@ void OCLPluginHelper<SupportsRenderScale>::render(const OFX::RenderArguments &ar
     std::cout << "rendering using OpenCL device: " << device.getInfo<CL_DEVICE_NAME>() << std::endl;
 #endif
 
+    // The kernel works on packed width x height images covering the render
+    // window. Images may have padded or negative kOfxImagePropRowBytes, which
+    // OpenCL cannot take as a row pitch, and bounds that differ from the render
+    // window, so copy the source pixels row by row with getPixelAddress().
+    // Source pixels outside the source bounds are transparent black.
+    const size_t rowFloats = (size_t)width * 4;
+    std::vector<float> inPixels(rowFloats * height, 0.f);
+    OfxRectI srcWindow;
+    if ( OFX::Coords::rectIntersection(renderWindow, srcBounds, &srcWindow) && (srcWindow.x1 < srcWindow.x2) ) {
+        for (int y = srcWindow.y1; y < srcWindow.y2; ++y) {
+            std::memcpy(&inPixels[(y - renderWindow.y1) * rowFloats + (srcWindow.x1 - renderWindow.x1) * 4],
+                        srcImg->getPixelAddress(srcWindow.x1, y),
+                        (srcWindow.x2 - srcWindow.x1) * 4 * sizeof(float));
+        }
+    }
+    std::vector<float> outPixels(rowFloats * height);
+
     // render
     cl_int err = CL_SUCCESS;
     cl::ImageFormat format(CL_RGBA, CL_FLOAT);
-    cl::Image2D in(context, CL_MEM_READ_ONLY | CL_MEM_COPY_HOST_PTR, format, width, height, 0, (float*)srcImg->getPixelData(), &err);
+    cl::Image2D in(context, CL_MEM_READ_ONLY | CL_MEM_COPY_HOST_PTR, format, width, height, 0, &inPixels[0], &err);
     checkCLError(err, "clCreateImage2D");
     cl::Image2D out(context, CL_MEM_WRITE_ONLY, format, width, height, 0, NULL, &err);
     checkCLError(err, "clCreateImage2D");
@@ -224,8 +248,15 @@ void OCLPluginHelper<SupportsRenderScale>::render(const OFX::RenderArguments &ar
     checkCLError(err, "clCreateCommandQueue");
     checkCLError(queue.enqueueNDRangeKernel(kernel, cl::NullRange, cl::NDRange(width, height), cl::NullRange, NULL, &timer), "clEnqueueNDRangeKernel");
     checkCLError(timer.wait(), "clWaitForEvents");
-    checkCLError(queue.enqueueReadImage(out, CL_TRUE, origin, size, 0, 0, (float*)dstImg->getPixelData()), "clEnqueueReadImage");
+    checkCLError(queue.enqueueReadImage(out, CL_TRUE, origin, size, 0, 0, &outPixels[0]), "clEnqueueReadImage");
     checkCLError(queue.finish(), "clFinish");
+
+    // the render window is inside the dst bounds (checked above)
+    for (int y = renderWindow.y1; y < renderWindow.y2; ++y) {
+        std::memcpy(dstImg->getPixelAddress(renderWindow.x1, y),
+                    &outPixels[(y - renderWindow.y1) * rowFloats],
+                    rowFloats * sizeof(float));
+    }
 }
 
 template <int SupportsRenderScale>
