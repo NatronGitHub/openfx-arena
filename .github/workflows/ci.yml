@@ -95,7 +95,9 @@ jobs:
           export PATH=/mingw64/bin:$PATH
           g++ -o verify_plugin_loads OpenFX-IO/.github/workflows/verify_plugin_loads.cpp OpenFX/HostSupport/src/ofxhBinary.cpp \
             OpenFX/HostSupport/src/ofxhUtilities.cpp -I OpenFX/HostSupport/include/ -I OpenFX/include/
-          ./verify_plugin_loads Bundle/ArenaPlugin/Arena.ofx.bundle/Contents/Win64/Arena.ofx
+          # on failure, list the DLLs that cannot be found
+          ./verify_plugin_loads Bundle/ArenaPlugin/Arena.ofx.bundle/Contents/Win64/Arena.ofx || \
+            { ldd Bundle/ArenaPlugin/Arena.ofx.bundle/Contents/Win64/Arena.ofx | grep -iE "not found|\?\?\?"; exit 1; }
       - name: Upload artifacts
         uses: actions/upload-artifact@v4
         with:
