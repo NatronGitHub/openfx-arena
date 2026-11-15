@@ -39,7 +39,7 @@
 #define kPluginGrouping "Draw"
 #define kPluginIdentifier "net.fxarena.openfx.Text"
 #define kPluginVersionMajor 6
-#define kPluginVersionMinor 14
+#define kPluginVersionMinor 15
 
 #define kSupportsTiles 0
 #define kSupportsMultiResolution 0
@@ -160,6 +160,11 @@
 #define kParamLetterSpaceLabel "Letter spacing"
 #define kParamLetterSpaceHint "Spacing between letters. Disabled if markup is used."
 #define kParamLetterSpaceDefault 0
+
+#define kParamLineSpace "lineSpace"
+#define kParamLineSpaceLabel "Line spacing"
+#define kParamLineSpaceHint "Extra space between lines, in pixels (may be negative)."
+#define kParamLineSpaceDefault 0.
 
 #define kParamCircleRadius "circleRadius"
 #define kParamCircleRadiusLabel "Circle radius"
@@ -366,6 +371,7 @@ private:
     OFX::DoubleParam *_circleRadius;
     OFX::IntParam *_circleWords;
     OFX::IntParam *_letterSpace;
+    OFX::DoubleParam *_lineSpace;
     OFX::Int2DParam *_canvas;
     OFX::DoubleParam *_arcRadius;
     OFX::DoubleParam *_arcAngle;
@@ -416,6 +422,7 @@ TextFXPlugin::TextFXPlugin(OfxImageEffectHandle handle)
 , _circleRadius(NULL)
 , _circleWords(NULL)
 , _letterSpace(NULL)
+, _lineSpace(NULL)
 , _canvas(NULL)
 , _arcRadius(NULL)
 , _arcAngle(NULL)
@@ -466,6 +473,7 @@ TextFXPlugin::TextFXPlugin(OfxImageEffectHandle handle)
     _circleRadius = fetchDoubleParam(kParamCircleRadius);
     _circleWords = fetchIntParam(kParamCircleWords);
     _letterSpace = fetchIntParam(kParamLetterSpace);
+    _lineSpace = fetchDoubleParam(kParamLineSpace);
     _canvas = fetchInt2DParam(kParamCanvas);
     _arcRadius = fetchDoubleParam(kParamArcRadius);
     _arcAngle = fetchDoubleParam(kParamArcAngle);
@@ -491,7 +499,7 @@ TextFXPlugin::TextFXPlugin(OfxImageEffectHandle handle)
     assert(_text && _fontSize && _fontName && _textColor && _bgColor && _font && _wrap
            && _justify && _align && _valign && _markup && _style && auto_ && stretch_ && weight_ && strokeColor_
            && strokeWidth_ && strokeDash_ && strokeDashPattern_ && fontAA_ && subpixel_ && _hintStyle
-           && _hintMetrics && _circleRadius && _circleWords && _letterSpace && _canvas
+           && _hintMetrics && _circleRadius && _circleWords && _letterSpace && _lineSpace && _canvas
            && _arcRadius && _arcAngle && _rotate && _scale && _position && _move && _txt
            && _skewX && _skewY && _scaleUniform && _centerInteract && _fontOverride && _scrollX && _scrollY
            && _srt && _fps);
@@ -768,6 +776,8 @@ void TextFXPlugin::render(const OFX::RenderArguments &args)
     _circleRadius->getValueAtTime(args.time, circleRadius);
     _circleWords->getValueAtTime(args.time, circleWords);
     _letterSpace->getValueAtTime(args.time, letterSpace);
+    double lineSpace = 0.;
+    _lineSpace->getValueAtTime(args.time, lineSpace);
     _canvas->getValueAtTime(args.time, cwidth, cheight);
     _arcRadius->getValueAtTime(args.time, arcRadius);
     _arcAngle->getValueAtTime(args.time, arcAngle);
@@ -986,6 +996,12 @@ void TextFXPlugin::render(const OFX::RenderArguments &args)
 
     if (letterSpace != 0) {
         pango_attr_list_insert(alist,pango_attr_letter_spacing_new(std::floor((letterSpace*PANGO_SCALE) * args.renderScale.x + 0.5)));
+    }
+
+    // pango_layout_set_spacing() adds space between lines, in Pango units.
+    // (pango_layout_set_line_spacing() takes a line-height factor instead.)
+    if (lineSpace != 0.) {
+        pango_layout_set_spacing(layout, (int)std::floor((lineSpace*PANGO_SCALE) * args.renderScale.y + 0.5));
     }
 
     if (!markup) {
@@ -1281,6 +1297,8 @@ bool TextFXPlugin::getRegionOfDefinition(const OFX::RegionOfDefinitionArguments 
         weight_->getValueAtTime(args.time, weight);
         strokeWidth_->getValueAtTime(args.time, strokeWidth);
         _letterSpace->getValueAtTime(args.time, letterSpace);
+        double lineSpace = 0.;
+        _lineSpace->getValueAtTime(args.time, lineSpace);
         _txt->getValueAtTime(args.time, txt);
 
         if (!txt.empty()) {
@@ -1368,6 +1386,10 @@ bool TextFXPlugin::getRegionOfDefinition(const OFX::RegionOfDefinitionArguments 
 
         if (letterSpace != 0) {
             pango_attr_list_insert(alist,pango_attr_letter_spacing_new(letterSpace*PANGO_SCALE));
+        }
+
+        if (lineSpace != 0.) {
+            pango_layout_set_spacing(layout, (int)std::floor(lineSpace*PANGO_SCALE + 0.5));
         }
 
         if (!markup)
@@ -1727,6 +1749,17 @@ void TextFXPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, Co
         param->setRange(-10000, 10000);
         param->setDisplayRange(-250, 250);
         param->setDefault(kParamLetterSpaceDefault);
+        if (page) {
+            page->addChild(*param);
+        }
+    }
+    {
+        DoubleParamDescriptor* param = desc.defineDoubleParam(kParamLineSpace);
+        param->setLabel(kParamLineSpaceLabel);
+        param->setHint(kParamLineSpaceHint);
+        param->setRange(-10000, 10000);
+        param->setDisplayRange(-100, 100);
+        param->setDefault(kParamLineSpaceDefault);
         param->setLayoutHint(OFX::eLayoutHintDivider);
         if (page) {
             page->addChild(*param);
