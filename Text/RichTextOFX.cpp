@@ -17,6 +17,7 @@
 */
 
 #include "RichText.h"
+#include "PackedImage.h"
 #include "ofxsImageEffect.h"
 
 #include <iostream>
@@ -233,20 +234,27 @@ void RichTextPlugin::render(const RenderArguments &args)
     }
 
     // write output
-    float* pixelData = (float*)dstImg->getPixelData();
-    int offset = 0;
-    for (int y = 0; y < height; y++) {
-        for (int x = 0; x < width; x++) {
-            pixelData[offset + 0] = result.buffer[offset + 0] * (1.f / 255);
-            pixelData[offset + 1] = result.buffer[offset + 1] * (1.f / 255);
-            pixelData[offset + 2] = result.buffer[offset + 2] * (1.f / 255);
-            pixelData[offset + 3] = result.buffer[offset + 3] * (1.f / 255);
-            offset += 4;
+    // result.buffer is packed RGBA covering dstRod, bottom-up (flip). Write the render window,
+    // addressing dstImg through its bounds and rowBytes, which may differ from dstRod,
+    // include padding, or be negative (kOfxImagePropRowBytes).
+    for (int y = args.renderWindow.y1; y < args.renderWindow.y2; y++) {
+        float* dst = PackedImage::pixelAddress(dstImg->getPixelData(), dstBounds, dstImg->getRowBytes(), 4, args.renderWindow.x1, y);
+        const int sy = y - dstRod.y1;
+        for (int x = args.renderWindow.x1; x < args.renderWindow.x2; x++, dst += 4) {
+            const int sx = x - dstRod.x1;
+            if (sx < 0 || sx >= width || sy < 0 || sy >= height) {
+                dst[0] = dst[1] = dst[2] = dst[3] = 0.f;
+                continue;
+            }
+            const unsigned char* src = result.buffer + ((size_t)sy * width + sx) * 4;
+            dst[0] = src[0] * (1.f / 255);
+            dst[1] = src[1] * (1.f / 255);
+            dst[2] = src[2] * (1.f / 255);
+            dst[3] = src[3] * (1.f / 255);
         }
     }
     delete [] result.buffer;
     result.buffer = nullptr;
-    pixelData = nullptr;
 }
 
 void RichTextPlugin::changedParam(const InstanceChangedArgs &args,
