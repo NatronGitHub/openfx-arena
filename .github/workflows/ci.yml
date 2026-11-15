@@ -95,9 +95,28 @@ jobs:
           export PATH=/mingw64/bin:$PATH
           g++ -o verify_plugin_loads OpenFX-IO/.github/workflows/verify_plugin_loads.cpp OpenFX/HostSupport/src/ofxhBinary.cpp \
             OpenFX/HostSupport/src/ofxhUtilities.cpp -I OpenFX/HostSupport/include/ -I OpenFX/include/
-          # on failure, list the DLLs that cannot be found
-          ./verify_plugin_loads Bundle/ArenaPlugin/Arena.ofx.bundle/Contents/Win64/Arena.ofx || \
-            { ntldd -R Bundle/ArenaPlugin/Arena.ofx.bundle/Contents/Win64/Arena.ofx | grep -iE "not found|=> *$" ; exit 1; }
+          ./verify_plugin_loads Bundle/ArenaPlugin/Arena.ofx.bundle/Contents/Win64/Arena.ofx
+      - name: Diagnose plugin load failure
+        if: failure()
+        run: |
+          export PATH=/mingw64/bin:$PATH
+          # missing DLLs (ext-ms-win-* API sets are always reported, ignore them)
+          ntldd -R Bundle/ArenaPlugin/Arena.ofx.bundle/Contents/Win64/Arena.ofx | grep -iE "not found|=> *$" | grep -v "ext-ms-" || true
+          # the Windows error message (e.g. a missing entry point in a DLL)
+          cat > loadlib.c <<'EOF'
+          #include <windows.h>
+          #include <stdio.h>
+          int main(int argc, char **argv) {
+              HMODULE h = LoadLibraryA(argv[1]);
+              if (h) { puts("loaded"); return 0; }
+              char msg[512];
+              DWORD err = GetLastError();
+              FormatMessageA(FORMAT_MESSAGE_FROM_SYSTEM, NULL, err, 0, msg, sizeof msg, NULL);
+              printf("LoadLibrary error %lu: %s\n", err, msg);
+              return 1;
+          }
+          EOF
+          gcc -o loadlib loadlib.c && ./loadlib Bundle/ArenaPlugin/Arena.ofx.bundle/Contents/Win64/Arena.ofx || true
       - name: Upload artifacts
         uses: actions/upload-artifact@v4
         with:
