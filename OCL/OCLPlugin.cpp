@@ -48,88 +48,102 @@ OCLPluginHelperBase::OCLPluginHelperBase(OfxImageEffectHandle handle, const std:
     setupContext(true, "");
 }
 
+// Create the context (if requested) and build the program into local handles,
+// then publish them under _setupMutex: this runs from the constructor and from
+// changedParam() while renders (eRenderFullySafe) may be reading them.
 void
 OCLPluginHelperBase::setupContext(bool context, std::string kernelString)
 {
-    _setupError.clear();
     cl::Device device;
-    if (getSelectedDevice(&device)) {
-        cl_int err = CL_SUCCESS;
-        if (context) {
-            cl::Platform platform(device.getInfo<CL_DEVICE_PLATFORM>());
-            cl_context_properties properties[] = { CL_CONTEXT_PLATFORM, (cl_context_properties)(platform)(), 0};
-            _context = cl::Context(CL_DEVICE_TYPE_ALL, properties, NULL, NULL, &err);
-            if (err != CL_SUCCESS) {
-                std::ostringstream msg;
-                msg << "Failed to create OpenCL context (error " << err << ")";
-                setupFailed( msg.str() );
-                return;
-            }
-#ifdef DEBUG
-            std::cout << "setup OpenCL context for: " << platform.getInfo<CL_PLATFORM_VENDOR>() << std::endl;
-#endif
-        }
-
-        std::string kSource;
-        if (!kernelString.empty()) {
-            kSource = kernelString;
-        } else if (!_source.empty()) {
-           kSource = _source;
-        } else if (!_plugin.empty()) {
-            std::string kSourcePath = gBundlePath;
-            if ( kSourcePath.empty() ) {
-                // fallback for hosts that also set it on the instance
-                kSourcePath = getPropertySet().propGetString(kOfxPluginPropFilePath, false);
-            }
-            kSourcePath.append("/Contents/Resources/");
-            kSourcePath.append(_plugin);
-            kSourcePath.append(".cl");
-            std::ifstream f;
-            f.open(kSourcePath.c_str());
-            std::ostringstream s;
-            s << f.rdbuf();
-            f.close();
-            if (!s.str().empty()) {
-                kSource = s.str();
-            } else {
-                setupFailed("Failed to read OpenCL kernel " + kSourcePath);
-                return;
-            }
-        }
-        if (!kSource.empty()) {
-            cl::Program::Sources sources(1, std::make_pair(kSource.c_str(), kSource.length()+1));
-            _program = cl::Program(_context, sources, &err);
-            if (err != CL_SUCCESS) {
-                std::ostringstream msg;
-                msg << "Failed to create OpenCL program (error " << err << ")";
-                setupFailed( msg.str() );
-                return;
-            }
-            std::string buildOptions;
-
-            std::vector<cl::Device> platformDevices = _context.getInfo<CL_CONTEXT_DEVICES>();
-            err = _program.build(platformDevices, buildOptions.c_str());
-            if (err != CL_SUCCESS) {
-                std::ostringstream msg;
-                msg << "Failed to build OpenCL kernel (error " << err << "):\n"
-                    << _program.getBuildInfo<CL_PROGRAM_BUILD_LOG>(device);
-                setupFailed( msg.str() );
-                return;
-            }
-        }
-    } else {
-        setupFailed("No OpenCL device found");
+    cl::Context clContext;
+    cl::Program program;
+    if (!context) {
+        OCLAutoMutex lock(_setupMutex);
+        clContext = _context;
+    }
+    std::string error = buildProgram(context, kernelString, &device, &clContext, &program);
+    {
+        OCLAutoMutex lock(_setupMutex);
+        _clDevice = device;
+        _context = clContext;
+        _program = program;
+        _setupError = error;
+    }
+    if ( !error.empty() ) {
+        // render() fails with this message instead of running an invalid program
+        std::cerr << _plugin << ": " << error << std::endl;
+        setPersistentMessage(OFX::Message::eMessageError, "", error);
     }
 }
 
-// Record why the context or program could not be set up, so that render()
-// fails with this message instead of running an invalid program.
-void
-OCLPluginHelperBase::setupFailed(const std::string& error)
+// Returns an error message, or an empty string on success.
+std::string
+OCLPluginHelperBase::buildProgram(bool context, const std::string& kernelString, cl::Device* device, cl::Context* clContext, cl::Program* program)
 {
-    _setupError = error;
-    std::cerr << _plugin << ": " << error << std::endl;
-    setPersistentMessage(OFX::Message::eMessageError, "", error);
+    if ( !getSelectedDevice(device) ) {
+        return "No OpenCL device found";
+    }
+    cl_int err = CL_SUCCESS;
+    if (context) {
+        cl::Platform platform(device->getInfo<CL_DEVICE_PLATFORM>());
+        cl_context_properties properties[] = { CL_CONTEXT_PLATFORM, (cl_context_properties)(platform)(), 0};
+        *clContext = cl::Context(CL_DEVICE_TYPE_ALL, properties, NULL, NULL, &err);
+        if (err != CL_SUCCESS) {
+            std::ostringstream msg;
+            msg << "Failed to create OpenCL context (error " << err << ")";
+            return msg.str();
+        }
+#ifdef DEBUG
+        std::cout << "setup OpenCL context for: " << platform.getInfo<CL_PLATFORM_VENDOR>() << std::endl;
+#endif
+    }
+
+    std::string kSource;
+    if (!kernelString.empty()) {
+        kSource = kernelString;
+    } else if (!_source.empty()) {
+       kSource = _source;
+    } else if (!_plugin.empty()) {
+        std::string kSourcePath = gBundlePath;
+        if ( kSourcePath.empty() ) {
+            // fallback for hosts that also set it on the instance
+            kSourcePath = getPropertySet().propGetString(kOfxPluginPropFilePath, false);
+        }
+        kSourcePath.append("/Contents/Resources/");
+        kSourcePath.append(_plugin);
+        kSourcePath.append(".cl");
+        std::ifstream f;
+        f.open(kSourcePath.c_str());
+        std::ostringstream s;
+        s << f.rdbuf();
+        f.close();
+        if (!s.str().empty()) {
+            kSource = s.str();
+        } else {
+            return "Failed to read OpenCL kernel " + kSourcePath;
+        }
+    }
+    if (!kSource.empty()) {
+        cl::Program::Sources sources(1, std::make_pair(kSource.c_str(), kSource.length()+1));
+        *program = cl::Program(*clContext, sources, &err);
+        if (err != CL_SUCCESS) {
+            std::ostringstream msg;
+            msg << "Failed to create OpenCL program (error " << err << ")";
+            return msg.str();
+        }
+        std::string buildOptions;
+
+        std::vector<cl::Device> platformDevices = clContext->getInfo<CL_CONTEXT_DEVICES>();
+        err = program->build(platformDevices, buildOptions.c_str());
+        if (err != CL_SUCCESS) {
+            std::ostringstream msg;
+            msg << "Failed to build OpenCL kernel (error " << err << "):\n"
+                << program->getBuildInfo<CL_PROGRAM_BUILD_LOG>(*device);
+            return msg.str();
+        }
+    }
+
+    return std::string();
 }
 
 // Set a persistent error message and throw kOfxStatFailed if an OpenCL call failed.

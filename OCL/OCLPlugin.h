@@ -20,12 +20,26 @@
 
 #include "ofxsImageEffect.h"
 #include "ofxsMacros.h"
+#include "ofxsMultiThread.h"
+#ifndef OFX_USE_MULTITHREAD_MUTEX
+// some OFX hosts do not have mutex handling in the MT-Suite (e.g. Sony Catalyst Edit)
+// prefer using the fast mutex by Marcus Geelnard http://tinythreadpp.bitsnbites.eu/
+#include "fast_mutex.h"
+#endif
 #include <iostream>
 
 #if defined(__APPLE__) || defined(__MACOSX)
 #include "OpenCL/mac/cl.hpp"
 #else
 #include <CL/cl.hpp>
+#endif
+
+#ifdef OFX_USE_MULTITHREAD_MUTEX
+typedef OFX::MultiThread::Mutex OCLMutex;
+typedef OFX::MultiThread::AutoMutex OCLAutoMutex;
+#else
+typedef tthread::fast_mutex OCLMutex;
+typedef OFX::MultiThread::AutoMutexT<tthread::fast_mutex> OCLAutoMutex;
 #endif
 
 #define kParamOCLDevice "device"
@@ -54,15 +68,21 @@ public:
 protected:
     OFX::Clip *_dstClip;
     OFX::Clip *_srcClip;
-    cl::Context _context;
-    cl::Program _program;
     OFX::ChoiceParam *_device;
     std::string _source;
     std::string _plugin;
     int _renderscale;
+
+    // Set up by setupContext(), possibly while renders run: only access them
+    // with _setupMutex held (render() copies the handles at start).
+    OCLMutex _setupMutex;
+    cl::Device _clDevice;
+    cl::Context _context;
+    cl::Program _program;
     std::string _setupError; // why setupContext() failed, empty on success
 
-    void setupFailed(const std::string& error);
+private:
+    std::string buildProgram(bool context, const std::string& kernelString, cl::Device* device, cl::Context* clContext, cl::Program* program);
 };
 
 template <int SupportsRenderScale>
@@ -151,10 +171,23 @@ void OCLPluginHelper<SupportsRenderScale>::render(const OFX::RenderArguments &ar
     int width = args.renderWindow.x2 - args.renderWindow.x1;
     int height = args.renderWindow.y2 - args.renderWindow.y1;
 
-    // get device
+    // copy the handles: changedParam() may call setupContext() concurrently
     cl::Device device;
-    if (!getSelectedDevice(&device)) {
-        setPersistentMessage(OFX::Message::eMessageError, "", "No OpenCL device found");
+    cl::Context context;
+    cl::Program program;
+    std::string setupError;
+    {
+        OCLAutoMutex lock(_setupMutex);
+        device = _clDevice;
+        context = _context;
+        program = _program;
+        setupError = _setupError;
+    }
+
+    // the context or program could not be set up (e.g. no device): report why
+    // instead of returning an uninitialised image
+    if ( !setupError.empty() ) {
+        setPersistentMessage(OFX::Message::eMessageError, "", setupError);
         OFX::throwSuiteStatusException(kOfxStatFailed);
         return;
     }
@@ -163,23 +196,15 @@ void OCLPluginHelper<SupportsRenderScale>::render(const OFX::RenderArguments &ar
     std::cout << "rendering using OpenCL device: " << device.getInfo<CL_DEVICE_NAME>() << std::endl;
 #endif
 
-    // the context or program could not be set up: report why instead of
-    // returning an uninitialised image
-    if ( !_setupError.empty() ) {
-        setPersistentMessage(OFX::Message::eMessageError, "", _setupError);
-        OFX::throwSuiteStatusException(kOfxStatFailed);
-        return;
-    }
-
     // render
     cl_int err = CL_SUCCESS;
     cl::ImageFormat format(CL_RGBA, CL_FLOAT);
-    cl::Image2D in(_context, CL_MEM_READ_ONLY | CL_MEM_COPY_HOST_PTR, format, width, height, 0, (float*)srcImg->getPixelData(), &err);
+    cl::Image2D in(context, CL_MEM_READ_ONLY | CL_MEM_COPY_HOST_PTR, format, width, height, 0, (float*)srcImg->getPixelData(), &err);
     checkCLError(err, "clCreateImage2D");
-    cl::Image2D out(_context, CL_MEM_WRITE_ONLY, format, width, height, 0, NULL, &err);
+    cl::Image2D out(context, CL_MEM_WRITE_ONLY, format, width, height, 0, NULL, &err);
     checkCLError(err, "clCreateImage2D");
 
-    cl::Kernel kernel(_program, "filter", &err);
+    cl::Kernel kernel(program, "filter", &err);
     checkCLError(err, "clCreateKernel");
     setKernelArg(kernel, 0, in);
     setKernelArg(kernel, 1, out);
@@ -195,7 +220,7 @@ void OCLPluginHelper<SupportsRenderScale>::render(const OFX::RenderArguments &ar
     size[1] = height;
     size[2] = 1;
 
-    cl::CommandQueue queue = cl::CommandQueue(_context, device, 0, &err);
+    cl::CommandQueue queue = cl::CommandQueue(context, device, 0, &err);
     checkCLError(err, "clCreateCommandQueue");
     checkCLError(queue.enqueueNDRangeKernel(kernel, cl::NullRange, cl::NDRange(width, height), cl::NullRange, NULL, &timer), "clEnqueueNDRangeKernel");
     checkCLError(timer.wait(), "clWaitForEvents");
