@@ -138,33 +138,52 @@ packedToImage(const float* packed, const OfxRectI& window, int nComps,
     }
 }
 
+/// Divide the colour of packed RGBA pixels by their alpha.
+/// Pixels with alpha <= 0 are left unchanged, as in openfx-misc's Unpremult.
+inline void
+unpremultiplyRGBA(float* packed, std::size_t nPixels)
+{
+    for (std::size_t i = 0; i < nPixels; ++i, packed += 4) {
+        const float a = packed[3];
+        if (a > 0.f && a != 1.f) {
+            packed[0] /= a;
+            packed[1] /= a;
+            packed[2] /= a;
+        }
+    }
+}
+
 /// Read-only packed view of window of an OFX image buffer.
-/// No copy is made if the buffer already is packed and covers exactly window.
+/// No copy is made if the buffer already is packed and covers exactly window,
+/// unless unpremult is set: then the packed RGBA pixels are a copy with colour
+/// divided by alpha (for libraries such as ImageMagick that expect straight colour).
 class PackedSrc
 {
 public:
-    PackedSrc(const void* data, const OfxRectI& bounds, int rowBytes, int nComps, const OfxRectI& window)
+    PackedSrc(const void* data, const OfxRectI& bounds, int rowBytes, int nComps, const OfxRectI& window,
+              bool unpremult = false)
         : _buf()
         , _ptr(NULL)
     {
-        init(data, bounds, rowBytes, nComps, window);
+        init(data, bounds, rowBytes, nComps, window, unpremult);
     }
 
     /// IMG is OFX::Image (template so that this header does not depend on the OFX Support library)
     template <class IMG>
-    PackedSrc(const IMG* img, const OfxRectI& window)
+    PackedSrc(const IMG* img, const OfxRectI& window, bool unpremult = false)
         : _buf()
         , _ptr(NULL)
     {
-        init(img->getPixelData(), img->getBounds(), img->getRowBytes(), img->getPixelComponentCount(), window);
+        init(img->getPixelData(), img->getBounds(), img->getRowBytes(), img->getPixelComponentCount(), window, unpremult);
     }
 
     const float* data() const { return _ptr; }
 
 private:
-    void init(const void* data, const OfxRectI& bounds, int rowBytes, int nComps, const OfxRectI& window)
+    void init(const void* data, const OfxRectI& bounds, int rowBytes, int nComps, const OfxRectI& window, bool unpremult)
     {
-        if (data && isPacked(bounds, rowBytes, nComps, window)) {
+        unpremult = unpremult && nComps == 4;
+        if (data && !unpremult && isPacked(bounds, rowBytes, nComps, window)) {
             _ptr = static_cast<const float*>(data);
         } else {
             const int w = window.x2 - window.x1;
@@ -172,6 +191,9 @@ private:
             _buf.resize((std::size_t)(w > 0 ? w : 0) * (std::size_t)(h > 0 ? h : 0) * nComps);
             if (!_buf.empty()) {
                 imageToPacked(data, bounds, rowBytes, nComps, window, &_buf[0]);
+                if (unpremult) {
+                    unpremultiplyRGBA(&_buf[0], _buf.size() / 4);
+                }
                 _ptr = &_buf[0];
             }
         }
