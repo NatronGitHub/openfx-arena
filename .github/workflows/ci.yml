@@ -68,10 +68,10 @@ jobs:
           update: true
           install: >-
             git base-devel unzip mingw-w64-x86_64-wget mingw-w64-x86_64-cc mingw-w64-x86_64-pkg-config
-            mingw-w64-x86_64-opencolorio mingw-w64-x86_64-lcms2 mingw-w64-x86_64-fontconfig mingw-w64-x86_64-pango
+            mingw-w64-x86_64-lcms2 mingw-w64-x86_64-fontconfig mingw-w64-x86_64-pango
             mingw-w64-x86_64-librsvg mingw-w64-x86_64-libxml2 mingw-w64-x86_64-libzip mingw-w64-x86_64-libcdr
-            mingw-w64-x86_64-librevenge mingw-w64-x86_64-sox mingw-w64-x86_64-curl
-      - name: Install Natron pacman repository (ImageMagick, poppler)
+            mingw-w64-x86_64-librevenge mingw-w64-x86_64-curl
+      - name: Install Natron pacman repository (ImageMagick, poppler, OpenColorIO, sox)
         run: |
           mkdir ${GITHUB_WORKSPACE}/natron_pacman_repo
           cd ${GITHUB_WORKSPACE}/natron_pacman_repo
@@ -80,7 +80,8 @@ jobs:
           NATRON_REPO_PATH=`cygpath -u $GITHUB_WORKSPACE`
           echo -e "#NATRON_REPO_START\n[natron]\nSigLevel = Optional TrustAll\nServer = file://${NATRON_REPO_PATH}/natron_pacman_repo/\n#NATRON_REPO_END" >> /etc/pacman.conf
           pacman -Sy
-          pacman -S --needed --noconfirm --overwrite "*" mingw-w64-x86_64-natron_imagemagick mingw-w64-x86_64-natron_poppler
+          pacman -S --needed --noconfirm --overwrite "*" mingw-w64-x86_64-natron_imagemagick mingw-w64-x86_64-natron_poppler \
+            mingw-w64-x86_64-natron_opencolorio-git mingw-w64-x86_64-natron_sox
       - name: Build (release)
         run: |
           make -j4 CONFIG=release MINGW=1
@@ -115,7 +116,8 @@ jobs:
         uses: melusina-org/setup-macports@v1
       - name: Install MacPorts packages
         run: |
-          sudo port -N install pkgconfig ImageMagick opencolorio lcms2 fontconfig pango librsvg poppler \
+          # gsed is needed by OpenFX's osxDeploy.sh (release bundle)
+          sudo port -N install pkgconfig gsed ImageMagick opencolorio lcms2 fontconfig pango librsvg poppler \
             libxml2 libzip librevenge libcdr-0.1 sox curl
           # same fix as in Natron's INSTALL_MACOS.md
           sudo sed -i '' -e 's/Zstd::Zstd/zstd/' /opt/local/lib/pkgconfig/libzip.pc
