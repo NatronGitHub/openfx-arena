@@ -63,8 +63,9 @@ public:
         _position->getValueAtTime(args.time, x, y);
         _radius->getValueAtTime(args.time, rX, rY);
         _strength->getValueAtTime(args.time, s);
-        double ypos = y*args.renderScale.y;
-        double xpos = x*args.renderScale.x;
+        // the kernel works in coordinates relative to the render window origin
+        double ypos = y*args.renderScale.y - args.renderWindow.y1;
+        double xpos = x*args.renderScale.x - args.renderWindow.x1;
         r = (rX*100)*args.renderScale.x;
         if (s != 0) {
             s = s/10;
