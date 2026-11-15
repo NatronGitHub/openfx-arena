@@ -26,8 +26,9 @@ OFXS_NAMESPACE_ANONYMOUS_ENTER
 #define kPluginGrouping "Extra/Distort"
 #define kPluginIdentifier "net.fxarena.openfx.Wave"
 #define kPluginDescription "Wave effect using ImageMagick."
-#define kPluginVersionMajor 2
-#define kPluginVersionMinor 9
+// Version 3 crops the result of WaveImage so that it is aligned with the input (see WavePlugin::render).
+#define kPluginVersionMajor 3
+#define kPluginVersionMinor 0
 
 #define kSupportsTiles 0
 #define kSupportsMultiResolution 1
@@ -51,8 +52,9 @@ class WavePlugin
     : public MagickPluginHelper<kSupportsRenderScale>
 {
 public:
-    WavePlugin(OfxImageEffectHandle handle)
+    WavePlugin(OfxImageEffectHandle handle, bool alignOutput)
         : MagickPluginHelper<kSupportsRenderScale>(handle)
+        , _alignOutput(alignOutput)
         , _amp(NULL)
         , _length(NULL)
     {
@@ -67,16 +69,27 @@ public:
         _amp->getValueAtTime(args.time, waveAmp);
         _length->getValueAtTime(args.time, waveLength);
         image.backgroundColor(Magick::Color("rgba(0,0,0,0)"));
+        const size_t rows = image.rows();
         image.wave(std::floor(waveAmp * args.renderScale.x + 0.5),std::floor(waveLength * args.renderScale.x + 0.5));
+        if (_alignOutput && image.rows() > rows) {
+            // WaveImage returns an image that is 2*|amplitude| rows taller, with the input centered
+            // vertically. Version 2 kept the first rows, which shifted the picture by the amplitude
+            // and lost rows at the top. Keep the rows that are aligned with the input instead.
+            const ssize_t yOffset = (ssize_t)(image.rows() - rows) / 2;
+            image.crop(Magick::Geometry(image.columns(), rows, 0, yOffset));
+            image.page(Magick::Geometry(0, 0, 0, 0));
+        }
     }
 private:
+    bool _alignOutput;
     DoubleParam *_amp;
     DoubleParam *_length;
 };
 
-mDeclarePluginFactory(WavePluginFactory, {}, {});
+mDeclarePluginFactoryVersioned(WavePluginFactory, {}, {});
 
-void WavePluginFactory::describe(ImageEffectDescriptor &desc)
+template<unsigned int majorVersion>
+void WavePluginFactory<majorVersion>::describe(ImageEffectDescriptor &desc)
 {
     desc.setLabel(kPluginName);
     desc.setPluginGrouping(kPluginGrouping);
@@ -92,7 +105,8 @@ void WavePluginFactory::describe(ImageEffectDescriptor &desc)
     desc.setHostMixingEnabled(kHostMixing);
 }
 
-void WavePluginFactory::describeInContext(ImageEffectDescriptor &desc, ContextEnum context)
+template<unsigned int majorVersion>
+void WavePluginFactory<majorVersion>::describeInContext(ImageEffectDescriptor &desc, ContextEnum context)
 {
     OFX::PageParamDescriptor *page = WavePlugin::describeInContextBegin(desc, context);
     {
@@ -116,13 +130,17 @@ void WavePluginFactory::describeInContext(ImageEffectDescriptor &desc, ContextEn
     WavePlugin::describeInContextEnd(desc, context, page);
 }
 
+template<unsigned int majorVersion>
 OFX::ImageEffect*
-WavePluginFactory::createInstance(OfxImageEffectHandle handle, ContextEnum /*context*/)
+WavePluginFactory<majorVersion>::createInstance(OfxImageEffectHandle handle, ContextEnum /*context*/)
 {
-    return new WavePlugin(handle);
+    return new WavePlugin(handle, majorVersion >= 3);
 }
 
-static WavePluginFactory p(kPluginIdentifier, kPluginVersionMajor, kPluginVersionMinor);
+static WavePluginFactory<kPluginVersionMajor> p(kPluginIdentifier, kPluginVersionMinor);
 mRegisterPluginFactoryInstance(p)
+// Version 2 is kept unchanged so that existing projects render as before.
+static WavePluginFactory<2> p2(kPluginIdentifier, 9);
+mRegisterPluginFactoryInstance(p2)
 
 OFXS_NAMESPACE_ANONYMOUS_EXIT
