@@ -16,13 +16,13 @@
 */
 
 const sampler_t sampler = CLK_FILTER_NEAREST | CLK_NORMALIZED_COORDS_FALSE | CLK_ADDRESS_CLAMP_TO_EDGE;
-kernel void filter(__read_only image2d_t input, __write_only image2d_t output, double centerX, double centerY, double r, double effect) {
+kernel void filter(__read_only image2d_t input, __write_only image2d_t output, float centerX, float centerY, float r, float effect) {
    const int2 size = get_image_dim(input);
    int2 coord = (int2)(get_global_id(0),get_global_id(1));
    int2 center = (int2)((int)centerX,(int)centerY);
    float2 coord_center = convert_float2(coord - center);
    float radius = r / 2.0f;
-   float strength = (float)effect;
+   float strength = effect;
    float dist = length(convert_float2(coord_center));
 
    if (dist < radius) {

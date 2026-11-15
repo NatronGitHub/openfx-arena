@@ -68,10 +68,11 @@ public:
         if (s!=0) {
             s = s/10;
         }
-        kernel.setArg(2, xpos);
-        kernel.setArg(3, ypos);
-        kernel.setArg(4, r);
-        kernel.setArg(5, s);
+        // the kernel takes float args: double needs cl_khr_fp64, which many devices lack
+        kernel.setArg(2, (cl_float)xpos);
+        kernel.setArg(3, (cl_float)ypos);
+        kernel.setArg(4, (cl_float)r);
+        kernel.setArg(5, (cl_float)s);
     }
     virtual void changedParam(const OFX::InstanceChangedArgs &args, const std::string &paramName) OVERRIDE FINAL;
     void resetCenter(double time);
