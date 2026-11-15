@@ -43,6 +43,7 @@ public:
     static void describeInContextEnd(OFX::ImageEffectDescriptor &desc, OFX::ContextEnum context, OFX::PageParamDescriptor* page);
     void setupContext(bool context, std::string kernelString);
     static std::vector<cl::Device> getDevices();
+    bool getSelectedDevice(cl::Device* device) const;
 
 protected:
     OFX::Clip *_dstClip;
@@ -142,12 +143,15 @@ void OCLPluginHelper<SupportsRenderScale>::render(const OFX::RenderArguments &ar
     int height = args.renderWindow.y2 - args.renderWindow.y1;
 
     // get device
-    int device = 0;
-    _device->getValue(device);
-    std::vector<cl::Device> devices = getDevices();
+    cl::Device device;
+    if (!getSelectedDevice(&device)) {
+        setPersistentMessage(OFX::Message::eMessageError, "", "No OpenCL device found");
+        OFX::throwSuiteStatusException(kOfxStatFailed);
+        return;
+    }
 
 #ifdef DEBUG
-    std::cout << "rendering using OpenCL device: " << devices[device].getInfo<CL_DEVICE_NAME>() << std::endl;
+    std::cout << "rendering using OpenCL device: " << device.getInfo<CL_DEVICE_NAME>() << std::endl;
 #endif
 
     // render
@@ -170,7 +174,7 @@ void OCLPluginHelper<SupportsRenderScale>::render(const OFX::RenderArguments &ar
     size[1] = height;
     size[2] = 1;
 
-    cl::CommandQueue queue = cl::CommandQueue(_context, devices[device]);
+    cl::CommandQueue queue = cl::CommandQueue(_context, device);
     queue.enqueueNDRangeKernel(kernel, cl::NullRange, cl::NDRange(width, height), cl::NullRange, NULL, &timer);
     timer.wait();
     queue.enqueueReadImage(out, CL_TRUE, origin, size, 0, 0, (float*)dstImg->getPixelData());

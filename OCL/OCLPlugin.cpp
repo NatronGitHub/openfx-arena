@@ -45,12 +45,10 @@ OCLPluginHelperBase::OCLPluginHelperBase(OfxImageEffectHandle handle, const std:
 void
 OCLPluginHelperBase::setupContext(bool context, std::string kernelString)
 {
-    int device;
-    _device->getValue(device);
-    std::vector<cl::Device> devices = getDevices();
-    if (devices.size()!=0) {
+    cl::Device device;
+    if (getSelectedDevice(&device)) {
         if (context) {
-            cl::Platform platform(devices[device].getInfo<CL_DEVICE_PLATFORM>());
+            cl::Platform platform(device.getInfo<CL_DEVICE_PLATFORM>());
             cl_context_properties properties[] = { CL_CONTEXT_PLATFORM, (cl_context_properties)(platform)(), 0};
             _context = cl::Context(CL_DEVICE_TYPE_ALL, properties);
 #ifdef DEBUG
@@ -88,7 +86,7 @@ OCLPluginHelperBase::setupContext(bool context, std::string kernelString)
             std::vector<cl::Device> platformDevices = _context.getInfo<CL_CONTEXT_DEVICES>();
             if(_program.build(platformDevices, buildOptions.c_str()) == CL_BUILD_PROGRAM_FAILURE){
                 setPersistentMessage(OFX::Message::eMessageError, "", "Failed to build kernel, see terminal for log");
-                std::cout << "Failed to build OpenCL kernel: "<< _program.getBuildInfo<CL_PROGRAM_BUILD_LOG>(devices[device]) << std::endl;
+                std::cout << "Failed to build OpenCL kernel: "<< _program.getBuildInfo<CL_PROGRAM_BUILD_LOG>(device) << std::endl;
             }
         }
     } else {
@@ -110,6 +108,29 @@ OCLPluginHelperBase::getDevices()
         }
     }
     return devices;
+}
+
+// Get the device selected by the device choice param. The index is clamped to the
+// devices present on this machine, since a project saved on a machine with more
+// OpenCL devices may store an index that is out of range here.
+// Returns false if there is no OpenCL device at all.
+bool
+OCLPluginHelperBase::getSelectedDevice(cl::Device* device) const
+{
+    std::vector<cl::Device> devices = getDevices();
+    if ( devices.empty() ) {
+        return false;
+    }
+    int index = 0;
+    _device->getValue(index);
+    if (index < 0) {
+        index = 0;
+    } else if ( index >= (int)devices.size() ) {
+        index = (int)devices.size() - 1;
+    }
+    *device = devices[index];
+
+    return true;
 }
 
 void
