@@ -1,6 +1,7 @@
-name: Continous Integration tests
+name: Continuous Integration tests
 
 on:
+  workflow_dispatch: {}
   push:
     paths-ignore:
       - COPYING
@@ -13,7 +14,7 @@ on:
       - README.md
 
 jobs:
-  build:
+  ubuntu_build:
     name: Build Ubuntu 24.04
     runs-on: ubuntu-24.04
     steps:
@@ -31,13 +32,111 @@ jobs:
             libltdl-dev libopenexr-dev libopenjp2-7-dev libpng-dev libtiff-dev libwmf-dev libx11-dev libxext-dev libxt-dev
       - name: Build (release)
         run: |
-          make -j2 CONFIG=release
+          make -j4 CONFIG=release
           mkdir -p Bundle/ArenaPlugin
-          mv Bundle/Linux-64-release/Arena.ofx.bundle Bundle/ArenaPlugin
+          cp -a Bundle/Linux-64-release/Arena.ofx.bundle Bundle/ArenaPlugin
       - name: Build (debug)
-        run: make -j2 CONFIG=debug
+        run: make -j4 CONFIG=debug
+      - name: Verify that the plugins load
+        run: |
+          # RTLD_NOW instead of RTLD_LAZY, so that missing symbols make loading fail
+          sed -e 's/RTLD_LAZY/RTLD_NOW/g' OpenFX/HostSupport/src/ofxhBinary.cpp > ofxhBinaryStrict.cpp
+          g++ -o verify_plugin_loads OpenFX-IO/.github/workflows/verify_plugin_loads.cpp ofxhBinaryStrict.cpp \
+            -I OpenFX/HostSupport/include/ -I OpenFX/include/
+          ./verify_plugin_loads Bundle/ArenaPlugin/Arena.ofx.bundle/Contents/Linux-x86-64/Arena.ofx
       - name: Upload artifacts
         uses: actions/upload-artifact@v4
         with:
           name: openfx-arena-build-ubuntu_24-release
+          path: Bundle/ArenaPlugin
+
+  windows_build:
+    name: Build Windows (MSYS2 MinGW64)
+    runs-on: windows-latest
+    defaults:
+      run:
+        shell: msys2 {0}
+    steps:
+      - name: Checkout branch
+        uses: actions/checkout@v4
+        with:
+          submodules: recursive
+      - name: Install MSYS2 packages
+        uses: msys2/setup-msys2@v2
+        with:
+          msystem: mingw64
+          update: true
+          install: >-
+            git base-devel unzip mingw-w64-x86_64-wget mingw-w64-x86_64-cc mingw-w64-x86_64-pkg-config
+            mingw-w64-x86_64-opencolorio mingw-w64-x86_64-lcms2 mingw-w64-x86_64-fontconfig mingw-w64-x86_64-pango
+            mingw-w64-x86_64-librsvg mingw-w64-x86_64-libxml2 mingw-w64-x86_64-libzip mingw-w64-x86_64-libcdr
+            mingw-w64-x86_64-librevenge mingw-w64-x86_64-sox mingw-w64-x86_64-curl
+      - name: Install Natron pacman repository (ImageMagick, poppler)
+        run: |
+          mkdir ${GITHUB_WORKSPACE}/natron_pacman_repo
+          cd ${GITHUB_WORKSPACE}/natron_pacman_repo
+          wget -q https://github.com/NatronGitHub/Natron/releases/download/windows-mingw-package-repo/natron_package_repo.zip
+          unzip -q natron_package_repo.zip
+          NATRON_REPO_PATH=`cygpath -u $GITHUB_WORKSPACE`
+          echo -e "#NATRON_REPO_START\n[natron]\nSigLevel = Optional TrustAll\nServer = file://${NATRON_REPO_PATH}/natron_pacman_repo/\n#NATRON_REPO_END" >> /etc/pacman.conf
+          pacman -Sy
+          pacman -S --needed --noconfirm --overwrite "*" mingw-w64-x86_64-natron_imagemagick mingw-w64-x86_64-natron_poppler
+      - name: Build (release)
+        run: |
+          make -j4 CONFIG=release MINGW=1
+          mkdir -p Bundle/ArenaPlugin
+          cp -a `find Bundle -maxdepth 1 -name "MINGW64_NT*-release"`/Arena.ofx.bundle Bundle/ArenaPlugin
+      - name: Build (debug)
+        run: make -j4 CONFIG=debug MINGW=1
+      - name: Verify that the plugins load
+        run: |
+          # make the MinGW runtime DLLs findable
+          export PATH=/mingw64/bin:$PATH
+          g++ -o verify_plugin_loads OpenFX-IO/.github/workflows/verify_plugin_loads.cpp OpenFX/HostSupport/src/ofxhBinary.cpp \
+            OpenFX/HostSupport/src/ofxhUtilities.cpp -I OpenFX/HostSupport/include/ -I OpenFX/include/
+          ./verify_plugin_loads Bundle/ArenaPlugin/Arena.ofx.bundle/Contents/Win64/Arena.ofx
+      - name: Upload artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: openfx-arena-build-windows-release
+          path: Bundle/ArenaPlugin
+
+  macos_build:
+    # MacPorts, as for Natron's macOS SDK (standard binary ports; the
+    # ImageMagick +natron variant would have to be built from source)
+    name: Build macOS (MacPorts)
+    runs-on: macos-15
+    steps:
+      - name: Checkout branch
+        uses: actions/checkout@v4
+        with:
+          submodules: recursive
+      - name: Install MacPorts
+        uses: melusina-org/setup-macports@v1
+      - name: Install MacPorts packages
+        run: |
+          sudo port -N install pkgconfig ImageMagick opencolorio lcms2 fontconfig pango librsvg poppler \
+            libxml2 libzip librevenge libcdr-0.1 sox curl
+          # same fix as in Natron's INSTALL_MACOS.md
+          sudo sed -i '' -e 's/Zstd::Zstd/zstd/' /opt/local/lib/pkgconfig/libzip.pc
+      - name: Build (release)
+        run: |
+          export PATH=/opt/local/bin:/opt/local/sbin:$PATH
+          make -j4 CONFIG=release CXXFLAGS_EXTRA="-DGL_SILENCE_DEPRECATION"
+          mkdir -p Bundle/ArenaPlugin
+          cp -a Bundle/Darwin-64-release/Arena.ofx.bundle Bundle/ArenaPlugin
+      - name: Build (debug)
+        run: |
+          export PATH=/opt/local/bin:/opt/local/sbin:$PATH
+          make -j4 CONFIG=debug CXXFLAGS_EXTRA="-DGL_SILENCE_DEPRECATION"
+      - name: Verify that the plugins load
+        run: |
+          sed -e 's/RTLD_LAZY/RTLD_NOW/g' OpenFX/HostSupport/src/ofxhBinary.cpp > ofxhBinaryStrict.cpp
+          clang++ -std=c++11 -o verify_plugin_loads OpenFX-IO/.github/workflows/verify_plugin_loads.cpp ofxhBinaryStrict.cpp \
+            -I OpenFX/HostSupport/include/ -I OpenFX/include/
+          ./verify_plugin_loads Bundle/ArenaPlugin/Arena.ofx.bundle/Contents/MacOS/Arena.ofx
+      - name: Upload artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: openfx-arena-build-macos-release
           path: Bundle/ArenaPlugin
