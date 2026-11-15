@@ -246,6 +246,15 @@ ${CMAKE_CURRENT_BINARY_DIR}/fonts.conf
 @ONLY)
 
 ADD_LIBRARY(${PROJECT_NAME} SHARED ${SOURCES} ${SUPPORT_SOURCES})
+# ReadPDF.cpp includes poppler's C++ headers (GlobalParams.h), which need
+# C++17 since poppler 21.12 (#23) and C++20 (std::span) in recent versions.
+# Only that file is built with this standard (see also Makefile.master).
+if(MSVC)
+    set(POPPLER_CXXSTD_FLAG "/std:c++20")
+else()
+    set(POPPLER_CXXSTD_FLAG "-std=c++20")
+endif()
+set_source_files_properties(Extra/ReadPDF.cpp PROPERTIES COMPILE_FLAGS "${POPPLER_CXXSTD_FLAG}")
 SET_TARGET_PROPERTIES(${PROJECT_NAME} PROPERTIES PREFIX "")
 SET_TARGET_PROPERTIES(${PROJECT_NAME} PROPERTIES SUFFIX ".ofx")
 

@@ -58,6 +58,11 @@ CAIRO_LINKFLAGS += $(shell pkg-config cairo --libs --static)
 # poppler
 POPPLER_CXXFLAGS += $(shell pkg-config poppler-glib --cflags)
 POPPLER_LINKFLAGS += $(shell pkg-config poppler-glib --libs --static)
+# ReadPDF.cpp includes poppler's C++ headers (GlobalParams.h), which need
+# C++17 since poppler 21.12 (#23) and C++20 (std::span) in recent versions.
+# Only that file is built with this standard; override for old compilers.
+POPPLER_CXXSTD ?= -std=c++20
+$(OBJECTPATH)/ReadPDF.o: CXXFLAGS += $(POPPLER_CXXSTD)
 
 # curl
 CURL_CXXFLAGS += $(shell pkg-config libcurl --cflags)
