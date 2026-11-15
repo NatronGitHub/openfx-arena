@@ -22,6 +22,11 @@
 #include <iostream>
 #include <sstream>
 
+// Bundle path, cached at describe time: per ofxCore.h, kOfxPluginPropFilePath
+// is an effect descriptor property ("Property Set - effect descriptor (read only)"),
+// so it is not guaranteed to exist on instances.
+static std::string gBundlePath;
+
 OCLPluginHelperBase::OCLPluginHelperBase(OfxImageEffectHandle handle, const std::string &kernelSource, const std::string &pluginID)
     : ImageEffect(handle)
     , _dstClip(NULL)
@@ -71,8 +76,11 @@ OCLPluginHelperBase::setupContext(bool context, std::string kernelString)
         } else if (!_source.empty()) {
            kSource = _source;
         } else if (!_plugin.empty()) {
-            std::string kSourcePath;
-            kSourcePath.append(getPropertySet().propGetString(kOfxPluginPropFilePath, false));
+            std::string kSourcePath = gBundlePath;
+            if ( kSourcePath.empty() ) {
+                // fallback for hosts that also set it on the instance
+                kSourcePath = getPropertySet().propGetString(kOfxPluginPropFilePath, false);
+            }
             kSourcePath.append("/Contents/Resources/");
             kSourcePath.append(_plugin);
             kSourcePath.append(".cl");
@@ -192,6 +200,8 @@ OCLPluginHelperBase::changedParam(const OFX::InstanceChangedArgs &args, const st
 OFX::PageParamDescriptor*
 OCLPluginHelperBase::describeInContextBegin(OFX::ImageEffectDescriptor &desc, OFX::ContextEnum /*context*/)
 {
+    gBundlePath = desc.getPropertySet().propGetString(kOfxPluginPropFilePath, false);
+
     OFX::ClipDescriptor *srcClip = desc.defineClip(kOfxImageEffectSimpleSourceClipName);
     srcClip->addSupportedComponent(OFX::ePixelComponentRGBA);
     srcClip->setTemporalClipAccess(false);
