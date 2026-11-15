@@ -20,6 +20,8 @@
 
 #include "MagickCommon.h"
 
+#include <string>
+
 #include "ofxsImageEffect.h"
 #include "ofxsMacros.h"
 #include "ofxsMultiThread.h"
@@ -41,7 +43,15 @@
 
 #define MagickMemoryLimit 4200000000
 
-static bool _hasMP = false;
+// A "static bool" defined in this header gave each translation unit its own
+// copy, and only MagickPlugin.cpp's copy was ever set, so plugins whose
+// render() is instantiated elsewhere (Roll, Wave, Swirl, ...) never enabled
+// OpenMP. An inline function has a single static shared by all units.
+inline bool magickHasOpenMP()
+{
+    static const bool hasMP = std::string(MagickCore::GetMagickFeatures()).find("OpenMP") != std::string::npos;
+    return hasMP;
+}
 
 class MagickPluginHelperBase
     : public OFX::ImageEffect
@@ -164,7 +174,7 @@ void MagickPluginHelper<SupportsRenderScale>::render(const OFX::RenderArguments 
     // OpenMP
 #ifndef DISABLE_OPENMP
     unsigned int threads = 1;
-    if (_hasMP && enableMP) {
+    if (magickHasOpenMP() && enableMP) {
         threads = OFX::MultiThread::getNumCPUs();
     }
     Magick::ResourceLimits::thread(threads);
