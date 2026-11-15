@@ -35,7 +35,7 @@
 #define kPluginGrouping "Draw"
 #define kPluginIdentifier "net.fxarena.openfx.Text"
 #define kPluginVersionMajor 5
-#define kPluginVersionMinor 7
+#define kPluginVersionMinor 8
 
 #define kSupportsTiles 0
 #define kSupportsMultiResolution 0
@@ -527,7 +527,10 @@ void TextPlugin::render(const OFX::RenderArguments &args)
         }
         if (shadowBlur>0)
             dropShadow.blur(0,std::floor(shadowBlur * args.renderScale.x + 0.5));
-        shadowContainer.composite(dropShadow,std::floor(shadowX * args.renderScale.x + 0.5),std::floor(shadowY * args.renderScale.x + 0.5),Magick::OverCompositeOp);
+        // shadow() enlarges the image by about 2*sigma on each side and stores
+        // that as a negative page offset; ignoring it put the shadow 2*sigma
+        // to the right of and below its intended position (#38)
+        shadowContainer.composite(dropShadow,std::floor(shadowX * args.renderScale.x + 0.5) + dropShadow.page().xOff(),std::floor(shadowY * args.renderScale.x + 0.5) + dropShadow.page().yOff(),Magick::OverCompositeOp);
         shadowContainer.composite(image,0,0,Magick::OverCompositeOp);
         image=shadowContainer;
     }
