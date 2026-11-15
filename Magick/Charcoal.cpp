@@ -29,8 +29,8 @@
 #define kPluginName "CharcoalOFX"
 #define kPluginGrouping "Extra/Filter"
 #define kPluginIdentifier "net.fxarena.openfx.Charcoal"
-#define kPluginVersionMajor 2
-#define kPluginVersionMinor 2
+#define kPluginVersionMajor 3 // 3: unpremultiply the source before ImageMagick (see magickReadRGBA)
+#define kPluginVersionMinor 0
 
 #define kParamRadius "radius"
 #define kParamRadiusLabel "Radius"
@@ -59,11 +59,12 @@ static bool _hasOpenMP = false;
 class CharcoalPlugin : public OFX::ImageEffect
 {
 public:
-    CharcoalPlugin(OfxImageEffectHandle handle);
+    CharcoalPlugin(OfxImageEffectHandle handle, bool unpremultSrc);
     virtual ~CharcoalPlugin();
     virtual void render(const OFX::RenderArguments &args) OVERRIDE FINAL;
     virtual bool getRegionOfDefinition(const OFX::RegionOfDefinitionArguments &args, OfxRectD &rod) OVERRIDE FINAL;
 private:
+    bool unpremultSrc_; // false in versions released before the premultiplication fix
     OFX::Clip *dstClip_;
     OFX::Clip *srcClip_;
     OFX::DoubleParam *radius_;
@@ -71,8 +72,9 @@ private:
     OFX::BooleanParam *enableOpenMP_;
 };
 
-CharcoalPlugin::CharcoalPlugin(OfxImageEffectHandle handle)
+CharcoalPlugin::CharcoalPlugin(OfxImageEffectHandle handle, bool unpremultSrc)
 : OFX::ImageEffect(handle)
+, unpremultSrc_(unpremultSrc)
 , dstClip_(NULL)
 , srcClip_(NULL)
 {
@@ -176,7 +178,9 @@ void CharcoalPlugin::render(const OFX::RenderArguments &args)
     Magick::Image image(Magick::Geometry(width,height),Magick::Color("rgba(0,0,0,0)"));
     Magick::Image output(Magick::Geometry(width,height),Magick::Color("rgba(0,0,0,1)"));
     if (srcClip_ && srcClip_->isConnected()) {
-        PackedImage::PackedSrc srcPixels(srcImg.get(), srcRod);
+        // ImageMagick expects straight colour
+        PackedImage::PackedSrc srcPixels(srcImg.get(), srcRod,
+                                         unpremultSrc_ && srcImg->getPreMultiplication() == OFX::eImagePreMultiplied);
         image.read(width,height,"RGBA",Magick::FloatPixel,srcPixels.data());
     }
 
@@ -212,11 +216,15 @@ bool CharcoalPlugin::getRegionOfDefinition(const OFX::RegionOfDefinitionArgument
     return true;
 }
 
-mDeclarePluginFactory(CharcoalPluginFactory, {}, {});
+mDeclarePluginFactoryVersioned(CharcoalPluginFactory, {}, {});
 
 /** @brief The basic describe function, passed a plugin descriptor */
-void CharcoalPluginFactory::describe(OFX::ImageEffectDescriptor &desc)
+template<unsigned int majorVersion>
+void CharcoalPluginFactory<majorVersion>::describe(OFX::ImageEffectDescriptor &desc)
 {
+    if (majorVersion < kPluginVersionMajor) {
+        desc.setIsDeprecated(true);
+    }
     // basic labels
     desc.setLabel(kPluginName);
     desc.setPluginGrouping(kPluginGrouping);
@@ -238,7 +246,8 @@ void CharcoalPluginFactory::describe(OFX::ImageEffectDescriptor &desc)
 }
 
 /** @brief The describe in context function, passed a plugin descriptor and a context */
-void CharcoalPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, ContextEnum /*context*/)
+template<unsigned int majorVersion>
+void CharcoalPluginFactory<majorVersion>::describeInContext(OFX::ImageEffectDescriptor &desc, ContextEnum /*context*/)
 {
     std::string features = MagickCore::GetMagickFeatures();
     if (features.find("OpenMP") != std::string::npos)
@@ -291,10 +300,15 @@ void CharcoalPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, 
 }
 
 /** @brief The create instance function, the plugin must return an object derived from the \ref OFX::ImageEffect class */
-ImageEffect* CharcoalPluginFactory::createInstance(OfxImageEffectHandle handle, ContextEnum /*context*/)
+template<unsigned int majorVersion>
+ImageEffect* CharcoalPluginFactory<majorVersion>::createInstance(OfxImageEffectHandle handle, ContextEnum /*context*/)
 {
-    return new CharcoalPlugin(handle);
+    // versions before 3 fed premultiplied pixels to ImageMagick: keep their output
+    return new CharcoalPlugin(handle, majorVersion >= 3);
 }
 
-static CharcoalPluginFactory p(kPluginIdentifier, kPluginVersionMajor, kPluginVersionMinor);
+static CharcoalPluginFactory<kPluginVersionMajor> p(kPluginIdentifier, kPluginVersionMinor);
 mRegisterPluginFactoryInstance(p)
+// version 2, kept so that existing projects render as before
+static CharcoalPluginFactory<2> p2(kPluginIdentifier, 2);
+mRegisterPluginFactoryInstance(p2)

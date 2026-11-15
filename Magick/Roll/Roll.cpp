@@ -26,8 +26,8 @@ OFXS_NAMESPACE_ANONYMOUS_ENTER
 #define kPluginGrouping "Extra/Transform"
 #define kPluginIdentifier "net.fxarena.openfx.Roll"
 #define kPluginDescription "Roll effect using ImageMagick."
-#define kPluginVersionMajor 2
-#define kPluginVersionMinor 9
+#define kPluginVersionMajor 3 // 3: unpremultiply the source before ImageMagick (see magickReadRGBA)
+#define kPluginVersionMinor 0
 
 #define kSupportsTiles 0
 #define kSupportsMultiResolution 1
@@ -51,8 +51,8 @@ class RollPlugin
     : public MagickPluginHelper<kSupportsRenderScale>
 {
 public:
-    RollPlugin(OfxImageEffectHandle handle)
-        : MagickPluginHelper<kSupportsRenderScale>(handle)
+    RollPlugin(OfxImageEffectHandle handle, bool unpremultSrc)
+        : MagickPluginHelper<kSupportsRenderScale>(handle, unpremultSrc)
         , _x(NULL)
         , _y(NULL)
     {
@@ -73,10 +73,14 @@ private:
     DoubleParam *_y;
 };
 
-mDeclarePluginFactory(RollPluginFactory, {}, {});
+mDeclarePluginFactoryVersioned(RollPluginFactory, {}, {});
 
-void RollPluginFactory::describe(ImageEffectDescriptor &desc)
+template<unsigned int majorVersion>
+void RollPluginFactory<majorVersion>::describe(ImageEffectDescriptor &desc)
 {
+    if (majorVersion < kPluginVersionMajor) {
+        desc.setIsDeprecated(true);
+    }
     desc.setLabel(kPluginName);
     desc.setPluginGrouping(kPluginGrouping);
     desc.setPluginDescription(kPluginDescription);
@@ -91,7 +95,8 @@ void RollPluginFactory::describe(ImageEffectDescriptor &desc)
     desc.setHostMixingEnabled(kHostMixing);
 }
 
-void RollPluginFactory::describeInContext(ImageEffectDescriptor &desc, ContextEnum context)
+template<unsigned int majorVersion>
+void RollPluginFactory<majorVersion>::describeInContext(ImageEffectDescriptor &desc, ContextEnum context)
 {
     OFX::PageParamDescriptor *page = RollPlugin::describeInContextBegin(desc, context);
     {
@@ -120,13 +125,18 @@ void RollPluginFactory::describeInContext(ImageEffectDescriptor &desc, ContextEn
     RollPlugin::describeInContextEnd(desc, context, page);
 }
 
+template<unsigned int majorVersion>
 OFX::ImageEffect*
-RollPluginFactory::createInstance(OfxImageEffectHandle handle, ContextEnum /*context*/)
+RollPluginFactory<majorVersion>::createInstance(OfxImageEffectHandle handle, ContextEnum /*context*/)
 {
-    return new RollPlugin(handle);
+    // versions before 3 fed premultiplied pixels to ImageMagick: keep their output
+    return new RollPlugin(handle, majorVersion >= 3);
 }
 
-static RollPluginFactory p(kPluginIdentifier, kPluginVersionMajor, kPluginVersionMinor);
+static RollPluginFactory<kPluginVersionMajor> p(kPluginIdentifier, kPluginVersionMinor);
 mRegisterPluginFactoryInstance(p)
+// version 2, kept so that existing projects render as before
+static RollPluginFactory<2> p2(kPluginIdentifier, 9);
+mRegisterPluginFactoryInstance(p2)
 
 OFXS_NAMESPACE_ANONYMOUS_EXIT

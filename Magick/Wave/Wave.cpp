@@ -27,7 +27,8 @@ OFXS_NAMESPACE_ANONYMOUS_ENTER
 #define kPluginIdentifier "net.fxarena.openfx.Wave"
 #define kPluginDescription "Wave effect using ImageMagick."
 // Version 3 crops the result of WaveImage so that it is aligned with the input (see WavePlugin::render).
-#define kPluginVersionMajor 3
+// Version 4 also unpremultiplies the source before ImageMagick (see PackedImage::PackedSrc).
+#define kPluginVersionMajor 4
 #define kPluginVersionMinor 0
 
 #define kSupportsTiles 0
@@ -52,8 +53,8 @@ class WavePlugin
     : public MagickPluginHelper<kSupportsRenderScale>
 {
 public:
-    WavePlugin(OfxImageEffectHandle handle, bool alignOutput)
-        : MagickPluginHelper<kSupportsRenderScale>(handle)
+    WavePlugin(OfxImageEffectHandle handle, bool alignOutput, bool unpremultSrc)
+        : MagickPluginHelper<kSupportsRenderScale>(handle, unpremultSrc)
         , _alignOutput(alignOutput)
         , _amp(NULL)
         , _length(NULL)
@@ -91,6 +92,9 @@ mDeclarePluginFactoryVersioned(WavePluginFactory, {}, {});
 template<unsigned int majorVersion>
 void WavePluginFactory<majorVersion>::describe(ImageEffectDescriptor &desc)
 {
+    if (majorVersion < kPluginVersionMajor) {
+        desc.setIsDeprecated(true);
+    }
     desc.setLabel(kPluginName);
     desc.setPluginGrouping(kPluginGrouping);
     desc.setPluginDescription(kPluginDescription);
@@ -134,11 +138,15 @@ template<unsigned int majorVersion>
 OFX::ImageEffect*
 WavePluginFactory<majorVersion>::createInstance(OfxImageEffectHandle handle, ContextEnum /*context*/)
 {
-    return new WavePlugin(handle, majorVersion >= 3);
+    // versions before 4 fed premultiplied pixels to ImageMagick: keep their output
+    return new WavePlugin(handle, majorVersion >= 3, majorVersion >= 4);
 }
 
 static WavePluginFactory<kPluginVersionMajor> p(kPluginIdentifier, kPluginVersionMinor);
 mRegisterPluginFactoryInstance(p)
+// Version 3 is kept unchanged so that existing projects render as before.
+static WavePluginFactory<3> p3(kPluginIdentifier, 0);
+mRegisterPluginFactoryInstance(p3)
 // Version 2 is kept unchanged so that existing projects render as before.
 static WavePluginFactory<2> p2(kPluginIdentifier, 9);
 mRegisterPluginFactoryInstance(p2)

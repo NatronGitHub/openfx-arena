@@ -68,7 +68,8 @@ OFXS_NAMESPACE_ANONYMOUS_ENTER
 #define kPluginRepoURL "https://raw.githubusercontent.com/NatronGitHub/clut/master"
 #define kPluginRepoZIP "https://github.com/NatronGitHub/clut/archive/master.zip"
 // Version 2 uses the sRGB transfer function to apply the CLUT to linear input (see HaldCLUTPlugin::render).
-#define kPluginVersionMajor 2
+// Version 3 also unpremultiplies the source before ImageMagick (see PackedImage::PackedSrc).
+#define kPluginVersionMajor 3
 #define kPluginVersionMinor 0
 
 #define kSupportsTiles 0
@@ -186,8 +187,8 @@ class HaldCLUTPlugin
     : public MagickPluginHelper<kSupportsRenderScale>
 {
 public:
-    HaldCLUTPlugin(OfxImageEffectHandle handle, bool srgbTransfer)
-        : MagickPluginHelper<kSupportsRenderScale>(handle)
+    HaldCLUTPlugin(OfxImageEffectHandle handle, bool srgbTransfer, bool unpremultSrc)
+        : MagickPluginHelper<kSupportsRenderScale>(handle, unpremultSrc)
         , _srgbTransfer(srgbTransfer)
         , _presets()
         , _preset(NULL)
@@ -402,6 +403,9 @@ template<unsigned int majorVersion>
 void
 HaldCLUTPluginFactory<majorVersion>::describe(ImageEffectDescriptor &desc)
 {
+    if (majorVersion < kPluginVersionMajor) {
+        desc.setIsDeprecated(true);
+    }
     desc.setLabel(kPluginName);
     desc.setPluginGrouping(kPluginGrouping);
     desc.setPluginDescription(kPluginDescription);
@@ -503,11 +507,15 @@ template<unsigned int majorVersion>
 OFX::ImageEffect*
 HaldCLUTPluginFactory<majorVersion>::createInstance(OfxImageEffectHandle handle, ContextEnum /*context*/)
 {
-    return new HaldCLUTPlugin(handle, majorVersion >= 2);
+    // versions before 3 fed premultiplied pixels to ImageMagick: keep their output
+    return new HaldCLUTPlugin(handle, majorVersion >= 2, majorVersion >= 3);
 }
 
 static HaldCLUTPluginFactory<kPluginVersionMajor> p(kPluginIdentifier, kPluginVersionMinor);
 mRegisterPluginFactoryInstance(p)
+// Version 2 is kept unchanged so that existing projects render as before.
+static HaldCLUTPluginFactory<2> p2(kPluginIdentifier, 0);
+mRegisterPluginFactoryInstance(p2)
 // Version 1 is kept unchanged so that existing projects render as before.
 static HaldCLUTPluginFactory<1> p1(kPluginIdentifier, 1);
 mRegisterPluginFactoryInstance(p1)
