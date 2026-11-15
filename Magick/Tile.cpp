@@ -220,12 +220,18 @@ void TilePlugin::render(const OFX::RenderArguments &args)
 
     // setup montage
     std::string fontFile;
-    char **fonts;
-    std::size_t fontList;
-    fonts=MagickCore::MagickQueryFonts("*",&fontList);
-    fontFile = fonts[0];
-    for (size_t i = 0; i < fontList; i++)
-        free(fonts[i]);
+    std::size_t fontList = 0;
+    char **fonts = MagickCore::MagickQueryFonts("*",&fontList);
+    // MagickQueryFonts returns NULL (or an empty list) if no font is found
+    if (fonts) {
+        if (fontList > 0 && fonts[0]) {
+            fontFile = fonts[0];
+        }
+        for (size_t i = 0; i < fontList; i++) {
+            MagickCore::MagickRelinquishMemory(fonts[i]);
+        }
+        MagickCore::MagickRelinquishMemory(fonts);
+    }
 
     if (!fontFile.empty())
         montage.font(fontFile); // avoid warn, set default font
