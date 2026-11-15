@@ -61,9 +61,10 @@ POPPLER_LINKFLAGS += $(shell pkg-config poppler-glib --libs --static)
 # ReadPDF.cpp includes poppler's C++ headers (GlobalParams.h), which need
 # C++17 since poppler 21.12 (#23) and C++20 (std::span) in recent versions.
 # Only that file is built with this standard; override for old compilers.
-# gnu++20, not c++20: MinGW GCC 16 headers (<numbers>, <limits>) need GNU
-# extensions for __float128 literals in strict mode.
-POPPLER_CXXSTD ?= -std=gnu++20
+# gnu++2a, not c++20: MinGW GCC 16 headers (<numbers>, <limits>) need GNU
+# extensions for __float128 literals in strict mode, and GCC < 10 (Natron's
+# Linux SDK uses GCC 9) only knows the "2a" spelling.
+POPPLER_CXXSTD ?= -std=gnu++2a
 $(OBJECTPATH)/ReadPDF.o: CXXFLAGS += $(POPPLER_CXXSTD)
 
 # curl
