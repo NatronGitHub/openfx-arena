@@ -1,7 +1,8 @@
 name: Extended builds
 
-# The builds of ci.yml with C++20 (Natron Qt6 builds and RB-2.7). Nightly, only
-# if master had a commit in the last 25 hours, and on demand.
+# Nightly, only if master had a commit in the last 25 hours, and on demand:
+# - the builds of ci.yml with C++20 (Natron Qt6 builds and RB-2.7);
+# - the per-PR (C++17) macOS build, which isn't required for merging.
 
 on:
   workflow_dispatch:
@@ -49,3 +50,12 @@ jobs:
     with:
       cxxstd: ${{ (github.event_name == 'workflow_dispatch' && inputs.cxxstd) || 'c++20' }}
       artifacts: false
+
+  macos-cxx17:
+    needs: changes
+    if: needs.changes.outputs.run == 'true'
+    uses: ./.github/workflows/platforms.yml
+    with:
+      cxxstd: c++17
+      artifacts: false
+      macos-only: true

@@ -13,6 +13,10 @@ on:
       artifacts:
         type: boolean
         default: false
+      macos-only:
+        description: Build only on macOS (nightly C++17 macOS build)
+        type: boolean
+        default: false
 
 permissions:
   contents: read
@@ -23,6 +27,7 @@ env:
 
 jobs:
   linux:
+    if: ${{ !inputs.macos-only }}
     name: Linux (Ubuntu 24.04)
     runs-on: ubuntu-24.04
     timeout-minutes: 60
@@ -63,6 +68,7 @@ jobs:
           path: Bundle/Linux-64-release/Arena.ofx.bundle
 
   windows:
+    if: ${{ !inputs.macos-only }}
     name: Windows (MSYS2 UCRT64)
     runs-on: windows-latest
     timeout-minutes: 90
@@ -131,6 +137,10 @@ jobs:
           path: Bundle/*-release/Arena.ofx.bundle
 
   macos:
+    # macOS arm64 runners are scarce: start only once Linux and Windows have passed. Merging
+    # only requires Linux and Windows; macOS is also built nightly (extended.yml).
+    needs: [linux, windows]
+    if: ${{ !cancelled() && (inputs.macos-only || (needs.linux.result == 'success' && needs.windows.result == 'success')) }}
     # System (Xcode) clang with MacPorts libraries, as for Natron's macOS SDK.
     name: macOS 15 arm64 (Xcode clang, MacPorts)
     runs-on: macos-15
