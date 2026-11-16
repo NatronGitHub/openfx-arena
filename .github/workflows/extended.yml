@@ -1,7 +1,7 @@
 name: Extended builds
 
-# The builds of ci.yml with C++20 (Natron Qt6 builds and RB-2.7). Weekly, only
-# if master changed in the last week, and on demand.
+# The builds of ci.yml with C++20 (Natron Qt6 builds and RB-2.7). Nightly, only
+# if master had a commit in the last 25 hours, and on demand.
 
 on:
   workflow_dispatch:
@@ -12,7 +12,7 @@ on:
         options: [c++20, c++17]
         default: c++20
   schedule:
-    - cron: '17 3 * * 1'
+    - cron: '17 3 * * *'
 
 permissions:
   contents: read
@@ -22,7 +22,7 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  # skip the scheduled run if master didn't change since the previous one
+  # skip the nightly run if master had no commit in the last 25 hours
   changes:
     runs-on: ubuntu-24.04
     timeout-minutes: 5
@@ -36,10 +36,10 @@ jobs:
       - id: check
         shell: bash -eo pipefail {0}
         run: |
-          if [ "${{ github.event_name }}" != schedule ] || [ -n "$(git log --since='8 days ago' --format=%h -1)" ]; then
+          if [ "${{ github.event_name }}" != schedule ] || [ -n "$(git log --since='25 hours ago' --format=%h -1)" ]; then
             echo "run=true" >> "$GITHUB_OUTPUT"
           else
-            echo "run=false" >> "$GITHUB_OUTPUT"; echo "No commits in the last 8 days: skipping."
+            echo "run=false" >> "$GITHUB_OUTPUT"; echo "No commits in the last 25 hours: skipping."
           fi
 
   build:

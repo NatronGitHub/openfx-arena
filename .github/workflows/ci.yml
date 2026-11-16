@@ -4,7 +4,7 @@ name: Continuous Integration tests
 # Pushes run CI only on master, RB-* and tags; feature branches run through their
 # pull request (not on every push, and not twice). Draft pull requests don't run
 # CI: mark the PR ready for review to run it. Superseded runs are cancelled,
-# except for tags. The C++20 builds run weekly in extended.yml.
+# except for tags. The C++20 builds run nightly in extended.yml.
 # Use [skip ci] for comment- or doc-only commits.
 
 on:
