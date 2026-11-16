@@ -134,15 +134,18 @@ ADD_LIBRARY(${PROJECT_NAME} SHARED ${SOURCES} ${SUPPORT_SOURCES})
 SET_TARGET_PROPERTIES(${PROJECT_NAME} PROPERTIES PREFIX "")
 SET_TARGET_PROPERTIES(${PROJECT_NAME} PROPERTIES SUFFIX ".ofx")
 
-# Add extra flags to the link step of the plugin
+# Add extra flags to the link step of the plugin: export only OfxGetPlugin and
+# OfxGetNumberOfPlugins (the macOS list was given to the compiler driver without
+# -Wl, so the link failed, #67; the Linux flags gave -fvisibility=hidden to the linker)
+set_target_properties(${PROJECT_NAME} PROPERTIES CXX_VISIBILITY_PRESET hidden)
 if(APPLE)
-    set_target_properties(${PROJECT_NAME} PROPERTIES LINK_FLAGS "-fvisibility=hidden -exported_symbols_list,${OFX_SUPPORT_HEADER_DIR}/osxSymbols")
+    target_link_options(${PROJECT_NAME} PRIVATE "LINKER:-exported_symbols_list,${OFX_SUPPORT_HEADER_DIR}/osxSymbols")
     set_target_properties(${PROJECT_NAME} PROPERTIES INSTALL_RPATH "@loader_path/../Frameworks;@loader_path/../Libraries")
 elseif(MINGW)
-    set_target_properties(${PROJECT_NAME} PROPERTIES LINK_FLAGS "-shared -fvisibility=hidden -Xlinker --version-script=${OFX_SUPPORT_HEADER_DIR}/linuxSymbols")
+    target_link_options(${PROJECT_NAME} PRIVATE "LINKER:--version-script=${OFX_SUPPORT_HEADER_DIR}/linuxSymbols")
 elseif(${CMAKE_SYSTEM_NAME} STREQUAL "FreeBSD" OR ${CMAKE_SYSTEM_NAME} STREQUAL "Linux")
 # Linux & FreeBSD
-    set_target_properties(${PROJECT_NAME} PROPERTIES LINK_FLAGS "-Wl,-fvisibility=hidden,--version-script=${OFX_SUPPORT_HEADER_DIR}/linuxSymbols")
+    target_link_options(${PROJECT_NAME} PRIVATE "LINKER:--version-script=${OFX_SUPPORT_HEADER_DIR}/linuxSymbols")
     set_target_properties(${PROJECT_NAME} PROPERTIES INSTALL_RPATH "$ORIGIN/../../Libraries")
 endif()
 
@@ -162,11 +165,20 @@ include_directories(
     ${FONTCONFIG_INCLUDE_DIRS}
     ${PANGO_INCLUDE_DIRS}
 )
-target_link_libraries(
-    ${PROJECT_NAME}
-    ${FONTCONFIG_STATIC_LDFLAGS}
-    ${PANGO_STATIC_LDFLAGS}
-)
+# pkg-config --static --libs, as Makefile.master; "-framework X" must stay one item
+set(_libs "")
+set(_framework FALSE)
+foreach(_f ${FONTCONFIG_STATIC_LDFLAGS} ${PANGO_STATIC_LDFLAGS})
+    if(_framework)
+        list(APPEND _libs "-Wl,-framework,${_f}")
+        set(_framework FALSE)
+    elseif(_f STREQUAL "-framework")
+        set(_framework TRUE)
+    else()
+        list(APPEND _libs "${_f}")
+    endif()
+endforeach()
+target_link_libraries(${PROJECT_NAME} ${_libs})
 
 #IF (MSVC)
 #  # Some files require this option. This breaks compatibility with older linkers.
