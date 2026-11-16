@@ -393,7 +393,6 @@ FILE(GLOB SOURCES
     "Text/TextOFX.cpp"
     "Text/RichText.cpp"
     "Extra/ReadSVG.cpp"
-    "Extra/ReadPDF.cpp"
     "Extra/OpenRaster.cpp"
     "Extra/ReadCDR.cpp"
     "Extra/ReadKrita.cpp"
@@ -492,15 +491,24 @@ endif()
 
 # ReadPDF.cpp includes poppler's C++ headers (GlobalParams.h), which need
 # C++17 since poppler 21.12 (#23) and C++20 (std::span) in recent versions.
-# Only that file is built with this standard (see also Makefile.master).
-# gnu++2a: MinGW GCC 16 headers need GNU extensions in C++20 mode, and
-# GCC < 10 only knows the "2a" spelling.
-if(MSVC)
-    set(POPPLER_CXXSTD_FLAG "/std:c++20")
-else()
-    set(POPPLER_CXXSTD_FLAG "-std=gnu++2a")
+# Only that file is built with this standard, with GNU extensions (gnu++2a,
+# as Makefile.master: MinGW GCC 16 headers need them in C++20 mode), in an
+# object library that is otherwise built like the other Arena sources.
+set(POPPLER_CXX_STANDARD 20 CACHE STRING "C++ standard of ReadPDF.cpp (Makefile.master: POPPLER_CXXSTD)")
+set(_std ${POPPLER_CXX_STANDARD})
+if(OFX_CXX_STANDARD GREATER _std)
+    set(_std ${OFX_CXX_STANDARD})
 endif()
-set_source_files_properties(Extra/ReadPDF.cpp PROPERTIES COMPILE_FLAGS "${POPPLER_CXXSTD_FLAG}")
+add_library(ArenaReadPDF OBJECT Extra/ReadPDF.cpp)
+set_target_properties(ArenaReadPDF PROPERTIES
+    CXX_STANDARD ${_std} CXX_STANDARD_REQUIRED ON CXX_EXTENSIONS ON
+    POSITION_INDEPENDENT_CODE ON CXX_VISIBILITY_PRESET hidden VISIBILITY_INLINES_HIDDEN ON)
+target_include_directories(ArenaReadPDF PRIVATE $<TARGET_PROPERTY:Arena,INCLUDE_DIRECTORIES>)
+target_compile_definitions(ArenaReadPDF PRIVATE $<TARGET_PROPERTY:Arena,COMPILE_DEFINITIONS>)
+target_compile_options(ArenaReadPDF PRIVATE $<TARGET_PROPERTY:Arena,COMPILE_OPTIONS>)
+target_link_libraries(ArenaReadPDF PRIVATE openfx::Support ${ARENA_LIBRARIES})
+ofx_target_openmp(ArenaReadPDF)
+target_link_libraries(Arena PRIVATE ArenaReadPDF)
 
 ofx_plugin_resources(Arena ${RESOURCES})
 
