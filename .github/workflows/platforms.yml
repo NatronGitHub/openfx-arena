@@ -84,16 +84,14 @@ jobs:
             cc:p pkgconf:p ntldd:p imagemagick:p opencolorio:p lcms2:p fontconfig:p pango:p librsvg:p
             libxml2:p libzip:p libcdr:p librevenge:p sox:p curl:p poppler:p
           install: make
-      # GNU dialect (gnu++17/gnu++20) on MinGW: in strict mode, GCC 16's own <limits>
-      # fails ("unable to find numeric literal operator 'operator""Q'", __float128)
       - name: Build (release)
         run: |
           set -eo pipefail
-          make -j4 CONFIG=release MINGW=1 IM=7 CXX="g++ -std=gnu${CXXSTD#c}"
+          make -j4 CONFIG=release MINGW=1 IM=7 CXX="g++ -std=$CXXSTD"
       - name: Build (debug)
         run: |
           set -eo pipefail
-          make -j4 CONFIG=debug MINGW=1 IM=7 CXX="g++ -std=gnu${CXXSTD#c}"
+          make -j4 CONFIG=debug MINGW=1 IM=7 CXX="g++ -std=$CXXSTD"
       - name: Verify that the plugins load
         run: |
           set -eo pipefail
