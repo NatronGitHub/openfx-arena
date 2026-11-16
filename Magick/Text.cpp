@@ -36,7 +36,7 @@
 #define kPluginGrouping "Draw"
 #define kPluginIdentifier "net.fxarena.openfx.Text"
 #define kPluginVersionMajor 5
-#define kPluginVersionMinor 8
+#define kPluginVersionMinor 9
 
 #define kSupportsTiles 0
 #define kSupportsMultiResolution 0
