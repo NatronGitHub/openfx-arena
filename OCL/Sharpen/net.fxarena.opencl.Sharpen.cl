@@ -16,13 +16,13 @@
 */
 
 const sampler_t sampler = CLK_NORMALIZED_COORDS_FALSE | CLK_ADDRESS_CLAMP_TO_EDGE | CLK_FILTER_NEAREST;
-kernel void filter(read_only image2d_t input, write_only image2d_t output, double factor) {
+kernel void filter(read_only image2d_t input, write_only image2d_t output, float factor) {
     const int2 p = {get_global_id(0), get_global_id(1)};
     float m[3][3] = { {-1, -1, -1}, {-1,  8, -1}, {-1, -1, -1} };
     float4 value = 0.f;
     for (int j = -1; j <= 1; j++) {
         for (int i = -1; i <= 1; i++) {
-            value += read_imagef(input, sampler, (int2)(p.x+i, p.y+j)) * m[i+1][j+1] * (float)factor;
+            value += read_imagef(input, sampler, (int2)(p.x+i, p.y+j)) * m[i+1][j+1] * factor;
         }
     }
   float4 orig = read_imagef(input, sampler, (int2)(p.x, p.y));
