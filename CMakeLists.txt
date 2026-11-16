@@ -326,33 +326,46 @@ endfunction()
 # end of the TODO block
 ########################################################################
 
-# Libraries, found by pkg-config as in Makefile.master
+# Libraries, found by pkg-config as in Makefile.master. Like Makefile.master, link
+# with "pkg-config --static --libs": e.g. MacPorts' ImageMagick +natron (Natron's
+# SDK) is a static library, which needs the libraries of its delegates.
 find_package(PkgConfig REQUIRED)
-pkg_check_modules(MAGICK REQUIRED IMPORTED_TARGET ${MAGICK_PKG_CONFIG})
-pkg_check_modules(LCMS2 REQUIRED IMPORTED_TARGET lcms2)
-pkg_check_modules(FONTCONFIG REQUIRED IMPORTED_TARGET fontconfig)
-pkg_check_modules(PANGO REQUIRED IMPORTED_TARGET pangocairo)
-pkg_check_modules(XML REQUIRED IMPORTED_TARGET libxml-2.0)
-pkg_check_modules(ZIP REQUIRED IMPORTED_TARGET libzip)
-pkg_check_modules(SVG REQUIRED IMPORTED_TARGET librsvg-2.0)
-pkg_check_modules(GLIB REQUIRED IMPORTED_TARGET glib-2.0)
-pkg_check_modules(CAIRO REQUIRED IMPORTED_TARGET cairo)
-pkg_check_modules(POPPLER REQUIRED IMPORTED_TARGET poppler-glib)
-pkg_check_modules(REVENGE REQUIRED IMPORTED_TARGET librevenge-0.0 librevenge-generators-0.0 librevenge-stream-0.0)
-pkg_check_modules(CDR REQUIRED IMPORTED_TARGET libcdr-0.1)
-set(ARENA_LIBRARIES
-  PkgConfig::MAGICK PkgConfig::LCMS2 PkgConfig::FONTCONFIG PkgConfig::PANGO PkgConfig::XML PkgConfig::ZIP
-  PkgConfig::SVG PkgConfig::GLIB PkgConfig::CAIRO PkgConfig::POPPLER PkgConfig::REVENGE PkgConfig::CDR)
-
+set(ARENA_LIBRARIES "")
+macro(arena_pkg_check_modules _prefix)
+  pkg_check_modules(${_prefix} REQUIRED IMPORTED_TARGET ${ARGN})
+  set(_libs "")
+  set(_framework FALSE)
+  foreach(_f ${${_prefix}_STATIC_LDFLAGS})
+    if(_framework)
+      list(APPEND _libs "-Wl,-framework,${_f}") # one item: CMake would split "-framework X"
+      set(_framework FALSE)
+    elseif(_f STREQUAL "-framework")
+      set(_framework TRUE)
+    else()
+      list(APPEND _libs "${_f}")
+    endif()
+  endforeach()
+  set_target_properties(PkgConfig::${_prefix} PROPERTIES INTERFACE_LINK_LIBRARIES "${_libs}" INTERFACE_LINK_OPTIONS "")
+  list(APPEND ARENA_LIBRARIES PkgConfig::${_prefix})
+endmacro()
+arena_pkg_check_modules(MAGICK ${MAGICK_PKG_CONFIG})
+arena_pkg_check_modules(LCMS2 lcms2)
+arena_pkg_check_modules(FONTCONFIG fontconfig)
+arena_pkg_check_modules(PANGO pangocairo)
+arena_pkg_check_modules(XML libxml-2.0)
+arena_pkg_check_modules(ZIP libzip)
+arena_pkg_check_modules(SVG librsvg-2.0)
+arena_pkg_check_modules(GLIB glib-2.0)
+arena_pkg_check_modules(CAIRO cairo)
+arena_pkg_check_modules(POPPLER poppler-glib)
+arena_pkg_check_modules(REVENGE librevenge-0.0 librevenge-generators-0.0 librevenge-stream-0.0)
+arena_pkg_check_modules(CDR libcdr-0.1)
 if(AUDIO)
-  pkg_check_modules(SOX REQUIRED IMPORTED_TARGET sox)
-  list(APPEND ARENA_LIBRARIES PkgConfig::SOX)
+  arena_pkg_check_modules(SOX sox)
 endif()
-
 if(HALDCLUT)
   # HaldCLUT uses libCurl to download ~100MiB of CLUT profiles
-  pkg_check_modules(CURL REQUIRED IMPORTED_TARGET libcurl)
-  list(APPEND ARENA_LIBRARIES PkgConfig::CURL)
+  arena_pkg_check_modules(CURL libcurl)
 endif()
 
 FILE(GLOB SOURCES
