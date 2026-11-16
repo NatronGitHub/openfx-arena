@@ -20,6 +20,7 @@
 #include <GlobalParams.h>
 #include <cairo.h>
 #include <string>
+#include <mutex>
 
 #include <iostream>
 #include <stdlib.h>
@@ -138,17 +139,23 @@ false
     // When we deploy the plugin we need access to the poppler data folder,
     // we asume that the path is OFX_HOST_BINARY/../Resources/poppler.
     // If not found, whatever poppler has as default will be used (may or may not work).
-    std::string popplerData = getResourcesPath();
-    if (!popplerData.empty()) {
-        struct stat sb;
-        if (stat(popplerData.c_str(), &sb) == 0 && S_ISDIR(sb.st_mode)) {
+    // globalParams is process-wide: set it only once. Replacing it in every
+    // instance constructor destroyed the previous object while other
+    // instances could be rendering with it on other threads.
+    static std::once_flag popplerDataOnce;
+    std::call_once(popplerDataOnce, [this]() {
+        std::string popplerData = getResourcesPath();
+        if (!popplerData.empty()) {
+            struct stat sb;
+            if (stat(popplerData.c_str(), &sb) == 0 && S_ISDIR(sb.st_mode)) {
 #ifdef LEGACY_POPPLER
-            globalParams = new GlobalParams(popplerData.c_str());
+                globalParams = new GlobalParams(popplerData.c_str());
 #else
-            globalParams.reset(new GlobalParams(popplerData.c_str()));
+                globalParams.reset(new GlobalParams(popplerData.c_str()));
 #endif
+            }
         }
-    }
+    });
 }
 
 ReadPDFPlugin::~ReadPDFPlugin()
@@ -162,7 +169,8 @@ void ReadPDFPlugin::restoreStateFromParams()
     int startingTime = getStartingTime();
     std::string filename;
     OfxStatus st = getFilenameAtTime(startingTime, &filename);
-    if ( st == kOfxStatOK || !filename.empty() ) {
+    // && (was ||): with no file set, this tried to open "" and reported an error
+    if ( st == kOfxStatOK && !filename.empty() ) {
         GError *error = NULL;
         PopplerDocument *document = NULL;
 
