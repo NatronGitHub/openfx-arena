@@ -180,13 +180,20 @@ if(APPLE)
 elseif(WIN32)
   # MSVC: the target architecture (ARM64EC, ARM64, x64, X86); other compilers: pointer size
   string(TOUPPER "${CMAKE_CXX_COMPILER_ARCHITECTURE_ID};${CMAKE_GENERATOR_PLATFORM}" _OFX_WINARCH)
-  if(NOT CMAKE_CXX_COMPILER_ARCHITECTURE_ID AND CMAKE_SYSTEM_PROCESSOR MATCHES "^(ARM64|arm64|aarch64)$")
-    # MinGW (MSYS2 CLANGARM64, llvm-mingw): the architecture ID is only set for MSVC
-    set(_OFX_WINARCH "ARM64")
+  if(NOT CMAKE_CXX_COMPILER_ARCHITECTURE_ID)
+    # MinGW (MSYS2 CLANGARM64, llvm-mingw): the architecture ID is only set for MSVC, and
+    # CMAKE_SYSTEM_PROCESSOR is the build machine's unless a toolchain file sets it, so ask the compiler
+    include(CheckCXXSourceCompiles)
+    check_cxx_source_compiles("#if !defined(__aarch64__)\n#error not aarch64\n#endif\nint main() { return 0; }"
+                              OFX_WIN_TARGET_IS_AARCH64)
+    if(OFX_WIN_TARGET_IS_AARCH64)
+      set(_OFX_WINARCH "ARM64")
+    endif()
   endif()
   if(_OFX_WINARCH MATCHES "ARM64EC" OR CMAKE_CXX_FLAGS MATCHES "/arm64EC")
     set(ARCHDIR "Win-arm64ec") # normative (upstream main, 2026): Arm64EC (and Arm64X) plug-ins
-  elseif(_OFX_WINARCH MATCHES "ARM64")
+  elseif(_OFX_WINARCH MATCHES "ARM64|AARCH64")
+    # CMake >= 4.1 reports "aarch64" as the MinGW architecture ID
     set(ARCHDIR "Win-arm64")   # reserved, not yet normative: native Arm64 hosts
   elseif(CMAKE_SIZEOF_VOID_P EQUAL 8)
     set(ARCHDIR "Win64")
@@ -226,7 +233,7 @@ elseif(UNIX)
     set(ARCHDIR "FreeBSD-riscv64")
   elseif(_OFX_OS STREQUAL "FreeBSD" AND _OFX_CPU MATCHES "^powerpc")
     # uname -p: powerpc64, powerpc64le (uname -m only says powerpc)
-    if(NOT DEFINED CMAKE_CXX_BYTE_ORDER AND CMAKE_VERSION VERSION_GREATER_EQUAL 3.12) # CMake 3.12-3.19; TestBigEndian needs C before 3.12
+    if(NOT DEFINED CMAKE_CXX_BYTE_ORDER AND NOT CMAKE_VERSION VERSION_LESS 3.12) # CMake 3.12-3.19; TestBigEndian needs C before 3.12
       include(TestBigEndian)
       test_big_endian(_OFX_BIG_ENDIAN)
       if(NOT _OFX_BIG_ENDIAN)
