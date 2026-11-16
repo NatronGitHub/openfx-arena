@@ -555,7 +555,7 @@ list(APPEND RESOURCES
     Magick/Morphology/net.fxarena.openfx.Morphology.svg)
 
 add_ofx_plugin(Arena INFO_PLIST Bundle/Info.plist SOURCES ${SOURCES})
-supportext_add_sources(Arena COMPONENTS TEXT RECTANGLE_INTERACT TRANSFORM3X3 TRANSFORM_INTERACT MULTIPLANE)
+supportext_add_sources(Arena COMPONENTS TEXT TRANSFORM3X3 TRANSFORM_INTERACT MULTIPLANE)
 ioSupport_add_sources(Arena)
 target_include_directories(Arena PRIVATE
     "${CMAKE_CURRENT_SOURCE_DIR}"

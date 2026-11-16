@@ -87,7 +87,6 @@ FILE(GLOB SUPPORT_SOURCES
     "${OFX_SUPPORT_LIBRARY_DIR}/ofxsProperty.cpp"
     "${OFX_SUPPORT_LIBRARY_DIR}/ofxsPropertyValidation.cpp"
     "${OFX_SUPPORT_LIBRARY_DIR}/*.h"
-    "../SupportExt/ofxsRectangleInteract.cpp"
     "../SupportExt/ofxsTransform3x3.cpp"
     "../SupportExt/ofxsTransformInteract.cpp"
     "../SupportExt/ofxsShutter.cpp"
