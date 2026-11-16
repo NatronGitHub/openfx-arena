@@ -70,6 +70,8 @@
 #define kParamFontSizeLabel "Font size"
 #define kParamFontSizeHint "The height of the characters to render in pixels. Should not be used for animation, see the scale param."
 #define kParamFontSizeDefault 64
+#define kParamFontSizeMin 1.
+#define kParamFontSizeMax 10000.
 
 // The "frame" that relative sizes and positions refer to: the Canvas size if it is set and
 // Auto size is off, else the format (the output format in Natron, the project size elsewhere).
@@ -77,7 +79,7 @@
 
 #define kParamSizeUnit "sizeUnit"
 #define kParamSizeUnitLabel "Size unit"
-#define kParamSizeUnitHint "Unit of the font size. Use a size relative to the frame height so that the text scales with the format. " kFrameDescription
+#define kParamSizeUnitHint "Unit of the font size. Use a size relative to the frame height so that the text scales with the format. Changing the unit converts the font size so that the text keeps its size, unless 'Font size' or 'Font size (%)' is animated. Only the font size and the position can be relative: the stroke size, the letter and line spacing, the radii and the scroll stay in pixels. " kFrameDescription
 #define kParamSizeUnitOptionPixels "Pixels", "The font size is given by 'Font size', in pixels.", "pixels"
 #define kParamSizeUnitOptionFrameHeight "% of frame height", "The font size is given by 'Font size (%)', as a percentage of the frame height.", "frameheight"
 enum SizeUnitEnum
@@ -89,13 +91,22 @@ enum SizeUnitEnum
 
 #define kParamFontSizeRelative "sizeRelative"
 #define kParamFontSizeRelativeLabel "Font size (%)"
-#define kParamFontSizeRelativeHint "Font size as a percentage of the frame height, used if 'Size unit' is '% of frame height'. It is in the same unit as 'Font size': 5% of a 1080-pixel-high frame is the same as a 'Font size' of 54. " kFrameDescription
+#define kParamFontSizeRelativeHint "Font size as a percentage of the frame height, used if 'Size unit' is '% of frame height'. It is in the same unit as 'Font size': 5% of a 1080-pixel-high frame is the same as a 'Font size' of 54. The stroke size, the letter and line spacing and the radii stay in pixels. " kFrameDescription
 #define kParamFontSizeRelativeDefault 5.
+#define kParamFontSizeRelativeMin 0.01
+#define kParamFontSizeRelativeMax 1000.
 
 #define kParamPositionRelative "positionRelative"
 #define kParamPositionRelativeLabel "Relative position"
-#define kParamPositionRelativeHint "If checked, the Center is a position relative to the frame, (0,0) being its bottom-left corner and (1,1) its top-right corner, so that the text stays at the same place in the frame when the format changes. Checking or unchecking this converts the Center so that the text does not move. " kFrameDescription
+#define kParamPositionRelativeHint "If checked, the Center is a position relative to the frame, (0,0) being its bottom-left corner and (1,1) its top-right corner, so that the text stays at the same place in the frame when the format changes. Checking or unchecking this converts the Center (and its keyframes) so that the text does not move. Only the position and the font size can be relative: the stroke size, the letter and line spacing, the radii and the scroll stay in pixels. Note that resetting the Center parameter to its default sets it to the center of the format in canonical coordinates, which is off-frame in relative mode: use the 'Reset Center' button instead. " kFrameDescription
 #define kParamPositionRelativeDefault false
+
+// Secret params holding the mode in which the stored size and Center are expressed.
+// Natron sends kOfxChangeUserEdited for many changes that are not user edits (restore defaults,
+// link/expression refresh, undo), so instanceChanged alone cannot tell whether to convert:
+// convert only if the new mode differs from the stored one. Restoring defaults resets these too.
+#define kParamSizeUnitState "sizeUnitState"
+#define kParamPositionRelativeState "positionRelativeState"
 
 #define kParamFontName "name"
 #define kParamFontNameLabel "Select font"
@@ -396,6 +407,7 @@ private:
     double getFontSize(double time, bool autoSize) const;
     void convertSizeUnit(double time, int sizeUnit);
     void convertPositionRelative(double time, bool relative);
+    double getPAR() const;
     void updateParamsState();
     void updatePositionIncrement(bool relative);
 
@@ -406,6 +418,8 @@ private:
     OFX::ChoiceParam *_sizeUnit;
     OFX::DoubleParam *_fontSizeRelative;
     OFX::BooleanParam *_positionRelative;
+    OFX::IntParam *_sizeUnitState;
+    OFX::BooleanParam *_positionRelativeState;
     OFX::RGBAParam *_textColor;
     OFX::RGBAParam *_bgColor;
     OFX::StringParam *_font;
@@ -460,6 +474,8 @@ TextFXPlugin::TextFXPlugin(OfxImageEffectHandle handle)
 , _sizeUnit(NULL)
 , _fontSizeRelative(NULL)
 , _positionRelative(NULL)
+, _sizeUnitState(NULL)
+, _positionRelativeState(NULL)
 , _textColor(NULL)
 , _bgColor(NULL)
 , _font(NULL)
@@ -513,6 +529,8 @@ TextFXPlugin::TextFXPlugin(OfxImageEffectHandle handle)
     _sizeUnit = fetchChoiceParam(kParamSizeUnit);
     _fontSizeRelative = fetchDoubleParam(kParamFontSizeRelative);
     _positionRelative = fetchBooleanParam(kParamPositionRelative);
+    _sizeUnitState = fetchIntParam(kParamSizeUnitState);
+    _positionRelativeState = fetchBooleanParam(kParamPositionRelativeState);
     _fontName = fetchChoiceParam(kParamFontName);
     _textColor = fetchRGBAParam(kParamTextColor);
     _bgColor = fetchRGBAParam(kParamBGColor);
@@ -560,7 +578,7 @@ TextFXPlugin::TextFXPlugin(OfxImageEffectHandle handle)
         assert(_range);
     }
 
-    assert(_text && _fontSize && _sizeUnit && _fontSizeRelative && _positionRelative && _fontName && _textColor && _bgColor && _font && _wrap
+    assert(_text && _fontSize && _sizeUnit && _fontSizeRelative && _positionRelative && _sizeUnitState && _positionRelativeState && _fontName && _textColor && _bgColor && _font && _wrap
            && _justify && _align && _valign && _markup && _style && auto_ && stretch_ && weight_ && strokeColor_
            && strokeWidth_ && strokeDash_ && strokeDashPattern_ && fontAA_ && subpixel_ && _hintStyle
            && _hintMetrics && _circleRadius && _circleWords && _letterSpace && _lineSpace && _canvas
@@ -698,6 +716,37 @@ double TextFXPlugin::getFontSize(double time, bool autoSize) const
     return _fontSize->getValueAtTime(time);
 }
 
+// An edit block that does nothing if the host does not support them
+// (paramEditBegin/paramEditEnd are optional in the parameter suite).
+class OptionalEditBlock
+{
+public:
+    OptionalEditBlock(OFX::ParamSet& paramSet, const std::string& name)
+        : _paramSet(paramSet)
+        , _open(false)
+    {
+        try {
+            _paramSet.beginEditBlock(name);
+            _open = true;
+        } catch (const std::exception&) {
+        }
+    }
+
+    ~OptionalEditBlock()
+    {
+        if (_open) {
+            try {
+                _paramSet.endEditBlock();
+            } catch (const std::exception&) {
+            }
+        }
+    }
+
+private:
+    OFX::ParamSet& _paramSet;
+    bool _open;
+};
+
 // Number of keyframes, 0 if the host cannot tell (the keyframe functions of the parameter
 // suite are optional).
 static int
@@ -723,10 +772,12 @@ void TextFXPlugin::convertSizeUnit(double time, int sizeUnit)
         return;
     }
     if (sizeUnit == eSizeUnitFrameHeight) {
-        _fontSizeRelative->setValue(_fontSize->getValue() * 100. / height);
+        // clamp to the param range
+        const double fontSizeRelative = _fontSize->getValue() * 100. / height;
+        _fontSizeRelative->setValue( (std::max)(kParamFontSizeRelativeMin, (std::min)(fontSizeRelative, kParamFontSizeRelativeMax)) );
     } else {
-        const int fontSize = (int)std::floor(_fontSizeRelative->getValue() * height / 100. + 0.5);
-        _fontSize->setValue( (std::max)(1, fontSize) );
+        const double fontSize = std::floor(_fontSizeRelative->getValue() * height / 100. + 0.5);
+        _fontSize->setValue( (int)(std::max)(kParamFontSizeMin, (std::min)(fontSize, kParamFontSizeMax)) );
     }
 }
 
@@ -744,24 +795,66 @@ convertPosition(const OfxPointD& p, const OfxRectD& frame, bool toRelative)
     return ret;
 }
 
-// Convert the Center (and its keyframes) to/from relative coordinates, so that the text does not move.
+// In absolute mode, render() takes the Center as pixels at scale 1 from the bottom-left corner
+// of the RoD (it does not apply the pixel aspect ratio): convert between that and canonical
+// coordinates. rodOrigin is the RoD origin in canonical coordinates.
+static OfxPointD
+absoluteToCanonical(const OfxPointD& p, const OfxPointD& rodOrigin, double par)
+{
+    OfxPointD ret;
+    ret.x = rodOrigin.x + p.x * par;
+    ret.y = rodOrigin.y + p.y;
+    return ret;
+}
+
+static OfxPointD
+canonicalToAbsolute(const OfxPointD& c, const OfxPointD& rodOrigin, double par)
+{
+    OfxPointD ret;
+    ret.x = (c.x - rodOrigin.x) / par;
+    ret.y = c.y - rodOrigin.y;
+    return ret;
+}
+
+double TextFXPlugin::getPAR() const
+{
+    const double par = _dstClip->getPixelAspectRatio();
+    return (par > 0.) ? par : 1.;
+}
+
+// Convert the Center (and its keyframes) to/from relative coordinates, so that the rendered
+// text does not move.
 void TextFXPlugin::convertPositionRelative(double time, bool relative)
 {
     const OfxRectD frame = getRelativeFrame(time);
     if ( (frame.x2 <= frame.x1) || (frame.y2 <= frame.y1) ) {
         return;
     }
+    // The origin of the RoD that render() uses in absolute mode: render() gets it in pixels
+    // (enclosing the canonical RoD, at scale 1 here), so round it the same way.
+    const double par = getPAR();
+    OfxPointD rodOrigin = {0., 0.};
+    const OfxRectD rod = _dstClip->getRegionOfDefinition(time);
+    if ( (kOfxFlagInfiniteMin < rod.x1) && (rod.x1 < kOfxFlagInfiniteMax) &&
+         (kOfxFlagInfiniteMin < rod.y1) && (rod.y1 < kOfxFlagInfiniteMax) ) {
+        rodOrigin.x = std::floor(rod.x1 / par) * par;
+        rodOrigin.y = std::floor(rod.y1);
+    }
     const int nKeys = getNumKeys(_position);
-    if (nKeys == 0) {
+    const int n = (nKeys == 0) ? 1 : nKeys;
+    for (int i = 0; i < n; ++i) {
+        const double t = (nKeys == 0) ? time : _position->getKeyTime(i);
         OfxPointD p;
-        _position->getValue(p.x, p.y);
-        _position->setValue( convertPosition(p, frame, relative) );
-    } else {
-        for (int i = 0; i < nKeys; ++i) {
-            const double t = _position->getKeyTime(i);
-            OfxPointD p;
-            _position->getValueAtTime(t, p.x, p.y);
-            _position->setValueAtTime( t, convertPosition(p, frame, relative) );
+        _position->getValueAtTime(t, p.x, p.y);
+        if (relative) {
+            p = convertPosition(absoluteToCanonical(p, rodOrigin, par), frame, true);
+        } else {
+            p = canonicalToAbsolute(convertPosition(p, frame, false), rodOrigin, par);
+        }
+        if (nKeys == 0) {
+            _position->setValue(p);
+        } else {
+            _position->setValueAtTime(t, p);
         }
     }
 }
@@ -1019,13 +1112,13 @@ void TextFXPlugin::render(const OFX::RenderArguments &args)
         // of the RoD: convert the relative position to canonical coordinates (in which the
         // interact works), then to that convention.
         const OfxPointD p0 = {x, y};
-        const OfxPointD c = convertPosition( p0, getRelativeFrame(args.time, autoSize), false );
-        double par = _dstClip->getPixelAspectRatio();
-        if (par <= 0.) {
-            par = 1.;
-        }
-        x = c.x / par - dstRod.x1 / args.renderScale.x;
-        y = c.y - dstRod.y1 / args.renderScale.y;
+        const double par = getPAR();
+        OfxPointD rodOrigin; // canonical
+        rodOrigin.x = dstRod.x1 * par / args.renderScale.x;
+        rodOrigin.y = dstRod.y1 / args.renderScale.y;
+        const OfxPointD p = canonicalToAbsolute(convertPosition( p0, getRelativeFrame(args.time, autoSize), false ), rodOrigin, par);
+        x = p.x;
+        y = p.y;
     }
 
     double ytext = y*args.renderScale.y;
@@ -1060,10 +1153,14 @@ void TextFXPlugin::render(const OFX::RenderArguments &args)
         break;
     }
     double fontSizePx = fontSize;
-    if (_sizeUnit->getValueAtTime(args.time) != eSizeUnitPixels) {
+    if (_sizeUnit->getValueAtTime(args.time) == eSizeUnitPixels) {
+        // unchanged, for compatibility
+        pangoFont << " " << std::floor(fontSizePx * args.renderScale.x + 0.5);
+    } else {
         fontSizePx = getFontSize(args.time, autoSize);
+        // Pango treats a size of 0 as unset
+        pangoFont << " " << (std::max)(1., std::floor(fontSizePx * args.renderScale.x + 0.5));
     }
-    pangoFont << " " << std::floor(fontSizePx * args.renderScale.x + 0.5);
 
     int width = dstRod.x2-dstRod.x1;
     int height = dstRod.y2-dstRod.y1;
@@ -1505,14 +1602,19 @@ void TextFXPlugin::changedParam(const OFX::InstanceChangedArgs &args, const std:
     } else if (paramName == kParamSubtitleFile) {
         loadSRT(); // load subtitle
     } else if (paramName == kParamSizeUnit) {
-        if (args.reason == OFX::eChangeUserEdit) {
-            convertSizeUnit(args.time, _sizeUnit->getValueAtTime(args.time));
+        const int sizeUnit = _sizeUnit->getValueAtTime(args.time);
+        if ( sizeUnit != _sizeUnitState->getValue() ) {
+            OptionalEditBlock eb(*this, "Convert font size");
+            convertSizeUnit(args.time, sizeUnit);
+            _sizeUnitState->setValue(sizeUnit);
         }
         updateParamsState();
     } else if (paramName == kParamPositionRelative) {
         const bool relative = _positionRelative->getValueAtTime(args.time);
-        if (args.reason == OFX::eChangeUserEdit) {
+        if ( relative != _positionRelativeState->getValue() ) {
+            OptionalEditBlock eb(*this, "Convert position");
             convertPositionRelative(args.time, relative);
+            _positionRelativeState->setValue(relative);
         }
         updatePositionIncrement(relative);
     }
@@ -1530,8 +1632,8 @@ bool TextFXPlugin::getRegionOfDefinition(const OFX::RegionOfDefinitionArguments 
     int width,height;
     bool autoSize = false;
 
-    _canvas->getValue(width, height);
-    auto_->getValue(autoSize);
+    _canvas->getValueAtTime(args.time, width, height);
+    auto_->getValueAtTime(args.time, autoSize);
 
     if (autoSize) {
         int fontSize, style, stretch, weight, letterSpace;
@@ -1597,7 +1699,8 @@ bool TextFXPlugin::getRegionOfDefinition(const OFX::RegionOfDefinitionArguments 
             pangoFont << " " << fontSize;
         } else {
             // rounded as in render(), at renderScale 1
-            pangoFont << " " << std::floor(getFontSize(args.time, true) + 0.5);
+            // Pango treats a size of 0 as unset
+            pangoFont << " " << (std::max)(1., std::floor(getFontSize(args.time, true) + 0.5));
         }
 
         width = rod.x2-rod.x1;
@@ -1743,6 +1846,7 @@ public:
         } else if ( (_mouseState != eReleased) || !getRelativeShift(args.time, &frame, &shift) ) {
             return TransformInteractHelperOldParams::draw(args);
         }
+        glMatrixMode(GL_MODELVIEW);
         glPushMatrix();
         glTranslated(shift.x, shift.y, 0.);
         bool ret = TransformInteractHelperOldParams::draw(args);
@@ -1833,6 +1937,13 @@ public:
         _relativeDrag = false;
 
         return ret;
+    }
+
+    virtual void loseFocus(const OFX::FocusArgs &args) OVERRIDE
+    {
+        // the helper releases the mouse
+        _relativeDrag = false;
+        TransformInteractHelperOldParams::loseFocus(args);
     }
 
 private:
@@ -1992,6 +2103,26 @@ void TextFXPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, Co
         param->setHint(kParamPositionRelativeHint);
         param->setDefault(kParamPositionRelativeDefault);
         param->setAnimates(false);
+        if (page) {
+            page->addChild(*param);
+        }
+    }
+    {
+        BooleanParamDescriptor *param = desc.defineBooleanParam(kParamPositionRelativeState);
+        param->setDefault(kParamPositionRelativeDefault);
+        param->setIsSecretAndDisabled(true);
+        param->setAnimates(false);
+        param->setEvaluateOnChange(false);
+        if (page) {
+            page->addChild(*param);
+        }
+    }
+    {
+        IntParamDescriptor *param = desc.defineIntParam(kParamSizeUnitState);
+        param->setDefault(kParamSizeUnitDefault);
+        param->setIsSecretAndDisabled(true);
+        param->setAnimates(false);
+        param->setEvaluateOnChange(false);
         if (page) {
             page->addChild(*param);
         }
@@ -2192,7 +2323,7 @@ void TextFXPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, Co
         IntParamDescriptor* param = desc.defineIntParam(kParamFontSize);
         param->setLabel(kParamFontSizeLabel);
         param->setHint(kParamFontSizeHint);
-        param->setRange(1, 10000);
+        param->setRange( (int)kParamFontSizeMin, (int)kParamFontSizeMax );
         param->setDisplayRange(1, 500);
         param->setDefault(kParamFontSizeDefault);
         param->setAnimates(true);
@@ -2219,7 +2350,7 @@ void TextFXPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, Co
         DoubleParamDescriptor* param = desc.defineDoubleParam(kParamFontSizeRelative);
         param->setLabel(kParamFontSizeRelativeLabel);
         param->setHint(kParamFontSizeRelativeHint);
-        param->setRange(0.01, 1000.);
+        param->setRange(kParamFontSizeRelativeMin, kParamFontSizeRelativeMax);
         param->setDisplayRange(0., 50.);
         param->setIncrement(0.1);
         param->setDefault(kParamFontSizeRelativeDefault);
