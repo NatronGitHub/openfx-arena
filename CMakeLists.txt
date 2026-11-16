@@ -411,79 +411,107 @@ if(EXISTS "${MAGICK_PREFIX}/lib/libomp")
   set_property(TARGET PkgConfig::MAGICK APPEND PROPERTY INTERFACE_LINK_DIRECTORIES "${MAGICK_PREFIX}/lib/libomp")
 endif()
 
-FILE(GLOB SOURCES
-    "Text/TextOFX.cpp"
-    "Text/RichText.cpp"
-    "Extra/ReadSVG.cpp"
-    "Extra/OpenRaster.cpp"
-    "Extra/ReadCDR.cpp"
-    "Extra/ReadKrita.cpp"
-    "Magick/Arc.cpp"
-    "Magick/Charcoal.cpp"
-    "Magick/Edges.cpp"
-    "Magick/Implode.cpp"
-    "Magick/Modulate.cpp"
-    "Magick/Oilpaint.cpp"
-    "Magick/Polar.cpp"
-    "Magick/Polaroid.cpp"
-    "Magick/ReadMisc.cpp"
-    "Magick/ReadPSD.cpp"
-    "Magick/Reflection.cpp"
-    "Magick/Sketch.cpp"
-    "Magick/Text.cpp"
-    "Magick/Texture.cpp"
-    "Magick/Tile.cpp"
-    "Magick/Roll/Roll.cpp"
-    "Magick/Swirl/Swirl.cpp"
-    "Magick/Wave/Wave.cpp"
-    "Magick/Morphology/Morphology.cpp"
-    "Magick/MagickPlugin.cpp"
-    "lodepng/lodepng.cpp"
-)
-
-FILE(GLOB RESOURCES
-    "Extra/net.fxarena.openfx.*.png"
-    "Extra/net.fxarena.openfx.*.svg"
-    "Extra/fr.inria.openfx.*.png"
-    "Extra/fr.inria.openfx.*.svg"
-    "Text/net.fxarena.openfx.*.png"
-    "Text/net.fxarena.openfx.*.svg"
-    "Magick/net.fxarena.openfx.*.png"
-    "Magick/net.fxarena.openfx.*.svg"
-    "Magick/Roll/net.fxarena.openfx.*.png"
-    "Magick/Roll/net.fxarena.openfx.*.svg"
-    "Magick/Swirl/net.fxarena.openfx.*.png"
-    "Magick/Swirl/net.fxarena.openfx.*.svg"
-    "Magick/Wave/net.fxarena.openfx.*.png"
-    "Magick/Wave/net.fxarena.openfx.*.svg"
-    "Magick/Morphology/net.fxarena.openfx.*.png"
-    "Magick/Morphology/net.fxarena.openfx.*.svg"
-    "Magick/Extra.png"
-    "Magick/Extra.svg"
-)
-
+# The plug-ins and resources of Bundle/Makefile, in the same order, which is the
+# order of the plug-ins in the bundle (except ReadPDF, built separately, see below)
+set(SOURCES
+    lodepng/lodepng.cpp
+    Text/RichText.cpp
+    Text/TextOFX.cpp
+    Extra/ReadCDR.cpp
+    Extra/ReadSVG.cpp
+    Extra/ReadKrita.cpp
+    Extra/OpenRaster.cpp)
+set(RESOURCES
+    Text/net.fxarena.openfx.Text.png
+    Text/net.fxarena.openfx.Text.svg
+    Extra/fr.inria.openfx.ReadCDR.png
+    Extra/fr.inria.openfx.ReadCDR.svg
+    Extra/net.fxarena.openfx.ReadSVG.png
+    Extra/net.fxarena.openfx.ReadSVG.svg
+    Extra/fr.inria.openfx.ReadKrita.png
+    Extra/fr.inria.openfx.ReadKrita.svg
+    Extra/fr.inria.openfx.OpenRaster.png
+    Extra/fr.inria.openfx.OpenRaster.svg)
 if(AUDIO)
-    list(APPEND SOURCES "Audio/AudioCurve.cpp")
-    list(APPEND RESOURCES "Audio/net.fxarena.openfx.AudioCurve.png")
+    list(APPEND SOURCES Audio/AudioCurve.cpp)
+    list(APPEND RESOURCES Audio/net.fxarena.openfx.AudioCurve.png)
 endif()
-
 if(RICHTEXT)
-    list(APPEND SOURCES "Text/RichTextOFX.cpp")
-    list(
-        APPEND
-        RESOURCES
-        "Text/net.fxarena.openfx.RichText.png"
-        "Text/net.fxarena.openfx.RichText.svg")
+    list(APPEND SOURCES Text/RichTextOFX.cpp)
+    list(APPEND RESOURCES Text/net.fxarena.openfx.RichText.png Text/net.fxarena.openfx.RichText.svg)
 endif()
-
+# ReadPDF.cpp is built in the ArenaReadPDF object library (see below)
+list(APPEND RESOURCES Extra/fr.inria.openfx.ReadPDF.png Extra/fr.inria.openfx.ReadPDF.svg)
+list(APPEND SOURCES
+    Magick/Sketch.cpp
+    Magick/Polaroid.cpp
+    Magick/Edges.cpp)
+list(APPEND RESOURCES
+    Magick/net.fxarena.openfx.Sketch.png
+    Magick/net.fxarena.openfx.Sketch.svg
+    Magick/net.fxarena.openfx.Polaroid.png
+    Magick/net.fxarena.openfx.Polaroid.svg
+    Magick/net.fxarena.openfx.Edges.png
+    Magick/net.fxarena.openfx.Edges.svg)
+list(APPEND SOURCES
+    Magick/Texture.cpp
+    Magick/Tile.cpp
+    Magick/Reflection.cpp
+    Magick/Arc.cpp
+    Magick/Polar.cpp
+    Magick/Roll/Roll.cpp
+    Magick/Wave/Wave.cpp
+    Magick/Swirl/Swirl.cpp
+    Magick/Implode.cpp
+    Magick/Charcoal.cpp
+    Magick/Oilpaint.cpp
+    Magick/ReadPSD.cpp
+    Magick/Modulate.cpp
+    Magick/ReadMisc.cpp
+    Magick/Text.cpp
+    Magick/Morphology/Morphology.cpp
+    Magick/MagickPlugin.cpp)
+# Magick/Text.cpp has the identifier of Text/TextOFX.cpp: only TextOFX's icons are
+# in the bundle
+list(APPEND RESOURCES
+    Magick/Extra.png
+    Magick/Extra.svg
+    Magick/net.fxarena.openfx.Tile.png
+    Magick/net.fxarena.openfx.Tile.svg
+    Magick/net.fxarena.openfx.Reflection.png
+    Magick/net.fxarena.openfx.Reflection.svg
+    Magick/net.fxarena.openfx.Arc.png
+    Magick/net.fxarena.openfx.Arc.svg
+    Magick/net.fxarena.openfx.Polar.png
+    Magick/net.fxarena.openfx.Polar.svg
+    Magick/Roll/net.fxarena.openfx.Roll.png
+    Magick/Roll/net.fxarena.openfx.Roll.svg
+    Magick/Wave/net.fxarena.openfx.Wave.png
+    Magick/Wave/net.fxarena.openfx.Wave.svg
+    Magick/Swirl/net.fxarena.openfx.Swirl.png
+    Magick/Swirl/net.fxarena.openfx.Swirl.svg
+    Magick/net.fxarena.openfx.Implode.png
+    Magick/net.fxarena.openfx.Implode.svg
+    Magick/net.fxarena.openfx.Charcoal.png
+    Magick/net.fxarena.openfx.Charcoal.svg
+    Magick/net.fxarena.openfx.Oilpaint.png
+    Magick/net.fxarena.openfx.Oilpaint.svg
+    Magick/net.fxarena.openfx.ReadPSD.png
+    Magick/net.fxarena.openfx.ReadPSD.svg
+    Magick/net.fxarena.openfx.Modulate.png
+    Magick/net.fxarena.openfx.Modulate.svg
+    Magick/fr.inria.openfx.ReadMisc.png
+    Magick/fr.inria.openfx.ReadMisc.svg
+    Magick/net.fxarena.openfx.Texture.png
+    Magick/net.fxarena.openfx.Texture.svg
+    Magick/Morphology/net.fxarena.openfx.Morphology.png
+    Magick/Morphology/net.fxarena.openfx.Morphology.svg)
 if(HALDCLUT)
-    list(APPEND SOURCES "Magick/HaldCLUT/HaldCLUT.cpp")
-    list(
-        APPEND
-        RESOURCES
-        "Magick/HaldCLUT/net.fxarena.openfx.HaldCLUT.png"
-        "Magick/HaldCLUT/net.fxarena.openfx.HaldCLUT.svg"
-        "Magick/HaldCLUT/net.fxarena.openfx.HaldCLUT.xml")
+    list(APPEND SOURCES Magick/HaldCLUT/HaldCLUT.cpp)
+    list(APPEND RESOURCES
+        Magick/HaldCLUT/net.fxarena.openfx.HaldCLUT.png
+        Magick/HaldCLUT/net.fxarena.openfx.HaldCLUT.svg
+        Magick/HaldCLUT/net.fxarena.openfx.HaldCLUT.xml)
 endif()
 
 add_ofx_plugin(Arena INFO_PLIST Bundle/Info.plist SOURCES ${SOURCES})
