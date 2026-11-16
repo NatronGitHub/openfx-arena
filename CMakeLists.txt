@@ -368,6 +368,22 @@ if(HALDCLUT)
   arena_pkg_check_modules(CURL libcurl)
 endif()
 
+# ImageMagick's .pc passes on the -fopenmp it was built with, which Apple clang
+# rejects: drop it, and let ofx_target_openmp() add OpenMP (OFX_USE_OPENMP). Keep
+# its OpenMP runtime (-lomp, -lgomp) in the link, which a static ImageMagick needs,
+# and, as Makefile.master, find libomp next to ImageMagick (MacPorts: lib/libomp).
+foreach(_prop INTERFACE_COMPILE_OPTIONS INTERFACE_LINK_LIBRARIES)
+  get_target_property(_flags PkgConfig::MAGICK ${_prop})
+  if(_flags)
+    list(REMOVE_ITEM _flags -fopenmp)
+    set_property(TARGET PkgConfig::MAGICK PROPERTY ${_prop} "${_flags}")
+  endif()
+endforeach()
+list(INSERT CMAKE_PREFIX_PATH 0 "${MAGICK_PREFIX}")
+if(EXISTS "${MAGICK_PREFIX}/lib/libomp")
+  set_property(TARGET PkgConfig::MAGICK APPEND PROPERTY INTERFACE_LINK_DIRECTORIES "${MAGICK_PREFIX}/lib/libomp")
+endif()
+
 FILE(GLOB SOURCES
     "Text/TextOFX.cpp"
     "Text/RichText.cpp"
@@ -456,6 +472,7 @@ target_include_directories(Arena PRIVATE
     "${CMAKE_CURRENT_SOURCE_DIR}/Text"
     "${CMAKE_CURRENT_SOURCE_DIR}/lodepng")
 target_link_libraries(Arena PRIVATE ${ARENA_LIBRARIES})
+ofx_target_openmp(Arena)
 if(READMISC_LEGACY)
     target_compile_definitions(Arena PRIVATE READMISC_LEGACY)
 endif()
