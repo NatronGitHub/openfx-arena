@@ -688,6 +688,8 @@ endif()
 
 foreach(_t Arena HaldCLUT OCL)
     if(TARGET ${_t})
+        # as Makefile.master's CONFIG=debug
+        target_compile_options(${_t} PRIVATE "$<$<AND:$<CONFIG:Debug>,$<NOT:$<CXX_COMPILER_ID:MSVC>>>:-Wall;-Wextra>")
         if(MINGW AND MINGW_STATIC)
             target_link_options(${_t} PRIVATE -static)
         endif()
