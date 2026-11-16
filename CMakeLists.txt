@@ -31,7 +31,9 @@ option(OLD_POPPLER "Support poppler-lib < 0.83" OFF)
 set(AUDIO "AUTO" CACHE STRING "Build AudioCurve (sox): AUTO (if pkg-config finds sox), ON or OFF")
 set_property(CACHE AUDIO PROPERTY STRINGS AUTO ON OFF)
 option(RICHTEXT "Enable RichText OFX" OFF)
-option(HALDCLUT "Enable HaldCLUT OFX (requires curl)" OFF)
+# Not in the Arena bundle, as with the Makefiles: their own bundles
+option(HALDCLUT "Also build HaldCLUT.ofx.bundle (requires curl), as Magick/HaldCLUT/Makefile" OFF)
+option(OCL "Also build OCL.ofx.bundle, the OpenCL plug-ins, as OCL/Makefile" OFF)
 option(BUNDLE_FONTS_CONF "Bundle fonts.conf" OFF)
 option(READMISC_LEGACY "Enable legacy file formats in ReadMisc" OFF)
 set(MAGICK_PKG_CONFIG "Magick++" CACHE STRING "ImageMagick pkg-config name")
@@ -416,6 +418,7 @@ endif()
 if(HALDCLUT)
   # HaldCLUT uses libCurl to download ~100MiB of CLUT profiles
   arena_pkg_check_modules(CURL libcurl)
+  list(REMOVE_ITEM ARENA_LIBRARIES PkgConfig::CURL) # HaldCLUT's own bundle
 endif()
 
 # OpenColorIO, for GenericReader's colorspace parameters, as Makefile.io (which,
@@ -538,13 +541,6 @@ list(APPEND RESOURCES
     Magick/net.fxarena.openfx.Texture.svg
     Magick/Morphology/net.fxarena.openfx.Morphology.png
     Magick/Morphology/net.fxarena.openfx.Morphology.svg)
-if(HALDCLUT)
-    list(APPEND SOURCES Magick/HaldCLUT/HaldCLUT.cpp)
-    list(APPEND RESOURCES
-        Magick/HaldCLUT/net.fxarena.openfx.HaldCLUT.png
-        Magick/HaldCLUT/net.fxarena.openfx.HaldCLUT.svg
-        Magick/HaldCLUT/net.fxarena.openfx.HaldCLUT.xml)
-endif()
 
 add_ofx_plugin(Arena INFO_PLIST Bundle/Info.plist SOURCES ${SOURCES})
 supportext_add_sources(Arena COMPONENTS TEXT RECTANGLE_INTERACT TRANSFORM3X3 TRANSFORM_INTERACT MULTIPLANE)
@@ -621,3 +617,61 @@ if(BUNDLE_FONTS_CONF)
 endif()
 
 ofx_deploy_bundle(Arena)
+
+# HaldCLUT.ofx.bundle, as Magick/HaldCLUT/Makefile (with Magick/Makefile.Magick)
+if(HALDCLUT)
+    add_ofx_plugin(HaldCLUT INFO_PLIST Magick/HaldCLUT/Info.plist
+        SOURCES Magick/HaldCLUT/HaldCLUT.cpp Magick/MagickPlugin.cpp)
+    supportext_add_sources(HaldCLUT)
+    target_include_directories(HaldCLUT PRIVATE "${CMAKE_CURRENT_SOURCE_DIR}/Magick")
+    target_link_libraries(HaldCLUT PRIVATE PkgConfig::MAGICK PkgConfig::CURL PkgConfig::XML)
+    ofx_target_openmp(HaldCLUT)
+    if(LEGACYIM)
+        target_compile_definitions(HaldCLUT PRIVATE LEGACYIM NOMAGICKSEED)
+    elseif(IM STREQUAL "68")
+        target_compile_definitions(HaldCLUT PRIVATE NOMAGICKSEED)
+    endif()
+    ofx_plugin_resources(HaldCLUT
+        Magick/HaldCLUT/net.fxarena.openfx.HaldCLUT.png
+        Magick/HaldCLUT/net.fxarena.openfx.HaldCLUT.svg
+        Magick/HaldCLUT/net.fxarena.openfx.HaldCLUT.xml
+        Magick/Extra.png
+        Magick/Extra.svg)
+    ofx_deploy_bundle(HaldCLUT)
+endif()
+
+# OCL.ofx.bundle, as OCL/Makefile: the system OpenCL (on macOS, the framework), or the
+# headers and libraries in OCL/OpenCL
+if(OCL)
+    if(NOT APPLE)
+        if(NOT OpenCL_INCLUDE_DIR)
+            set(OpenCL_INCLUDE_DIR "${CMAKE_CURRENT_SOURCE_DIR}/OCL/OpenCL" CACHE PATH "OpenCL headers")
+        endif()
+        if(CMAKE_SIZEOF_VOID_P EQUAL 8)
+            set(_ocl_lib "${CMAKE_CURRENT_SOURCE_DIR}/OCL/OpenCL/lib64")
+        else()
+            set(_ocl_lib "${CMAKE_CURRENT_SOURCE_DIR}/OCL/OpenCL/lib32")
+        endif()
+        find_library(OpenCL_LIBRARY NAMES OpenCL HINTS "${_ocl_lib}")
+    endif()
+    find_package(OpenCL REQUIRED)
+    set(_ocl_plugins Bulge Cartoon Duotone Edge Ripple Sharpen Twirl)
+    set(_ocl_sources OCL/OCLPlugin.cpp OCL/ofxsTransformInteractCustom.cpp)
+    set(_ocl_resources OCL/OpenCL.png)
+    foreach(_p ${_ocl_plugins})
+        list(APPEND _ocl_sources OCL/${_p}/${_p}.cpp)
+        list(APPEND _ocl_resources
+            OCL/${_p}/net.fxarena.opencl.${_p}.png
+            OCL/${_p}/net.fxarena.opencl.${_p}.svg
+            OCL/${_p}/net.fxarena.opencl.${_p}.cl)
+    endforeach()
+    add_ofx_plugin(OCL INFO_PLIST OCL/Info.plist SOURCES ${_ocl_sources})
+    supportext_add_sources(OCL COMPONENTS TRANSFORM3X3)
+    target_include_directories(OCL PRIVATE "${CMAKE_CURRENT_SOURCE_DIR}/OCL")
+    target_link_libraries(OCL PRIVATE OpenCL::OpenCL)
+    # ofxsTransformInteractCustom.cpp draws with OpenGL
+    find_package(OpenGL REQUIRED)
+    target_link_libraries(OCL PRIVATE OpenGL::GL)
+    ofx_plugin_resources(OCL ${_ocl_resources})
+    ofx_deploy_bundle(OCL)
+endif()
