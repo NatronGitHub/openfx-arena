@@ -36,7 +36,7 @@
 #define kPluginGrouping "Draw"
 #define kPluginIdentifier "net.fxarena.openfx.Text"
 #define kPluginVersionMajor 5
-#define kPluginVersionMinor 7
+#define kPluginVersionMinor 8
 
 #define kSupportsTiles 0
 #define kSupportsMultiResolution 0
@@ -552,20 +552,14 @@ void TextPlugin::render(const OFX::RenderArguments &args)
             const OfxRectI srcBounds = srcImg->getBounds();
             const int srcWidth = srcBounds.x2 - srcBounds.x1;
             const int srcHeight = srcBounds.y2 - srcBounds.y1;
-            // Layout that used to be read without overflow or shearing: same
-            // width and at least as many rows as the output. Keep its previous
-            // behaviour (the first 'height' source rows, placed at the output
-            // origin) so that existing renders do not change.
-            const bool legacyLayout = (srcWidth == width && srcHeight >= height);
-            const int readHeight = legacyLayout ? height : srcHeight;
             Magick::Image input;
-            if (srcWidth > 0 && readHeight > 0) {
+            if (srcWidth > 0 && srcHeight > 0) {
                 const size_t packedRowBytes = (size_t)srcWidth * 3 * sizeof(float);
                 std::vector<float> packed;
                 const float* srcPixels = (const float*)srcImg->getPixelData();
                 if (srcImg->getRowBytes() != (int)packedRowBytes) {
-                    packed.resize((size_t)srcWidth * 3 * readHeight);
-                    for (int row = 0; row < readHeight; ++row) {
+                    packed.resize((size_t)srcWidth * 3 * srcHeight);
+                    for (int row = 0; row < srcHeight; ++row) {
                         std::memcpy(&packed[(size_t)row * srcWidth * 3],
                                     srcImg->getPixelAddress(srcBounds.x1, srcBounds.y1 + row),
                                     packedRowBytes);
@@ -573,21 +567,19 @@ void TextPlugin::render(const OFX::RenderArguments &args)
                     srcPixels = &packed[0];
                 }
                 Magick::Image src;
-                src.read(srcWidth,readHeight,"RGB",Magick::FloatPixel,srcPixels);
+                src.read(srcWidth,srcHeight,"RGB",Magick::FloatPixel,srcPixels);
 #if MagickLibVersion >= 0x700
                 src.alpha(true);
 #else
                 src.matte(true);
 #endif
-                if (legacyLayout) {
-                    input = src;
-                } else {
-                    // Place the source at its position relative to the output
-                    // bounds (both images have row 0 at their bounds' y1);
-                    // outside the source is transparent black.
-                    input = Magick::Image(Magick::Geometry(width,height),Magick::Color("rgba(0,0,0,0)"));
-                    input.composite(src,srcBounds.x1 - dstBounds.x1,srcBounds.y1 - dstBounds.y1,Magick::CopyCompositeOp);
-                }
+                // Place the source at its position relative to the output
+                // bounds (both images have row 0 at their bounds' y1);
+                // outside the source is transparent black. A source as wide
+                // as the output used to be placed at the output origin
+                // whatever its bounds (issue #52).
+                input = Magick::Image(Magick::Geometry(width,height),Magick::Color("rgba(0,0,0,0)"));
+                input.composite(src,srcBounds.x1 - dstBounds.x1,srcBounds.y1 - dstBounds.y1,Magick::CopyCompositeOp);
                 input.composite(image,0,0,Magick::OverCompositeOp);
                 image=input;
             }
