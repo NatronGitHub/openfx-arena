@@ -104,21 +104,30 @@ sudo cp -a */*-release/*.ofx.bundle /usr/OFX/Plugins/
 
 ### CMake
 
-This will build one OFX plugin bundle *(Arena.ofx)*. Only plugins included in the official Natron bundle are built.
+This builds the same *Arena.ofx* bundle as ``make -C Bundle`` (the plug-ins of the official Natron bundle), with CMake 3.16 or later, out of tree. It is assembled in ``build/Plugins``, and installed into ``PLUGIN_INSTALLDIR`` (``OFX/Plugins`` by default, relative to ``CMAKE_INSTALL_PREFIX``):
 
-Optional build options:
+```
+cmake -S . -B build -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_PREFIX=/usr
+cmake --build build
+sudo cmake --install build
+```
 
-  * ``-DAUDIO=ON``: Enable ``AudioCurve``
-  * ``-DRICHTEXT=ON``: Enable ``RichText`` *(WIP, only for developers)*
-  * ``-DBUNDLE_FONTS_CONF=ON``: Bundle fonts.conf *(If not using Natron and on Windows/macOS)*
+Options (the Makefile equivalents are in parentheses):
+
+  * ``-DAUDIO=AUTO|ON|OFF``: ``AudioCurve``; ``AUTO``, the default, builds it if pkg-config finds sox (``AUDIO``)
+  * ``-DRICHTEXT=ON``: Enable ``RichText`` *(WIP, only for developers)* (``RICHTEXT=ON``)
+  * ``-DOFX_LICENSE=COMMERCIAL``: leave out ``ReadPDF`` and poppler (``LICENSE=COMMERCIAL``)
+  * ``-DLEGACYIM=ON``: old ImageMagick, without ``Sketch``, ``Polaroid`` and ``Edges`` (``LEGACYIM=1``)
+  * ``-DIM=68`` or ``-DIM=7``: ImageMagick 6.8 or 7 (``IM=68``, ``IM=7``)
   * ``-DMAGICK_PKG_CONFIG=XXX``: Custom Magick++ pkg-config name
-
-```
-mkdir build && cd build
-cmake -DCMAKE_INSTALL_PREFIX=/usr/OFX/Plugins ..
-make
-sudo make install
-```
+  * ``-DOFX_USE_OPENMP=OFF``: build without OpenMP (on macOS with Apple clang, OpenMP uses MacPorts' libomp)
+  * ``-DOFX_CXX_STANDARD=20``: C++ standard (17 by default; ``ReadPDF`` is always built as C++20)
+  * ``-DOFX_DEPLOY_BUNDLES=ON``: on macOS, copy the non-system libraries into the installed bundle (Release builds), as the Makefile does
+  * ``-DMINGW_STATIC=ON``: link MinGW bundles statically, for hosts other than Natron (``LDFLAGS_ADD=-static``)
+  * ``-DHALDCLUT=ON``, ``-DOCL=ON``: also build ``HaldCLUT.ofx.bundle`` and ``OCL.ofx.bundle`` (``make -C Magick/HaldCLUT``, ``make -C OCL``)
+  * ``-DBUNDLE_FONTS_CONF=ON``: Bundle fonts.conf *(If not using Natron and on Windows/macOS)*
+  * ``-DREADMISC_LEGACY=ON``, ``-DOLD_POPPLER=ON``: legacy formats in ``ReadMisc``, poppler < 0.83
+  * ``-DBUILD_TESTING=ON``: ``ctest`` loads the bundles
 
 ## License
 
