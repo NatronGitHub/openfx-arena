@@ -33,6 +33,10 @@ option(HALDCLUT "Enable HaldCLUT OFX (requires curl)" OFF)
 option(BUNDLE_FONTS_CONF "Bundle fonts.conf" OFF)
 option(READMISC_LEGACY "Enable legacy file formats in ReadMisc" OFF)
 set(MAGICK_PKG_CONFIG "Magick++" CACHE STRING "ImageMagick pkg-config name")
+# ImageMagick variants, as the Makefiles' LEGACYIM=1 and IM=68|7
+option(LEGACYIM "Old ImageMagick: leave out Sketch, Polaroid and Edges (make LEGACYIM=1)" OFF)
+set(IM "" CACHE STRING "ImageMagick version: 68 (6.8: no Magick seed), 7 (MinGW: also link oleaut32), or empty (make IM=)")
+set_property(CACHE IM PROPERTY STRINGS "" 68 7)
 # make LICENSE=COMMERCIAL (Natron's NATRON_LICENSE): leave out the plug-ins that
 # link GPL-only libraries, i.e. ReadPDF (poppler)
 set(OFX_LICENSE "GPL" CACHE STRING "GPL, or COMMERCIAL to leave out ReadPDF (poppler is GPL)")
@@ -453,17 +457,19 @@ if(OFX_LICENSE STREQUAL "GPL")
     # ReadPDF.cpp is built in the ArenaReadPDF object library (see below)
     list(APPEND RESOURCES Extra/fr.inria.openfx.ReadPDF.png Extra/fr.inria.openfx.ReadPDF.svg)
 endif()
-list(APPEND SOURCES
-    Magick/Sketch.cpp
-    Magick/Polaroid.cpp
-    Magick/Edges.cpp)
-list(APPEND RESOURCES
-    Magick/net.fxarena.openfx.Sketch.png
-    Magick/net.fxarena.openfx.Sketch.svg
-    Magick/net.fxarena.openfx.Polaroid.png
-    Magick/net.fxarena.openfx.Polaroid.svg
-    Magick/net.fxarena.openfx.Edges.png
-    Magick/net.fxarena.openfx.Edges.svg)
+if(NOT LEGACYIM)
+    list(APPEND SOURCES
+        Magick/Sketch.cpp
+        Magick/Polaroid.cpp
+        Magick/Edges.cpp)
+    list(APPEND RESOURCES
+        Magick/net.fxarena.openfx.Sketch.png
+        Magick/net.fxarena.openfx.Sketch.svg
+        Magick/net.fxarena.openfx.Polaroid.png
+        Magick/net.fxarena.openfx.Polaroid.svg
+        Magick/net.fxarena.openfx.Edges.png
+        Magick/net.fxarena.openfx.Edges.svg)
+endif()
 list(APPEND SOURCES
     Magick/Texture.cpp
     Magick/Tile.cpp
@@ -542,6 +548,11 @@ target_compile_definitions(Arena PRIVATE OFX_IO_USING_OCIO)
 if(CMAKE_SYSTEM_NAME STREQUAL "Linux")
     # as Makefile.io
     set_property(TARGET Arena APPEND PROPERTY INSTALL_RPATH "${OCIO_LIBDIR}")
+endif()
+if(LEGACYIM)
+    target_compile_definitions(Arena PRIVATE LEGACYIM NOMAGICKSEED)
+elseif(IM STREQUAL "68")
+    target_compile_definitions(Arena PRIVATE NOMAGICKSEED)
 endif()
 if(READMISC_LEGACY)
     target_compile_definitions(Arena PRIVATE READMISC_LEGACY)
