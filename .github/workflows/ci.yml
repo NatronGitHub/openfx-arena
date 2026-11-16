@@ -11,6 +11,14 @@ on:
         description: Upload the release bundles as artifacts
         type: boolean
         default: false
+      cxxstd:
+        description: C++ standard to build with
+        type: choice
+        options: [c++17, c++20]
+        default: c++17
+  # extra standards (C++20) nightly, not per PR
+  schedule:
+    - cron: '17 3 * * *'
   push:
     branches: ['**']
     tags: ['*-rc*', '*-beta*', '*-alpha*', '*-pre*']
@@ -26,6 +34,8 @@ concurrency:
   cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 env:
+  # C++ standard policy: per PR/push C++17 (Natron RB-2.6 Qt5); C++20 nightly or on demand
+  CXXSTD: ${{ (github.event_name == 'schedule' && 'c++20') || (github.event_name == 'workflow_dispatch' && inputs.cxxstd) || 'c++17' }}
   UPLOAD_ARTIFACTS: ${{ (github.event_name == 'workflow_dispatch' && inputs.artifacts) || startsWith(github.ref, 'refs/tags/') }}
 
 jobs:
@@ -52,9 +62,9 @@ jobs:
             libcurl4-openssl-dev libbz2-dev libdjvulibre-dev libexif-dev libfreetype6-dev libjpeg-dev liblqr-1-0-dev \
             libltdl-dev libopenexr-dev libopenjp2-7-dev libpng-dev libtiff-dev libwmf-dev libx11-dev libxext-dev libxt-dev
       - name: Build (release)
-        run: make -j4 CONFIG=release
+        run: make -j4 CONFIG=release CXX="g++ -std=$CXXSTD"
       - name: Build (debug)
-        run: make -j4 CONFIG=debug
+        run: make -j4 CONFIG=debug CXX="g++ -std=$CXXSTD"
       - name: Verify that the plugins load
         run: |
           # RTLD_NOW instead of RTLD_LAZY, so that missing symbols make loading fail
@@ -94,11 +104,11 @@ jobs:
       - name: Build (release)
         run: |
           set -eo pipefail
-          make -j4 CONFIG=release MINGW=1 IM=7
+          make -j4 CONFIG=release MINGW=1 IM=7 CXX="g++ -std=$CXXSTD"
       - name: Build (debug)
         run: |
           set -eo pipefail
-          make -j4 CONFIG=debug MINGW=1 IM=7
+          make -j4 CONFIG=debug MINGW=1 IM=7 CXX="g++ -std=$CXXSTD"
       - name: Verify that the plugins load
         run: |
           set -eo pipefail
@@ -163,11 +173,11 @@ jobs:
         run: |
           export PATH=/opt/local/bin:/opt/local/sbin:$PATH
           c++ --version
-          make -j4 CONFIG=release CXXFLAGS_EXTRA="-DGL_SILENCE_DEPRECATION"
+          make -j4 CONFIG=release CXX="c++ -std=$CXXSTD" CXXFLAGS_EXTRA="-DGL_SILENCE_DEPRECATION"
       - name: Build (debug)
         run: |
           export PATH=/opt/local/bin:/opt/local/sbin:$PATH
-          make -j4 CONFIG=debug CXXFLAGS_EXTRA="-DGL_SILENCE_DEPRECATION"
+          make -j4 CONFIG=debug CXX="c++ -std=$CXXSTD" CXXFLAGS_EXTRA="-DGL_SILENCE_DEPRECATION"
       - name: Verify that the plugins load
         run: |
           sed -e 's/RTLD_LAZY/RTLD_NOW/g' OpenFX/HostSupport/src/ofxhBinary.cpp > ofxhBinaryStrict.cpp
