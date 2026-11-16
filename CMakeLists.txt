@@ -368,6 +368,11 @@ if(HALDCLUT)
   arena_pkg_check_modules(CURL libcurl)
 endif()
 
+# OpenColorIO, for GenericReader's colorspace parameters, as Makefile.io (which,
+# unlike Makefile.master, uses the shared link line)
+pkg_check_modules(OCIO REQUIRED IMPORTED_TARGET OpenColorIO)
+list(APPEND ARENA_LIBRARIES PkgConfig::OCIO)
+
 # ImageMagick's .pc passes on the -fopenmp it was built with, which Apple clang
 # rejects: drop it, and let ofx_target_openmp() add OpenMP (OFX_USE_OPENMP). Keep
 # its OpenMP runtime (-lomp, -lgomp) in the link, which a static ImageMagick needs,
@@ -473,6 +478,11 @@ target_include_directories(Arena PRIVATE
     "${CMAKE_CURRENT_SOURCE_DIR}/lodepng")
 target_link_libraries(Arena PRIVATE ${ARENA_LIBRARIES})
 ofx_target_openmp(Arena)
+target_compile_definitions(Arena PRIVATE OFX_IO_USING_OCIO)
+if(CMAKE_SYSTEM_NAME STREQUAL "Linux")
+    # as Makefile.io
+    set_property(TARGET Arena APPEND PROPERTY INSTALL_RPATH "${OCIO_LIBDIR}")
+endif()
 if(READMISC_LEGACY)
     target_compile_definitions(Arena PRIVATE READMISC_LEGACY)
 endif()
