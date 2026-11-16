@@ -7,7 +7,7 @@ OFXS_NAMESPACE_ANONYMOUS_ENTER
 #define kPluginGrouping "Extra/Misc"
 #define kPluginIdentifier "net.fxarena.openfx.Morphology"
 #define kPluginDescription "Morphology modifies an image in various ways based on the nearby neighbourhood of the other pixels that surround it. This in turn can provide a huge range of effects, Shape expansion and contraction (dilate/erode), to distance from edge, to thining down to a skeleton, or mid-line axis. For more information read  https://imagemagick.org/Usage/morphology/#basic"
-#define kPluginVersionMajor 2 // 2: unpremultiply the source before ImageMagick (see magickReadRGBA)
+#define kPluginVersionMajor 2 // 2: unpremultiply the source before ImageMagick (see PackedImage::PackedSrc)
 #define kPluginVersionMinor 0
 
 #define kSupportsTiles 0

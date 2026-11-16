@@ -27,7 +27,7 @@
 #define kPluginName "ModulateOFX"
 #define kPluginGrouping "Extra/Color"
 #define kPluginIdentifier "net.fxarena.openfx.Modulate"
-#define kPluginVersionMajor 2 // 2: unpremultiply the source before ImageMagick (see magickReadRGBA)
+#define kPluginVersionMajor 2 // 2: unpremultiply the source before ImageMagick (see PackedImage::PackedSrc)
 #define kPluginVersionMinor 0
 
 #define kParamSaturation "saturation"

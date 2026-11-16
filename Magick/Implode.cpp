@@ -29,7 +29,7 @@
 #define kPluginName "ImplodeOFX"
 #define kPluginGrouping "Extra/Distort"
 #define kPluginIdentifier "net.fxarena.openfx.Implode"
-#define kPluginVersionMajor 3 // 3: unpremultiply the source before ImageMagick (see magickReadRGBA)
+#define kPluginVersionMajor 3 // 3: unpremultiply the source before ImageMagick (see PackedImage::PackedSrc)
 #define kPluginVersionMinor 0
 
 #define kParamImplode "factor"

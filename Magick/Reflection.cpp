@@ -29,7 +29,7 @@
 #define kPluginName "ReflectionOFX"
 #define kPluginGrouping "Extra/Transform"
 #define kPluginIdentifier "net.fxarena.openfx.Reflection"
-#define kPluginVersionMajor 4 // 4: unpremultiply the source before ImageMagick (see magickReadRGBA)
+#define kPluginVersionMajor 4 // 4: unpremultiply the source before ImageMagick (see PackedImage::PackedSrc)
 #define kPluginVersionMinor 0
 
 #define kParamSpace "spacing"

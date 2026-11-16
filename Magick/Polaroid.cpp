@@ -31,7 +31,7 @@
 #define kPluginName "PolaroidOFX"
 #define kPluginGrouping "Extra/Misc"
 #define kPluginIdentifier "net.fxarena.openfx.Polaroid"
-#define kPluginVersionMajor 2 // 2: unpremultiply the source before ImageMagick (see magickReadRGBA)
+#define kPluginVersionMajor 2 // 2: unpremultiply the source before ImageMagick (see PackedImage::PackedSrc)
 #define kPluginVersionMinor 0
 
 #define kParamText "caption"

@@ -28,7 +28,7 @@
 #define kPluginName "SketchOFX"
 #define kPluginGrouping "Extra/Filter"
 #define kPluginIdentifier "net.fxarena.openfx.Sketch"
-#define kPluginVersionMajor 3 // 3: unpremultiply the source before ImageMagick (see magickReadRGBA)
+#define kPluginVersionMajor 3 // 3: unpremultiply the source before ImageMagick (see PackedImage::PackedSrc)
 #define kPluginVersionMinor 0
 
 #define kParamRadius "radius"

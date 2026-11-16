@@ -25,7 +25,7 @@ OFXS_NAMESPACE_ANONYMOUS_ENTER
 #define kPluginGrouping "Extra/Distort"
 #define kPluginIdentifier "net.fxarena.openfx.Swirl"
 #define kPluginDescription "Swirl effect using ImageMagick."
-#define kPluginVersionMajor 3 // 3: unpremultiply the source before ImageMagick (see magickReadRGBA)
+#define kPluginVersionMajor 3 // 3: unpremultiply the source before ImageMagick (see PackedImage::PackedSrc)
 #define kPluginVersionMinor 0
 
 #define kSupportsTiles 0

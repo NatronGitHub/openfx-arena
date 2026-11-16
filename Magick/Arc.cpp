@@ -29,7 +29,7 @@
 #define kPluginName "ArcOFX"
 #define kPluginGrouping "Extra/Distort"
 #define kPluginIdentifier "net.fxarena.openfx.Arc"
-#define kPluginVersionMajor 5 // 5: unpremultiply the source before ImageMagick (see magickReadRGBA)
+#define kPluginVersionMajor 5 // 5: unpremultiply the source before ImageMagick (see PackedImage::PackedSrc)
 #define kPluginVersionMinor 0
 
 #define kParamVPixel "pixel"
