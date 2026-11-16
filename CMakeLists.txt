@@ -33,6 +33,13 @@ option(HALDCLUT "Enable HaldCLUT OFX (requires curl)" OFF)
 option(BUNDLE_FONTS_CONF "Bundle fonts.conf" OFF)
 option(READMISC_LEGACY "Enable legacy file formats in ReadMisc" OFF)
 set(MAGICK_PKG_CONFIG "Magick++" CACHE STRING "ImageMagick pkg-config name")
+# make LICENSE=COMMERCIAL (Natron's NATRON_LICENSE): leave out the plug-ins that
+# link GPL-only libraries, i.e. ReadPDF (poppler)
+set(OFX_LICENSE "GPL" CACHE STRING "GPL, or COMMERCIAL to leave out ReadPDF (poppler is GPL)")
+set_property(CACHE OFX_LICENSE PROPERTY STRINGS GPL COMMERCIAL)
+if(NOT OFX_LICENSE MATCHES "^(GPL|COMMERCIAL)$")
+  message(FATAL_ERROR "OFX_LICENSE must be GPL or COMMERCIAL, not \"${OFX_LICENSE}\"")
+endif()
 
 # Check that submodule have been initialized and updated
 if(NOT EXISTS "${PROJECT_SOURCE_DIR}/OpenFX/include" OR NOT EXISTS "${PROJECT_SOURCE_DIR}/SupportExt/ofxsMacros.h"
@@ -379,7 +386,9 @@ arena_pkg_check_modules(ZIP libzip)
 arena_pkg_check_modules(SVG librsvg-2.0)
 arena_pkg_check_modules(GLIB glib-2.0)
 arena_pkg_check_modules(CAIRO cairo)
-arena_pkg_check_modules(POPPLER poppler-glib)
+if(OFX_LICENSE STREQUAL "GPL")
+  arena_pkg_check_modules(POPPLER poppler-glib)
+endif()
 arena_pkg_check_modules(REVENGE librevenge-0.0 librevenge-generators-0.0 librevenge-stream-0.0)
 arena_pkg_check_modules(CDR libcdr-0.1)
 if(AUDIO)
@@ -440,8 +449,10 @@ if(RICHTEXT)
     list(APPEND SOURCES Text/RichTextOFX.cpp)
     list(APPEND RESOURCES Text/net.fxarena.openfx.RichText.png Text/net.fxarena.openfx.RichText.svg)
 endif()
-# ReadPDF.cpp is built in the ArenaReadPDF object library (see below)
-list(APPEND RESOURCES Extra/fr.inria.openfx.ReadPDF.png Extra/fr.inria.openfx.ReadPDF.svg)
+if(OFX_LICENSE STREQUAL "GPL")
+    # ReadPDF.cpp is built in the ArenaReadPDF object library (see below)
+    list(APPEND RESOURCES Extra/fr.inria.openfx.ReadPDF.png Extra/fr.inria.openfx.ReadPDF.svg)
+endif()
 list(APPEND SOURCES
     Magick/Sketch.cpp
     Magick/Polaroid.cpp
@@ -539,26 +550,28 @@ if(OLD_POPPLER)
     target_compile_definitions(Arena PRIVATE LEGACY_POPPLER)
 endif()
 
-# ReadPDF.cpp includes poppler's C++ headers (GlobalParams.h), which need
-# C++17 since poppler 21.12 (#23) and C++20 (std::span) in recent versions.
-# Only that file is built with this standard, with GNU extensions (gnu++2a,
-# as Makefile.master: MinGW GCC 16 headers need them in C++20 mode), in an
-# object library that is otherwise built like the other Arena sources.
-set(POPPLER_CXX_STANDARD 20 CACHE STRING "C++ standard of ReadPDF.cpp (Makefile.master: POPPLER_CXXSTD)")
-set(_std ${POPPLER_CXX_STANDARD})
-if(OFX_CXX_STANDARD GREATER _std)
-    set(_std ${OFX_CXX_STANDARD})
+if(OFX_LICENSE STREQUAL "GPL")
+    # ReadPDF.cpp includes poppler's C++ headers (GlobalParams.h), which need
+    # C++17 since poppler 21.12 (#23) and C++20 (std::span) in recent versions.
+    # Only that file is built with this standard, with GNU extensions (gnu++2a,
+    # as Makefile.master: MinGW GCC 16 headers need them in C++20 mode), in an
+    # object library that is otherwise built like the other Arena sources.
+    set(POPPLER_CXX_STANDARD 20 CACHE STRING "C++ standard of ReadPDF.cpp (Makefile.master: POPPLER_CXXSTD)")
+    set(_std ${POPPLER_CXX_STANDARD})
+    if(OFX_CXX_STANDARD GREATER _std)
+        set(_std ${OFX_CXX_STANDARD})
+    endif()
+    add_library(ArenaReadPDF OBJECT Extra/ReadPDF.cpp)
+    set_target_properties(ArenaReadPDF PROPERTIES
+        CXX_STANDARD ${_std} CXX_STANDARD_REQUIRED ON CXX_EXTENSIONS ON
+        POSITION_INDEPENDENT_CODE ON CXX_VISIBILITY_PRESET hidden VISIBILITY_INLINES_HIDDEN ON)
+    target_include_directories(ArenaReadPDF PRIVATE $<TARGET_PROPERTY:Arena,INCLUDE_DIRECTORIES>)
+    target_compile_definitions(ArenaReadPDF PRIVATE $<TARGET_PROPERTY:Arena,COMPILE_DEFINITIONS>)
+    target_compile_options(ArenaReadPDF PRIVATE $<TARGET_PROPERTY:Arena,COMPILE_OPTIONS>)
+    target_link_libraries(ArenaReadPDF PRIVATE openfx::Support ${ARENA_LIBRARIES})
+    ofx_target_openmp(ArenaReadPDF)
+    target_link_libraries(Arena PRIVATE ArenaReadPDF)
 endif()
-add_library(ArenaReadPDF OBJECT Extra/ReadPDF.cpp)
-set_target_properties(ArenaReadPDF PROPERTIES
-    CXX_STANDARD ${_std} CXX_STANDARD_REQUIRED ON CXX_EXTENSIONS ON
-    POSITION_INDEPENDENT_CODE ON CXX_VISIBILITY_PRESET hidden VISIBILITY_INLINES_HIDDEN ON)
-target_include_directories(ArenaReadPDF PRIVATE $<TARGET_PROPERTY:Arena,INCLUDE_DIRECTORIES>)
-target_compile_definitions(ArenaReadPDF PRIVATE $<TARGET_PROPERTY:Arena,COMPILE_DEFINITIONS>)
-target_compile_options(ArenaReadPDF PRIVATE $<TARGET_PROPERTY:Arena,COMPILE_OPTIONS>)
-target_link_libraries(ArenaReadPDF PRIVATE openfx::Support ${ARENA_LIBRARIES})
-ofx_target_openmp(ArenaReadPDF)
-target_link_libraries(Arena PRIVATE ArenaReadPDF)
 
 ofx_plugin_resources(Arena ${RESOURCES})
 
