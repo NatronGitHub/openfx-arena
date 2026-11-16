@@ -52,6 +52,8 @@ if(NOT OFX_LICENSE MATCHES "^(GPL|COMMERCIAL)$")
   message(FATAL_ERROR "OFX_LICENSE must be GPL or COMMERCIAL, not \"${OFX_LICENSE}\"")
 endif()
 
+option(BUILD_TESTING "Build a plug-in load test (ctest)" OFF)
+
 # Check that submodule have been initialized and updated
 if(NOT EXISTS "${PROJECT_SOURCE_DIR}/OpenFX/include" OR NOT EXISTS "${PROJECT_SOURCE_DIR}/SupportExt/ofxsMacros.h"
    OR NOT EXISTS "${PROJECT_SOURCE_DIR}/OpenFX-IO/IOSupport/SequenceParsing/SequenceParsing.cpp")
@@ -700,3 +702,28 @@ foreach(_t Arena HaldCLUT OCL)
         endif()
     endif()
 endforeach()
+
+# ctest: load each bundle with the plug-in load test of the CI (OpenFX-IO's
+# verify_plugin_loads, with RTLD_NOW so that a missing symbol fails), which prints
+# Num_plugins
+if(BUILD_TESTING)
+    enable_testing()
+    file(READ "${CMAKE_CURRENT_SOURCE_DIR}/OpenFX/HostSupport/src/ofxhBinary.cpp" _binary)
+    string(REPLACE "RTLD_LAZY" "RTLD_NOW" _binary "${_binary}")
+    file(WRITE "${CMAKE_CURRENT_BINARY_DIR}/ofxhBinaryStrict.cpp" "${_binary}")
+    add_executable(verify_plugin_loads
+        OpenFX-IO/.github/workflows/verify_plugin_loads.cpp
+        "${CMAKE_CURRENT_BINARY_DIR}/ofxhBinaryStrict.cpp")
+    if(WIN32)
+        target_sources(verify_plugin_loads PRIVATE OpenFX/HostSupport/src/ofxhUtilities.cpp)
+    endif()
+    target_include_directories(verify_plugin_loads PRIVATE
+        "${CMAKE_CURRENT_SOURCE_DIR}/OpenFX/HostSupport/include" "${CMAKE_CURRENT_SOURCE_DIR}/OpenFX/include")
+    target_link_libraries(verify_plugin_loads PRIVATE ${CMAKE_DL_LIBS})
+    foreach(_t Arena HaldCLUT OCL)
+        if(TARGET ${_t})
+            add_test(NAME load_${_t} COMMAND verify_plugin_loads "$<TARGET_FILE:${_t}>")
+            set_tests_properties(load_${_t} PROPERTIES PASS_REGULAR_EXPRESSION "Num_plugins: [1-9]")
+        endif()
+    endforeach()
+endif()
