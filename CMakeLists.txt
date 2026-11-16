@@ -24,7 +24,7 @@ ENDIF(${CMAKE_SOURCE_DIR} STREQUAL ${CMAKE_BINARY_DIR})
 ########################################################################
 # Project setup
 ########################################################################
-CMAKE_MINIMUM_REQUIRED(VERSION 3.12)
+CMAKE_MINIMUM_REQUIRED(VERSION 3.16) # as Natron and openfx-io; CMake 3.16 has OpenMP imported targets
 PROJECT(Arena CXX)
 ENABLE_TESTING()
 
@@ -36,13 +36,8 @@ option(BUNDLE_FONTS_CONF "Bundle fonts.conf" OFF)
 option(READMISC_LEGACY "Enable legacy file formats in ReadMisc" OFF)
 set(MAGICK_PKG_CONFIG "Magick++" CACHE STRING "ImageMagick pkg-config name")
 
-# Require OpenGL
-if(POLICY CMP0072)
-    # prefer GLVND ABI. We use the compatibility via OPENGL_LIBRARIES variable
-    # see https://cmake.org/cmake/help/v3.11/policy/CMP0072.html
-    # see https://cmake.org/cmake/help/v3.11/module/FindOpenGL.html#linux-specific
-    cmake_policy(SET CMP0072 NEW)
-endif()
+# Require OpenGL (CMP0072 is NEW since CMake 3.11: prefer GLVND; we use the
+# compatibility ABI through the OPENGL_LIBRARIES variable)
 include(FindOpenGL REQUIRED)
 
 # not super portable, but will do for now:
@@ -402,7 +397,7 @@ elseif(UNIX)
     set(ARCHDIR "FreeBSD-riscv64")
   elseif(_OFX_OS STREQUAL "FreeBSD" AND _OFX_CPU MATCHES "^powerpc")
     # uname -p: powerpc64, powerpc64le (uname -m only says powerpc)
-    if(NOT DEFINED CMAKE_CXX_BYTE_ORDER AND NOT CMAKE_VERSION VERSION_LESS 3.12) # CMake 3.12-3.19; TestBigEndian needs C before 3.12
+    if(NOT DEFINED CMAKE_CXX_BYTE_ORDER) # CMake < 3.20
       include(TestBigEndian)
       test_big_endian(_OFX_BIG_ENDIAN)
       if(NOT _OFX_BIG_ENDIAN)

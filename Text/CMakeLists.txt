@@ -24,7 +24,7 @@ ENDIF(${CMAKE_SOURCE_DIR} STREQUAL ${CMAKE_BINARY_DIR})
 ########################################################################
 # Project setup
 ########################################################################
-CMAKE_MINIMUM_REQUIRED(VERSION 3.12)
+CMAKE_MINIMUM_REQUIRED(VERSION 3.16) # as Natron and openfx-io
 PROJECT(Text CXX)
 ENABLE_TESTING()
 
@@ -242,7 +242,7 @@ elseif(UNIX)
     set(ARCHDIR "FreeBSD-riscv64")
   elseif(_OFX_OS STREQUAL "FreeBSD" AND _OFX_CPU MATCHES "^powerpc")
     # uname -p: powerpc64, powerpc64le (uname -m only says powerpc)
-    if(NOT DEFINED CMAKE_CXX_BYTE_ORDER AND NOT CMAKE_VERSION VERSION_LESS 3.12) # CMake 3.12-3.19; TestBigEndian needs C before 3.12
+    if(NOT DEFINED CMAKE_CXX_BYTE_ORDER) # CMake < 3.20
       include(TestBigEndian)
       test_big_endian(_OFX_BIG_ENDIAN)
       if(NOT _OFX_BIG_ENDIAN)
