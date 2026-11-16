@@ -28,6 +28,7 @@
 #include <stdint.h>
 #include <cmath>
 #include <cstring>
+#include <vector>
 
 #define CLAMP(value, min, max) (((value) >(max)) ? (max) : (((value) <(min)) ? (min) : (value)))
 
@@ -539,15 +540,57 @@ void TextPlugin::render(const OFX::RenderArguments &args)
     if (srcClip_ && srcClip_->isConnected() && cwidth==0 && cheight==0) {
         OFX::auto_ptr<const OFX::Image> srcImg(srcClip_->fetchImage(args.time));
         if (srcImg.get()) {
+            if (srcImg->getPixelDepth() != OFX::eBitDepthFloat || srcImg->getPixelComponents() != OFX::ePixelComponentRGB) {
+                OFX::throwSuiteStatusException(kOfxStatErrFormat);
+                return;
+            }
+            // The source used to be read with the size of the output RoD and
+            // without its row stride, which over-read the source buffer when
+            // it was smaller than the output (e.g. infinite output RoD, which
+            // the host clamps to the project format, over a smaller input).
+            // Read it with its own bounds and row bytes instead.
+            const OfxRectI srcBounds = srcImg->getBounds();
+            const int srcWidth = srcBounds.x2 - srcBounds.x1;
+            const int srcHeight = srcBounds.y2 - srcBounds.y1;
+            // Layout that used to be read without overflow or shearing: same
+            // width and at least as many rows as the output. Keep its previous
+            // behaviour (the first 'height' source rows, placed at the output
+            // origin) so that existing renders do not change.
+            const bool legacyLayout = (srcWidth == width && srcHeight >= height);
+            const int readHeight = legacyLayout ? height : srcHeight;
             Magick::Image input;
-            input.read(width,height,"RGB",Magick::FloatPixel,(float*)srcImg->getPixelData());
+            if (srcWidth > 0 && readHeight > 0) {
+                const size_t packedRowBytes = (size_t)srcWidth * 3 * sizeof(float);
+                std::vector<float> packed;
+                const float* srcPixels = (const float*)srcImg->getPixelData();
+                if (srcImg->getRowBytes() != (int)packedRowBytes) {
+                    packed.resize((size_t)srcWidth * 3 * readHeight);
+                    for (int row = 0; row < readHeight; ++row) {
+                        std::memcpy(&packed[(size_t)row * srcWidth * 3],
+                                    srcImg->getPixelAddress(srcBounds.x1, srcBounds.y1 + row),
+                                    packedRowBytes);
+                    }
+                    srcPixels = &packed[0];
+                }
+                Magick::Image src;
+                src.read(srcWidth,readHeight,"RGB",Magick::FloatPixel,srcPixels);
 #if MagickLibVersion >= 0x700
-            input.alpha(true);
+                src.alpha(true);
 #else
-            input.matte(true);
+                src.matte(true);
 #endif
-            input.composite(image,0,0,Magick::OverCompositeOp);
-            image=input;
+                if (legacyLayout) {
+                    input = src;
+                } else {
+                    // Place the source at its position relative to the output
+                    // bounds (both images have row 0 at their bounds' y1);
+                    // outside the source is transparent black.
+                    input = Magick::Image(Magick::Geometry(width,height),Magick::Color("rgba(0,0,0,0)"));
+                    input.composite(src,srcBounds.x1 - dstBounds.x1,srcBounds.y1 - dstBounds.y1,Magick::CopyCompositeOp);
+                }
+                input.composite(image,0,0,Magick::OverCompositeOp);
+                image=input;
+            }
         }
     }
 
