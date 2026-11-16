@@ -28,7 +28,7 @@ OFXS_NAMESPACE_ANONYMOUS_ENTER
 #define kPluginIdentifier "net.fxarena.opencl.Bulge"
 #define kPluginDescription "Bulge (implode/explode) transform effect using OpenCL."
 #define kPluginVersionMajor 1
-#define kPluginVersionMinor 0
+#define kPluginVersionMinor 1 // 1.1: centre is relative to the RoD origin
 
 #define kSupportsTiles 0
 #define kSupportsMultiResolution 1
