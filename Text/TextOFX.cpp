@@ -98,10 +98,13 @@ enum SizeUnitEnum
 
 #define kParamPositionRelative "positionRelative"
 #define kParamPositionRelativeLabel "Relative position"
-#define kParamPositionRelativeHint "If checked, the Center is a position relative to the frame, (0,0) being its bottom-left corner and (1,1) its top-right corner, so that the text stays at the same place in the frame when the format changes. Checking or unchecking this converts the Center (and its keyframes) so that the text does not move. Only the position and the font size can be relative: the stroke size, the letter and line spacing, the radii and the scroll stay in pixels. Note that resetting the Center parameter to its default sets it to the center of the format in canonical coordinates, which is off-frame in relative mode: use the 'Reset Center' button instead. " kFrameDescription
+#define kParamPositionRelativeHint "If checked, the Center is a position relative to the frame, (0,0) being its bottom-left corner and (1,1) its top-right corner, so that the text stays at the same place in the frame when the format changes. Checking or unchecking this converts the Center (and its keyframes) so that the text does not move. Only the position and the font size can be relative: the stroke size, the letter and line spacing, the radii and the scroll stay in pixels. Note that resetting the Center parameter to its default sets it to the center of the format in canonical coordinates, which is off-frame in relative mode: use the 'Reset Center' button instead. In scripts, set 'Relative position' before setting the Center, since changing it converts the Center. " kFrameDescription
 #define kParamPositionRelativeDefault false
 
-// Secret params holding the mode in which the stored size and Center are expressed.
+// Secret params holding the mode in which the stored size and Center are expressed. They,
+// not the user-facing 'Size unit' and 'Relative position', decide how render(), the RoD and
+// the interact interpret the values: Natron can restore the user-facing params without any
+// instanceChanged (e.g. undoing a reset to default), and the conversion is not on its undo stack.
 // Natron sends kOfxChangeUserEdited for many changes that are not user edits (restore defaults,
 // link/expression refresh, undo), so instanceChanged alone cannot tell whether to convert:
 // convert only if the new mode differs from the stored one. Restoring defaults resets these too.
@@ -401,12 +404,13 @@ public:
     OfxRectD getRelativeFrame(double time) const;
 
     bool isPositionRelative(double time) const;
+    int getSizeUnit(double time) const;
 
 private:
     // The font size in the unit of the size param (scaled by renderScale in render).
     double getFontSize(double time, bool autoSize) const;
     void convertSizeUnit(double time, int sizeUnit);
-    void convertPositionRelative(double time, bool relative);
+    bool convertPositionRelative(double time, bool relative);
     double getPAR() const;
     void updateParamsState();
     void updatePositionIncrement(bool relative);
@@ -626,7 +630,7 @@ TextFXPlugin::TextFXPlugin(OfxImageEffectHandle handle)
     _font->setDefault(font.empty()? fontName : font);
 
     updateParamsState();
-    if ( _positionRelative->getValue() ) {
+    if ( _positionRelativeState->getValue() ) {
         updatePositionIncrement(true);
     }
 }
@@ -704,12 +708,17 @@ OfxRectD TextFXPlugin::getRelativeFrame(double time) const
 
 bool TextFXPlugin::isPositionRelative(double time) const
 {
-    return _positionRelative->getValueAtTime(time);
+    return _positionRelativeState->getValueAtTime(time);
+}
+
+int TextFXPlugin::getSizeUnit(double time) const
+{
+    return _sizeUnitState->getValueAtTime(time);
 }
 
 double TextFXPlugin::getFontSize(double time, bool autoSize) const
 {
-    if (_sizeUnit->getValueAtTime(time) == eSizeUnitFrameHeight) {
+    if (getSizeUnit(time) == eSizeUnitFrameHeight) {
         const OfxRectD frame = getRelativeFrame(time, autoSize);
         return (frame.y2 - frame.y1) * _fontSizeRelative->getValueAtTime(time) / 100.;
     }
@@ -824,11 +833,11 @@ double TextFXPlugin::getPAR() const
 
 // Convert the Center (and its keyframes) to/from relative coordinates, so that the rendered
 // text does not move.
-void TextFXPlugin::convertPositionRelative(double time, bool relative)
+bool TextFXPlugin::convertPositionRelative(double time, bool relative)
 {
     const OfxRectD frame = getRelativeFrame(time);
     if ( (frame.x2 <= frame.x1) || (frame.y2 <= frame.y1) ) {
-        return;
+        return false;
     }
     // The origin of the RoD that render() uses in absolute mode: render() gets it in pixels
     // (enclosing the canonical RoD, at scale 1 here), so round it the same way.
@@ -857,6 +866,8 @@ void TextFXPlugin::convertPositionRelative(double time, bool relative)
             _position->setValueAtTime(t, p);
         }
     }
+
+    return true;
 }
 
 // A relative Center needs finer steps than the canonical one (see ofxsTransformDescribeParams()).
@@ -873,7 +884,7 @@ void TextFXPlugin::updatePositionIncrement(bool relative)
 
 void TextFXPlugin::updateParamsState()
 {
-    const bool pixels = (_sizeUnit->getValue() == eSizeUnitPixels);
+    const bool pixels = (_sizeUnitState->getValue() == eSizeUnitPixels);
     _fontSize->setEnabled(pixels);
     _fontSizeRelative->setEnabled(!pixels);
 }
@@ -1153,7 +1164,7 @@ void TextFXPlugin::render(const OFX::RenderArguments &args)
         break;
     }
     double fontSizePx = fontSize;
-    if (_sizeUnit->getValueAtTime(args.time) == eSizeUnitPixels) {
+    if (getSizeUnit(args.time) == eSizeUnitPixels) {
         // unchanged, for compatibility
         pangoFont << " " << std::floor(fontSizePx * args.renderScale.x + 0.5);
     } else {
@@ -1606,6 +1617,8 @@ void TextFXPlugin::changedParam(const OFX::InstanceChangedArgs &args, const std:
         if ( sizeUnit != _sizeUnitState->getValue() ) {
             OptionalEditBlock eb(*this, "Convert font size");
             convertSizeUnit(args.time, sizeUnit);
+            // The size and the relative size are separate params, so the new unit applies
+            // even if the size could not be converted (e.g. animated).
             _sizeUnitState->setValue(sizeUnit);
         }
         updateParamsState();
@@ -1613,10 +1626,17 @@ void TextFXPlugin::changedParam(const OFX::InstanceChangedArgs &args, const std:
         const bool relative = _positionRelative->getValueAtTime(args.time);
         if ( relative != _positionRelativeState->getValue() ) {
             OptionalEditBlock eb(*this, "Convert position");
-            convertPositionRelative(args.time, relative);
-            _positionRelativeState->setValue(relative);
+            // Keep the state consistent with the Center: change it only if the Center was
+            // converted (it is not if the frame is empty).
+            if ( convertPositionRelative(args.time, relative) ) {
+                _positionRelativeState->setValue(relative);
+            }
         }
-        updatePositionIncrement(relative);
+        updatePositionIncrement( _positionRelativeState->getValue() );
+    } else if ( (paramName == kParamSizeUnitState) || (paramName == kParamPositionRelativeState) ) {
+        // e.g. a preset load
+        updateParamsState();
+        updatePositionIncrement( _positionRelativeState->getValue() );
     }
 
     clearPersistentMessage();
@@ -1695,7 +1715,7 @@ bool TextFXPlugin::getRegionOfDefinition(const OFX::RegionOfDefinitionArguments 
                 pangoFont << " " << "italic";
                 break;
         }
-        if (_sizeUnit->getValueAtTime(args.time) == eSizeUnitPixels) {
+        if (getSizeUnit(args.time) == eSizeUnitPixels) {
             pangoFont << " " << fontSize;
         } else {
             // rounded as in render(), at renderScale 1
