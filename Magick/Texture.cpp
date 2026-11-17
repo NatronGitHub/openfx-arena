@@ -17,12 +17,14 @@
 */
 
 #include "MagickCommon.h"
+#include "PackedImage.h"
 
 #include "ofxsMacros.h"
 #include "ofxsMultiThread.h"
 #include "ofxsImageEffect.h"
 #include "ofxNatron.h"
 #include <iostream>
+#include <cstring>
 
 #define kPluginName "TextureOFX"
 #define kPluginGrouping "Extra/Draw"
@@ -178,7 +180,8 @@ void TexturePlugin::render(const OFX::RenderArguments &args)
     }
 
     OFX::PixelComponentEnum dstComponents  = dstImg->getPixelComponents();
-    if ((dstComponents != OFX::ePixelComponentRGBA && dstComponents != OFX::ePixelComponentRGB && dstComponents != OFX::ePixelComponentAlpha)) {
+    // only RGBA is supported by the output clip, and the image is written as "RGBA" below
+    if (dstComponents != OFX::ePixelComponentRGBA) {
         OFX::throwSuiteStatusException(kOfxStatErrFormat);
         return;
     }
@@ -299,8 +302,20 @@ void TexturePlugin::render(const OFX::RenderArguments &args)
     }
 
     // return image
-    if (dstClip_ && dstClip_->isConnected())
-        image.write(0,0,width,height,"RGBA",Magick::FloatPixel,(float*)dstImg->getPixelData());
+    if (dstClip_ && dstClip_->isConnected()) {
+        // The texture only covers dstRod: pixels of the render window outside the RoD must be
+        // transparent black (OFX rendering spec). The render window is inside dstBounds (checked above).
+        const OfxRectI& win = args.renderWindow;
+        if (win.x1 < dstRod.x1 || win.y1 < dstRod.y1 || win.x2 > dstRod.x2 || win.y2 > dstRod.y2) {
+            for (int y = win.y1; y < win.y2; ++y) {
+                std::memset(PackedImage::pixelAddress(dstImg->getPixelData(), dstBounds, dstImg->getRowBytes(), 4, win.x1, y),
+                            0, (std::size_t)(win.x2 - win.x1) * 4 * sizeof(float));
+            }
+        }
+        PackedImage::PackedDst dstPixels(dstImg.get(), dstRod);
+        image.write(0,0,width,height,"RGBA",Magick::FloatPixel,dstPixels.data());
+        dstPixels.commit();
+    }
 }
 
 bool TexturePlugin::getRegionOfDefinition(const OFX::RegionOfDefinitionArguments &args, OfxRectD &rod)

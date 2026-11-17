@@ -25,8 +25,8 @@ OFXS_NAMESPACE_ANONYMOUS_ENTER
 #define kPluginGrouping "Extra/Distort"
 #define kPluginIdentifier "net.fxarena.openfx.Swirl"
 #define kPluginDescription "Swirl effect using ImageMagick."
-#define kPluginVersionMajor 2
-#define kPluginVersionMinor 9
+#define kPluginVersionMajor 3 // 3: unpremultiply the source before ImageMagick (see PackedImage::PackedSrc)
+#define kPluginVersionMinor 0
 
 #define kSupportsTiles 0
 #define kSupportsMultiResolution 1
@@ -45,8 +45,8 @@ class SwirlPlugin
     : public MagickPluginHelper<kSupportsRenderScale>
 {
 public:
-    SwirlPlugin(OfxImageEffectHandle handle)
-        : MagickPluginHelper<kSupportsRenderScale>(handle)
+    SwirlPlugin(OfxImageEffectHandle handle, bool unpremultSrc)
+        : MagickPluginHelper<kSupportsRenderScale>(handle, unpremultSrc)
         , _swirl(NULL)
     {
         _swirl = fetchDoubleParam(kParamSwirl);
@@ -63,10 +63,14 @@ private:
     DoubleParam *_swirl;
 };
 
-mDeclarePluginFactory(SwirlPluginFactory, {}, {});
+mDeclarePluginFactoryVersioned(SwirlPluginFactory, {}, {});
 
-void SwirlPluginFactory::describe(ImageEffectDescriptor &desc)
+template<unsigned int majorVersion>
+void SwirlPluginFactory<majorVersion>::describe(ImageEffectDescriptor &desc)
 {
+    if (majorVersion < kPluginVersionMajor) {
+        desc.setIsDeprecated(true);
+    }
     desc.setLabel(kPluginName);
     desc.setPluginGrouping(kPluginGrouping);
     desc.setPluginDescription(kPluginDescription);
@@ -81,7 +85,8 @@ void SwirlPluginFactory::describe(ImageEffectDescriptor &desc)
     desc.setHostMixingEnabled(kHostMixing);
 }
 
-void SwirlPluginFactory::describeInContext(ImageEffectDescriptor &desc, ContextEnum context)
+template<unsigned int majorVersion>
+void SwirlPluginFactory<majorVersion>::describeInContext(ImageEffectDescriptor &desc, ContextEnum context)
 {
     OFX::PageParamDescriptor *page = SwirlPlugin::describeInContextBegin(desc, context);
     {
@@ -98,13 +103,18 @@ void SwirlPluginFactory::describeInContext(ImageEffectDescriptor &desc, ContextE
     SwirlPlugin::describeInContextEnd(desc, context, page);
 }
 
+template<unsigned int majorVersion>
 OFX::ImageEffect*
-SwirlPluginFactory::createInstance(OfxImageEffectHandle handle, ContextEnum /*context*/)
+SwirlPluginFactory<majorVersion>::createInstance(OfxImageEffectHandle handle, ContextEnum /*context*/)
 {
-    return new SwirlPlugin(handle);
+    // versions before 3 fed premultiplied pixels to ImageMagick: keep their output
+    return new SwirlPlugin(handle, majorVersion >= 3);
 }
 
-static SwirlPluginFactory p(kPluginIdentifier, kPluginVersionMajor, kPluginVersionMinor);
+static SwirlPluginFactory<kPluginVersionMajor> p(kPluginIdentifier, kPluginVersionMinor);
 mRegisterPluginFactoryInstance(p)
+// version 2, kept so that existing projects render as before
+static SwirlPluginFactory<2> p2(kPluginIdentifier, 9);
+mRegisterPluginFactoryInstance(p2)
 
 OFXS_NAMESPACE_ANONYMOUS_EXIT

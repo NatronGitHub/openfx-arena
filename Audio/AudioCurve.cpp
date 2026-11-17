@@ -20,9 +20,12 @@
 
 #include "sox.h"
 #include "ofxsImageEffect.h"
+#include "PackedImage.h"
 
 #include <stdint.h>
 #include <cstdlib>
+#include <cmath>
+#include <algorithm>
 #include <sys/stat.h>
 #include <sys/types.h>
 #include <vector>
@@ -164,7 +167,6 @@ void AudioCurvePlugin::render(const RenderArguments &args)
 
     // are we in the image bounds
     OfxRectI dstBounds = dstImg->getBounds();
-    OfxRectI dstRod = dstImg->getRegionOfDefinition();
     if (args.renderWindow.x1 < dstBounds.x1 ||
         args.renderWindow.x1 >= dstBounds.x2 ||
         args.renderWindow.y1 < dstBounds.y1 ||
@@ -177,23 +179,18 @@ void AudioCurvePlugin::render(const RenderArguments &args)
         return;
     }
 
-    // get options
-    int width = dstRod.x2-dstRod.x1;
-    int height = dstRod.y2-dstRod.y1;
-
-    // write output
-    float* pixelData = (float*)dstImg->getPixelData();
-    int offset = 0;
-    for (int y = 0; y < height; y++) {
-        for (int x = 0; x < width; x++) {
-            pixelData[offset + 0] = 0.f;
-            pixelData[offset + 1] = 0.f;
-            pixelData[offset + 2] = 0.f;
-            pixelData[offset + 3] = 0.f;
-            offset += 4;
+    // write output: transparent black over the render window, addressing dstImg through
+    // its bounds and rowBytes, which may differ from the RoD, include padding, or be
+    // negative (kOfxImagePropRowBytes).
+    for (int y = args.renderWindow.y1; y < args.renderWindow.y2; y++) {
+        float* dst = PackedImage::pixelAddress(dstImg->getPixelData(), dstBounds, dstImg->getRowBytes(), 4, args.renderWindow.x1, y);
+        for (int x = args.renderWindow.x1; x < args.renderWindow.x2; x++, dst += 4) {
+            dst[0] = 0.f;
+            dst[1] = 0.f;
+            dst[2] = 0.f;
+            dst[3] = 0.f;
         }
     }
-    pixelData = nullptr;
 }
 
 void AudioCurvePlugin::changedParam(const InstanceChangedArgs &/*args*/,
@@ -251,13 +248,17 @@ void AudioCurvePlugin::generateCurves()
         uint64_t seek;
         double period = endFrame/fps;
 
-        seek = start_secs * audio->signal.rate * audio->signal.channels + .5;
-        seek -= seek % audio->signal.channels;
-        if (sox_seek(audio,
-                     seek,
-                     SOX_SEEK_SET) == SOX_SUCCESS &&
-            audio->signal.channels == 2)
-        {
+        // check the channel count (only stereo is supported) and rate before
+        // using them: seek % channels would divide by zero if channels == 0
+        bool seekOk = false;
+        if (audio->signal.channels == 2 && audio->signal.rate > 0) {
+            seek = start_secs * audio->signal.rate * audio->signal.channels + .5;
+            seek -= seek % audio->signal.channels;
+            seekOk = sox_seek(audio,
+                              seek,
+                              SOX_SEEK_SET) == SOX_SUCCESS;
+        }
+        if (seekOk) {
             block_size = block_period * audio->signal.rate * audio->signal.channels + .5;
             block_size -= block_size % audio->signal.channels;
             sox_sample_t *buf = (sox_sample_t*)malloc(sizeof(sox_sample_t) * block_size);
@@ -304,9 +305,11 @@ void AudioCurvePlugin::generateCurves()
         _srcCurve->deleteAllKeys();
         for (size_t i=0;i<result.size();++i) {
             CurveData curve = result.at(i);
+            // normalize by the max, unless it is zero (e.g. silent audio),
+            // which would give NaN/inf keyframes
             _srcCurve->setValueAtTime(curve.frame,
-                                      curve.x*(factorX/maxX),
-                                      curve.y*(factorY/maxY));
+                                      maxX > 0. ? curve.x*(factorX/maxX) : curve.x*factorX,
+                                      maxY > 0. ? curve.y*(factorY/maxY) : curve.y*factorY);
         }
     }
 }
@@ -338,9 +341,15 @@ void AudioCurvePlugin::setCurveLength()
                                         nullptr,
                                         nullptr);
     if (audio) {
-        uint64_t ws = audio->signal.length/audio->signal.channels;
-        dur = audio->signal.length?(double)ws/audio->signal.rate:0;
-        _srcFrames->setValue(startFrame, dur*fps);
+        // channels == 0 would divide by zero, and the length may be unknown (e.g. streams)
+        if (audio->signal.channels == 0 || audio->signal.rate <= 0 ||
+            audio->signal.length == SOX_UNKNOWN_LEN) {
+            setPersistentMessage(Message::eMessageWarning, "", "Unknown audio length");
+        } else {
+            uint64_t ws = audio->signal.length/audio->signal.channels;
+            dur = audio->signal.length?(double)ws/audio->signal.rate:0;
+            _srcFrames->setValue(startFrame, dur*fps);
+        }
         sox_close(audio);
     } else {
         setPersistentMessage(Message::eMessageWarning, "", "Failed to read the file");
