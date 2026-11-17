@@ -41,7 +41,15 @@
 #define kPluginGrouping "Image/Readers"
 #define kPluginIdentifier "net.fxarena.openfx.ReadPSD"
 #define kPluginVersionMajor 2
-#define kPluginVersionMinor 8 // 2.8: the XCF layer menu is fixed in place on hosts other than Natron (#74)
+// 2.8 (#74, fixed in place: the old behaviours were bugs, and the XCF menu crashed):
+// - XCF, hosts other than Natron: the layer menu maps to the right layers (it was off by one, and the
+//   top layer crashed), and Default is the layers merged (it was the bottom layer)
+// - XCF, every host (Natron too): the output size is the canvas from the file header (it was the
+//   largest layer's size, which cut a canvas that no layer covers)
+// - PSD and XCF, every host, with ImageMagick 6: layers at negative offsets are placed correctly (they
+//   landed at e.g. +20,+10 instead of -20,-10; ImageMagick 7 already placed them correctly)
+// - XCF: the merged Default skips hidden layers and uses the layers' blend modes
+#define kPluginVersionMinor 8
 #define kPluginEvaluation 92
 
 #define kSupportsRGBA true
@@ -626,7 +634,9 @@ void ReadPSDPlugin::decodePlane(const std::string& filename, OfxTime time, int /
     Magick::Image image;
     if (layer == kMergedLayers) {
         // no composite in the file (XCF): merge the layers, bottom first, each at its offset and with
-        // its mode, which ImageMagick's XCF coder puts in compose() (NoCompositeOp for a hidden layer)
+        // its mode, which ImageMagick's XCF coder puts in compose() (NoCompositeOp for a hidden layer).
+        // Known limitation: that coder (IM6 and IM7) ignores the layer opacity (PROP_OPACITY), so a
+        // layer at 50% opacity is merged (and read alone) as if it were opaque.
         image = Magick::Image(Magick::Geometry(width,height),Magick::Color("rgba(0,0,0,0)"));
         for (size_t i = 0; i < frames.size(); i++) {
             if (frames[i].compose() == Magick::NoCompositeOp) {
