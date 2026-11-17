@@ -129,7 +129,62 @@ public:
         default:
             method = MagickCore::UndefinedMorphology;
         }
+#if MagickLibVersion >= 0x700
+        // IM7 applies every method to alpha too (Distance made the output transparent). IM6 did
+        // that only for the convolutions and the intensity methods, and applied the others to its
+        // default channels, RGB: keep the IM6 behaviour
+        switch (method) {
+        case MagickCore::ConvolveMorphology:
+        case MagickCore::CorrelateMorphology: {
+            // IM6 convolved the opacity (1-alpha) and IM7 convolves alpha, so they differ unless
+            // the kernel sums to 1 (with Sobel, the output was transparent). Convolve a negated
+            // copy of alpha, as IM6 did, and put it back
+            Magick::Image opacity(image);
+            opacity.channel(Magick::AlphaChannel);
+            opacity.negate();
+            // opacity has no alpha channel: give its border the opacity IM6 read from the virtual
+            // pixels (1 for Transparent, 0 for the opaque colours)
+            switch (image.virtualPixelMethod()) {
+            case Magick::TransparentVirtualPixelMethod:
+                opacity.virtualPixelMethod(Magick::WhiteVirtualPixelMethod);
+                break;
+            case Magick::BlackVirtualPixelMethod:
+            case Magick::GrayVirtualPixelMethod:
+            case Magick::WhiteVirtualPixelMethod:
+                opacity.virtualPixelMethod(Magick::BlackVirtualPixelMethod);
+                break;
+            case Magick::BackgroundVirtualPixelMethod:
+            case Magick::CheckerTileVirtualPixelMethod:
+            case Magick::HorizontalTileVirtualPixelMethod: // background above and below
+            case Magick::VerticalTileVirtualPixelMethod: // background left and right
+                opacity.backgroundColor(Magick::ColorGray(1. - Magick::ColorRGB(image.backgroundColor()).alpha()));
+                opacity.virtualPixelMethod(image.virtualPixelMethod());
+                break;
+            default:
+                // Random may differ from IM6: the two passes draw their virtual pixels independently
+                opacity.virtualPixelMethod(image.virtualPixelMethod());
+                break;
+            }
+            opacity.morphology(method, kernel, iterations);
+            opacity.negate();
+            image.morphology(method, kernel, iterations);
+            image.composite(opacity, 0, 0, Magick::CopyAlphaCompositeOp);
+            break;
+        }
+        case MagickCore::ErodeIntensityMorphology:
+        case MagickCore::DilateIntensityMorphology:
+        case MagickCore::OpenIntensityMorphology:
+        case MagickCore::CloseIntensityMorphology:
+            image.morphology(method, kernel, iterations);
+            break;
+        default:
+            image.morphologyChannel(Magick::ChannelType(Magick::RedChannel | Magick::GreenChannel | Magick::BlueChannel),
+                                    method, kernel, iterations);
+            break;
+        }
+#else
         image.morphology(method, kernel, iterations);
+#endif
     }
 private:
     IntParam *_iterations;

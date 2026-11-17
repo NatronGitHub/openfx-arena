@@ -89,6 +89,17 @@ static unsigned int hash(unsigned int a)
     return a;
 }
 
+// add noise to the RGB channels only: IM7's addNoise also adds it to alpha (GaussianNoise gave a
+// negative alpha), IM6's default channels didn't
+static void addNoiseRGB(Magick::Image &image, Magick::NoiseType noiseType)
+{
+#if MagickLibVersion >= 0x700
+    image.addNoiseChannel(Magick::ChannelType(Magick::RedChannel | Magick::GreenChannel | Magick::BlueChannel), noiseType);
+#else
+    image.addNoise(noiseType);
+#endif
+}
+
 class TexturePlugin : public OFX::ImageEffect
 {
 public:
@@ -237,20 +248,20 @@ void TexturePlugin::render(const OFX::RenderArguments &args)
             image.read("plasma:fractal");
             break;
         case 2: // GaussianNoise
-            image.addNoise(Magick::GaussianNoise);
+            addNoiseRGB(image, Magick::GaussianNoise);
             break;
         case 3: // ImpulseNoise
-            image.addNoise(Magick::ImpulseNoise);
+            addNoiseRGB(image, Magick::ImpulseNoise);
             break;
         case 4: // LaplacianNoise
-            image.addNoise(Magick::LaplacianNoise);
+            addNoiseRGB(image, Magick::LaplacianNoise);
             break;
         case 5: // checkerboard
             image.read("pattern:checkerboard");
             break;
         case 6: // stripes
             image.extent(Magick::Geometry(width,1));
-            image.addNoise(Magick::GaussianNoise);
+            addNoiseRGB(image, Magick::GaussianNoise);
             image.channel(Magick::GreenChannel);
             image.negate();
             image.scale(Magick::Geometry(width,height));
@@ -268,13 +279,13 @@ void TexturePlugin::render(const OFX::RenderArguments &args)
                 image.read("radial-gradient:"+fromColor+"-"+toColor);
             break;
         case 9: // loops1
-            image.addNoise(Magick::GaussianNoise);
+            addNoiseRGB(image, Magick::GaussianNoise);
             break;
         case 10: // loops2
-            image.addNoise(Magick::ImpulseNoise);
+            addNoiseRGB(image, Magick::ImpulseNoise);
             break;
         case 11: // loops3
-            image.addNoise(Magick::LaplacianNoise);
+            addNoiseRGB(image, Magick::LaplacianNoise);
             break;
         }
         if (effect>8 && effect<12) { // loops 1 2 3
