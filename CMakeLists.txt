@@ -79,7 +79,11 @@ if(${HALDCLUT})
     pkg_search_module(CURL REQUIRED libcurl)
 endif()
 
-set (CMAKE_CXX_STANDARD 11)
+# C++17 by default (Natron RB-2.6 Qt5 builds); callers may ask for C++20
+# (Qt6 builds) with -DCMAKE_CXX_STANDARD=20. The code must build with both.
+if(NOT DEFINED CMAKE_CXX_STANDARD)
+    set(CMAKE_CXX_STANDARD 17)
+endif()
 
 # Use -Ofast when applicable (implies -ffast-math)
 if("${CMAKE_CXX_COMPILER_ID}" STREQUAL "GNU")
