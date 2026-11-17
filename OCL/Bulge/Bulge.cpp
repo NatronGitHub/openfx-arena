@@ -27,8 +27,12 @@ OFXS_NAMESPACE_ANONYMOUS_ENTER
 #define kPluginGrouping "Transform"
 #define kPluginIdentifier "net.fxarena.opencl.Bulge"
 #define kPluginDescription "Bulge (implode/explode) transform effect using OpenCL."
-#define kPluginVersionMajor 1
-#define kPluginVersionMinor 1 // 1.1: centre is relative to the RoD origin
+// 2.0: the centre is relative to the render window origin, so it is right when
+// the RoD does not start at (0,0). 1.0 is kept, unchanged, for old projects.
+#define kPluginVersionMajor 2
+#define kPluginVersionMinor 0
+#define kPluginVersionMajorV1 1
+#define kPluginVersionMinorV1 0
 
 #define kSupportsTiles 0
 #define kSupportsMultiResolution 1
@@ -44,11 +48,12 @@ class BulgeCLPlugin
     : public OCLPluginHelper<kSupportsRenderScale>
 {
 public:
-    BulgeCLPlugin(OfxImageEffectHandle handle)
+    BulgeCLPlugin(OfxImageEffectHandle handle, bool centerFromRenderWindow)
         : OCLPluginHelper<kSupportsRenderScale>(handle, "", kPluginIdentifier)
         , _position(NULL)
         , _radius(NULL)
         , _strength(NULL)
+        , _centerFromRenderWindow(centerFromRenderWindow)
     {
         _position = fetchDouble2DParam(kParamTransformCenterOld);
         _radius = fetchDouble2DParam(kParamTransformScaleOld);
@@ -62,9 +67,14 @@ public:
         _position->getValueAtTime(args.time, x, y);
         _radius->getValueAtTime(args.time, rX, rY);
         _strength->getValueAtTime(args.time, s);
-        // the kernel works in coordinates relative to the render window origin
-        double ypos = y*args.renderScale.y - args.renderWindow.y1;
-        double xpos = x*args.renderScale.x - args.renderWindow.x1;
+        double ypos = y*args.renderScale.y;
+        double xpos = x*args.renderScale.x;
+        if (_centerFromRenderWindow) {
+            // the kernel works in coordinates relative to the render window origin
+            // (v1 ignored it, which is wrong when the RoD does not start at (0,0))
+            ypos -= args.renderWindow.y1;
+            xpos -= args.renderWindow.x1;
+        }
         r = (rX*100)*args.renderScale.x;
         if (s!=0) {
             s = s/10;
@@ -81,6 +91,7 @@ private:
     Double2DParam *_position;
     Double2DParam *_radius;
     DoubleParam *_strength;
+    bool _centerFromRenderWindow; // true from v2
 };
 
 void BulgeCLPlugin::resetCenter(double time) {
@@ -117,9 +128,11 @@ void BulgeCLPlugin::changedParam(const OFX::InstanceChangedArgs &args, const std
     }
 }
 
-mDeclarePluginFactory(BulgeCLPluginFactory, {}, {});
+mDeclarePluginFactoryVersioned(BulgeCLPluginFactory, {}, {});
 
-void BulgeCLPluginFactory::describe(ImageEffectDescriptor &desc)
+template<unsigned int majorVersion>
+void
+BulgeCLPluginFactory<majorVersion>::describe(ImageEffectDescriptor &desc)
 {
     desc.setLabel(kPluginName);
     desc.setPluginGrouping(kPluginGrouping);
@@ -138,20 +151,25 @@ void BulgeCLPluginFactory::describe(ImageEffectDescriptor &desc)
     desc.setOverlayInteractDescriptor(new TransformOverlayDescriptorOldParams);
 }
 
-void BulgeCLPluginFactory::describeInContext(ImageEffectDescriptor &desc, ContextEnum context)
+template<unsigned int majorVersion>
+void
+BulgeCLPluginFactory<majorVersion>::describeInContext(ImageEffectDescriptor &desc, ContextEnum context)
 {
     OFX::PageParamDescriptor *page = BulgeCLPlugin::describeInContextBegin(desc, context);
     ofxsTransformDescribeParams(desc, page, NULL, /*isOpen=*/ true, /*oldParams=*/ true, /*noTranslate=*/ true, /*uniform=*/ true, /*rotateDefault*/ kParamStrengthDefault);
     BulgeCLPlugin::describeInContextEnd(desc, context, page);
 }
 
+template<unsigned int majorVersion>
 OFX::ImageEffect*
-BulgeCLPluginFactory::createInstance(OfxImageEffectHandle handle, ContextEnum /*context*/)
+BulgeCLPluginFactory<majorVersion>::createInstance(OfxImageEffectHandle handle, ContextEnum /*context*/)
 {
-    return new BulgeCLPlugin(handle);
+    return new BulgeCLPlugin(handle, /*centerFromRenderWindow=*/ majorVersion >= 2);
 }
 
-static BulgeCLPluginFactory p(kPluginIdentifier, kPluginVersionMajor, kPluginVersionMinor);
+static BulgeCLPluginFactory<kPluginVersionMajor> p(kPluginIdentifier, kPluginVersionMinor);
+static BulgeCLPluginFactory<kPluginVersionMajorV1> p1(kPluginIdentifier, kPluginVersionMinorV1);
 mRegisterPluginFactoryInstance(p)
+mRegisterPluginFactoryInstance(p1)
 
 OFXS_NAMESPACE_ANONYMOUS_EXIT
