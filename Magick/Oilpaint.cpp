@@ -29,8 +29,8 @@
 #define kPluginName "OilpaintOFX"
 #define kPluginGrouping "Extra/Filter"
 #define kPluginIdentifier "net.fxarena.openfx.Oilpaint"
-#define kPluginVersionMajor 2
-#define kPluginVersionMinor 1
+#define kPluginVersionMajor 3 // 3: unpremultiply the source before ImageMagick (see PackedImage::PackedSrc)
+#define kPluginVersionMinor 0
 
 #define kParamRadius "radius"
 #define kParamRadiusLabel "Radius"
@@ -54,19 +54,21 @@ static bool _hasOpenMP = false;
 class OilpaintPlugin : public OFX::ImageEffect
 {
 public:
-    OilpaintPlugin(OfxImageEffectHandle handle);
+    OilpaintPlugin(OfxImageEffectHandle handle, bool unpremultSrc);
     virtual ~OilpaintPlugin();
     virtual void render(const OFX::RenderArguments &args) OVERRIDE FINAL;
     virtual bool getRegionOfDefinition(const OFX::RegionOfDefinitionArguments &args, OfxRectD &rod) OVERRIDE FINAL;
 private:
+    bool unpremultSrc_; // false in versions released before the premultiplication fix
     OFX::Clip *dstClip_;
     OFX::Clip *srcClip_;
     OFX::DoubleParam *radius_;
     OFX::BooleanParam *enableOpenMP_;
 };
 
-OilpaintPlugin::OilpaintPlugin(OfxImageEffectHandle handle)
+OilpaintPlugin::OilpaintPlugin(OfxImageEffectHandle handle, bool unpremultSrc)
 : OFX::ImageEffect(handle)
+, unpremultSrc_(unpremultSrc)
 , dstClip_(NULL)
 , srcClip_(NULL)
 {
@@ -168,7 +170,9 @@ void OilpaintPlugin::render(const OFX::RenderArguments &args)
     Magick::Image image(Magick::Geometry(width,height),Magick::Color("rgba(0,0,0,0)"));
     Magick::Image output(Magick::Geometry(width,height),Magick::Color("rgba(0,0,0,1)"));
     if (srcClip_ && srcClip_->isConnected()) {
-        PackedImage::PackedSrc srcPixels(srcImg.get(), srcRod);
+        // ImageMagick expects straight colour
+        PackedImage::PackedSrc srcPixels(srcImg.get(), srcRod,
+                                         unpremultSrc_ && srcImg->getPreMultiplication() == OFX::eImagePreMultiplied);
         image.read(width,height,"RGBA",Magick::FloatPixel,srcPixels.data());
     }
 
@@ -205,11 +209,15 @@ bool OilpaintPlugin::getRegionOfDefinition(const OFX::RegionOfDefinitionArgument
     return true;
 }
 
-mDeclarePluginFactory(OilpaintPluginFactory, {}, {});
+mDeclarePluginFactoryVersioned(OilpaintPluginFactory, {}, {});
 
 /** @brief The basic describe function, passed a plugin descriptor */
-void OilpaintPluginFactory::describe(OFX::ImageEffectDescriptor &desc)
+template<unsigned int majorVersion>
+void OilpaintPluginFactory<majorVersion>::describe(OFX::ImageEffectDescriptor &desc)
 {
+    if (majorVersion < kPluginVersionMajor) {
+        desc.setIsDeprecated(true);
+    }
     // basic labels
     desc.setLabel(kPluginName);
     desc.setPluginGrouping(kPluginGrouping);
@@ -231,7 +239,8 @@ void OilpaintPluginFactory::describe(OFX::ImageEffectDescriptor &desc)
 }
 
 /** @brief The describe in context function, passed a plugin descriptor and a context */
-void OilpaintPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, ContextEnum /*context*/)
+template<unsigned int majorVersion>
+void OilpaintPluginFactory<majorVersion>::describeInContext(OFX::ImageEffectDescriptor &desc, ContextEnum /*context*/)
 {
     std::string features = MagickCore::GetMagickFeatures();
     if (features.find("OpenMP") != std::string::npos)
@@ -275,10 +284,15 @@ void OilpaintPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, 
 }
 
 /** @brief The create instance function, the plugin must return an object derived from the \ref OFX::ImageEffect class */
-ImageEffect* OilpaintPluginFactory::createInstance(OfxImageEffectHandle handle, ContextEnum /*context*/)
+template<unsigned int majorVersion>
+ImageEffect* OilpaintPluginFactory<majorVersion>::createInstance(OfxImageEffectHandle handle, ContextEnum /*context*/)
 {
-    return new OilpaintPlugin(handle);
+    // versions before 3 fed premultiplied pixels to ImageMagick: keep their output
+    return new OilpaintPlugin(handle, majorVersion >= 3);
 }
 
-static OilpaintPluginFactory p(kPluginIdentifier, kPluginVersionMajor, kPluginVersionMinor);
+static OilpaintPluginFactory<kPluginVersionMajor> p(kPluginIdentifier, kPluginVersionMinor);
 mRegisterPluginFactoryInstance(p)
+// version 2, kept so that existing projects render as before
+static OilpaintPluginFactory<2> p2(kPluginIdentifier, 1);
+mRegisterPluginFactoryInstance(p2)

@@ -71,6 +71,9 @@ protected:
     OFX::BooleanParam *_matte;
     OFX::ChoiceParam *_vpixel;
     int _renderscale;
+    // Unpremultiply premultiplied sources before handing them to ImageMagick
+    // (false in plugin versions released before this fix, to keep their output).
+    bool _unpremultSrc;
 };
 
 template <int SupportsRenderScale>
@@ -79,10 +82,11 @@ class MagickPluginHelper
 {
 public:
 
-    MagickPluginHelper(OfxImageEffectHandle handle)
+    MagickPluginHelper(OfxImageEffectHandle handle, bool unpremultSrc)
         : MagickPluginHelperBase(handle)
     {
         _renderscale = SupportsRenderScale;
+        _unpremultSrc = unpremultSrc;
 
         // set ImageMagick resources
         Magick::InitializeMagick(NULL);
@@ -185,7 +189,10 @@ void MagickPluginHelper<SupportsRenderScale>::render(const OFX::RenderArguments 
     Magick::Image image(Magick::Geometry(width, height), Magick::Color("rgba(0,0,0,0)"));
     Magick::Image output(Magick::Geometry(width, height), Magick::Color("rgba(0,0,0,1)"));
     if (_srcClip && _srcClip->isConnected()) {
-        PackedImage::PackedSrc srcPixels(srcImg.get(), args.renderWindow);
+        // ImageMagick expects straight colour. With Matte, alpha is discarded right below and the
+        // premultiplied colour is the intended "flattened over black" input, so only unpremultiply without Matte.
+        PackedImage::PackedSrc srcPixels(srcImg.get(), args.renderWindow,
+                                         _unpremultSrc && !matte && srcImg->getPreMultiplication() == OFX::eImagePreMultiplied);
         image.read(width, height, "RGBA", Magick::FloatPixel, srcPixels.data());
         image.flip();
         switch (vpixel) {

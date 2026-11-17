@@ -27,8 +27,8 @@
 #define kPluginName "TileOFX"
 #define kPluginGrouping "Extra/Transform"
 #define kPluginIdentifier "net.fxarena.openfx.Tile"
-#define kPluginVersionMajor 3
-#define kPluginVersionMinor 2
+#define kPluginVersionMajor 4 // 4: unpremultiply the source before ImageMagick (see PackedImage::PackedSrc)
+#define kPluginVersionMinor 0
 
 #define kParamRows "rows"
 #define kParamRowsLabel "Rows"
@@ -72,11 +72,12 @@ static bool _hasOpenMP = false;
 class TilePlugin : public OFX::ImageEffect
 {
 public:
-    TilePlugin(OfxImageEffectHandle handle);
+    TilePlugin(OfxImageEffectHandle handle, bool unpremultSrc);
     virtual ~TilePlugin();
     virtual void render(const OFX::RenderArguments &args) OVERRIDE FINAL;
     virtual bool getRegionOfDefinition(const OFX::RegionOfDefinitionArguments &args, OfxRectD &rod) OVERRIDE FINAL;
 private:
+    bool unpremultSrc_; // false in versions released before the premultiplication fix
     OFX::Clip *dstClip_;
     OFX::Clip *srcClip_;
     OFX::IntParam *rows_;
@@ -87,8 +88,9 @@ private:
     OFX::BooleanParam *enableOpenMP_;
 };
 
-TilePlugin::TilePlugin(OfxImageEffectHandle handle)
+TilePlugin::TilePlugin(OfxImageEffectHandle handle, bool unpremultSrc)
 : OFX::ImageEffect(handle)
+, unpremultSrc_(unpremultSrc)
 , dstClip_(NULL)
 , srcClip_(NULL)
 {
@@ -217,7 +219,10 @@ void TilePlugin::render(const OFX::RenderArguments &args)
     Magick::Image container(Magick::Geometry(srcWidth,srcHeight),Magick::Color("rgba(0,0,0,0)"));
     Magick::Image output(Magick::Geometry(srcWidth,srcHeight),Magick::Color("rgba(0,0,0,1)"));
     if (srcClip_ && srcClip_->isConnected()) {
-        PackedImage::PackedSrc srcPixels(srcImg.get(), srcRod);
+        // ImageMagick expects straight colour. With Matte, alpha is discarded and the
+        // premultiplied colour is the intended "flattened over black" input.
+        PackedImage::PackedSrc srcPixels(srcImg.get(), srcRod,
+                                         unpremultSrc_ && !matte && srcImg->getPreMultiplication() == OFX::eImagePreMultiplied);
         image.read(srcWidth,srcHeight,"RGBA",Magick::FloatPixel,srcPixels.data());
     }
 
@@ -277,7 +282,9 @@ void TilePlugin::render(const OFX::RenderArguments &args)
                 int tileWidth = tileRod.x2-tileRod.x1;
                 int tileHeight = tileRod.y2-tileRod.y1;
                 if (tileWidth>0&&tileHeight>0) {
-                    PackedImage::PackedSrc tilePixels(tileImg.get(), tileRod);
+                    // Matte only applies to the current frame: always unpremultiply here
+                    PackedImage::PackedSrc tilePixels(tileImg.get(), tileRod,
+                                                      unpremultSrc_ && tileImg->getPreMultiplication() == OFX::eImagePreMultiplied);
                     Magick::Image tmpTile(tileWidth,tileHeight,"RGBA",Magick::FloatPixel,tilePixels.data());
                     std::size_t tileColumns = tileWidth;
                     std::size_t tileRows = tileHeight;
@@ -324,11 +331,15 @@ bool TilePlugin::getRegionOfDefinition(const OFX::RegionOfDefinitionArguments &a
     return true;
 }
 
-mDeclarePluginFactory(TilePluginFactory, {}, {});
+mDeclarePluginFactoryVersioned(TilePluginFactory, {}, {});
 
 /** @brief The basic describe function, passed a plugin descriptor */
-void TilePluginFactory::describe(OFX::ImageEffectDescriptor &desc)
+template<unsigned int majorVersion>
+void TilePluginFactory<majorVersion>::describe(OFX::ImageEffectDescriptor &desc)
 {
+    if (majorVersion < kPluginVersionMajor) {
+        desc.setIsDeprecated(true);
+    }
     // basic labels
     desc.setLabel(kPluginName);
     desc.setPluginGrouping(kPluginGrouping);
@@ -351,7 +362,8 @@ void TilePluginFactory::describe(OFX::ImageEffectDescriptor &desc)
 }
 
 /** @brief The describe in context function, passed a plugin descriptor and a context */
-void TilePluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, ContextEnum /*context*/)
+template<unsigned int majorVersion>
+void TilePluginFactory<majorVersion>::describeInContext(OFX::ImageEffectDescriptor &desc, ContextEnum /*context*/)
 {
     std::string features = MagickCore::GetMagickFeatures();
     if (features.find("OpenMP") != std::string::npos)
@@ -429,10 +441,15 @@ void TilePluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, Cont
 }
 
 /** @brief The create instance function, the plugin must return an object derived from the \ref OFX::ImageEffect class */
-ImageEffect* TilePluginFactory::createInstance(OfxImageEffectHandle handle, ContextEnum /*context*/)
+template<unsigned int majorVersion>
+ImageEffect* TilePluginFactory<majorVersion>::createInstance(OfxImageEffectHandle handle, ContextEnum /*context*/)
 {
-    return new TilePlugin(handle);
+    // versions before 4 fed premultiplied pixels to ImageMagick: keep their output
+    return new TilePlugin(handle, majorVersion >= 4);
 }
 
-static TilePluginFactory p(kPluginIdentifier, kPluginVersionMajor, kPluginVersionMinor);
+static TilePluginFactory<kPluginVersionMajor> p(kPluginIdentifier, kPluginVersionMinor);
 mRegisterPluginFactoryInstance(p)
+// version 3, kept so that existing projects render as before
+static TilePluginFactory<3> p3(kPluginIdentifier, 2);
+mRegisterPluginFactoryInstance(p3)
