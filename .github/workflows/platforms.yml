@@ -2,7 +2,7 @@ name: Platform builds
 
 # Reusable workflow: the three builds (Linux, Windows UCRT64, macOS 15 arm64 with
 # Xcode clang and MacPorts), called by ci.yml (per push/PR, C++17) and
-# extended.yml (weekly/on demand, C++20).
+# extended.yml (nightly/on demand, C++20, plus a nightly macOS C++17 build).
 
 on:
   workflow_call:
