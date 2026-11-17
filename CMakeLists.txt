@@ -317,7 +317,13 @@ list(APPEND RESOURCES
     Magick/Morphology/net.fxarena.openfx.Morphology.png
     Magick/Morphology/net.fxarena.openfx.Morphology.svg)
 
-add_ofx_plugin(Arena INFO_PLIST Bundle/Info.plist SOURCES ${SOURCES})
+# On Linux, OpenColorIO's libdir is in the rpath, as Makefile.io does (also when it is a
+# system directory, which INSTALL_RPATH_USE_LINK_PATH would skip)
+set(_arena_rpath "")
+if(CMAKE_SYSTEM_NAME STREQUAL "Linux")
+    set(_arena_rpath "${OCIO_LIBDIR}")
+endif()
+add_ofx_plugin(Arena INFO_PLIST Bundle/Info.plist RPATH ${_arena_rpath} SOURCES ${SOURCES})
 supportext_add_sources(Arena COMPONENTS TEXT TRANSFORM3X3 TRANSFORM_INTERACT MULTIPLANE)
 ioSupport_add_sources(Arena)
 target_include_directories(Arena PRIVATE
@@ -331,10 +337,6 @@ target_include_directories(Arena PRIVATE
 target_link_libraries(Arena PRIVATE openfx::Support ${ARENA_LIBRARIES})
 ofx_target_openmp(Arena)
 target_compile_definitions(Arena PRIVATE OFX_IO_USING_OCIO)
-if(CMAKE_SYSTEM_NAME STREQUAL "Linux")
-    # as Makefile.io
-    set_property(TARGET Arena APPEND PROPERTY INSTALL_RPATH "${OCIO_LIBDIR}")
-endif()
 if(LEGACYIM)
     target_compile_definitions(Arena PRIVATE LEGACYIM NOMAGICKSEED)
 elseif(IM STREQUAL "68")
