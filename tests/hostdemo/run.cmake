@@ -3,7 +3,10 @@
 # crash, on a missing output frame, and on a plug-in that the list doesn't mention.
 #
 #   cmake -DHOSTDEMO=<hostDemo> -DVERIFY=<verify_plugin_loads> -DBINARY=<bundle>/Contents/<arch>/<name>.ofx
-#         -DLIST=<list.txt> -DSAMPLES=<dir> -DWORK=<dir> -P run.cmake
+#         -DLIST=<list.txt> -DSAMPLES=<dir> -DWORK=<dir> [-DCACHE=<dir>] -P run.cmake
+#
+# WORK is wiped at each run; CACHE (default: WORK-cache) is not: it holds the caches that
+# would otherwise go to the home directory, e.g. fontconfig's.
 #
 # Relative paths are relative to the current directory. The list has one line per plug-in:
 # "<identifier> <major> <context> [hostDemo arguments]", or "skip <identifier> <major> <reason>";
@@ -17,6 +20,11 @@ foreach(_v HOSTDEMO VERIFY BINARY LIST SAMPLES WORK)
   # in script mode, relative to the current directory
   get_filename_component(${_v} "${${_v}}" ABSOLUTE)
 endforeach()
+if(NOT DEFINED CACHE)
+  set(CACHE "${WORK}-cache")
+endif()
+get_filename_component(CACHE "${CACHE}" ABSOLUTE)
+file(MAKE_DIRECTORY "${CACHE}")
 string(TIMESTAMP _start "%s")
 
 # the bundle's plug-ins, as the load test sees them: "plugin[i] : <id> v<major>.<minor>"
@@ -65,6 +73,13 @@ set(ENV{OFX_PLUGIN_PATH} "${_pluginpath}")
 set(ENV{OCIO} "${_ocio}")
 set(ENV{HOME} "${_nwork}")
 set(ENV{USERPROFILE} "${_nwork}")
+# ... but the caches in a directory that is kept, so that fontconfig doesn't rebuild its
+# cache at every run (XDG_CACHE_HOME; LOCALAPPDATA on Windows)
+native(_ncache "${CACHE}")
+set(ENV{XDG_CACHE_HOME} "${_ncache}")
+if(CMAKE_HOST_WIN32)
+  set(ENV{LOCALAPPDATA} "${_ncache}")
+endif()
 
 set(_ok 0)
 set(_skipped 0)

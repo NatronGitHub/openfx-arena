@@ -542,6 +542,7 @@ endif()
                     -DHOSTDEMO=$<TARGET_FILE:hostDemo> -DVERIFY=$<TARGET_FILE:verify_plugin_loads>
                     -DBINARY=$<TARGET_FILE:${_t}> -DLIST=${CMAKE_CURRENT_SOURCE_DIR}/tests/hostdemo/${_list}.txt
                     -DSAMPLES=${_samples} -DWORK=${CMAKE_CURRENT_BINARY_DIR}/hostdemo-${_t}
+                    -DCACHE=${CMAKE_CURRENT_BINARY_DIR}/hostdemo-cache
                     -P "${CMAKE_CURRENT_SOURCE_DIR}/tests/hostdemo/run.cmake")
             endif()
         endforeach()
