@@ -93,7 +93,7 @@
 
 #define kParamImageLayer "layer"
 #define kParamImageLayerLabel "Image layer"
-#define kParamImageLayerHint "Select image layer\n\nThe recommended way to access layers is through a merge/shuffle node (multi-plane)."
+#define kParamImageLayerHint "Select image layer\n\nDefault is the merged image: the composite saved in a PSD file, or the layers of an XCF file merged. In Natron, the menu lists the layers of the file. The recommended way to access layers is through a merge/shuffle node (multi-plane)."
 #define kParamImageLayerDefault 0
 
 #define kParamOffsetLayer "offset"
@@ -111,6 +111,38 @@ namespace OCIO = OCIO_NAMESPACE;
 OFXS_NAMESPACE_ANONYMOUS_ENTER
 
 static bool gHostIsNatron   = false;
+
+// What the frames that ImageMagick reads from a file are: PSD files start with the composite that
+// Photoshop saves (frame 0), followed by the layers; XCF files have no composite, their frames are the
+// layers, bottom first (IM6 and IM7 alike).
+static bool
+hasComposite(const std::vector<Magick::Image>& frames)
+{
+    return !frames.empty() && frames[0].format() == "Adobe Photoshop bitmap";
+}
+
+// frameForLayerChoice() results that are not a frame index
+static const int kNoFrame = -1;     // the choice is past the last layer
+static const int kMergedLayers = -2; // the layers merged, for files without a composite (XCF)
+
+// The frame that an "Image layer" choice stands for. In Natron, genLayerMenu() lists the frames themselves
+// (for a PSD, "Default" is frame 0, the composite). Other hosts have the fixed menu Default, Layer 1..9:
+// for a PSD, that matches the frames too, but an XCF has no composite frame, so Default is the layers
+// merged, and Layer N is frame N-1 (it was frame N: off by one, and past the end for the top layer).
+static int
+frameForLayerChoice(const std::vector<Magick::Image>& frames,
+                    int choice)
+{
+    const int nFrames = (int)frames.size();
+    if ( gHostIsNatron || hasComposite(frames) ) {
+        return (choice >= 0 && choice < nFrames) ? choice : kNoFrame;
+    }
+    if (choice == 0) {
+        return nFrames > 0 ? kMergedLayers : kNoFrame;
+    }
+
+    return (choice >= 1 && choice <= nFrames) ? choice - 1 : kNoFrame;
+}
 
 void _setupChoice(OFX::ChoiceParam *visible, OFX::StringParam *hidden) {
     std::string cString, cCombo;
@@ -246,6 +278,7 @@ private:
     virtual bool guessParamsFromFilename(const std::string& filename, std::string *colorspace, OFX::PreMultiplicationEnum *filePremult, OFX::PixelComponentEnum *components, int *componentCount) OVERRIDE FINAL;
     virtual void changedFilename(const OFX::InstanceChangedArgs &args) OVERRIDE FINAL;
     void genLayerMenu();
+    void readFrames(const std::string& filename);
     std::string _filename;
     bool _hasLCMS;
     std::vector<Magick::Image> _psd;
@@ -322,23 +355,33 @@ void ReadPSDPlugin::restoreStateFromParams()
     std::string filename;
     OfxStatus st = getFilenameAtTime(startingTime, &filename);
     if ( st == kOfxStatOK || !filename.empty() ) {
+        readFrames(filename);
+    }
+}
+
+// Read all the frames of the file into _psd, and rebuild the layer menu. A layer choice past the last
+// layer doesn't unload the file: the user may still pick another layer.
+void ReadPSDPlugin::readFrames(const std::string& filename)
+{
+    _psd.clear();
+    try {
+        Magick::readImages(&_psd, filename);
+    }
+    catch(Magick::Exception) {
+        setPersistentMessage(OFX::Message::eMessageError, "", "Unable to read image");
+        OFX::throwSuiteStatusException(kOfxStatErrFormat);
+    }
+    genLayerMenu();
+    if (_psd.empty() || _psd[0].columns() == 0 || _psd[0].rows() == 0) {
         _psd.clear();
-        try {
-            Magick::readImages(&_psd, filename);
-        }
-        catch(Magick::Exception) {
-            setPersistentMessage(OFX::Message::eMessageError, "", "Unable to read image");
-            OFX::throwSuiteStatusException(kOfxStatErrFormat);
-        }
-        genLayerMenu();
-        int layer = 0;
-        _imageLayer->getValue(layer);
-        if (layer >= 0 && layer < (int)_psd.size() && _psd[layer].columns()>0 && _psd[layer].rows()>0) {
-            _filename = filename;
-        } else {
-            _psd.clear();
-            setPersistentMessage(OFX::Message::eMessageError, "", "Unable to read image");
-        }
+        setPersistentMessage(OFX::Message::eMessageError, "", "Unable to read image");
+        return;
+    }
+    _filename = filename;
+    int layer = 0;
+    _imageLayer->getValue(layer);
+    if (frameForLayerChoice(_psd, layer) == kNoFrame) {
+        setPersistentMessage(OFX::Message::eMessageError, "", "Layer not found in image");
     }
 }
 
@@ -435,20 +478,33 @@ void ReadPSDPlugin::decodePlane(const std::string& filename, OfxTime time, int /
     _imageLayer->getValueAtTime(time, imageLayer);
     _offsetLayer->getValueAtTime(time, offsetLayer);
 
+    // the frames of the file: _psd, or (for a filename that varies with time) those of this frame's file
+    std::vector<Magick::Image> fileFrames;
+    if (_filename != filename) {
+        try {
+            Magick::readImages(&fileFrames, filename);
+        }
+        catch(Magick::Exception) {
+            setPersistentMessage(OFX::Message::eMessageError, "", "Unable to read image");
+            OFX::throwSuiteStatusException(kOfxStatErrFormat);
+        }
+    }
+    const std::vector<Magick::Image>& frames = (_filename == filename) ? _psd : fileFrames;
+
     // Get multiplane layer
     if (!plane.isColorPlane()) {
-        for (size_t i = 0; i < _psd.size(); i++) {
+        for (size_t i = 0; i < frames.size(); i++) {
             bool foundLayer = false;
             std::ostringstream psdLayer;
             psdLayer << "Image Layer #" << i; // if layer name is empty
-            if (_psd[i].label()==plane.getPlaneLabel())
+            if (frames[i].label()==plane.getPlaneLabel())
                 foundLayer = true;
             if (psdLayer.str()==plane.getPlaneLabel() && !foundLayer)
                 foundLayer = true;
             if (foundLayer) {
                 if (offsetLayer) {
-                    offsetX = _psd[i].page().xOff();
-                    offsetY = _psd[i].page().yOff();
+                    offsetX = frames[i].page().xOff();
+                    offsetY = frames[i].page().yOff();
                 }
                 layer = i;
                 break;
@@ -457,33 +513,34 @@ void ReadPSDPlugin::decodePlane(const std::string& filename, OfxTime time, int /
     }
     else { // no multiplane
         // the layer menu may list more layers than the file has (fixed menu
-        // on non-Natron hosts), and _psd is empty if the file failed to load
-        if ( imageLayer < 0 || imageLayer >= (int)_psd.size() ) {
+        // on non-Natron hosts), and frames is empty if the file failed to load
+        layer = frameForLayerChoice(frames, imageLayer);
+        if (layer == kNoFrame) {
             setPersistentMessage(OFX::Message::eMessageError, "", "Layer not found in image");
             OFX::throwSuiteStatusException(kOfxStatFailed);
         }
-        if (imageLayer>0 || _psd[imageLayer].format()!="Adobe Photoshop bitmap") {
-            if (offsetLayer) {
-                offsetX = _psd[imageLayer].page().xOff();
-                offsetY = _psd[imageLayer].page().yOff();
-            }
+        // a layer (not the composite) is placed at its offset
+        if ( offsetLayer && layer != kMergedLayers && (layer > 0 || !hasComposite(frames)) ) {
+            offsetX = frames[layer].page().xOff();
+            offsetY = frames[layer].page().yOff();
         }
-        layer = imageLayer;
     }
 
-    // Get image
+    // Get image (frames may be empty in the multiplane case, if the file failed to load)
+    if ( layer != kMergedLayers && (layer < 0 || layer >= (int)frames.size()) ) {
+        setPersistentMessage(OFX::Message::eMessageError, "", "Layer not found in image");
+        OFX::throwSuiteStatusException(kOfxStatFailed);
+    }
     Magick::Image image;
-    if (_filename!=filename) { // anim?
-        std::ostringstream newFile;
-        newFile << filename << "[" << layer << "]";
-        image.read(newFile.str().c_str());
+    if (layer == kMergedLayers) {
+        // no composite in the file (XCF): merge the layers, each at its offset
+        image = Magick::Image(Magick::Geometry(width,height),Magick::Color("rgba(0,0,0,0)"));
+        for (size_t i = 0; i < frames.size(); i++) {
+            image.composite(frames[i], frames[i].page().xOff(), frames[i].page().yOff(), Magick::OverCompositeOp);
+        }
     }
     else {
-        if ( layer < 0 || layer >= (int)_psd.size() ) {
-            setPersistentMessage(OFX::Message::eMessageError, "", "Layer not found in image");
-            OFX::throwSuiteStatusException(kOfxStatFailed);
-        }
-        image = _psd[layer];
+        image = frames[layer];
     }
 
     // color management
@@ -656,6 +713,16 @@ void ReadPSDPlugin::changedParam(const OFX::InstanceChangedArgs &args, const std
         _iccGRAY->getOption(proID,profile);
         _iccGRAYSelected->setValueAtTime(args.time, profile);
     }
+    else if (paramName == kParamImageLayer && !_psd.empty()) {
+        // the file stays loaded when a choice past the last layer is picked: report it, or clear it
+        int layer = 0;
+        _imageLayer->getValueAtTime(args.time, layer);
+        if (frameForLayerChoice(_psd, layer) == kNoFrame) {
+            setPersistentMessage(OFX::Message::eMessageError, "", "Layer not found in image");
+        } else {
+            clearPersistentMessage();
+        }
+    }
     else {
         GenericReaderPlugin::changedParam(args,paramName);
     }
@@ -677,7 +744,7 @@ bool ReadPSDPlugin::getFrameBounds(const std::string& /*filename*/,
     int maxWidth = 0;
     int maxHeight = 0;
     _imageLayer->getValue(layer);
-    if (layer >= 0 && layer < (int)_psd.size() && _psd[layer].columns()>0 && _psd[layer].rows()>0) {
+    if (frameForLayerChoice(_psd, layer) != kNoFrame) {
         for (int i = 0; i < (int)_psd.size(); i++) {
             if ((int)_psd[i].columns()>maxWidth)
                 maxWidth = (int)_psd[i].columns();
@@ -721,23 +788,7 @@ bool ReadPSDPlugin::guessParamsFromFilename(const std::string& /*newFile*/,
         return false;
     }
 
-    _psd.clear();
-    try {
-        Magick::readImages(&_psd, filename);
-    }
-    catch(Magick::Exception) {
-        setPersistentMessage(OFX::Message::eMessageError, "", "Unable to read image");
-        OFX::throwSuiteStatusException(kOfxStatErrFormat);
-    }
-    genLayerMenu();
-    int layer = 0;
-    _imageLayer->getValue(layer);
-    if (layer >= 0 && layer < (int)_psd.size() && _psd[layer].columns()>0 && _psd[layer].rows()>0) {
-        _filename = filename;
-    } else {
-        _psd.clear();
-        setPersistentMessage(OFX::Message::eMessageError, "", "Unable to read image");
-    }
+    readFrames(filename);
 
     *components = OFX::ePixelComponentRGBA;
     *filePremult = OFX::eImageUnPreMultiplied;
@@ -757,23 +808,7 @@ void ReadPSDPlugin::changedFilename(const OFX::InstanceChangedArgs &args)
         OFX::throwSuiteStatusException(kOfxStatErrFormat);
     }
 
-    _psd.clear();
-    try {
-        Magick::readImages(&_psd, filename);
-    }
-    catch(Magick::Exception) {
-        setPersistentMessage(OFX::Message::eMessageError, "", "Unable to read image");
-        OFX::throwSuiteStatusException(kOfxStatErrFormat);
-    }
-    genLayerMenu();
-    int layer = 0;
-    _imageLayer->getValue(layer);
-    if (layer >= 0 && layer < (int)_psd.size() && _psd[layer].columns()>0 && _psd[layer].rows()>0) {
-        _filename = filename;
-    } else {
-        _psd.clear();
-        setPersistentMessage(OFX::Message::eMessageError, "", "Unable to read image");
-    }
+    readFrames(filename);
 }
 
 using namespace OFX;
