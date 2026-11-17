@@ -57,8 +57,9 @@
 #define kPluginGrouping "Draw"
 #define kPluginIdentifier "net.fxarena.openfx.Text"
 // 7.0: the Center is in canonical coordinates (the pixel aspect ratio and the RoD origin are
-// applied), so the text is where the overlay shows it, and Canvas size and Auto size are in
-// pixels. 6.x is kept, unchanged, for old projects (issue #70).
+// applied), so the text is where the overlay shows it, and the text is drawn in canonical
+// units, so that it isn't squeezed or sheared on a PAR-corrected viewer. The Canvas size is in
+// pixels. 6.x is kept, unchanged and deprecated, for old projects (issue #70).
 #define kPluginVersionMajor 7
 #define kPluginVersionMinor 0
 #define kPluginVersionMajorV6 6
@@ -459,10 +460,11 @@ private:
     void updateParamsState();
     void updatePositionIncrement(bool relative);
 
-    // From v7, the Center is in canonical coordinates in render(), and the Canvas and Auto size
-    // are in pixels. v6 took the Center as pixels at scale 1 from the RoD origin, and the
-    // Canvas and Auto size as canonical sizes, which is only right if PAR = 1 and the RoD
-    // starts at (0,0) (issue #70). v6 renders as before, for old projects.
+    // From v7, the Center is in canonical coordinates in render(), the text is drawn in
+    // canonical units (render scale aside), and the Canvas is in pixels. v6 took the Center as
+    // pixels at scale 1 from the RoD origin, drew in pixels, and took the Canvas as a canonical
+    // size, which is only right if PAR = 1 and the RoD starts at (0,0) (issue #70). v6 renders
+    // as before, for old projects.
     const bool _canonicalCenter;
 
     // do not need to delete these, the ImageEffect is managing them for us
@@ -742,16 +744,16 @@ void TextFXPlugin::resetCenter(double time) {
 
 // The canonical size of a width in pixels at scale 1. Hosts get the pixel RoD as
 // ceil(x2 * renderScale / PAR) (e.g. Natron's RectD::toPixelEnclosing), and w * PAR / PAR can
-// be w plus a rounding error (e.g. w = 31 and PAR = 16/15), which would add a column.
+// be w plus a rounding error (e.g. w = 31 and PAR = 16/15), which would add a column: make it
+// slightly smaller, by far more than any rounding error, even with -ffast-math.
 static double
 pixelWidthToCanonical(int w, double par)
 {
-    double x = w * par;
-    while (x / par > w) {
-        x = std::nextafter(x, 0.);
+    if (par == 1.) {
+        return w;
     }
 
-    return x;
+    return w * par * (1. - 1e-12);
 }
 
 OfxRectD TextFXPlugin::getRelativeFrame(double time, bool autoSize) const
@@ -930,25 +932,7 @@ bool TextFXPlugin::convertPositionRelative(double time, bool relative)
     if ( (frame.x2 <= frame.x1) || (frame.y2 <= frame.y1) ) {
         return false;
     }
-    if (_canonicalCenter) {
-        // v7: the absolute Center is canonical, as is the frame
-        const int nKeys = getNumKeys(_position);
-        const int n = (nKeys == 0) ? 1 : nKeys;
-        for (int i = 0; i < n; ++i) {
-            const double t = (nKeys == 0) ? time : _position->getKeyTime(i);
-            OfxPointD p;
-            _position->getValueAtTime(t, p.x, p.y);
-            p = convertPosition(p, frame, relative);
-            if (nKeys == 0) {
-                _position->setValue(p);
-            } else {
-                _position->setValueAtTime(t, p);
-            }
-        }
-
-        return true;
-    }
-    // v6: the origin of the RoD that render() uses in absolute mode: render() gets it in pixels
+    // v6 only: the origin of the RoD that render() v6 uses in absolute mode: render() gets it in pixels
     // (enclosing the canonical RoD, at scale 1 here), so round it the same way.
     const double par = getPAR();
     OfxPointD rodOrigin = {0., 0.};
@@ -964,7 +948,10 @@ bool TextFXPlugin::convertPositionRelative(double time, bool relative)
         const double t = (nKeys == 0) ? time : _position->getKeyTime(i);
         OfxPointD p;
         _position->getValueAtTime(t, p.x, p.y);
-        if (relative) {
+        if (_canonicalCenter) {
+            // v7: the absolute Center is canonical, as is the frame
+            p = convertPosition(p, frame, relative);
+        } else if (relative) {
             p = convertPosition(absoluteToCanonical(p, rodOrigin, par), frame, true);
         } else {
             p = canonicalToAbsolute(convertPosition(p, frame, false), rodOrigin, par);
@@ -1260,7 +1247,9 @@ void TextFXPlugin::render(const OFX::RenderArguments &args)
     // The cairo surface covers dstRod, whatever the bounds of dstImg (which may be only the
     // render window, see the write below), so flip y within dstRod, not within dstBounds.
     // When dstBounds == dstRod this is the same value as before.
-    ytext = (dstRod.y2 - dstRod.y1 - 1) - ytext;
+    // In the flipped context below, y = height is the bottom edge of the RoD: v7 maps the Center
+    // there exactly, v6 put it one pixel too high.
+    ytext = (dstRod.y2 - dstRod.y1 - (_canonicalCenter ? 0 : 1)) - ytext;
 
     if (!txt.empty()) {
         std::string txt_tmp = textFromFile(txt);
@@ -1299,6 +1288,13 @@ void TextFXPlugin::render(const OFX::RenderArguments &args)
 
     int width = dstRod.x2-dstRod.x1;
     int height = dstRod.y2-dstRod.y1;
+    // v7 draws in canonical units horizontally (times the render scale): the context below is
+    // scaled by 1/PAR in x, so that the glyphs, the rotation, skew and scale, the circle, the
+    // arc and the stroke look right on a canonical (PAR-corrected) viewer, as the overlay
+    // does. v6 drew everything in pixels (xScale = 1).
+    const double xScale = _canonicalCenter ? getPAR() : 1.;
+    const double drawWidth = width * xScale; // the width of the RoD in drawing units
+    xtext *= xScale;
 
     cairo_t *cr;
     cairo_status_t status;
@@ -1320,6 +1316,13 @@ void TextFXPlugin::render(const OFX::RenderArguments &args)
 
     layout = pango_cairo_create_layout(cr);
     alist = pango_attr_list_new();
+    if (xScale != 1.) {
+        // After the layout is created: its context keeps the identity transform, so that it is
+        // measured as in getRegionOfDefinition(), and is not updated to this one below. With
+        // hinted metrics, Pango rounds the advances in device space under a non-uniform
+        // transform, which spaced the glyphs out (twice as much at PAR 2).
+        cairo_scale(cr, 1. / xScale, 1.);
+    }
 
     // flip
     cairo_scale(cr, 1.0f, -1.0f);
@@ -1327,7 +1330,7 @@ void TextFXPlugin::render(const OFX::RenderArguments &args)
 
     cairo_font_options_t* options = cairo_font_options_create();
 
-    cairo_rectangle(cr, 0, 0, width, height);
+    cairo_rectangle(cr, 0, 0, drawWidth, height);
     cairo_set_source_rgba(cr, bg_r, bg_g, bg_b, bg_a);
     cairo_fill(cr);
 
@@ -1416,15 +1419,15 @@ void TextFXPlugin::render(const OFX::RenderArguments &args)
     if (!autoSize && !move) {
         switch(wrap) {
         case 1:
-            pango_layout_set_width(layout, width * PANGO_SCALE);
+            pango_layout_set_width(layout, (int)(drawWidth * PANGO_SCALE));
             pango_layout_set_wrap(layout, PANGO_WRAP_WORD);
             break;
         case 2:
-            pango_layout_set_width(layout, width * PANGO_SCALE);
+            pango_layout_set_width(layout, (int)(drawWidth * PANGO_SCALE));
             pango_layout_set_wrap(layout, PANGO_WRAP_CHAR);
             break;
         case 3:
-            pango_layout_set_width(layout, width * PANGO_SCALE);
+            pango_layout_set_width(layout, (int)(drawWidth * PANGO_SCALE));
             pango_layout_set_wrap(layout, PANGO_WRAP_WORD_CHAR);
             break;
         default:
@@ -1480,22 +1483,37 @@ void TextFXPlugin::render(const OFX::RenderArguments &args)
         pango_layout_set_attributes(layout,alist);
     }
 
+    // v6 scaled the vertical scroll by the horizontal render scale
+    const double scrollYScale = _canonicalCenter ? args.renderScale.y : args.renderScale.x;
     if (!move && !autoSize && (scrollX!=0||scrollY!=0) && arcAngle==0 && circleRadius==0) {
-        cairo_move_to(cr, std::floor(scrollX * args.renderScale.x), std::floor(scrollY * args.renderScale.x));
+        cairo_move_to(cr, std::floor(scrollX * args.renderScale.x), std::floor(scrollY * scrollYScale));
     }
 
-    if (!autoSize && !markup && circleRadius==0 && arcAngle==0 && strokeWidth==0 && move) {
-        int moveX, moveY;
+    // Move to where the layout is drawn from: the Center, or the Center minus half the layout
+    // size if centerInteract. v6 truncated that point to integers.
+    auto moveToLayoutOrigin = [&]() {
+        double moveX = xtext;
+        double moveY = ytext;
         if (centerInteract) {
             int text_width, text_height;
             pango_layout_get_pixel_size(layout, &text_width, &text_height);
-            moveX=xtext-(text_width/2);
-            moveY=ytext-(text_height/2);
-        } else {
-            moveX=xtext;
-            moveY=ytext;
+            if (_canonicalCenter) {
+                moveX -= text_width / 2.;
+                moveY -= text_height / 2.;
+            } else {
+                moveX -= text_width / 2;
+                moveY -= text_height / 2;
+            }
+        }
+        if (!_canonicalCenter) {
+            moveX = (int)moveX;
+            moveY = (int)moveY;
         }
         cairo_move_to(cr, moveX, moveY);
+    };
+
+    if (!autoSize && !markup && circleRadius==0 && arcAngle==0 && strokeWidth==0 && move) {
+        moveToLayoutOrigin();
     }
 
     if (scaleX!=1.0||scaleY!=1.0) {
@@ -1533,7 +1551,7 @@ void TextFXPlugin::render(const OFX::RenderArguments &args)
     }
 
     if (rotate !=0 && !autoSize) {
-        double rotateX = width/2.0;
+        double rotateX = drawWidth/2.0;
         double rotateY = height/2.0;
         if (move) {
             rotateX = xtext;
@@ -1565,23 +1583,13 @@ void TextFXPlugin::render(const OFX::RenderArguments &args)
             cairo_new_path(cr);
 
             if (!move && !autoSize && (scrollX!=0||scrollY!=0)) {
-                cairo_move_to(cr, std::floor(scrollX * args.renderScale.x), std::floor(scrollY * args.renderScale.x));
+                cairo_move_to(cr, std::floor(scrollX * args.renderScale.x), std::floor(scrollY * scrollYScale));
             }
 
             if (autoSize) {
                 cairo_move_to(cr, std::floor((strokeWidth/2) * args.renderScale.x + 0.5), 0.0);
             } else if (move) {
-                int moveX, moveY;
-                if (centerInteract) {
-                    int text_width, text_height;
-                    pango_layout_get_pixel_size(layout, &text_width, &text_height);
-                    moveX=xtext-(text_width/2);
-                    moveY=ytext-(text_height/2);
-                } else {
-                    moveX=xtext;
-                    moveY=ytext;
-                }
-                cairo_move_to(cr, moveX, moveY);
+                moveToLayoutOrigin();
             }
 
             pango_cairo_layout_path(cr, layout);
@@ -1596,7 +1604,7 @@ void TextFXPlugin::render(const OFX::RenderArguments &args)
     else {
         if (circleRadius==0) {
             if (arcAngle>0) {
-                double arcX = width/2.0;
+                double arcX = drawWidth/2.0;
                 double arcY = height/2.0;
                 if (move) {
                     arcX = xtext;
@@ -1615,27 +1623,20 @@ void TextFXPlugin::render(const OFX::RenderArguments &args)
             }
             else {
                 if (!autoSize && move) {
-                    int moveX, moveY;
-                    if (centerInteract) {
-                        int text_width, text_height;
-                        pango_layout_get_pixel_size(layout, &text_width, &text_height);
-                        moveX=xtext-(text_width/2);
-                        moveY=ytext-(text_height/2);
-                    } else {
-                        moveX=xtext;
-                        moveY=ytext;
-                    }
-                    cairo_move_to(cr, moveX, moveY);
+                    moveToLayoutOrigin();
                 }
                 cairo_set_source_rgba(cr, r, g, b, a);
-                pango_cairo_update_layout(cr, layout);
+                if (xScale == 1.) {
+                    // (see the cairo_scale() above)
+                    pango_cairo_update_layout(cr, layout);
+                }
                 pango_cairo_show_layout(cr, layout);
             }
         }
     }
 
     if (circleRadius>0 && !autoSize) {
-        double circleX = width/2.0;
+        double circleX = drawWidth/2.0;
         double circleY = height/2.0;
         if (move) {
             circleX = xtext;
@@ -1648,7 +1649,10 @@ void TextFXPlugin::render(const OFX::RenderArguments &args)
             cairo_save(cr);
             cairo_set_source_rgba(cr, r, g, b, a);
             cairo_rotate (cr, angle * G_PI / 180.);
-            pango_cairo_update_layout(cr, layout);
+            if (xScale == 1.) {
+                // (see the cairo_scale() above)
+                pango_cairo_update_layout(cr, layout);
+            }
             pango_layout_get_size(layout, &rwidth, &rheight);
             cairo_move_to(cr, - ((double)rwidth / PANGO_SCALE) / 2, - std::floor(circleRadius * args.renderScale.x + 0.5));
             pango_cairo_layout_path(cr, layout);
@@ -1945,9 +1949,9 @@ bool TextFXPlugin::getRegionOfDefinition(const OFX::RegionOfDefinitionArguments 
 
     if (width>0 && height>0) {
         rod.x1 = rod.y1 = 0;
-        // The RoD is in canonical coordinates. v7: the canvas and the measured text are in
-        // pixels, so apply the PAR (v6 did not, which cropped or padded the text if PAR != 1).
-        rod.x2 = _canonicalCenter ? pixelWidthToCanonical(width, getPAR()) : width;
+        // The RoD is in canonical coordinates. v7: the canvas is in pixels, so apply the PAR
+        // (v6 did not), and the text is measured in canonical units, as render() draws it.
+        rod.x2 = (_canonicalCenter && !autoSize) ? pixelWidthToCanonical(width, getPAR()) : width;
         rod.y2 = height;
     }
     else {
