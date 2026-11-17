@@ -1087,7 +1087,9 @@ void TextFXPlugin::render(const OFX::RenderArguments &args)
                     strokeDashZ=0;
                 }
                 double dash[] = {strokeDashX, strokeDashY, strokeDashZ};
-                cairo_set_dash(cr, dash, strokeDash, 0);
+                // only 3 dash lengths exist; strokeDash ranges up to 100,
+                // and larger values made cairo read past the end of dash[]
+                cairo_set_dash(cr, dash, std::min(strokeDash, 3), 0);
             }
 
             cairo_new_path(cr);
