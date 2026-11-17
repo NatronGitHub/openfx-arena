@@ -251,30 +251,46 @@ function(ofx_plugin_resources TARGET)
 endfunction()
 
 # ofx_target_openmp(<target> [REQUIRED])
-# Compile and link <target> with OpenMP if OFX_USE_OPENMP. Apple clang has no
-# -fopenmp and no runtime: use "-Xpreprocessor -fopenmp" and MacPorts' libomp
-# (<prefix>/include/libomp, <prefix>/lib/libomp), as Makefile.master.
+# Compile and link <target> with OpenMP if OFX_USE_OPENMP (as openfx #125). Apple clang has
+# no OpenMP runtime: it uses libomp from MacPorts (/opt/local/include/libomp,
+# /opt/local/lib/libomp), or from OFX_LIBOMP_ROOT, with "-Xpreprocessor -fopenmp".
 function(ofx_target_openmp TARGET)
-  cmake_parse_arguments(PARSE_ARGV 1 _ofx "REQUIRED" "" "")
+  cmake_parse_arguments(PARSE_ARGV 1 OFX "REQUIRED" "" "")
   if(NOT OFX_USE_OPENMP)
     return()
   endif()
-  if(CMAKE_CXX_COMPILER_ID STREQUAL "AppleClang" AND NOT OpenMP_CXX_FLAGS)
-    find_path(OFX_LIBOMP_INCLUDE_DIR omp.h PATH_SUFFIXES libomp)
-    find_library(OFX_LIBOMP_LIBRARY omp PATH_SUFFIXES libomp)
+  if(TARGET OpenMP::OpenMP_CXX) # found by an earlier call
+    target_link_libraries(${TARGET} PRIVATE OpenMP::OpenMP_CXX)
+    return()
+  endif()
+  if(APPLE AND CMAKE_CXX_COMPILER_ID STREQUAL "AppleClang")
+    if(NOT "${OFX_LIBOMP_ROOT}" STREQUAL "${_OFX_LIBOMP_ROOT_SEARCHED}")
+      # OFX_LIBOMP_ROOT changed: search again
+      unset(OFX_LIBOMP_INCLUDE_DIR CACHE)
+      unset(OFX_LIBOMP_LIBRARY CACHE)
+      set(_OFX_LIBOMP_ROOT_SEARCHED "${OFX_LIBOMP_ROOT}" CACHE INTERNAL "")
+    endif()
+    find_path(OFX_LIBOMP_INCLUDE_DIR omp.h
+      HINTS ${OFX_LIBOMP_ROOT} ${OFX_LIBOMP_ROOT}/include ${OFX_LIBOMP_ROOT}/include/libomp
+            /opt/local/include/libomp
+      NO_DEFAULT_PATH)
+    find_library(OFX_LIBOMP_LIBRARY omp
+      HINTS ${OFX_LIBOMP_ROOT} ${OFX_LIBOMP_ROOT}/lib ${OFX_LIBOMP_ROOT}/lib/libomp
+            /opt/local/lib/libomp
+      NO_DEFAULT_PATH)
     if(OFX_LIBOMP_INCLUDE_DIR AND OFX_LIBOMP_LIBRARY)
-      set(OpenMP_CXX_FLAGS "-Xpreprocessor -fopenmp -I${OFX_LIBOMP_INCLUDE_DIR}" CACHE STRING "OpenMP flags (Apple clang)")
-      set(OpenMP_CXX_LIB_NAMES "omp" CACHE STRING "OpenMP libraries (Apple clang)")
-      set(OpenMP_omp_LIBRARY "${OFX_LIBOMP_LIBRARY}" CACHE FILEPATH "libomp (Apple clang)")
+      set(OpenMP_CXX_FLAGS "-Xpreprocessor -fopenmp -I${OFX_LIBOMP_INCLUDE_DIR}")
+      set(OpenMP_CXX_LIB_NAMES omp)
+      set(OpenMP_omp_LIBRARY "${OFX_LIBOMP_LIBRARY}")
     endif()
   endif()
-  if(_ofx_REQUIRED)
-    find_package(OpenMP REQUIRED COMPONENTS CXX)
-  else()
-    find_package(OpenMP COMPONENTS CXX)
-  endif()
+  find_package(OpenMP COMPONENTS CXX)
   if(TARGET OpenMP::OpenMP_CXX)
     target_link_libraries(${TARGET} PRIVATE OpenMP::OpenMP_CXX)
+  elseif(OFX_REQUIRED)
+    message(FATAL_ERROR "ofx_target_openmp(${TARGET}): OpenMP not found (MacPorts: port install libomp)")
+  else()
+    message(WARNING "ofx_target_openmp(${TARGET}): OpenMP not found, building without it (MacPorts: port install libomp; or set OFX_LIBOMP_ROOT, or OFX_USE_OPENMP=OFF)")
   endif()
 endfunction()
 
@@ -472,7 +488,9 @@ if(MINGW)
     set_property(TARGET PkgConfig::MAGICK APPEND PROPERTY INTERFACE_LINK_LIBRARIES oleaut32)
   endif()
 endif()
-list(INSERT CMAKE_PREFIX_PATH 0 "${MAGICK_PREFIX}")
+if(NOT DEFINED OFX_LIBOMP_ROOT)
+  set(OFX_LIBOMP_ROOT "${MAGICK_PREFIX}") # ofx_target_openmp(): libomp next to ImageMagick
+endif()
 if(EXISTS "${MAGICK_PREFIX}/lib/libomp")
   set_property(TARGET PkgConfig::MAGICK APPEND PROPERTY INTERFACE_LINK_DIRECTORIES "${MAGICK_PREFIX}/lib/libomp")
 endif()
