@@ -21,6 +21,10 @@
 ########################################################################
 CMAKE_MINIMUM_REQUIRED(VERSION 3.16) # as Natron and openfx-io; CMake 3.16 has OpenMP imported targets
 PROJECT(Arena CXX)
+# normalize install() destinations: -DPLUGIN_INSTALLDIR=. gives ./Arena.ofx.bundle (CMake 3.31)
+if(POLICY CMP0177)
+  cmake_policy(SET CMP0177 NEW)
+endif()
 
 if("${CMAKE_SOURCE_DIR}" STREQUAL "${CMAKE_BINARY_DIR}")
   message(FATAL_ERROR "Prevented in-tree built. This is bad practice.")
