@@ -46,17 +46,8 @@ if(NOT DEFINED CMAKE_CXX_STANDARD)
     set(CMAKE_CXX_STANDARD 17)
 endif()
 
-# Use -Ofast when applicable (implies -ffast-math)
-if("${CMAKE_CXX_COMPILER_ID}" STREQUAL "GNU")
-    set (CMAKE_CXX_FLAGS_RELEASE "-Wall -Wextra -Ofast -DNDEBUG")
-    set (CMAKE_C_FLAGS_RELEASE   "-Wall -Wextra -Ofast -DNDEBUG")
-elseif("${CMAKE_CXX_COMPILER_ID}" STREQUAL "Intel")
-    set (CMAKE_CXX_FLAGS_RELEASE "-Wall -Ofast -DNDEBUG")
-    set (CMAKE_C_FLAGS_RELEASE   "-Wall -Ofast -DNDEBUG")
-elseif("${CMAKE_CXX_COMPILER_ID}" STREQUAL "Clang")
-    set (CMAKE_CXX_FLAGS_RELEASE "-Wall -Wextra -Ofast -DNDEBUG")
-    set (CMAKE_C_FLAGS_RELEASE   "-Wall -Wextra -Ofast -DNDEBUG")
-endif()
+# Release: CMake's default -O3 -DNDEBUG, not -Ofast: -ffast-math's -ffinite-math-only
+# folds std::isnan/isfinite to constants and lets NaN through std::max (Natron#1277)
 SET(OPENFX_PATH ${CMAKE_CURRENT_SOURCE_DIR}/../OpenFX)
 
 # Check that submodule have been initialized and updated
