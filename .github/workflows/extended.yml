@@ -2,7 +2,9 @@ name: Extended builds
 
 # Nightly, only if master had a commit in the last 25 hours, and on demand:
 # - the builds of ci.yml with C++20 (Natron Qt6 builds and RB-2.7);
-# - the per-PR (C++17) macOS build, which isn't required for merging.
+# - the per-PR (C++17) macOS build, which isn't required for merging;
+# - a Linux build with the Makefiles, which ci.yml no longer uses (CMake), but which
+#   Natron's build-plugins.sh still does: it keeps them from rotting.
 
 on:
   workflow_dispatch:
@@ -60,3 +62,13 @@ jobs:
       cxxstd: c++17
       artifacts: false
       macos-only: true
+
+  make-linux:
+    needs: changes
+    if: needs.changes.outputs.run == 'true'
+    uses: ./.github/workflows/platforms.yml
+    with:
+      cxxstd: c++17
+      artifacts: false
+      linux-only: true
+      build-system: make

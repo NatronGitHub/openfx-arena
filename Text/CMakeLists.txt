@@ -17,21 +17,25 @@
 # ***** END LICENSE BLOCK *****
 
 ########################################################################
-IF(${CMAKE_SOURCE_DIR} STREQUAL ${CMAKE_BINARY_DIR})
-MESSAGE(FATAL_ERROR "Prevented in-tree built. This is bad practice.")
-ENDIF(${CMAKE_SOURCE_DIR} STREQUAL ${CMAKE_BINARY_DIR})
-
-########################################################################
 # Project setup
 ########################################################################
-CMAKE_MINIMUM_REQUIRED(VERSION 3.12)
+CMAKE_MINIMUM_REQUIRED(VERSION 3.16) # as Natron and openfx-io
 PROJECT(Text CXX)
+
+if("${CMAKE_SOURCE_DIR}" STREQUAL "${CMAKE_BINARY_DIR}")
+  message(FATAL_ERROR "Prevented in-tree built. This is bad practice.")
+endif()
 ENABLE_TESTING()
 
 option(RICHTEXT "Enable RichText OFX" OFF)
 option(BUNDLE_FONTS_CONF "Bundle fonts.conf" OFF)
 
-include(FindOpenGL REQUIRED)
+# libGL, as Makefile.master: with GLVND's libOpenGL, OPENGL_gl_LIBRARY is empty and the
+# module doesn't load on Linux (undefined symbol: glMultMatrixd)
+if(NOT DEFINED OpenGL_GL_PREFERENCE)
+  set(OpenGL_GL_PREFERENCE LEGACY)
+endif()
+find_package(OpenGL REQUIRED)
 find_package(PkgConfig REQUIRED)
 pkg_search_module(FONTCONFIG REQUIRED fontconfig)
 pkg_search_module(PANGO REQUIRED pangocairo)
@@ -42,17 +46,8 @@ if(NOT DEFINED CMAKE_CXX_STANDARD)
     set(CMAKE_CXX_STANDARD 17)
 endif()
 
-# Use -Ofast when applicable (implies -ffast-math)
-if("${CMAKE_CXX_COMPILER_ID}" STREQUAL "GNU")
-    set (CMAKE_CXX_FLAGS_RELEASE "-Wall -Wextra -Ofast -DNDEBUG")
-    set (CMAKE_C_FLAGS_RELEASE   "-Wall -Wextra -Ofast -DNDEBUG")
-elseif("${CMAKE_CXX_COMPILER_ID}" STREQUAL "Intel")
-    set (CMAKE_CXX_FLAGS_RELEASE "-Wall -Ofast -DNDEBUG")
-    set (CMAKE_C_FLAGS_RELEASE   "-Wall -Ofast -DNDEBUG")
-elseif("${CMAKE_CXX_COMPILER_ID}" STREQUAL "Clang")
-    set (CMAKE_CXX_FLAGS_RELEASE "-Wall -Wextra -Ofast -DNDEBUG")
-    set (CMAKE_C_FLAGS_RELEASE   "-Wall -Wextra -Ofast -DNDEBUG")
-endif()
+# Release: CMake's default -O3 -DNDEBUG, not -Ofast: -ffast-math's -ffinite-math-only
+# folds std::isnan/isfinite to constants and lets NaN through std::max (Natron#1277)
 SET(OPENFX_PATH ${CMAKE_CURRENT_SOURCE_DIR}/../OpenFX)
 
 # Check that submodule have been initialized and updated
@@ -64,7 +59,6 @@ endif()
 
 # C++ Include directories
 INCLUDE_DIRECTORIES(${CMAKE_CURRENT_SOURCE_DIR})
-INCLUDE_DIRECTORIES(${CMAKE_CURRENT_SOURCE_DIR}/../SupportExt)
 INCLUDE_DIRECTORIES(${CMAKE_CURRENT_SOURCE_DIR}/../Magick) # PackedImage.h
 INCLUDE_DIRECTORIES(${OPENFX_PATH}/include)
 INCLUDE_DIRECTORIES(${OPENFX_PATH}/Support/include)
@@ -92,12 +86,6 @@ FILE(GLOB SUPPORT_SOURCES
     "${OFX_SUPPORT_LIBRARY_DIR}/ofxsProperty.cpp"
     "${OFX_SUPPORT_LIBRARY_DIR}/ofxsPropertyValidation.cpp"
     "${OFX_SUPPORT_LIBRARY_DIR}/*.h"
-    "../SupportExt/ofxsRectangleInteract.cpp"
-    "../SupportExt/ofxsTransform3x3.cpp"
-    "../SupportExt/ofxsTransformInteract.cpp"
-    "../SupportExt/ofxsShutter.cpp"
-    "../SupportExt/ofxsMultiPlane.cpp"
-    "../SupportExt/*.h"
 )
 
 FILE(GLOB SOURCES
@@ -135,19 +123,27 @@ ${CMAKE_CURRENT_SOURCE_DIR}/fonts.conf.in
 ${CMAKE_CURRENT_BINARY_DIR}/fonts.conf
 @ONLY)
 
-ADD_LIBRARY(${PROJECT_NAME} SHARED ${SOURCES} ${SUPPORT_SOURCES})
+# MODULE: -bundle on macOS, no SONAME elsewhere, as Makefile.master
+ADD_LIBRARY(${PROJECT_NAME} MODULE ${SOURCES} ${SUPPORT_SOURCES})
+# the SupportExt sources it had (TextOFX's transform interact, MultiPlane), built with
+# the plug-in's definitions
+include(${CMAKE_CURRENT_SOURCE_DIR}/../SupportExt/cmake/SupportExt.cmake)
+supportext_add_sources(${PROJECT_NAME} COMPONENTS TRANSFORM3X3 TRANSFORM_INTERACT MULTIPLANE)
 SET_TARGET_PROPERTIES(${PROJECT_NAME} PROPERTIES PREFIX "")
 SET_TARGET_PROPERTIES(${PROJECT_NAME} PROPERTIES SUFFIX ".ofx")
 
-# Add extra flags to the link step of the plugin
+# Add extra flags to the link step of the plugin: export only OfxGetPlugin and
+# OfxGetNumberOfPlugins (the macOS list was given to the compiler driver without
+# -Wl, so the link failed, #67; the Linux flags gave -fvisibility=hidden to the linker)
+set_target_properties(${PROJECT_NAME} PROPERTIES CXX_VISIBILITY_PRESET hidden)
 if(APPLE)
-    set_target_properties(${PROJECT_NAME} PROPERTIES LINK_FLAGS "-fvisibility=hidden -exported_symbols_list,${OFX_SUPPORT_HEADER_DIR}/osxSymbols")
+    target_link_options(${PROJECT_NAME} PRIVATE "LINKER:-exported_symbols_list,${OFX_SUPPORT_HEADER_DIR}/osxSymbols")
     set_target_properties(${PROJECT_NAME} PROPERTIES INSTALL_RPATH "@loader_path/../Frameworks;@loader_path/../Libraries")
 elseif(MINGW)
-    set_target_properties(${PROJECT_NAME} PROPERTIES LINK_FLAGS "-shared -fvisibility=hidden -Xlinker --version-script=${OFX_SUPPORT_HEADER_DIR}/linuxSymbols")
+    target_link_options(${PROJECT_NAME} PRIVATE "LINKER:--version-script=${OFX_SUPPORT_HEADER_DIR}/linuxSymbols")
 elseif(${CMAKE_SYSTEM_NAME} STREQUAL "FreeBSD" OR ${CMAKE_SYSTEM_NAME} STREQUAL "Linux")
 # Linux & FreeBSD
-    set_target_properties(${PROJECT_NAME} PROPERTIES LINK_FLAGS "-Wl,-fvisibility=hidden,--version-script=${OFX_SUPPORT_HEADER_DIR}/linuxSymbols")
+    target_link_options(${PROJECT_NAME} PRIVATE "LINKER:--version-script=${OFX_SUPPORT_HEADER_DIR}/linuxSymbols")
     set_target_properties(${PROJECT_NAME} PROPERTIES INSTALL_RPATH "$ORIGIN/../../Libraries")
 endif()
 
@@ -161,17 +157,26 @@ TARGET_COMPILE_DEFINITIONS(
     OFX_SUPPORTS_OPENGLRENDER
     NOMINMAX
 )
-TARGET_LINK_LIBRARIES(${PROJECT_NAME} ${OPENGL_gl_LIBRARY})
+TARGET_LINK_LIBRARIES(${PROJECT_NAME} OpenGL::GL)
 
 include_directories(
     ${FONTCONFIG_INCLUDE_DIRS}
     ${PANGO_INCLUDE_DIRS}
 )
-target_link_libraries(
-    ${PROJECT_NAME}
-    ${FONTCONFIG_STATIC_LDFLAGS}
-    ${PANGO_STATIC_LDFLAGS}
-)
+# pkg-config --static --libs, as Makefile.master; "-framework X" must stay one item
+set(_libs "")
+set(_framework FALSE)
+foreach(_f ${FONTCONFIG_STATIC_LDFLAGS} ${PANGO_STATIC_LDFLAGS})
+    if(_framework)
+        list(APPEND _libs "-Wl,-framework,${_f}")
+        set(_framework FALSE)
+    elseif(_f STREQUAL "-framework")
+        set(_framework TRUE)
+    else()
+        list(APPEND _libs "${_f}")
+    endif()
+endforeach()
+target_link_libraries(${PROJECT_NAME} ${_libs})
 
 #IF (MSVC)
 #  # Some files require this option. This breaks compatibility with older linkers.
@@ -247,7 +252,7 @@ elseif(UNIX)
     set(ARCHDIR "FreeBSD-riscv64")
   elseif(_OFX_OS STREQUAL "FreeBSD" AND _OFX_CPU MATCHES "^powerpc")
     # uname -p: powerpc64, powerpc64le (uname -m only says powerpc)
-    if(NOT DEFINED CMAKE_CXX_BYTE_ORDER AND NOT CMAKE_VERSION VERSION_LESS 3.12) # CMake 3.12-3.19; TestBigEndian needs C before 3.12
+    if(NOT DEFINED CMAKE_CXX_BYTE_ORDER) # CMake < 3.20
       include(TestBigEndian)
       test_big_endian(_OFX_BIG_ENDIAN)
       if(NOT _OFX_BIG_ENDIAN)
