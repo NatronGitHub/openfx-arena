@@ -25,15 +25,15 @@ float2 effect(float x, float y, float a, float w) {
         return (float2)(x1, y1);
 }
 
-float2 displacement(int xi, int yi, int width, int height, double waveAmp, double waveLength) {
+float2 displacement(int xi, int yi, int width, int height, float waveAmp, float waveLength) {
         float aspect = ((float) height) / ((float) width);
         float x = ((float) xi) / ((float) width), y = ((float) yi) / ((float) height);
-        return effect(x - 0.5, aspect*(y - 0.5 + 0.35), waveAmp, waveLength)
-             - effect(x - 0.5, aspect*(y - 0.5 - 0.35), waveAmp, waveLength)
-             + effect(x - 0.5, aspect*(y), 2, 5000);
+        return effect(x - 0.5f, aspect*(y - 0.5f + 0.35f), waveAmp, waveLength)
+             - effect(x - 0.5f, aspect*(y - 0.5f - 0.35f), waveAmp, waveLength)
+             + effect(x - 0.5f, aspect*(y), 2.f, 5000.f);
 }
 
-kernel void filter(read_only image2d_t inputImage, write_only image2d_t outputImage, double waveAmp, double waveLength) {
+kernel void filter(read_only image2d_t inputImage, write_only image2d_t outputImage, float waveAmp, float waveLength) {
    int2 dimensions = get_image_dim(inputImage);
    int width = dimensions.x, height = dimensions.y;
    int channelDataType = get_image_channel_data_type(inputImage);
