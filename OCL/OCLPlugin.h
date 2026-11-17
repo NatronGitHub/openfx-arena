@@ -20,12 +20,29 @@
 
 #include "ofxsImageEffect.h"
 #include "ofxsMacros.h"
+#include "ofxsCoords.h"
+#include "ofxsMultiThread.h"
+#ifndef OFX_USE_MULTITHREAD_MUTEX
+// some OFX hosts do not have mutex handling in the MT-Suite (e.g. Sony Catalyst Edit)
+// prefer using the fast mutex by Marcus Geelnard http://tinythreadpp.bitsnbites.eu/
+#include "fast_mutex.h"
+#endif
+#include <cstring>
 #include <iostream>
+#include <vector>
 
 #if defined(__APPLE__) || defined(__MACOSX)
 #include "OpenCL/mac/cl.hpp"
 #else
 #include <CL/cl.hpp>
+#endif
+
+#ifdef OFX_USE_MULTITHREAD_MUTEX
+typedef OFX::MultiThread::Mutex OCLMutex;
+typedef OFX::MultiThread::AutoMutex OCLAutoMutex;
+#else
+typedef tthread::fast_mutex OCLMutex;
+typedef OFX::MultiThread::AutoMutexT<tthread::fast_mutex> OCLAutoMutex;
 #endif
 
 #define kParamOCLDevice "device"
@@ -43,16 +60,32 @@ public:
     static void describeInContextEnd(OFX::ImageEffectDescriptor &desc, OFX::ContextEnum context, OFX::PageParamDescriptor* page);
     void setupContext(bool context, std::string kernelString);
     static std::vector<cl::Device> getDevices();
+    bool getSelectedDevice(cl::Device* device) const;
+    void checkCLError(cl_int err, const char* what);
+    template <typename T>
+    void setKernelArg(cl::Kernel& kernel, cl_uint index, const T& value)
+    {
+        checkCLError(kernel.setArg(index, value), "clSetKernelArg");
+    }
 
 protected:
     OFX::Clip *_dstClip;
     OFX::Clip *_srcClip;
-    cl::Context _context;
-    cl::Program _program;
     OFX::ChoiceParam *_device;
     std::string _source;
     std::string _plugin;
     int _renderscale;
+
+    // Set up by setupContext(), possibly while renders run: only access them
+    // with _setupMutex held (render() copies the handles at start).
+    OCLMutex _setupMutex;
+    cl::Device _clDevice;
+    cl::Context _context;
+    cl::Program _program;
+    std::string _setupError; // why setupContext() failed, empty on success
+
+private:
+    std::string buildProgram(bool context, const std::string& kernelString, cl::Device* device, cl::Context* clContext, cl::Program* program);
 };
 
 template <int SupportsRenderScale>
@@ -138,26 +171,67 @@ void OCLPluginHelper<SupportsRenderScale>::render(const OFX::RenderArguments &ar
     }
 
     // get image size
-    int width = args.renderWindow.x2 - args.renderWindow.x1;
-    int height = args.renderWindow.y2 - args.renderWindow.y1;
+    const OfxRectI& renderWindow = args.renderWindow;
+    int width = renderWindow.x2 - renderWindow.x1;
+    int height = renderWindow.y2 - renderWindow.y1;
+    if (width <= 0 || height <= 0) {
+        return;
+    }
 
-    // get device
-    int device = 0;
-    _device->getValue(device);
-    std::vector<cl::Device> devices = getDevices();
+    // copy the handles: changedParam() may call setupContext() concurrently
+    cl::Device device;
+    cl::Context context;
+    cl::Program program;
+    std::string setupError;
+    {
+        OCLAutoMutex lock(_setupMutex);
+        device = _clDevice;
+        context = _context;
+        program = _program;
+        setupError = _setupError;
+    }
+
+    // the context or program could not be set up (e.g. no device): report why
+    // instead of returning an uninitialised image
+    if ( !setupError.empty() ) {
+        setPersistentMessage(OFX::Message::eMessageError, "", setupError);
+        OFX::throwSuiteStatusException(kOfxStatFailed);
+        return;
+    }
 
 #ifdef DEBUG
-    std::cout << "rendering using OpenCL device: " << devices[device].getInfo<CL_DEVICE_NAME>() << std::endl;
+    std::cout << "rendering using OpenCL device: " << device.getInfo<CL_DEVICE_NAME>() << std::endl;
 #endif
 
-    // render
-    cl::ImageFormat format(CL_RGBA, CL_FLOAT);
-    cl::Image2D in(_context, CL_MEM_READ_ONLY | CL_MEM_COPY_HOST_PTR, format, width, height, 0, (float*)srcImg->getPixelData());
-    cl::Image2D out(_context, CL_MEM_WRITE_ONLY, format, width, height, 0, NULL);
+    // The kernel works on packed width x height images covering the render
+    // window. Images may have padded or negative kOfxImagePropRowBytes, which
+    // OpenCL cannot take as a row pitch, and bounds that differ from the render
+    // window, so copy the source pixels row by row with getPixelAddress().
+    // Source pixels outside the source bounds are transparent black.
+    const size_t rowFloats = (size_t)width * 4;
+    std::vector<float> inPixels(rowFloats * height, 0.f);
+    OfxRectI srcWindow;
+    if ( OFX::Coords::rectIntersection(renderWindow, srcBounds, &srcWindow) && (srcWindow.x1 < srcWindow.x2) ) {
+        for (int y = srcWindow.y1; y < srcWindow.y2; ++y) {
+            std::memcpy(&inPixels[(y - renderWindow.y1) * rowFloats + (srcWindow.x1 - renderWindow.x1) * 4],
+                        srcImg->getPixelAddress(srcWindow.x1, y),
+                        (srcWindow.x2 - srcWindow.x1) * 4 * sizeof(float));
+        }
+    }
+    std::vector<float> outPixels(rowFloats * height);
 
-    cl::Kernel kernel(_program, "filter");
-    kernel.setArg(0, in);
-    kernel.setArg(1, out);
+    // render
+    cl_int err = CL_SUCCESS;
+    cl::ImageFormat format(CL_RGBA, CL_FLOAT);
+    cl::Image2D in(context, CL_MEM_READ_ONLY | CL_MEM_COPY_HOST_PTR, format, width, height, 0, &inPixels[0], &err);
+    checkCLError(err, "clCreateImage2D");
+    cl::Image2D out(context, CL_MEM_WRITE_ONLY, format, width, height, 0, NULL, &err);
+    checkCLError(err, "clCreateImage2D");
+
+    cl::Kernel kernel(program, "filter", &err);
+    checkCLError(err, "clCreateKernel");
+    setKernelArg(kernel, 0, in);
+    setKernelArg(kernel, 1, out);
     render(args, kernel);
 
     cl::Event timer;
@@ -170,11 +244,19 @@ void OCLPluginHelper<SupportsRenderScale>::render(const OFX::RenderArguments &ar
     size[1] = height;
     size[2] = 1;
 
-    cl::CommandQueue queue = cl::CommandQueue(_context, devices[device]);
-    queue.enqueueNDRangeKernel(kernel, cl::NullRange, cl::NDRange(width, height), cl::NullRange, NULL, &timer);
-    timer.wait();
-    queue.enqueueReadImage(out, CL_TRUE, origin, size, 0, 0, (float*)dstImg->getPixelData());
-    queue.finish();
+    cl::CommandQueue queue = cl::CommandQueue(context, device, 0, &err);
+    checkCLError(err, "clCreateCommandQueue");
+    checkCLError(queue.enqueueNDRangeKernel(kernel, cl::NullRange, cl::NDRange(width, height), cl::NullRange, NULL, &timer), "clEnqueueNDRangeKernel");
+    checkCLError(timer.wait(), "clWaitForEvents");
+    checkCLError(queue.enqueueReadImage(out, CL_TRUE, origin, size, 0, 0, &outPixels[0]), "clEnqueueReadImage");
+    checkCLError(queue.finish(), "clFinish");
+
+    // the render window is inside the dst bounds (checked above)
+    for (int y = renderWindow.y1; y < renderWindow.y2; ++y) {
+        std::memcpy(dstImg->getPixelAddress(renderWindow.x1, y),
+                    &outPixels[(y - renderWindow.y1) * rowFloats],
+                    rowFloats * sizeof(float));
+    }
 }
 
 template <int SupportsRenderScale>

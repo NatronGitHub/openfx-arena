@@ -1019,7 +1019,7 @@ TransformInteractCustomHelper::penMotion(const OFX::PenArgs &args)
 
     if ( (_mouseState != eReleased) && _interactiveDrag && valuesChanged ) {
         // no need to redraw overlay since it is slave to the paramaters
-        ImageEffect::EditBlock eb("setTransform", true);
+        ImageEffect::EditBlock eb(*_effect, "setTransform", true);
         if (centerChanged) {
             _center->setValue(center.x, center.y);
         }

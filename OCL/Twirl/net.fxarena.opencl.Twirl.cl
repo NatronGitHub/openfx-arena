@@ -16,12 +16,6 @@
  * along with openfx-arena.  If not, see <http://www.gnu.org/licenses/gpl-2.0.html>
 */
 
-#ifdef cl_khr_fp64
-#pragma OPENCL EXTENSION cl_khr_fp64 : enable
-#elif defined(cl_amd_fp64)
-#pragma OPENCL EXTENSION cl_amd_fp64 : enable
-#endif
-
 const sampler_t sampler = CLK_NORMALIZED_COORDS_FALSE;
 
 float clampRGB( float x ) {
@@ -30,7 +24,7 @@ float clampRGB( float x ) {
          : x;
 }
 
-kernel void filter (read_only image2d_t in, write_only image2d_t out, double centerW, double centerH, double amount, double radius) {
+kernel void filter (read_only image2d_t in, write_only image2d_t out, float centerW, float centerH, float amount, float radius) {
 
     int2 d = get_image_dim(in);
     int2 pos = (int2)(get_global_id(0),get_global_id(1));
@@ -41,8 +35,8 @@ kernel void filter (read_only image2d_t in, write_only image2d_t out, double cen
     float u = (cos(a)*x + sin(a)*y);
     float v = (-sin(a)*x + cos(a)*y);
 
-    u += (float)centerW;
-    v += (float)centerH;
+    u += centerW;
+    v += centerH;
 
     float4 fp = read_imagef(in,sampler,(int2)((int)u,(int)v));
 
