@@ -26,6 +26,13 @@ if("${CMAKE_SOURCE_DIR}" STREQUAL "${CMAKE_BINARY_DIR}")
   message(FATAL_ERROR "Prevented in-tree built. This is bad practice.")
 endif()
 
+# Release by default with single-config generators: CMake's empty build type has
+# no optimization (and, like the Debug build, no NDEBUG)
+if(NOT CMAKE_CONFIGURATION_TYPES AND NOT CMAKE_BUILD_TYPE)
+  message(STATUS "CMAKE_BUILD_TYPE not set: using Release")
+  set(CMAKE_BUILD_TYPE Release CACHE STRING "Build type (Debug, Release, RelWithDebInfo, MinSizeRel)" FORCE)
+endif()
+
 option(OLD_POPPLER "Support poppler-lib < 0.83" OFF)
 # AUTO, as Bundle/Makefile: AudioCurve if pkg-config finds sox
 set(AUDIO "AUTO" CACHE STRING "Build AudioCurve (sox): AUTO (if pkg-config finds sox), ON or OFF")
@@ -118,6 +125,7 @@ set_target_properties(${_ofx_support} PROPERTIES
   CXX_VISIBILITY_PRESET hidden
   VISIBILITY_INLINES_HIDDEN ON
   CXX_STANDARD ${OFX_CXX_STANDARD}
+  CXX_EXTENSIONS OFF
   OSX_ARCHITECTURES "${CMAKE_OSX_ARCHITECTURES}")
 # ofxsProcessing.H and friends, which Makefile.master puts in the include path
 target_include_directories(${_ofx_support} INTERFACE "$<BUILD_INTERFACE:${_OFX_CMAKE_MODULE_DIR}/../Support/Plugins/include>")
@@ -129,7 +137,8 @@ target_include_directories(${_ofx_support} INTERFACE "$<BUILD_INTERFACE:${_OFX_C
 # ${PLUGIN_INSTALLDIR}. INFO_PLIST is configured into Contents/Info.plist; without
 # it, openfx's Info.plist.in is, with IDENTIFIER and VERSION. As Makefile.master:
 # hidden visibility and the osxSymbols/linuxSymbols export lists, the rpaths of the
-# bundled libraries, DEBUG or NDEBUG, big objects on Windows, ${OFX_CXX_STANDARD}.
+# bundled libraries, DEBUG in Debug builds, big objects on Windows, strict
+# ${OFX_CXX_STANDARD} (no GNU extensions).
 # (DIR is accepted for compatibility with OpenFX.cmake and unused.)
 function(add_ofx_plugin TARGET)
   cmake_parse_arguments(PARSE_ARGV 1 _ofx "" "DIR;BUNDLE_NAME;INFO_PLIST;IDENTIFIER;VERSION" "SOURCES")
@@ -140,10 +149,10 @@ function(add_ofx_plugin TARGET)
   add_library(${TARGET} MODULE ${_ofx_SOURCES})
   set_target_properties(${TARGET} PROPERTIES
     PREFIX "" SUFFIX ".ofx" OUTPUT_NAME "${_ofx_BUNDLE_NAME}"
-    CXX_STANDARD ${OFX_CXX_STANDARD} CXX_STANDARD_REQUIRED ON
+    CXX_STANDARD ${OFX_CXX_STANDARD} CXX_STANDARD_REQUIRED ON CXX_EXTENSIONS OFF
     C_VISIBILITY_PRESET hidden CXX_VISIBILITY_PRESET hidden VISIBILITY_INLINES_HIDDEN ON)
   target_link_libraries(${TARGET} PRIVATE openfx::Support)
-  target_compile_definitions(${TARGET} PRIVATE $<IF:$<CONFIG:Debug>,DEBUG,NDEBUG>)
+  target_compile_definitions(${TARGET} PRIVATE $<$<CONFIG:Debug>:DEBUG>)
   target_compile_options(${TARGET} PRIVATE $<$<CXX_COMPILER_ID:MSVC>:/bigobj>)
   if(MINGW AND CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
     target_compile_options(${TARGET} PRIVATE -Wa,-mbig-obj)
