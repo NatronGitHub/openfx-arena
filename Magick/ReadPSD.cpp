@@ -121,6 +121,16 @@ hasComposite(const std::vector<Magick::Image>& frames)
     return !frames.empty() && frames[0].format() == "Adobe Photoshop bitmap";
 }
 
+// The offset of a layer, signed. Don't use page().xOff()/yOff(): with IM6, Magick::Geometry keeps the
+// magnitude there and the sign in xNegative()/yNegative(), so a layer at -20,-10 would land at +20,+10.
+// MagickCore's page.x/y is signed with IM6 and IM7.
+static void
+layerOffset(const Magick::Image& frame, int* x, int* y)
+{
+    *x = (int)frame.constImage()->page.x;
+    *y = (int)frame.constImage()->page.y;
+}
+
 // frameForLayerChoice() results that are not a frame index
 static const int kNoFrame = -1;     // the choice is past the last layer
 static const int kMergedLayers = -2; // the layers merged, for files without a composite (XCF)
@@ -503,8 +513,7 @@ void ReadPSDPlugin::decodePlane(const std::string& filename, OfxTime time, int /
                 foundLayer = true;
             if (foundLayer) {
                 if (offsetLayer) {
-                    offsetX = frames[i].page().xOff();
-                    offsetY = frames[i].page().yOff();
+                    layerOffset(frames[i], &offsetX, &offsetY);
                 }
                 layer = i;
                 break;
@@ -521,8 +530,7 @@ void ReadPSDPlugin::decodePlane(const std::string& filename, OfxTime time, int /
         }
         // a layer (not the composite) is placed at its offset
         if ( offsetLayer && layer != kMergedLayers && (layer > 0 || !hasComposite(frames)) ) {
-            offsetX = frames[layer].page().xOff();
-            offsetY = frames[layer].page().yOff();
+            layerOffset(frames[layer], &offsetX, &offsetY);
         }
     }
 
@@ -536,7 +544,9 @@ void ReadPSDPlugin::decodePlane(const std::string& filename, OfxTime time, int /
         // no composite in the file (XCF): merge the layers, each at its offset
         image = Magick::Image(Magick::Geometry(width,height),Magick::Color("rgba(0,0,0,0)"));
         for (size_t i = 0; i < frames.size(); i++) {
-            image.composite(frames[i], frames[i].page().xOff(), frames[i].page().yOff(), Magick::OverCompositeOp);
+            int x, y;
+            layerOffset(frames[i], &x, &y);
+            image.composite(frames[i], x, y, Magick::OverCompositeOp);
         }
     }
     else {
