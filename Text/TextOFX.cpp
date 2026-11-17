@@ -1070,7 +1070,7 @@ void TextFXPlugin::render(const OFX::RenderArguments &args)
             rotateY = ytext;
         }
         cairo_translate(cr, rotateX, rotateY);
-        cairo_rotate(cr, -rotate * (M_PI/180.0));
+        cairo_rotate(cr, -rotate * (OFXS_PI / 180.0));
         cairo_translate(cr, -rotateX, -rotateY);
     }
 
@@ -1130,7 +1130,7 @@ void TextFXPlugin::render(const OFX::RenderArguments &args)
                     arcX = xtext;
                     arcY = ytext;
                 }
-                cairo_arc(cr, arcX, arcY, std::floor(arcRadius * args.renderScale.x + 0.5), 0.0, arcAngle * (M_PI/180.0));
+                cairo_arc(cr, arcX, arcY, std::floor(arcRadius * args.renderScale.x + 0.5), 0.0, arcAngle * (OFXS_PI / 180.0));
                 cairo_path_t *path;
                 cairo_save(cr);
                 path = cairo_copy_path_flat(cr);
