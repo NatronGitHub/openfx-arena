@@ -181,16 +181,22 @@ void CharcoalPlugin::render(const OFX::RenderArguments &args)
 #if MagickLibVersion >= 0x700
     // IM7's charcoal drops the alpha channel, and CopyAlphaCompositeOp below would then copy the
     // grey levels into alpha. IM6's charcoal also filtered the opacity channel (edge, then blur;
-    // normalize and negate leave it alone): do the same on a copy of it, and put it back
-    Magick::Image opacity(image);
-    opacity.channel(Magick::AlphaChannel);
-    opacity.negate();
-    opacity.edge(radius);
-    opacity.blur(radius,sigma);
-    opacity.negate();
-    image.charcoal(radius,sigma);
-    image.alpha(true);
-    image.composite(opacity, 0, 0, Magick::CopyAlphaCompositeOp);
+    // normalize and negate leave it alone): do the same on a copy of it, and put it back.
+    // An opaque source keeps an opaque alpha, so skip that pass, which costs more than charcoal
+    if (image.isOpaque()) {
+        image.charcoal(radius,sigma);
+        image.alpha(true);
+    } else {
+        Magick::Image opacity(image);
+        opacity.channel(Magick::AlphaChannel);
+        opacity.negate();
+        opacity.edge(radius);
+        opacity.blur(radius,sigma);
+        opacity.negate();
+        image.charcoal(radius,sigma);
+        image.alpha(true);
+        image.composite(opacity, 0, 0, Magick::CopyAlphaCompositeOp);
+    }
 #else
     image.charcoal(radius,sigma);
 #endif
