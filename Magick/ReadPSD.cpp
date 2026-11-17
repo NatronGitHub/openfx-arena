@@ -37,7 +37,7 @@
 #define kPluginGrouping "Image/Readers"
 #define kPluginIdentifier "net.fxarena.openfx.ReadPSD"
 #define kPluginVersionMajor 2
-#define kPluginVersionMinor 7
+#define kPluginVersionMinor 8 // 2.8: the XCF layer menu is fixed in place on hosts other than Natron (#74)
 #define kPluginEvaluation 92
 
 #define kSupportsRGBA true
