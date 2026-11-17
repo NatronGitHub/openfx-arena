@@ -129,7 +129,27 @@ public:
         default:
             method = MagickCore::UndefinedMorphology;
         }
+#if MagickLibVersion >= 0x700
+        // IM7 applies every method to alpha too (Distance made the output transparent). IM6 did
+        // that only for the convolutions and the intensity methods, and applied the others to its
+        // default channels, RGB: keep the IM6 behaviour
+        switch (method) {
+        case MagickCore::ConvolveMorphology:
+        case MagickCore::CorrelateMorphology:
+        case MagickCore::ErodeIntensityMorphology:
+        case MagickCore::DilateIntensityMorphology:
+        case MagickCore::OpenIntensityMorphology:
+        case MagickCore::CloseIntensityMorphology:
+            image.morphology(method, kernel, iterations);
+            break;
+        default:
+            image.morphologyChannel(Magick::ChannelType(Magick::RedChannel | Magick::GreenChannel | Magick::BlueChannel),
+                                    method, kernel, iterations);
+            break;
+        }
+#else
         image.morphology(method, kernel, iterations);
+#endif
     }
 private:
     IntParam *_iterations;
