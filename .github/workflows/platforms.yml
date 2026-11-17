@@ -2,7 +2,10 @@ name: Platform builds
 
 # Reusable workflow: the three builds (Linux, Windows UCRT64, macOS 15 arm64 with
 # Xcode clang and MacPorts), called by ci.yml (per push/PR, C++17) and
-# extended.yml (nightly/on demand, C++20, plus a nightly macOS C++17 build).
+# extended.yml (nightly/on demand, C++20, plus a nightly macOS C++17 build and a
+# nightly Linux build with the Makefiles). They build with CMake (BUILD_TESTING: ctest
+# loads the bundle), or with the Makefiles (build-system: make), which Natron's
+# build-plugins.sh still uses.
 
 on:
   workflow_call:
@@ -17,6 +20,14 @@ on:
         description: Build only on macOS (nightly C++17 macOS build)
         type: boolean
         default: false
+      linux-only:
+        description: Build only on Linux (nightly Make build)
+        type: boolean
+        default: false
+      build-system:
+        description: cmake, or make (the Makefiles)
+        type: string
+        default: cmake
 
 permissions:
   contents: read
@@ -24,6 +35,8 @@ permissions:
 env:
   CXXSTD: ${{ inputs.cxxstd }}
   UPLOAD_ARTIFACTS: ${{ inputs.artifacts }}
+  # the CMake install: Arena.ofx.bundle in install/OFX/Plugins
+  CMAKE_BUNDLE: install/OFX/Plugins/Arena.ofx.bundle
 
 jobs:
   linux:
@@ -42,33 +55,54 @@ jobs:
       - name: Install packages
         run: |
           sudo apt-get update
-          # the -dev packages of ImageMagick's own dependencies are needed too,
-          # since Makefile.master links with pkg-config --static
-          sudo apt-get install -y libopencolorio-dev libgl-dev libglu1-mesa-dev libmagick++-dev zlib1g-dev libwebp-dev \
+          # the -dev packages of ImageMagick's own dependencies are needed too, since
+          # Makefile.master and CMakeLists.txt link with pkg-config --static (libssl-dev and
+          # libzstd-dev: for libzip and curl)
+          sudo apt-get install -y cmake libssl-dev libzstd-dev libopencolorio-dev libgl-dev libglu1-mesa-dev libmagick++-dev zlib1g-dev libwebp-dev \
             liblcms2-dev libfontconfig1-dev libpango1.0-dev libxml2-dev libzip-dev librsvg2-dev libglib2.0-dev libfftw3-dev \
             libpoppler-dev libpoppler-glib-dev libpoppler-private-dev librevenge-dev libcdr-dev libsox-dev libcairo-dev \
             libcurl4-openssl-dev libbz2-dev libdjvulibre-dev libexif-dev libfreetype6-dev libjpeg-dev liblqr-1-0-dev \
             libltdl-dev libopenexr-dev libopenjp2-7-dev libpng-dev libtiff-dev libwmf-dev libx11-dev libxext-dev libxt-dev
-      - name: Build (release)
+      - name: Build (release, CMake)
+        if: inputs.build-system == 'cmake'
+        run: |
+          cmake -S . -B build -DCMAKE_BUILD_TYPE=Release -DOFX_CXX_STANDARD="${CXXSTD#c++}" -DBUILD_TESTING=ON \
+            -DCMAKE_INSTALL_PREFIX="$PWD/install"
+          cmake --build build --parallel 4
+          cmake --install build
+      - name: Build (debug, CMake)
+        if: inputs.build-system == 'cmake'
+        run: |
+          cmake -S . -B build-debug -DCMAKE_BUILD_TYPE=Debug -DOFX_CXX_STANDARD="${CXXSTD#c++}"
+          cmake --build build-debug --parallel 4
+      - name: Load test (ctest)
+        if: inputs.build-system == 'cmake'
+        run: ctest --test-dir build --output-on-failure
+      - name: Build (release, Make)
+        if: inputs.build-system == 'make'
         run: make -j4 CONFIG=release CXX="g++ -std=$CXXSTD"
-      - name: Build (debug)
+      - name: Build (debug, Make)
+        if: inputs.build-system == 'make'
         run: make -j4 CONFIG=debug CXX="g++ -std=$CXXSTD"
       - name: Verify that the plugins load
+        env:
+          BUNDLE: ${{ inputs.build-system == 'make' && 'Bundle/Linux-64-release/Arena.ofx.bundle' || env.CMAKE_BUNDLE }}
         run: |
           # RTLD_NOW instead of RTLD_LAZY, so that missing symbols make loading fail
           sed -e 's/RTLD_LAZY/RTLD_NOW/g' OpenFX/HostSupport/src/ofxhBinary.cpp > ofxhBinaryStrict.cpp
           g++ -o verify_plugin_loads OpenFX-IO/.github/workflows/verify_plugin_loads.cpp ofxhBinaryStrict.cpp \
             -I OpenFX/HostSupport/include/ -I OpenFX/include/
-          ./verify_plugin_loads Bundle/Linux-64-release/Arena.ofx.bundle/Contents/Linux-x86-64/Arena.ofx
+          ./verify_plugin_loads "$BUNDLE/Contents/Linux-x86-64/Arena.ofx" | tee load.txt
+          grep -q "^Num_plugins: 26$" load.txt
       - name: Upload artifacts
         if: env.UPLOAD_ARTIFACTS == 'true'
         uses: actions/upload-artifact@v4
         with:
-          name: openfx-arena-linux-release-${{ inputs.cxxstd }}
-          path: Bundle/Linux-64-release/Arena.ofx.bundle
+          name: openfx-arena-linux-release-${{ inputs.cxxstd }}-${{ inputs.build-system }}
+          path: ${{ inputs.build-system == 'make' && 'Bundle/Linux-64-release/Arena.ofx.bundle' || env.CMAKE_BUNDLE }}
 
   windows:
-    if: ${{ !inputs.macos-only }}
+    if: ${{ !inputs.macos-only && !inputs.linux-only }}
     name: Windows (MSYS2 UCRT64)
     runs-on: windows-latest
     timeout-minutes: 90
@@ -88,26 +122,56 @@ jobs:
           cache: true
           pacboy: >-
             cc:p pkgconf:p ntldd:p imagemagick:p opencolorio:p lcms2:p fontconfig:p pango:p librsvg:p
-            libxml2:p libzip:p libcdr:p librevenge:p sox:p curl:p poppler:p
+            libxml2:p libzip:p libcdr:p librevenge:p sox:p curl:p poppler:p cmake:p ninja:p
           install: make
-      - name: Build (release)
+      - name: Build (release, CMake)
+        if: inputs.build-system == 'cmake'
+        run: |
+          set -eo pipefail
+          cmake -S . -B build -G Ninja -DCMAKE_BUILD_TYPE=Release -DOFX_CXX_STANDARD="${CXXSTD#c++}" -DIM=7 \
+            -DBUILD_TESTING=ON -DCMAKE_INSTALL_PREFIX="$PWD/install"
+          cmake --build build --parallel 4
+          cmake --install build
+      - name: Build (debug, CMake)
+        if: inputs.build-system == 'cmake'
+        run: |
+          set -eo pipefail
+          cmake -S . -B build-debug -G Ninja -DCMAKE_BUILD_TYPE=Debug -DOFX_CXX_STANDARD="${CXXSTD#c++}" -DIM=7
+          cmake --build build-debug --parallel 4
+      - name: Load test (ctest)
+        if: inputs.build-system == 'cmake'
+        run: |
+          set -eo pipefail
+          ctest --test-dir build --output-on-failure
+      - name: Build (release, Make)
+        if: inputs.build-system == 'make'
         run: |
           set -eo pipefail
           make -j4 CONFIG=release MINGW=1 IM=7 CXX="g++ -std=$CXXSTD"
-      - name: Build (debug)
+      - name: Build (debug, Make)
+        if: inputs.build-system == 'make'
         run: |
           set -eo pipefail
           make -j4 CONFIG=debug MINGW=1 IM=7 CXX="g++ -std=$CXXSTD"
+      - name: Find the bundle
+        run: |
+          set -eo pipefail
+          if [ "${{ inputs.build-system }}" = make ]; then
+            echo "BUNDLE=$(find Bundle -maxdepth 1 -name "*-release")/Arena.ofx.bundle" >> "$GITHUB_ENV"
+          else
+            echo "BUNDLE=$CMAKE_BUNDLE" >> "$GITHUB_ENV"
+          fi
       - name: Verify that the plugins load
         run: |
           set -eo pipefail
           g++ -o verify_plugin_loads OpenFX-IO/.github/workflows/verify_plugin_loads.cpp OpenFX/HostSupport/src/ofxhBinary.cpp \
             OpenFX/HostSupport/src/ofxhUtilities.cpp -I OpenFX/HostSupport/include/ -I OpenFX/include/
-          ./verify_plugin_loads `find Bundle -maxdepth 1 -name "*-release"`/Arena.ofx.bundle/Contents/Win64/Arena.ofx
+          ./verify_plugin_loads "$BUNDLE/Contents/Win64/Arena.ofx" | tee load.txt
+          grep -q "^Num_plugins: 26.\?$" load.txt
       - name: Diagnose plugin load failure
         if: failure()
         run: |
-          OFX=`find Bundle -maxdepth 1 -name "*-release"`/Arena.ofx.bundle/Contents/Win64/Arena.ofx
+          OFX="$BUNDLE/Contents/Win64/Arena.ofx"
           # missing DLLs (ext-ms-win-* API sets are always reported, ignore them)
           ntldd -R "$OFX" | grep -iE "not found|=> *$" | grep -v "ext-ms-" || true
           # the Windows error message (e.g. a missing entry point in a DLL)
@@ -133,14 +197,14 @@ jobs:
         if: env.UPLOAD_ARTIFACTS == 'true'
         uses: actions/upload-artifact@v4
         with:
-          name: openfx-arena-windows-release-${{ inputs.cxxstd }}
-          path: Bundle/*-release/Arena.ofx.bundle
+          name: openfx-arena-windows-release-${{ inputs.cxxstd }}-${{ inputs.build-system }}
+          path: ${{ env.BUNDLE }}
 
   macos:
     # macOS arm64 runners are scarce: start only once Linux and Windows have passed. Merging
     # only requires Linux and Windows; macOS is also built nightly (extended.yml).
     needs: [linux, windows]
-    if: ${{ !cancelled() && (inputs.macos-only || (needs.linux.result == 'success' && needs.windows.result == 'success')) }}
+    if: ${{ !cancelled() && !inputs.linux-only && (inputs.macos-only || (needs.linux.result == 'success' && needs.windows.result == 'success')) }}
     # System (Xcode) clang with MacPorts libraries, as for Natron's macOS SDK.
     name: macOS 15 arm64 (Xcode clang, MacPorts)
     runs-on: macos-15
@@ -149,7 +213,7 @@ jobs:
       run:
         shell: bash -eo pipefail {0}
     env:
-      PORTS: pkgconfig gsed ImageMagick opencolorio lcms2 fontconfig pango librsvg poppler libxml2 libzip librevenge libcdr-0.1 sox curl
+      PORTS: cmake pkgconfig gsed ImageMagick opencolorio lcms2 fontconfig pango librsvg poppler libxml2 libzip librevenge libcdr-0.1 sox curl
     steps:
       - uses: actions/checkout@v4
         with:
@@ -162,24 +226,53 @@ jobs:
           sudo port -N install $PORTS
           # same fix as in Natron's INSTALL_MACOS.md
           sudo sed -i '' -e 's/Zstd::Zstd/zstd/' /opt/local/lib/pkgconfig/libzip.pc
-      - name: Build (release)
+      - name: Build (release, CMake)
+        if: inputs.build-system == 'cmake'
+        run: |
+          # MacPorts' cmake and pkg-config, the system (Xcode) clang
+          export PATH=/opt/local/bin:/opt/local/sbin:$PATH
+          c++ --version
+          cmake --version
+          # OFX_DEPLOY_BUNDLES: osxDeploy.sh, as the Makefiles' release build
+          cmake -S . -B build -DCMAKE_BUILD_TYPE=Release -DOFX_CXX_STANDARD="${CXXSTD#c++}" -DBUILD_TESTING=ON \
+            -DOFX_DEPLOY_BUNDLES=ON -DCMAKE_INSTALL_PREFIX="$PWD/install"
+          cmake --build build --parallel 4
+          cmake --install build
+      - name: Build (debug, CMake)
+        if: inputs.build-system == 'cmake'
+        run: |
+          export PATH=/opt/local/bin:/opt/local/sbin:$PATH
+          cmake -S . -B build-debug -DCMAKE_BUILD_TYPE=Debug -DOFX_CXX_STANDARD="${CXXSTD#c++}"
+          cmake --build build-debug --parallel 4
+      - name: Load test (ctest)
+        if: inputs.build-system == 'cmake'
+        run: |
+          export PATH=/opt/local/bin:/opt/local/sbin:$PATH
+          ctest --test-dir build --output-on-failure
+      - name: Build (release, Make)
+        if: inputs.build-system == 'make'
         run: |
           export PATH=/opt/local/bin:/opt/local/sbin:$PATH
           c++ --version
           make -j4 CONFIG=release CXX="c++ -std=$CXXSTD" CXXFLAGS_EXTRA="-DGL_SILENCE_DEPRECATION"
-      - name: Build (debug)
+      - name: Build (debug, Make)
+        if: inputs.build-system == 'make'
         run: |
           export PATH=/opt/local/bin:/opt/local/sbin:$PATH
           make -j4 CONFIG=debug CXX="c++ -std=$CXXSTD" CXXFLAGS_EXTRA="-DGL_SILENCE_DEPRECATION"
       - name: Verify that the plugins load
+        env:
+          BUNDLE: ${{ inputs.build-system == 'make' && 'Bundle/Darwin-64-release/Arena.ofx.bundle' || env.CMAKE_BUNDLE }}
         run: |
           sed -e 's/RTLD_LAZY/RTLD_NOW/g' OpenFX/HostSupport/src/ofxhBinary.cpp > ofxhBinaryStrict.cpp
           c++ -std=c++11 -o verify_plugin_loads OpenFX-IO/.github/workflows/verify_plugin_loads.cpp ofxhBinaryStrict.cpp \
             -I OpenFX/HostSupport/include/ -I OpenFX/include/
-          ./verify_plugin_loads Bundle/Darwin-64-release/Arena.ofx.bundle/Contents/MacOS/Arena.ofx
+          # the installed (deployed) bundle, with its own copies of the MacPorts libraries
+          ./verify_plugin_loads "$BUNDLE/Contents/MacOS/Arena.ofx" | tee load.txt
+          grep -q "^Num_plugins: 26$" load.txt
       - name: Upload artifacts
         if: env.UPLOAD_ARTIFACTS == 'true'
         uses: actions/upload-artifact@v4
         with:
-          name: openfx-arena-macos-release-${{ inputs.cxxstd }}
-          path: Bundle/Darwin-64-release/Arena.ofx.bundle
+          name: openfx-arena-macos-release-${{ inputs.cxxstd }}-${{ inputs.build-system }}
+          path: ${{ inputs.build-system == 'make' && 'Bundle/Darwin-64-release/Arena.ofx.bundle' || env.CMAKE_BUNDLE }}
