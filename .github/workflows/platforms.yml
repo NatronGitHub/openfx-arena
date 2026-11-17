@@ -75,7 +75,7 @@ jobs:
         run: |
           cmake -S . -B build-debug -DCMAKE_BUILD_TYPE=Debug -DOFX_CXX_STANDARD="${CXXSTD#c++}"
           cmake --build build-debug --parallel 4
-      - name: Load test (ctest)
+      - name: Load and render tests (ctest, hostDemo)
         if: inputs.build-system == 'cmake'
         run: ctest --test-dir build --output-on-failure
       - name: Build (release, Make)
@@ -138,7 +138,7 @@ jobs:
           set -eo pipefail
           cmake -S . -B build-debug -G Ninja -DCMAKE_BUILD_TYPE=Debug -DOFX_CXX_STANDARD="${CXXSTD#c++}" -DIM=7
           cmake --build build-debug --parallel 4
-      - name: Load test (ctest)
+      - name: Load and render tests (ctest, hostDemo)
         if: inputs.build-system == 'cmake'
         run: |
           set -eo pipefail
@@ -245,7 +245,7 @@ jobs:
           export PATH=/opt/local/bin:/opt/local/sbin:$PATH
           cmake -S . -B build-debug -DCMAKE_BUILD_TYPE=Debug -DOFX_CXX_STANDARD="${CXXSTD#c++}"
           cmake --build build-debug --parallel 4
-      - name: Load test (ctest)
+      - name: Load and render tests (ctest, hostDemo)
         if: inputs.build-system == 'cmake'
         run: |
           export PATH=/opt/local/bin:/opt/local/sbin:$PATH
