@@ -1,12 +1,5 @@
 PLUGINNAME = Magick
 
-ifneq ($(LEGACYIM),1)
-PLUGINOBJECTS += \
-    Sketch.o \
-    Polaroid.o \
-    Edges.o
-endif
-
 PLUGINOBJECTS = \
     Texture.o \
     Tile.o \
@@ -33,6 +26,13 @@ PLUGINOBJECTS = \
     GenericReader.o \
     GenericOCIO.o \
     SequenceParsing.o
+
+ifneq ($(LEGACYIM),1)
+PLUGINOBJECTS += \
+    Sketch.o \
+    Polaroid.o \
+    Edges.o
+endif
 
 RESOURCES = \
     Extra.png \
