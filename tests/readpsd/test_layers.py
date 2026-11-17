@@ -13,7 +13,7 @@
 # usage: test_layers.py [--hostdemo PATH] [--workdir DIR] BUNDLE_DIR
 #   BUNDLE_DIR: the directory that contains Arena.ofx.bundle
 #   hostDemo: from OpenFX's HostSupport/examples (it needs PFM output and --report), default $HOSTDEMO
-#   --workdir: keep the files and renders there (by default, a temporary directory, removed if all pass)
+#   --workdir: keep the files and renders there (by default, a temporary directory, always removed)
 # Needs Python 3 and NumPy, and ImageMagick for the layered PSD (see mklayers.py; $MAGICK overrides it).
 # Exit status 0 if all pass.
 import argparse, json, os, shutil, subprocess, sys, tempfile
@@ -75,11 +75,18 @@ def render(hostdemo, bundle_dir, workdir, name, settings):
     except (OSError, ValueError):
         rep = None
     if p.returncode == 0:
-        rgb = read_pfm(os.path.join(d, 'out.0.pfm'))
-        a = read_pfm(os.path.join(d, 'out.0.alpha.pfm'))
-        out = np.concatenate([rgb, a[..., None]], -1).astype(np.float64)
-        if rep and rep['clipPreferences']['outputPremultiplication'] != 'OfxImageAlphaPremultiplied':
-            out = premult(out)
+        # a hostDemo built with the multiview extensions (e.g. by CMake, with OFX_EXTENSIONS_NUKE and VEGAS)
+        # writes out.0l.pfm and out.0r.pfm instead of out.0.pfm: use the left view
+        base = next((b for b in ('out.0', 'out.0l') if os.path.exists(os.path.join(d, b + '.pfm'))), None)
+        if base is None:
+            msgs = 'no out.0.pfm or out.0l.pfm; hostDemo wrote: %s. %s' % (
+                ', '.join(sorted(os.listdir(d))) or 'nothing', msgs)
+        else:
+            rgb = read_pfm(os.path.join(d, base + '.pfm'))
+            a = read_pfm(os.path.join(d, base + '.alpha.pfm'))
+            out = np.concatenate([rgb, a[..., None]], -1).astype(np.float64)
+            if rep and rep['clipPreferences']['outputPremultiplication'] != 'OfxImageAlphaPremultiplied':
+                out = premult(out)
     return p.returncode, out, ' '.join(msgs.split())
 
 def main():
@@ -95,6 +102,14 @@ def main():
         print('FAIL: no Arena.ofx.bundle in %s' % bundle_dir)
         return 1
     workdir = os.path.abspath(a.workdir or tempfile.mkdtemp(prefix='readpsd-layers-'))
+    try:
+        return run(a, bundle_dir, hostdemo, workdir)
+    finally:
+        # a temporary work dir goes, whatever happened (--workdir keeps the files and renders)
+        if not a.workdir:
+            shutil.rmtree(workdir, ignore_errors=True)
+
+def run(a, bundle_dir, hostdemo, workdir):
     files = os.path.join(workdir, 'files')
     has_psd = mklayers.write_all(files) is not None
     with open(os.path.join(workdir, 'identity.ocio'), 'w') as f:
@@ -144,6 +159,8 @@ def main():
             detail = 'rc=%d %s' % (rc, msgs[:120])
         elif rc != 0:
             ok, detail = False, 'rc=%d %s' % (rc, msgs[:120])
+        elif out is None:
+            ok, detail = False, msgs[:200]
         elif out.shape != exp.shape:
             ok, detail = False, 'size %s, expected %s' % (out.shape[:2], exp.shape[:2])
         else:
@@ -154,9 +171,9 @@ def main():
         print('%-4s %-30s %s' % ('ok' if ok else 'FAIL', name, detail))
     if not has_psd:
         print('note: ImageMagick not found, the layered PSD cases were skipped')
-    print('%d/%d passed (work dir %s)' % (len(cases) - nfail, len(cases), workdir))
-    if not nfail and not a.workdir:
-        shutil.rmtree(workdir)
+    print('%d/%d passed%s' % (len(cases) - nfail, len(cases),
+                              ' (work dir %s)' % workdir if a.workdir else
+                              ('' if not nfail else ' (rerun with --workdir DIR to keep the renders)')))
     return 1 if nfail else 0
 
 if __name__ == '__main__':
