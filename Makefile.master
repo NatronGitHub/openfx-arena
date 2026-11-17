@@ -11,11 +11,16 @@ MAGICK_LINKFLAGS = $(shell pkg-config Magick++ --cflags-only-other --libs --stat
 # Apple clang rejects -fopenmp, which ImageMagick's .pc adds when it was built
 # with OpenMP (e.g. MacPorts). It accepts "-Xpreprocessor -fopenmp" with an
 # external libomp, which MacPorts installs under $(prefix)/{include,lib}/libomp.
+# libomp is a separate port, so an ImageMagick built in its own prefix (e.g.
+# a local IM7) has no libomp next to it: LIBOMP_PREFIX defaults to the
+# ImageMagick prefix if it has libomp, else to MacPorts' /opt/local, and can
+# be set on the command line.
 ifeq ($(shell $(CXX) --version 2>/dev/null | grep -c "Apple clang"),1)
 ifneq ($(filter -fopenmp,$(MAGICK_CXXFLAGS) $(MAGICK_LINKFLAGS)),)
 MAGICK_PREFIX := $(shell pkg-config Magick++ --variable=prefix)
-MAGICK_CXXFLAGS := $(patsubst -fopenmp,-Xpreprocessor -fopenmp,$(MAGICK_CXXFLAGS)) -I$(MAGICK_PREFIX)/include/libomp
-MAGICK_LINKFLAGS := $(patsubst -fopenmp,,$(MAGICK_LINKFLAGS)) -L$(MAGICK_PREFIX)/lib/libomp
+LIBOMP_PREFIX ?= $(if $(wildcard $(MAGICK_PREFIX)/lib/libomp),$(MAGICK_PREFIX),/opt/local)
+MAGICK_CXXFLAGS := $(patsubst -fopenmp,-Xpreprocessor -fopenmp,$(MAGICK_CXXFLAGS)) -I$(LIBOMP_PREFIX)/include/libomp
+MAGICK_LINKFLAGS := $(patsubst -fopenmp,,$(MAGICK_LINKFLAGS)) -L$(LIBOMP_PREFIX)/lib/libomp
 endif
 endif
 

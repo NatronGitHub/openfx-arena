@@ -1,12 +1,5 @@
 PLUGINNAME = Magick
 
-ifneq ($(LEGACYIM),1)
-PLUGINOBJECTS += \
-    Sketch.o \
-    Polaroid.o \
-    Edges.o
-endif
-
 PLUGINOBJECTS = \
     Texture.o \
     Tile.o \
@@ -29,9 +22,19 @@ PLUGINOBJECTS = \
     ofxsOGLTextRenderer.o \
     ofxsOGLFontData.o \
     ofxsRectangleInteract.o \
+    ofxsMultiPlane.o \
     GenericReader.o \
     GenericOCIO.o \
     SequenceParsing.o
+
+# must come after the "PLUGINOBJECTS =" assignment above, which would
+# otherwise discard these objects
+ifneq ($(LEGACYIM),1)
+PLUGINOBJECTS += \
+    Sketch.o \
+    Polaroid.o \
+    Edges.o
+endif
 
 RESOURCES = \
     Extra.png \
@@ -115,6 +118,3 @@ ifeq ($(IM),68)
 CXXFLAGS += -DNOMAGICKSEED
 endif
 
-ifeq ($(READMISC_LEGACY),1)
-CXXFLAGS += -DREADMISC_LEGACY
-endif

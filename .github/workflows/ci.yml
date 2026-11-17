@@ -1,8 +1,12 @@
 name: Continuous Integration tests
 
-# Policy (Natron-related repos): exactly three full builds per PR/push
-# (Linux, Windows UCRT64, macOS arm64 with the system clang and MacPorts),
-# read-only token, artifacts only on demand or on pre-release tags.
+# Frugal CI (NatronGitHub runners are shared by all repos): one run per change.
+# Pushes run CI only on master, RB-* and tags; feature branches run through their
+# pull request (not on every push, and not twice). Draft pull requests don't run
+# CI: mark the PR ready for review to run it. Superseded runs are cancelled,
+# except for tags. The C++20 builds run nightly in extended.yml. macOS starts only
+# once Linux and Windows pass, and is not required for merging (scarce runners).
+# Use [skip ci] for comment- or doc-only commits.
 
 on:
   workflow_dispatch:
@@ -12,171 +16,28 @@ on:
         type: boolean
         default: false
   push:
-    branches: ['**']
-    tags: ['*-rc*', '*-beta*', '*-alpha*', '*-pre*']
+    branches: [master, 'RB-*']
+    tags: ['*']
     paths-ignore: ['**/*.md', 'LICENSE', 'COPYING', 'gpl-header-c.txt']
   pull_request:
+    types: [opened, synchronize, reopened, ready_for_review]
     paths-ignore: ['**/*.md', 'LICENSE', 'COPYING', 'gpl-header-c.txt']
 
 permissions:
   contents: read
 
 concurrency:
-  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
-  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
-
-env:
-  UPLOAD_ARTIFACTS: ${{ (github.event_name == 'workflow_dispatch' && inputs.artifacts) || startsWith(github.ref, 'refs/tags/') }}
+  # event_name keeps a manual dispatch from cancelling (or being cancelled by) a push
+  group: ${{ github.workflow }}-${{ github.event_name }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: ${{ !startsWith(github.ref, 'refs/tags/') }}
 
 jobs:
-  linux:
-    name: Linux (Ubuntu 24.04)
-    runs-on: ubuntu-24.04
-    timeout-minutes: 60
-    defaults:
-      run:
-        shell: bash -eo pipefail {0}
-    steps:
-      - uses: actions/checkout@v4
-        with:
-          submodules: recursive
-          persist-credentials: false
-      - name: Install packages
-        run: |
-          sudo apt-get update
-          # the -dev packages of ImageMagick's own dependencies are needed too,
-          # since Makefile.master links with pkg-config --static
-          sudo apt-get install -y libopencolorio-dev libgl-dev libglu1-mesa-dev libmagick++-dev zlib1g-dev libwebp-dev \
-            liblcms2-dev libfontconfig1-dev libpango1.0-dev libxml2-dev libzip-dev librsvg2-dev libglib2.0-dev libfftw3-dev \
-            libpoppler-dev libpoppler-glib-dev libpoppler-private-dev librevenge-dev libcdr-dev libsox-dev libcairo-dev \
-            libcurl4-openssl-dev libbz2-dev libdjvulibre-dev libexif-dev libfreetype6-dev libjpeg-dev liblqr-1-0-dev \
-            libltdl-dev libopenexr-dev libopenjp2-7-dev libpng-dev libtiff-dev libwmf-dev libx11-dev libxext-dev libxt-dev
-      - name: Build (release)
-        run: make -j4 CONFIG=release
-      - name: Build (debug)
-        run: make -j4 CONFIG=debug
-      - name: Verify that the plugins load
-        run: |
-          # RTLD_NOW instead of RTLD_LAZY, so that missing symbols make loading fail
-          sed -e 's/RTLD_LAZY/RTLD_NOW/g' OpenFX/HostSupport/src/ofxhBinary.cpp > ofxhBinaryStrict.cpp
-          g++ -o verify_plugin_loads OpenFX-IO/.github/workflows/verify_plugin_loads.cpp ofxhBinaryStrict.cpp \
-            -I OpenFX/HostSupport/include/ -I OpenFX/include/
-          ./verify_plugin_loads Bundle/Linux-64-release/Arena.ofx.bundle/Contents/Linux-x86-64/Arena.ofx
-      - name: Upload artifacts
-        if: env.UPLOAD_ARTIFACTS == 'true'
-        uses: actions/upload-artifact@v4
-        with:
-          name: openfx-arena-linux-release
-          path: Bundle/Linux-64-release/Arena.ofx.bundle
-
-  windows:
-    name: Windows (MSYS2 UCRT64)
-    runs-on: windows-latest
-    timeout-minutes: 90
-    defaults:
-      run:
-        shell: msys2 {0}
-    steps:
-      - uses: actions/checkout@v4
-        with:
-          submodules: recursive
-          persist-credentials: false
-      - name: Install MSYS2 packages
-        uses: msys2/setup-msys2@v2
-        with:
-          msystem: ucrt64
-          update: true
-          cache: true
-          pacboy: >-
-            cc:p pkgconf:p ntldd:p imagemagick:p opencolorio:p lcms2:p fontconfig:p pango:p librsvg:p
-            libxml2:p libzip:p libcdr:p librevenge:p sox:p curl:p poppler:p
-          install: make
-      - name: Build (release)
-        run: |
-          set -eo pipefail
-          make -j4 CONFIG=release MINGW=1 IM=7
-      - name: Build (debug)
-        run: |
-          set -eo pipefail
-          make -j4 CONFIG=debug MINGW=1 IM=7
-      - name: Verify that the plugins load
-        run: |
-          set -eo pipefail
-          g++ -o verify_plugin_loads OpenFX-IO/.github/workflows/verify_plugin_loads.cpp OpenFX/HostSupport/src/ofxhBinary.cpp \
-            OpenFX/HostSupport/src/ofxhUtilities.cpp -I OpenFX/HostSupport/include/ -I OpenFX/include/
-          ./verify_plugin_loads `find Bundle -maxdepth 1 -name "*-release"`/Arena.ofx.bundle/Contents/Win64/Arena.ofx
-      - name: Diagnose plugin load failure
-        if: failure()
-        run: |
-          OFX=`find Bundle -maxdepth 1 -name "*-release"`/Arena.ofx.bundle/Contents/Win64/Arena.ofx
-          # missing DLLs (ext-ms-win-* API sets are always reported, ignore them)
-          ntldd -R "$OFX" | grep -iE "not found|=> *$" | grep -v "ext-ms-" || true
-          # the Windows error message (e.g. a missing entry point in a DLL)
-          cat > loadlib.c <<'EOC'
-          #include <windows.h>
-          #include <stdio.h>
-          int main(int argc, char **argv) {
-              HMODULE h = LoadLibraryA(argv[1]);
-              if (h) { puts("loaded"); return 0; }
-              char msg[512];
-              DWORD err = GetLastError();
-              FormatMessageA(FORMAT_MESSAGE_FROM_SYSTEM, NULL, err, 0, msg, sizeof msg, NULL);
-              printf("LoadLibrary error %lu: %s\n", err, msg);
-              return 1;
-          }
-          EOC
-          gcc -o loadlib loadlib.c
-          ./loadlib "$OFX" || true
-          for d in $(ntldd -R "$OFX" | grep -i ucrt64 | awk '{print $3}' | sort -u); do
-            ./loadlib "$(cygpath -w "$d")" > /dev/null || echo "FAILS: $d: $(./loadlib "$(cygpath -w "$d")")"
-          done
-      - name: Upload artifacts
-        if: env.UPLOAD_ARTIFACTS == 'true'
-        uses: actions/upload-artifact@v4
-        with:
-          name: openfx-arena-windows-release
-          path: Bundle/*-release/Arena.ofx.bundle
-
-  macos:
-    # System (Xcode) clang with MacPorts libraries, as for Natron's macOS SDK.
-    name: macOS 15 arm64 (Xcode clang, MacPorts)
-    runs-on: macos-15
-    timeout-minutes: 120
-    defaults:
-      run:
-        shell: bash -eo pipefail {0}
-    env:
-      PORTS: pkgconfig gsed ImageMagick opencolorio lcms2 fontconfig pango librsvg poppler libxml2 libzip librevenge libcdr-0.1 sox curl
-    steps:
-      - uses: actions/checkout@v4
-        with:
-          submodules: recursive
-          persist-credentials: false
-      - name: Install MacPorts
-        uses: melusina-org/setup-macports@v1
-      - name: Install MacPorts packages
-        run: |
-          sudo port -N install $PORTS
-          # same fix as in Natron's INSTALL_MACOS.md
-          sudo sed -i '' -e 's/Zstd::Zstd/zstd/' /opt/local/lib/pkgconfig/libzip.pc
-      - name: Build (release)
-        run: |
-          export PATH=/opt/local/bin:/opt/local/sbin:$PATH
-          c++ --version
-          make -j4 CONFIG=release CXXFLAGS_EXTRA="-DGL_SILENCE_DEPRECATION"
-      - name: Build (debug)
-        run: |
-          export PATH=/opt/local/bin:/opt/local/sbin:$PATH
-          make -j4 CONFIG=debug CXXFLAGS_EXTRA="-DGL_SILENCE_DEPRECATION"
-      - name: Verify that the plugins load
-        run: |
-          sed -e 's/RTLD_LAZY/RTLD_NOW/g' OpenFX/HostSupport/src/ofxhBinary.cpp > ofxhBinaryStrict.cpp
-          c++ -std=c++11 -o verify_plugin_loads OpenFX-IO/.github/workflows/verify_plugin_loads.cpp ofxhBinaryStrict.cpp \
-            -I OpenFX/HostSupport/include/ -I OpenFX/include/
-          ./verify_plugin_loads Bundle/Darwin-64-release/Arena.ofx.bundle/Contents/MacOS/Arena.ofx
-      - name: Upload artifacts
-        if: env.UPLOAD_ARTIFACTS == 'true'
-        uses: actions/upload-artifact@v4
-        with:
-          name: openfx-arena-macos-release
-          path: Bundle/Darwin-64-release/Arena.ofx.bundle
+  build:
+    # no CI for draft pull requests
+    if: github.event_name != 'pull_request' || !github.event.pull_request.draft
+    uses: ./.github/workflows/platforms.yml
+    with:
+      # C++ standard policy: C++17 per push/PR (Natron RB-2.6 Qt5), C++20 in extended.yml
+      cxxstd: c++17
+      # artifacts only on demand or for tags
+      artifacts: ${{ (github.event_name == 'workflow_dispatch' && inputs.artifacts) || startsWith(github.ref, 'refs/tags/') }}
