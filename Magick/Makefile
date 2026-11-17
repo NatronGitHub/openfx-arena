@@ -27,6 +27,8 @@ PLUGINOBJECTS = \
     GenericOCIO.o \
     SequenceParsing.o
 
+# must come after the "PLUGINOBJECTS =" assignment above, which would
+# otherwise discard these objects
 ifneq ($(LEGACYIM),1)
 PLUGINOBJECTS += \
     Sketch.o \

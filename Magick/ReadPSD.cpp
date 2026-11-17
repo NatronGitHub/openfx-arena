@@ -334,7 +334,7 @@ void ReadPSDPlugin::restoreStateFromParams()
         genLayerMenu();
         int layer = 0;
         _imageLayer->getValue(layer);
-        if (!_psd.empty() && _psd[layer].columns()>0 && _psd[layer].rows()>0) {
+        if (layer >= 0 && layer < (int)_psd.size() && _psd[layer].columns()>0 && _psd[layer].rows()>0) {
             _filename = filename;
         } else {
             _psd.clear();
@@ -468,6 +468,12 @@ void ReadPSDPlugin::decodePlane(const std::string& filename, OfxTime time, int /
         }
     }
     else { // no multiplane
+        // the layer menu may list more layers than the file has (fixed menu
+        // on non-Natron hosts), and _psd is empty if the file failed to load
+        if ( imageLayer < 0 || imageLayer >= (int)_psd.size() ) {
+            setPersistentMessage(OFX::Message::eMessageError, "", "Layer not found in image");
+            OFX::throwSuiteStatusException(kOfxStatFailed);
+        }
         if (imageLayer>0 || _psd[imageLayer].format()!="Adobe Photoshop bitmap") {
             if (offsetLayer) {
                 offsetX = _psd[imageLayer].page().xOff();
@@ -484,8 +490,13 @@ void ReadPSDPlugin::decodePlane(const std::string& filename, OfxTime time, int /
         newFile << filename << "[" << layer << "]";
         image.read(newFile.str().c_str());
     }
-    else
+    else {
+        if ( layer < 0 || layer >= (int)_psd.size() ) {
+            setPersistentMessage(OFX::Message::eMessageError, "", "Layer not found in image");
+            OFX::throwSuiteStatusException(kOfxStatFailed);
+        }
         image = _psd[layer];
+    }
 
     // color management
     if (color && _hasLCMS) {
@@ -670,7 +681,7 @@ bool ReadPSDPlugin::getFrameBounds(const std::string& /*filename*/,
                               OfxRectI *bounds,
                               OfxRectI* format,
                               double *par,
-                              std::string */*error*/,int *tile_width, int *tile_height)
+                              std::string *error,int *tile_width, int *tile_height)
 {
     #ifdef DEBUG
     std::cout << "getFrameBounds ..." << std::endl;
@@ -680,7 +691,7 @@ bool ReadPSDPlugin::getFrameBounds(const std::string& /*filename*/,
     int maxWidth = 0;
     int maxHeight = 0;
     _imageLayer->getValue(layer);
-    if (!_psd.empty() && _psd[layer].columns()>0 && _psd[layer].rows()>0) {
+    if (layer >= 0 && layer < (int)_psd.size() && _psd[layer].columns()>0 && _psd[layer].rows()>0) {
         for (int i = 0; i < (int)_psd.size(); i++) {
             if ((int)_psd[i].columns()>maxWidth)
                 maxWidth = (int)_psd[i].columns();
@@ -695,6 +706,13 @@ bool ReadPSDPlugin::getFrameBounds(const std::string& /*filename*/,
         bounds->y2 = maxHeight;
         *format = *bounds;
         *par = 1.0;
+    } else {
+        // bounds and format were not set: report failure instead of
+        // returning garbage bounds to GenericReader
+        if (error) {
+            *error = "Unable to read image";
+        }
+        return false;
     }
     *tile_width = *tile_height = 0;
     return true;
@@ -728,7 +746,7 @@ bool ReadPSDPlugin::guessParamsFromFilename(const std::string& /*newFile*/,
     genLayerMenu();
     int layer = 0;
     _imageLayer->getValue(layer);
-    if (!_psd.empty() && _psd[layer].columns()>0 && _psd[layer].rows()>0) {
+    if (layer >= 0 && layer < (int)_psd.size() && _psd[layer].columns()>0 && _psd[layer].rows()>0) {
         _filename = filename;
     } else {
         _psd.clear();
@@ -764,7 +782,7 @@ void ReadPSDPlugin::changedFilename(const OFX::InstanceChangedArgs &args)
     genLayerMenu();
     int layer = 0;
     _imageLayer->getValue(layer);
-    if (!_psd.empty() && _psd[layer].columns()>0 && _psd[layer].rows()>0) {
+    if (layer >= 0 && layer < (int)_psd.size() && _psd[layer].columns()>0 && _psd[layer].rows()>0) {
         _filename = filename;
     } else {
         _psd.clear();
