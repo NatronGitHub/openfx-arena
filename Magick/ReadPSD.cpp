@@ -35,6 +35,7 @@
 #include <dirent.h>
 #include <ofxNatron.h>
 #include <cstring>
+#include <fstream>
 
 #define kPluginName "ReadPSD"
 #define kPluginGrouping "Image/Readers"
@@ -141,6 +142,28 @@ layerOffset(const Magick::Image& frame, int* x, int* y)
 {
     *x = (int)frame.constImage()->page.x;
     *y = (int)frame.constImage()->page.y;
+}
+
+// The canvas size of an XCF file, from its header ("gimp xcf file" or "gimp xcf vNNN", NUL, then the width
+// and height, big-endian). ImageMagick's XCF coder drops it: its frames are only the layers, each with its
+// own size and offset, so a canvas without a layer covering it would be cut to the largest layer.
+static bool
+readXCFCanvas(const std::string& filename, int* width, int* height)
+{
+    std::ifstream f(filename.c_str(), std::ios::in | std::ios::binary);
+    unsigned char h[22];
+    if ( !f.read((char*)h, sizeof(h)) || std::memcmp(h, "gimp xcf ", 9) != 0 || h[13] != 0 ) {
+        return false;
+    }
+    const unsigned w = ((unsigned)h[14] << 24) | ((unsigned)h[15] << 16) | ((unsigned)h[16] << 8) | h[17];
+    const unsigned hh = ((unsigned)h[18] << 24) | ((unsigned)h[19] << 16) | ((unsigned)h[20] << 8) | h[21];
+    // GIMP's limit is 524288; ImageMagick's XCF coder rejects more than 262144
+    if (w == 0 || hh == 0 || w > 524288 || hh > 524288) {
+        return false;
+    }
+    *width = (int)w;
+    *height = (int)hh;
+    return true;
 }
 
 // frameForLayerChoice() results that are not a frame index
@@ -810,13 +833,17 @@ bool ReadPSDPlugin::getFrameBounds(const std::string& /*filename*/,
     int maxHeight = 0;
     _imageLayer->getValue(layer);
     std::vector<Magick::Image> frames;
-    getFrames(&frames);
+    std::string framesFilename;
+    getFrames(&frames, &framesFilename);
     if (frameForLayerChoice(frames, layer) != kNoFrame) {
-        for (int i = 0; i < (int)frames.size(); i++) {
-            if ((int)frames[i].columns()>maxWidth)
-                maxWidth = (int)frames[i].columns();
-            if ((int)frames[i].rows()>maxHeight)
-                maxHeight = (int)frames[i].rows();
+        // PSD: the largest frame, i.e. the composite. XCF: the canvas
+        if ( hasComposite(frames) || !readXCFCanvas(framesFilename, &maxWidth, &maxHeight) ) {
+            for (int i = 0; i < (int)frames.size(); i++) {
+                if ((int)frames[i].columns()>maxWidth)
+                    maxWidth = (int)frames[i].columns();
+                if ((int)frames[i].rows()>maxHeight)
+                    maxHeight = (int)frames[i].rows();
+            }
         }
     }
     if (maxWidth>0 && maxHeight>0) {
