@@ -19,6 +19,7 @@
 #include <iostream>
 #include <stdint.h>
 #include <zip.h>
+#include <cstdlib>
 #include <libxml/xmlmemory.h>
 #include <libxml/parser.h>
 #include "GenericReader.h"
@@ -114,8 +115,9 @@ ReadKritaPlugin::parseXML(xmlNode *node,int *width, int *height)
                 xmlChar *imgHchar;
                 imgWchar = xmlGetProp(cur_node,(const xmlChar*)"width");
                 imgHchar = xmlGetProp(cur_node,(const xmlChar*)"height");
-                imgW = atoi((const char*)imgWchar);
-                imgH = atoi((const char*)imgHchar);
+                // xmlGetProp returns NULL if the attribute is missing
+                imgW = imgWchar ? atoi((const char*)imgWchar) : 0;
+                imgH = imgHchar ? atoi((const char*)imgHchar) : 0;
                 xmlFree(imgWchar);
                 xmlFree(imgHchar);
                 if (imgW>0&&imgH>0) {
@@ -177,25 +179,38 @@ ReadKritaPlugin::decode(const std::string& filename,
     int renderHeight= renderWindow.y2 - renderWindow.y1;
 
     int err = 0;
+    // zip_open/zip_fopen return NULL on failure (missing or corrupt file)
     zip *imageOpen = zip_open(filename.c_str(),0,&err);
-    struct zip_stat imageSt;
-    zip_stat_init(&imageSt);
-    err=zip_stat(imageOpen,"mergedimage.png",0,&imageSt);
-    if (err!=-1) {
-        char *imageData = new char[imageSt.size];
-        zip_file *imageFile = zip_fopen(imageOpen,"mergedimage.png",0);
-        err=zip_fread(imageFile,imageData,imageSt.size);
-        if (err!=-1) {
-            zip_fclose(imageFile);
-            if ((imageData!=NULL)&&(imageSt.size>0)) {
-                lodepng_decode32(&buffer,(unsigned int*)&width,(unsigned int*)&height,(unsigned char *)imageData,(size_t)imageSt.size);
+    if (imageOpen) {
+        struct zip_stat imageSt;
+        zip_stat_init(&imageSt);
+        err=zip_stat(imageOpen,"mergedimage.png",0,&imageSt);
+        if (err!=-1 && imageSt.size>0) {
+            zip_file *imageFile = zip_fopen(imageOpen,"mergedimage.png",0);
+            if (imageFile) {
+                char *imageData = new char[imageSt.size];
+                zip_int64_t nread = zip_fread(imageFile,imageData,imageSt.size);
+                zip_fclose(imageFile);
+                if (nread == (zip_int64_t)imageSt.size) {
+                    unsigned w = 0, h = 0;
+                    unsigned pngErr = lodepng_decode32(&buffer,&w,&h,(unsigned char *)imageData,(size_t)imageSt.size);
+                    if (pngErr) {
+                        // lodepng may allocate the output even on error
+                        free(buffer);
+                        buffer = NULL;
+                    } else {
+                        width = (int)w;
+                        height = (int)h;
+                    }
+                }
+                delete[] imageData;
             }
         }
-        delete[] imageData;
+        zip_close(imageOpen);
     }
-    zip_close(imageOpen);
 
     if (buffer==NULL || width!=renderWidth || height!=renderHeight) {
+        free(buffer); // allocated by lodepng with malloc
         setPersistentMessage(OFX::Message::eMessageError, "", "Unable to read image");
         OFX::throwSuiteStatusException(kOfxStatErrFormat);
     }
@@ -223,6 +238,7 @@ ReadKritaPlugin::decode(const std::string& filename,
         }
     }
 
+    free(buffer); // allocated by lodepng with malloc; was leaked on every render
     buffer = NULL;
     delete[] pixels;
 }

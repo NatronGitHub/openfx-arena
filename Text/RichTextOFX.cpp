@@ -94,6 +94,7 @@ class RichTextPlugin : public ImageEffect
 {
 public:
     RichTextPlugin(OfxImageEffectHandle handle);
+    virtual ~RichTextPlugin();
     virtual void render(const RenderArguments &args) override final;
     virtual void changedParam(const InstanceChangedArgs &args,
                               const std::string &paramName) override final;
@@ -118,6 +119,7 @@ RichTextPlugin::RichTextPlugin(OfxImageEffectHandle handle)
 , _srcAlign(nullptr)
 , _srcWrap(nullptr)
 , _srcJustify(nullptr)
+, _fc(nullptr)
 , _srcAuto(nullptr)
 , _srcCanvas(nullptr)
 {
@@ -134,16 +136,33 @@ RichTextPlugin::RichTextPlugin(OfxImageEffectHandle handle)
            _srcJustify && _srcAuto && _srcCanvas);
 
     // setup fontconfig
+    // Load the bundled fonts.conf (if any) into a config owned by this
+    // instance, instead of setting FONTCONFIG_PATH: setenv() is process-wide
+    // (it made every fontconfig user created afterwards, e.g. TextOFX, load
+    // the bundled fonts.conf) and races with getenv() on host threads.
     std::string fontConf = ofxPath;
-    fontConf.append("/Contents/Resources/fonts");
-    if (RichText::fileExists(fontConf+"/fonts.conf")) {
-#ifdef _WIN32
-        _putenv_s("FONTCONFIG_PATH", fontConf.c_str());
-#else
-        setenv("FONTCONFIG_PATH", fontConf.c_str(), 1);
-#endif
+    fontConf.append("/Contents/Resources/fonts/fonts.conf");
+    if (RichText::fileExists(fontConf)) {
+        _fc = FcConfigCreate();
+        if (_fc &&
+            (!FcConfigParseAndLoad(_fc, (const FcChar8*)fontConf.c_str(), FcTrue) ||
+             !FcConfigBuildFonts(_fc))) {
+            FcConfigDestroy(_fc);
+            _fc = nullptr;
+        }
     }
-    _fc = FcInitLoadConfigAndFonts();
+    if (!_fc) {
+        // no bundled fonts.conf (or it failed to load): use the default config
+        _fc = FcInitLoadConfigAndFonts();
+    }
+}
+
+RichTextPlugin::~RichTextPlugin()
+{
+    // the render threads' fontmaps hold their own reference, if any
+    if (_fc) {
+        FcConfigDestroy(_fc);
+    }
 }
 
 /* Override the render */
