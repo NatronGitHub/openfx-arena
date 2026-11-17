@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- sample for the hostDemo render test (ReadSVG) -->
+<svg xmlns="http://www.w3.org/2000/svg" width="64" height="48" viewBox="0 0 64 48">
+  <rect x="0" y="0" width="64" height="48" fill="#204080"/>
+  <circle cx="32" cy="24" r="16" fill="#e0c020" fill-opacity="0.8"/>
+  <path d="M4 44 L60 4" stroke="#ffffff" stroke-width="3"/>
+</svg>

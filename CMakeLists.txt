@@ -85,7 +85,11 @@ include(SupportExt/cmake/SupportExt.cmake)
 # ofx_plugin_resources(), ofx_target_openmp(), ofx_deploy_bundle(), ARCHDIR, and the
 # OFX_CXX_STANDARD, OFX_USE_OPENMP, OFX_DEPLOY_BUNDLES and PLUGIN_INSTALLDIR (default
 # OFX/Plugins, relative to CMAKE_INSTALL_PREFIX) cache variables. EXCLUDE_FROM_ALL: build
-# only what Arena links.
+# only what Arena links. With BUILD_TESTING, also openfx's hostDemo, for the render test
+# (tests/hostdemo); normal builds don't build it.
+if(BUILD_TESTING)
+  set(BUILD_EXAMPLE_HOSTS ON)
+endif()
 add_subdirectory(OpenFX EXCLUDE_FROM_ALL)
 
 ########################################################################
@@ -513,4 +517,35 @@ endif()
                 -P "${CMAKE_CURRENT_BINARY_DIR}/verify_plugin_loads.cmake")
         endif()
     endforeach()
+
+    # render test: every plug-in rendered once with openfx's hostDemo (tests/hostdemo), the
+    # readers on samples written by make_samples (ImageMagick, libzip) and sample.svg
+    if(TARGET hostDemo)
+        set(_samples "${CMAKE_CURRENT_BINARY_DIR}/hostdemo-samples")
+        add_executable(make_samples tests/hostdemo/make_samples.cpp)
+        target_link_libraries(make_samples PRIVATE PkgConfig::MAGICK PkgConfig::ZIP)
+        ofx_target_openmp(make_samples)
+        set(_sample_files sample.png sample.psd sample.bmp sample.ora sample.kra sample.pdf sample.svg sample_hald.png)
+        list(TRANSFORM _sample_files PREPEND "${_samples}/")
+        add_custom_command(OUTPUT ${_sample_files}
+            COMMAND "${CMAKE_COMMAND}" -E make_directory "${_samples}"
+            COMMAND make_samples "${_samples}"
+            COMMAND "${CMAKE_COMMAND}" -E copy "${CMAKE_CURRENT_SOURCE_DIR}/tests/hostdemo/sample.svg" "${_samples}"
+            DEPENDS make_samples tests/hostdemo/sample.svg
+            VERBATIM)
+        # hostDemo is in openfx's EXCLUDE_FROM_ALL directory: build it with the tests
+        add_custom_target(hostdemo_test ALL DEPENDS ${_sample_files} hostDemo)
+        foreach(_t Arena HaldCLUT OCL)
+            if(TARGET ${_t})
+                string(TOLOWER "${_t}" _list)
+                add_test(NAME render_${_t} COMMAND "${CMAKE_COMMAND}"
+                    -DHOSTDEMO=$<TARGET_FILE:hostDemo> -DVERIFY=$<TARGET_FILE:verify_plugin_loads>
+                    -DBINARY=$<TARGET_FILE:${_t}> -DLIST=${CMAKE_CURRENT_SOURCE_DIR}/tests/hostdemo/${_list}.txt
+                    -DSAMPLES=${_samples} -DWORK=${CMAKE_CURRENT_BINARY_DIR}/hostdemo-${_t}
+                    -P "${CMAKE_CURRENT_SOURCE_DIR}/tests/hostdemo/run.cmake")
+            endif()
+        endforeach()
+    else()
+        message(STATUS "BUILD_TESTING: no hostDemo (openfx's HostSupport examples), no render test")
+    endif()
 endif()

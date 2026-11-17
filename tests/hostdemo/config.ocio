@@ -1,0 +1,40 @@
+# A minimal OpenColorIO config for the hostDemo render test (OCIO environment variable):
+# the readers need one; every colorspace is an identity.
+ocio_profile_version: 1
+search_path: ""
+strictparsing: false
+luma: [0.2126, 0.7152, 0.0722]
+roles:
+  color_picking: sRGB
+  color_timing: sRGB
+  compositing_log: sRGB
+  data: raw
+  default: linear
+  matte_paint: sRGB
+  reference: linear
+  scene_linear: linear
+  texture_paint: sRGB
+displays:
+  default:
+    - !<View> {name: None, colorspace: raw}
+active_displays: []
+active_views: []
+colorspaces:
+  - !<ColorSpace>
+    name: linear
+    family: ""
+    bitdepth: 32f
+    isdata: false
+    allocation: uniform
+  - !<ColorSpace>
+    name: sRGB
+    family: ""
+    bitdepth: 32f
+    isdata: false
+    allocation: uniform
+  - !<ColorSpace>
+    name: raw
+    family: ""
+    bitdepth: 32f
+    isdata: true
+    allocation: uniform

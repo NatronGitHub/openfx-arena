@@ -1,0 +1,4 @@
+# HaldCLUT.ofx.bundle (HALDCLUT=ON), rendered by tests/hostdemo/run.cmake (see arena.txt).
+# The default look is downloaded at render time: give it a generated identity CLUT instead.
+# (The plug-in still creates its preset folder, ~/.clut, empty, when it is instantiated.)
+net.fxarena.openfx.HaldCLUT 1 filter custom=@SAMPLES@/sample_hald.png
