@@ -859,9 +859,10 @@ void TextFXPlugin::render(const OFX::RenderArguments &args)
 
     double ytext = y*args.renderScale.y;
     double xtext = x*args.renderScale.x;
-    int tmp_y = dstRod.y2 - dstBounds.y2;
-    int tmp_height = dstBounds.y2 - dstBounds.y1;
-    ytext = tmp_y + ((tmp_y+tmp_height-1) - ytext);
+    // The cairo surface covers dstRod, whatever the bounds of dstImg (which may be only the
+    // render window, see the write below), so flip y within dstRod, not within dstBounds.
+    // When dstBounds == dstRod this is the same value as before.
+    ytext = (dstRod.y2 - dstRod.y1 - 1) - ytext;
 
     if (!txt.empty()) {
         std::string txt_tmp = textFromFile(txt);
