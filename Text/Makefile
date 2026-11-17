@@ -4,7 +4,8 @@ PLUGINOBJECTS = RichText.o RichTextOFX.o TextOFX.o
 
 PLUGINOBJECTS += \
     ofxsTransform3x3.o \
-    ofxsTransformInteract.o
+    ofxsTransformInteract.o \
+    ofxsShutter.o
 
 RESOURCES = \
     net.fxarena.openfx.Text.png \
