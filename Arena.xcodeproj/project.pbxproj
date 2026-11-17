@@ -2092,8 +2092,6 @@
 		ACE3CE691BB7E19C0042BAF9 /* ofxsMaskMix.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = ofxsMaskMix.h; sourceTree = "<group>"; };
 		ACE3CE6A1BB7E19C0042BAF9 /* ofxsMatrix2D.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = ofxsMatrix2D.h; sourceTree = "<group>"; };
 		ACE3CE6B1BB7E19C0042BAF9 /* ofxsMerging.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = ofxsMerging.h; sourceTree = "<group>"; };
-		ACE3CE6C1BB7E19C0042BAF9 /* ofxsMipmap.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = ofxsMipmap.cpp; sourceTree = "<group>"; };
-		ACE3CE6D1BB7E19C0042BAF9 /* ofxsMipmap.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = ofxsMipmap.h; sourceTree = "<group>"; };
 		ACE3CE6E1BB7E19C0042BAF9 /* ofxsOGLFontData.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = ofxsOGLFontData.cpp; sourceTree = "<group>"; };
 		ACE3CE6F1BB7E19C0042BAF9 /* ofxsOGLFontUtils.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = ofxsOGLFontUtils.h; sourceTree = "<group>"; };
 		ACE3CE701BB7E19C0042BAF9 /* ofxsOGLTextRenderer.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = ofxsOGLTextRenderer.cpp; sourceTree = "<group>"; };
@@ -2129,8 +2127,6 @@
 		ACE3CEC71BB7E19D0042BAF9 /* ofxsMaskMix.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = ofxsMaskMix.h; sourceTree = "<group>"; };
 		ACE3CEC81BB7E19D0042BAF9 /* ofxsMatrix2D.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = ofxsMatrix2D.h; sourceTree = "<group>"; };
 		ACE3CEC91BB7E19D0042BAF9 /* ofxsMerging.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = ofxsMerging.h; sourceTree = "<group>"; };
-		ACE3CECA1BB7E19D0042BAF9 /* ofxsMipmap.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = ofxsMipmap.cpp; sourceTree = "<group>"; };
-		ACE3CECB1BB7E19D0042BAF9 /* ofxsMipmap.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = ofxsMipmap.h; sourceTree = "<group>"; };
 		ACE3CECC1BB7E19D0042BAF9 /* ofxsOGLFontData.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = ofxsOGLFontData.cpp; sourceTree = "<group>"; };
 		ACE3CECD1BB7E19D0042BAF9 /* ofxsOGLFontUtils.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = ofxsOGLFontUtils.h; sourceTree = "<group>"; };
 		ACE3CECE1BB7E19D0042BAF9 /* ofxsOGLTextRenderer.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = ofxsOGLTextRenderer.cpp; sourceTree = "<group>"; };
@@ -4936,8 +4932,6 @@
 				ACE3CE691BB7E19C0042BAF9 /* ofxsMaskMix.h */,
 				ACE3CE6A1BB7E19C0042BAF9 /* ofxsMatrix2D.h */,
 				ACE3CE6B1BB7E19C0042BAF9 /* ofxsMerging.h */,
-				ACE3CE6C1BB7E19C0042BAF9 /* ofxsMipmap.cpp */,
-				ACE3CE6D1BB7E19C0042BAF9 /* ofxsMipmap.h */,
 				ACE3CE6E1BB7E19C0042BAF9 /* ofxsOGLFontData.cpp */,
 				ACE3CE6F1BB7E19C0042BAF9 /* ofxsOGLFontUtils.h */,
 				ACE3CE701BB7E19C0042BAF9 /* ofxsOGLTextRenderer.cpp */,
@@ -4998,8 +4992,6 @@
 				ACE3CEC71BB7E19D0042BAF9 /* ofxsMaskMix.h */,
 				ACE3CEC81BB7E19D0042BAF9 /* ofxsMatrix2D.h */,
 				ACE3CEC91BB7E19D0042BAF9 /* ofxsMerging.h */,
-				ACE3CECA1BB7E19D0042BAF9 /* ofxsMipmap.cpp */,
-				ACE3CECB1BB7E19D0042BAF9 /* ofxsMipmap.h */,
 				ACE3CECC1BB7E19D0042BAF9 /* ofxsOGLFontData.cpp */,
 				ACE3CECD1BB7E19D0042BAF9 /* ofxsOGLFontUtils.h */,
 				ACE3CECE1BB7E19D0042BAF9 /* ofxsOGLTextRenderer.cpp */,

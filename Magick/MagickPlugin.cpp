@@ -28,6 +28,7 @@ MagickPluginHelperBase::MagickPluginHelperBase(OfxImageEffectHandle handle)
     , _enableMP(NULL)
     , _matte(NULL)
     , _vpixel(NULL)
+    , _unpremultSrc(false)
 {
     _dstClip = fetchClip(kOfxImageEffectOutputClipName);
     assert(_dstClip && _dstClip->getPixelComponents() == OFX::ePixelComponentRGBA);
@@ -63,11 +64,6 @@ MagickPluginHelperBase::describeInContextBegin(OFX::ImageEffectDescriptor &desc,
     dstClip->addSupportedComponent(OFX::ePixelComponentRGBA);
     dstClip->setSupportsTiles(false);
 
-    std::string features = MagickCore::GetMagickFeatures();
-    if (features.find("OpenMP") != std::string::npos) {
-        _hasMP = true;
-    }
-
     OFX::PageParamDescriptor *page = desc.definePageParam("Controls");
     {
         OFX::BooleanParamDescriptor *param = desc.defineBooleanParam(kParamOpenMP);
@@ -75,7 +71,7 @@ MagickPluginHelperBase::describeInContextBegin(OFX::ImageEffectDescriptor &desc,
         param->setHint(kParamOpenMPHint);
         param->setDefault(kParamOpenMPDefault);
         param->setAnimates(false);
-        if (!_hasMP) {
+        if (!magickHasOpenMP()) {
             param->setEnabled(false);
         }
         if (page) {

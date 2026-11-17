@@ -7,5 +7,5 @@ RESOURCES = net.fxarena.openfx.AudioCurve.png
 SRCDIR = ..
 include $(SRCDIR)/Makefile.master
 
-CXXFLAGS  += $(SOX_CXXFLAGS)
+CXXFLAGS  += $(SOX_CXXFLAGS) -I$(SRCDIR)/Magick
 LINKFLAGS += $(SOX_LINKFLAGS)
