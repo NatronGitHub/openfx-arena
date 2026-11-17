@@ -541,12 +541,16 @@ void ReadPSDPlugin::decodePlane(const std::string& filename, OfxTime time, int /
     }
     Magick::Image image;
     if (layer == kMergedLayers) {
-        // no composite in the file (XCF): merge the layers, each at its offset
+        // no composite in the file (XCF): merge the layers, bottom first, each at its offset and with
+        // its mode, which ImageMagick's XCF coder puts in compose() (NoCompositeOp for a hidden layer)
         image = Magick::Image(Magick::Geometry(width,height),Magick::Color("rgba(0,0,0,0)"));
         for (size_t i = 0; i < frames.size(); i++) {
+            if (frames[i].compose() == Magick::NoCompositeOp) {
+                continue;
+            }
             int x, y;
             layerOffset(frames[i], &x, &y);
-            image.composite(frames[i], x, y, Magick::OverCompositeOp);
+            image.composite(frames[i], x, y, frames[i].compose());
         }
     }
     else {
