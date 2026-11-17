@@ -218,7 +218,8 @@ function(add_ofx_plugin TARGET)
 endfunction()
 
 # ofx_plugin_resources(<target> [DESTINATION subdir] files...)
-# Copy files into the bundle's Contents/Resources[/subdir], in the build tree and installed.
+# Copy files into the bundle's Contents/Resources[/subdir], in the build tree (by a custom
+# target that runs at every build, so that edited resources are recopied) and installed.
 function(ofx_plugin_resources TARGET)
   cmake_parse_arguments(PARSE_ARGV 1 _ofx "" "DESTINATION" "")
   get_target_property(_bundle ${TARGET} OFX_BUNDLE_DIR)
@@ -229,16 +230,23 @@ function(ofx_plugin_resources TARGET)
   endif()
   set(_files "")
   foreach(_f ${_ofx_UNPARSED_ARGUMENTS})
-    get_filename_component(_f "${_f}" ABSOLUTE)
+    get_filename_component(_f "${_f}" ABSOLUTE BASE_DIR "${CMAKE_CURRENT_SOURCE_DIR}")
     list(APPEND _files "${_f}")
   endforeach()
   if(NOT _files)
     return()
   endif()
-  add_custom_command(TARGET ${TARGET} POST_BUILD
+  get_target_property(_n ${TARGET} OFX_RESOURCE_TARGETS)
+  if(NOT _n)
+    set(_n 0)
+  endif()
+  math(EXPR _n "${_n} + 1")
+  set_target_properties(${TARGET} PROPERTIES OFX_RESOURCE_TARGETS ${_n})
+  add_custom_target(${TARGET}_resources_${_n} ALL
     COMMAND "${CMAKE_COMMAND}" -E make_directory "${_bundle}/${_sub}"
     COMMAND "${CMAKE_COMMAND}" -E copy_if_different ${_files} "${_bundle}/${_sub}"
     VERBATIM)
+  add_dependencies(${TARGET} ${TARGET}_resources_${_n})
   install(FILES ${_files} DESTINATION "${_dest}/${_sub}")
 endfunction()
 
