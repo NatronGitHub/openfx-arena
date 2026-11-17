@@ -78,251 +78,24 @@ if(NOT DEFINED OpenGL_GL_PREFERENCE)
   set(OpenGL_GL_PREFERENCE LEGACY)
 endif()
 
+# openfx::Api and openfx::Support (with the OFX_EXTENSIONS_* and OFX_SUPPORTS_OPENGLRENDER
+# definitions of Makefile.master), and cmake/OpenFX.cmake: add_ofx_plugin(),
+# ofx_plugin_resources(), ofx_target_openmp(), ofx_deploy_bundle(), ARCHDIR, and the
+# OFX_CXX_STANDARD, OFX_USE_OPENMP, OFX_DEPLOY_BUNDLES and PLUGIN_INSTALLDIR (default
+# OFX/Plugins, relative to CMAKE_INSTALL_PREFIX) cache variables. EXCLUDE_FROM_ALL: build
+# only what Arena links.
+add_subdirectory(OpenFX EXCLUDE_FROM_ALL)
+
 ########################################################################
-# TODO: replace with OpenFX.cmake, SupportExt and IOSupport when available.
+# TODO: replace with SupportExt (supportext#46) and IOSupport (openfx-io#102).
 #
-# Stand-ins, with the names and arguments that openfx's cmake/OpenFX.cmake,
-# SupportExt and OpenFX-IO/IOSupport will provide:
-#   add_ofx_plugin(<target> [DIR d] [BUNDLE_NAME n] [INFO_PLIST file]
-#                  [IDENTIFIER id] [VERSION v] [SOURCES ...])
-#   ofx_plugin_resources(<target> [DESTINATION subdir] files...)
-#   ofx_target_openmp(<target> [REQUIRED])        (OFX_USE_OPENMP)
-#   ofx_deploy_bundle(<target>)                    (OFX_DEPLOY_BUNDLES)
+# Stand-ins, with the names and arguments that SupportExt's cmake/SupportExt.cmake
+# and OpenFX-IO/IOSupport will provide:
 #   supportext_add_sources(<target> [ALL] [OPENGL] [OSMESA] [EGL] [COMPONENTS ...])
 #   ioSupport_add_sources(<target>)
-# plus the MinGW/MSVC definitions as usage requirements of openfx::Api, and a
-# static, PIC, hidden openfx::Support. Nothing Arena-specific goes in this
-# block: when the submodules provide these, delete it; the calls stay.
+# Nothing Arena-specific goes in this block: delete it when the submodules provide
+# these; the calls stay.
 ########################################################################
-set(OFX_CXX_STANDARD 17 CACHE STRING "C++ standard of the plug-ins (17: Natron 2.6 Qt5; 20: Qt6 hosts)")
-option(OFX_USE_OPENMP "Build the plug-ins that ask for it with OpenMP" ON)
-option(OFX_DEPLOY_BUNDLES "Copy the non-system libraries into the installed bundles (macOS: osxDeploy.sh, in Release and RelWithDebInfo)" OFF)
-
-# Where the bundles are installed: OFX/Plugins by default. A STRING, so that a relative
-# path stays relative to CMAKE_INSTALL_PREFIX; declared before add_subdirectory(OpenFX),
-# whose CACHE PATH declaration would make a relative -DPLUGIN_INSTALLDIR absolute, and
-# whose OpenFX.cmake (366b9709) defaults to its examples' folder.
-if("$CACHE{PLUGIN_INSTALLDIR}" STREQUAL "")
-  set(_ofx_installdir "OFX/Plugins")
-else()
-  set(_ofx_installdir "$CACHE{PLUGIN_INSTALLDIR}")
-endif()
-set(PLUGIN_INSTALLDIR "${_ofx_installdir}" CACHE STRING "Where the OFX bundles are installed (relative: to CMAKE_INSTALL_PREFIX)" FORCE)
-
-# (not a stand-in: here because of PLUGIN_INSTALLDIR above)
-# openfx::Api and openfx::Support (with the OFX_EXTENSIONS_* and
-# OFX_SUPPORTS_OPENGLRENDER definitions of Makefile.master). EXCLUDE_FROM_ALL:
-# build only what Arena links, and install none of openfx.
-add_subdirectory(OpenFX EXCLUDE_FROM_ALL)
-# ARCHDIR, OFX_PLUGIN_BUILD_DIR and add_ofx_plugin() (redefined below until
-# OpenFX.cmake has the arguments we need)
-list(APPEND CMAKE_MODULE_PATH "${PROJECT_SOURCE_DIR}/OpenFX/cmake")
-include(OpenFX)
-
-set(_OFX_SUPPORT_INCLUDE_DIR "${_OFX_CMAKE_MODULE_DIR}/../Support/include") # osxSymbols, linuxSymbols, osxDeploy.sh
-
-# Definitions that Support/Plugins/Makefile.master and openfx's CMakeLists.txt
-# use for MinGW and MSVC, as usage requirements of openfx::Api
-get_target_property(_ofx_api openfx::Api ALIASED_TARGET)
-if(MINGW)
-  # math constants (M_PI) in every dialect, C99 printf
-  target_compile_definitions(${_ofx_api} INTERFACE _USE_MATH_DEFINES __USE_MINGW_ANSI_STDIO=1)
-elseif(MSVC)
-  target_compile_definitions(${_ofx_api} INTERFACE _USE_MATH_DEFINES NOMINMAX _HAS_AUTO_PTR_ETC)
-endif()
-# openfx::Support: static, PIC, hidden, same standard and architectures as the plug-ins
-# (openfx's CMakeLists.txt builds universal macOS binaries by default)
-get_target_property(_ofx_support openfx::Support ALIASED_TARGET)
-set_target_properties(${_ofx_support} PROPERTIES
-  POSITION_INDEPENDENT_CODE ON
-  CXX_VISIBILITY_PRESET hidden
-  VISIBILITY_INLINES_HIDDEN ON
-  CXX_STANDARD ${OFX_CXX_STANDARD}
-  CXX_EXTENSIONS OFF
-  OSX_ARCHITECTURES "${CMAKE_OSX_ARCHITECTURES}")
-# ofxsProcessing.H and friends, which Makefile.master puts in the include path
-target_include_directories(${_ofx_support} INTERFACE "$<BUILD_INTERFACE:${_OFX_CMAKE_MODULE_DIR}/../Support/Plugins/include>")
-
-# add_ofx_plugin(<target> [DIR d] [BUNDLE_NAME n] [INFO_PLIST file] [IDENTIFIER id]
-#                [VERSION v] [SOURCES ...])
-# A plug-in module <BUNDLE_NAME>.ofx (BUNDLE_NAME defaults to <target>), assembled in
-# ${OFX_PLUGIN_BUILD_DIR}/<BUNDLE_NAME>.ofx.bundle and installed into
-# ${PLUGIN_INSTALLDIR}. INFO_PLIST is configured into Contents/Info.plist; without
-# it, openfx's Info.plist.in is, with IDENTIFIER and VERSION. As Makefile.master:
-# hidden visibility and the osxSymbols/linuxSymbols export lists, the rpaths of the
-# bundled libraries, DEBUG in Debug builds, big objects on Windows, strict
-# ${OFX_CXX_STANDARD} (no GNU extensions).
-# (DIR is accepted for compatibility with OpenFX.cmake and unused.)
-function(add_ofx_plugin TARGET)
-  cmake_parse_arguments(PARSE_ARGV 1 _ofx "" "DIR;BUNDLE_NAME;INFO_PLIST;IDENTIFIER;VERSION" "SOURCES")
-  if(NOT _ofx_BUNDLE_NAME)
-    set(_ofx_BUNDLE_NAME "${TARGET}")
-  endif()
-  # MODULE everywhere: -bundle on macOS, no SONAME or import library elsewhere, as Makefile.master
-  add_library(${TARGET} MODULE ${_ofx_SOURCES})
-  set_target_properties(${TARGET} PROPERTIES
-    PREFIX "" SUFFIX ".ofx" OUTPUT_NAME "${_ofx_BUNDLE_NAME}"
-    CXX_STANDARD ${OFX_CXX_STANDARD} CXX_STANDARD_REQUIRED ON CXX_EXTENSIONS OFF
-    C_VISIBILITY_PRESET hidden CXX_VISIBILITY_PRESET hidden VISIBILITY_INLINES_HIDDEN ON)
-  target_link_libraries(${TARGET} PRIVATE openfx::Support)
-  target_compile_definitions(${TARGET} PRIVATE $<$<CONFIG:Debug>:DEBUG>)
-  target_compile_options(${TARGET} PRIVATE $<$<CXX_COMPILER_ID:MSVC>:/bigobj>)
-  if(MINGW AND CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
-    target_compile_options(${TARGET} PRIVATE -Wa,-mbig-obj)
-  endif()
-
-  # export only OfxGetPlugin and OfxGetNumberOfPlugins
-  set(_symbols "")
-  if(APPLE)
-    set(_symbols "${_OFX_SUPPORT_INCLUDE_DIR}/osxSymbols")
-    target_link_options(${TARGET} PRIVATE "LINKER:-exported_symbols_list,${_symbols}")
-  elseif(CMAKE_SYSTEM_NAME MATCHES "Linux|FreeBSD")
-    # (on Windows, OfxExport's __declspec(dllexport) already limits the DLL's exports)
-    set(_symbols "${_OFX_SUPPORT_INCLUDE_DIR}/linuxSymbols")
-    target_link_options(${TARGET} PRIVATE "LINKER:--version-script=${_symbols}")
-  endif()
-  if(_symbols)
-    set_property(TARGET ${TARGET} APPEND PROPERTY LINK_DEPENDS "${_symbols}")
-  endif()
-  # libraries bundled by osxDeploy.sh (macOS) or by the Natron installer (Linux)
-  if(APPLE)
-    set_target_properties(${TARGET} PROPERTIES INSTALL_RPATH "@loader_path/../Frameworks;@loader_path/../Libraries")
-  elseif(UNIX)
-    set_target_properties(${TARGET} PROPERTIES INSTALL_RPATH "$ORIGIN/../../Libraries")
-  endif()
-
-  # the bundle, in the build tree and installed
-  set(_bundle "${OFX_PLUGIN_BUILD_DIR}/${_ofx_BUNDLE_NAME}.ofx.bundle")
-  set(_dest "${PLUGIN_INSTALLDIR}/${_ofx_BUNDLE_NAME}.ofx.bundle")
-  set(PLUGIN_NAME "${_ofx_BUNDLE_NAME}")
-  set(PLUGIN_EXE "${_ofx_BUNDLE_NAME}.ofx")
-  set(BUNDLE_IDENTIFIER "${_ofx_IDENTIFIER}")
-  if(NOT BUNDLE_IDENTIFIER)
-    set(BUNDLE_IDENTIFIER "org.openeffects.plugins.${_ofx_BUNDLE_NAME}")
-  endif()
-  set(BUNDLE_SIGNATURE "????")
-  set(PLUGIN_VERSION "${_ofx_VERSION}")
-  if(NOT PLUGIN_VERSION)
-    set(PLUGIN_VERSION "1.0.0")
-  endif()
-  set(_plist "${_ofx_INFO_PLIST}")
-  if(NOT _plist)
-    set(_plist "${_OFX_CMAKE_MODULE_DIR}/../Examples/Info.plist.in")
-  endif()
-  configure_file("${_plist}" "${_bundle}/Contents/Info.plist")
-  set_target_properties(${TARGET} PROPERTIES
-    LIBRARY_OUTPUT_DIRECTORY "${_bundle}/Contents/${ARCHDIR}"
-    OFX_BUNDLE_DIR "${_bundle}" OFX_BUNDLE_INSTALL_DIR "${_dest}" OFX_BUNDLE_NAME "${_ofx_BUNDLE_NAME}")
-  foreach(_cfg ${CMAKE_CONFIGURATION_TYPES} ${CMAKE_BUILD_TYPE})
-    string(TOUPPER "${_cfg}" _CFG)
-    set_target_properties(${TARGET} PROPERTIES LIBRARY_OUTPUT_DIRECTORY_${_CFG} "${_bundle}/Contents/${ARCHDIR}")
-  endforeach()
-  install(TARGETS ${TARGET} LIBRARY DESTINATION "${_dest}/Contents/${ARCHDIR}")
-  install(FILES "${_bundle}/Contents/Info.plist" DESTINATION "${_dest}/Contents")
-endfunction()
-
-# ofx_plugin_resources(<target> [DESTINATION subdir] files...)
-# Copy files into the bundle's Contents/Resources[/subdir], in the build tree (by a custom
-# target that runs at every build, so that edited resources are recopied) and installed.
-function(ofx_plugin_resources TARGET)
-  cmake_parse_arguments(PARSE_ARGV 1 _ofx "" "DESTINATION" "")
-  get_target_property(_bundle ${TARGET} OFX_BUNDLE_DIR)
-  get_target_property(_dest ${TARGET} OFX_BUNDLE_INSTALL_DIR)
-  set(_sub "Contents/Resources")
-  if(_ofx_DESTINATION)
-    set(_sub "${_sub}/${_ofx_DESTINATION}")
-  endif()
-  set(_files "")
-  foreach(_f ${_ofx_UNPARSED_ARGUMENTS})
-    get_filename_component(_f "${_f}" ABSOLUTE BASE_DIR "${CMAKE_CURRENT_SOURCE_DIR}")
-    list(APPEND _files "${_f}")
-  endforeach()
-  if(NOT _files)
-    return()
-  endif()
-  get_target_property(_n ${TARGET} OFX_RESOURCE_TARGETS)
-  if(NOT _n)
-    set(_n 0)
-  endif()
-  math(EXPR _n "${_n} + 1")
-  set_target_properties(${TARGET} PROPERTIES OFX_RESOURCE_TARGETS ${_n})
-  add_custom_target(${TARGET}_resources_${_n} ALL
-    COMMAND "${CMAKE_COMMAND}" -E make_directory "${_bundle}/${_sub}"
-    COMMAND "${CMAKE_COMMAND}" -E copy_if_different ${_files} "${_bundle}/${_sub}"
-    VERBATIM)
-  add_dependencies(${TARGET} ${TARGET}_resources_${_n})
-  install(FILES ${_files} DESTINATION "${_dest}/${_sub}")
-endfunction()
-
-# ofx_target_openmp(<target> [REQUIRED])
-# Compile and link <target> with OpenMP if OFX_USE_OPENMP (as openfx #125). Apple clang has
-# no OpenMP runtime: it uses libomp from MacPorts (/opt/local/include/libomp,
-# /opt/local/lib/libomp), or from OFX_LIBOMP_ROOT, with "-Xpreprocessor -fopenmp".
-function(ofx_target_openmp TARGET)
-  cmake_parse_arguments(PARSE_ARGV 1 OFX "REQUIRED" "" "")
-  if(NOT OFX_USE_OPENMP)
-    return()
-  endif()
-  if(TARGET OpenMP::OpenMP_CXX) # found by an earlier call
-    target_link_libraries(${TARGET} PRIVATE OpenMP::OpenMP_CXX)
-    return()
-  endif()
-  if(APPLE AND CMAKE_CXX_COMPILER_ID STREQUAL "AppleClang")
-    if(NOT "${OFX_LIBOMP_ROOT}" STREQUAL "${_OFX_LIBOMP_ROOT_SEARCHED}")
-      # OFX_LIBOMP_ROOT changed: search again
-      unset(OFX_LIBOMP_INCLUDE_DIR CACHE)
-      unset(OFX_LIBOMP_LIBRARY CACHE)
-      set(_OFX_LIBOMP_ROOT_SEARCHED "${OFX_LIBOMP_ROOT}" CACHE INTERNAL "")
-    endif()
-    find_path(OFX_LIBOMP_INCLUDE_DIR omp.h
-      HINTS ${OFX_LIBOMP_ROOT} ${OFX_LIBOMP_ROOT}/include ${OFX_LIBOMP_ROOT}/include/libomp
-            /opt/local/include/libomp
-      NO_DEFAULT_PATH)
-    find_library(OFX_LIBOMP_LIBRARY omp
-      HINTS ${OFX_LIBOMP_ROOT} ${OFX_LIBOMP_ROOT}/lib ${OFX_LIBOMP_ROOT}/lib/libomp
-            /opt/local/lib/libomp
-      NO_DEFAULT_PATH)
-    if(OFX_LIBOMP_INCLUDE_DIR AND OFX_LIBOMP_LIBRARY)
-      set(OpenMP_CXX_FLAGS "-Xpreprocessor -fopenmp -I${OFX_LIBOMP_INCLUDE_DIR}")
-      set(OpenMP_CXX_LIB_NAMES omp)
-      set(OpenMP_omp_LIBRARY "${OFX_LIBOMP_LIBRARY}")
-    endif()
-  endif()
-  find_package(OpenMP COMPONENTS CXX)
-  if(TARGET OpenMP::OpenMP_CXX)
-    target_link_libraries(${TARGET} PRIVATE OpenMP::OpenMP_CXX)
-  elseif(OFX_REQUIRED)
-    message(FATAL_ERROR "ofx_target_openmp(${TARGET}): OpenMP not found (MacPorts: port install libomp)")
-  else()
-    message(WARNING "ofx_target_openmp(${TARGET}): OpenMP not found, building without it (MacPorts: port install libomp; or set OFX_LIBOMP_ROOT, or OFX_USE_OPENMP=OFF)")
-  endif()
-endfunction()
-
-# ofx_deploy_bundle(<target>)
-# If OFX_DEPLOY_BUNDLES: on macOS, run osxDeploy.sh on the installed bundle in Release
-# and RelWithDebInfo, as Makefile.master does on its bundle (needs gsed). On Windows,
-# copying the runtime DLLs is not implemented in this stand-in (the Makefiles don't).
-function(ofx_deploy_bundle TARGET)
-  if(NOT OFX_DEPLOY_BUNDLES OR NOT APPLE)
-    return()
-  endif()
-  get_target_property(_dest ${TARGET} OFX_BUNDLE_INSTALL_DIR)
-  get_target_property(_name ${TARGET} OFX_BUNDLE_NAME)
-  set(_deploy "${_OFX_SUPPORT_INCLUDE_DIR}/osxDeploy.sh")
-  install(CODE "
-    if(CMAKE_INSTALL_CONFIG_NAME MATCHES \"^(Release|RelWithDebInfo)\$\")
-      set(_b \"${_dest}\")
-      if(NOT IS_ABSOLUTE \"\${_b}\")
-        set(_b \"\${CMAKE_INSTALL_PREFIX}/\${_b}\")
-      endif()
-      message(STATUS \"osxDeploy.sh: \$ENV{DESTDIR}\${_b}\")
-      execute_process(COMMAND bash \"${_deploy}\" \"\$ENV{DESTDIR}\${_b}\" \"${_name}.ofx\" RESULT_VARIABLE _r)
-      if(_r)
-        message(FATAL_ERROR \"osxDeploy.sh failed on \$ENV{DESTDIR}\${_b}\")
-      endif()
-    endif()")
-endfunction()
-
 # supportext_add_sources(<target> [ALL] [OPENGL] [OSMESA] [EGL] [COMPONENTS ...])
 # Add SupportExt sources to <target>, so that they are built with its definitions;
 # a short version of SupportExt's cmake/SupportExt.cmake (openfx-supportext #45),
@@ -618,7 +391,7 @@ target_include_directories(Arena PRIVATE
     "${CMAKE_CURRENT_SOURCE_DIR}/Bundle"
     "${CMAKE_CURRENT_SOURCE_DIR}/Text"
     "${CMAKE_CURRENT_SOURCE_DIR}/lodepng")
-target_link_libraries(Arena PRIVATE ${ARENA_LIBRARIES})
+target_link_libraries(Arena PRIVATE openfx::Support ${ARENA_LIBRARIES})
 ofx_target_openmp(Arena)
 target_compile_definitions(Arena PRIVATE OFX_IO_USING_OCIO)
 if(CMAKE_SYSTEM_NAME STREQUAL "Linux")
@@ -689,7 +462,7 @@ if(HALDCLUT)
         SOURCES Magick/HaldCLUT/HaldCLUT.cpp Magick/MagickPlugin.cpp)
     supportext_add_sources(HaldCLUT)
     target_include_directories(HaldCLUT PRIVATE "${CMAKE_CURRENT_SOURCE_DIR}/Magick")
-    target_link_libraries(HaldCLUT PRIVATE PkgConfig::MAGICK PkgConfig::CURL PkgConfig::XML)
+    target_link_libraries(HaldCLUT PRIVATE openfx::Support PkgConfig::MAGICK PkgConfig::CURL PkgConfig::XML)
     ofx_target_openmp(HaldCLUT)
     if(LEGACYIM)
         target_compile_definitions(HaldCLUT PRIVATE LEGACYIM NOMAGICKSEED)
@@ -733,7 +506,7 @@ if(OCL)
     add_ofx_plugin(OCL INFO_PLIST OCL/Info.plist SOURCES ${_ocl_sources})
     supportext_add_sources(OCL COMPONENTS TRANSFORM3X3)
     target_include_directories(OCL PRIVATE "${CMAKE_CURRENT_SOURCE_DIR}/OCL")
-    target_link_libraries(OCL PRIVATE OpenCL::OpenCL)
+    target_link_libraries(OCL PRIVATE openfx::Support OpenCL::OpenCL)
     # ofxsTransformInteractCustom.cpp draws with OpenGL
     find_package(OpenGL REQUIRED)
     target_link_libraries(OCL PRIVATE OpenGL::GL)
