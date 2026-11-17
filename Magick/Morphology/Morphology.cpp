@@ -155,10 +155,13 @@ public:
                 break;
             case Magick::BackgroundVirtualPixelMethod:
             case Magick::CheckerTileVirtualPixelMethod:
+            case Magick::HorizontalTileVirtualPixelMethod: // background above and below
+            case Magick::VerticalTileVirtualPixelMethod: // background left and right
                 opacity.backgroundColor(Magick::ColorGray(1. - Magick::ColorRGB(image.backgroundColor()).alpha()));
                 opacity.virtualPixelMethod(image.virtualPixelMethod());
                 break;
             default:
+                // Random may differ from IM6: the two passes draw their virtual pixels independently
                 opacity.virtualPixelMethod(image.virtualPixelMethod());
                 break;
             }
