@@ -17,21 +17,25 @@
 # ***** END LICENSE BLOCK *****
 
 ########################################################################
-IF(${CMAKE_SOURCE_DIR} STREQUAL ${CMAKE_BINARY_DIR})
-MESSAGE(FATAL_ERROR "Prevented in-tree built. This is bad practice.")
-ENDIF(${CMAKE_SOURCE_DIR} STREQUAL ${CMAKE_BINARY_DIR})
-
-########################################################################
 # Project setup
 ########################################################################
 CMAKE_MINIMUM_REQUIRED(VERSION 3.16) # as Natron and openfx-io
 PROJECT(Text CXX)
+
+if("${CMAKE_SOURCE_DIR}" STREQUAL "${CMAKE_BINARY_DIR}")
+  message(FATAL_ERROR "Prevented in-tree built. This is bad practice.")
+endif()
 ENABLE_TESTING()
 
 option(RICHTEXT "Enable RichText OFX" OFF)
 option(BUNDLE_FONTS_CONF "Bundle fonts.conf" OFF)
 
-include(FindOpenGL REQUIRED)
+# libGL, as Makefile.master: with GLVND's libOpenGL, OPENGL_gl_LIBRARY is empty and the
+# module doesn't load on Linux (undefined symbol: glMultMatrixd)
+if(NOT DEFINED OpenGL_GL_PREFERENCE)
+  set(OpenGL_GL_PREFERENCE LEGACY)
+endif()
+find_package(OpenGL REQUIRED)
 find_package(PkgConfig REQUIRED)
 pkg_search_module(FONTCONFIG REQUIRED fontconfig)
 pkg_search_module(PANGO REQUIRED pangocairo)
@@ -129,7 +133,8 @@ ${CMAKE_CURRENT_SOURCE_DIR}/fonts.conf.in
 ${CMAKE_CURRENT_BINARY_DIR}/fonts.conf
 @ONLY)
 
-ADD_LIBRARY(${PROJECT_NAME} SHARED ${SOURCES} ${SUPPORT_SOURCES})
+# MODULE: -bundle on macOS, no SONAME elsewhere, as Makefile.master
+ADD_LIBRARY(${PROJECT_NAME} MODULE ${SOURCES} ${SUPPORT_SOURCES})
 SET_TARGET_PROPERTIES(${PROJECT_NAME} PROPERTIES PREFIX "")
 SET_TARGET_PROPERTIES(${PROJECT_NAME} PROPERTIES SUFFIX ".ofx")
 
@@ -158,7 +163,7 @@ TARGET_COMPILE_DEFINITIONS(
     OFX_SUPPORTS_OPENGLRENDER
     NOMINMAX
 )
-TARGET_LINK_LIBRARIES(${PROJECT_NAME} ${OPENGL_gl_LIBRARY})
+TARGET_LINK_LIBRARIES(${PROJECT_NAME} OpenGL::GL)
 
 include_directories(
     ${FONTCONFIG_INCLUDE_DIRS}
