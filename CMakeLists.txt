@@ -69,14 +69,10 @@ if(NOT EXISTS "${PROJECT_SOURCE_DIR}/OpenFX/include" OR NOT EXISTS "${PROJECT_SO
     "  > git submodule update --init --recursive\n")
 endif()
 
-# openfx::Api and openfx::Support (with the OFX_EXTENSIONS_* and
-# OFX_SUPPORTS_OPENGLRENDER definitions of Makefile.master). EXCLUDE_FROM_ALL:
-# build only what Arena links, and install none of openfx.
-add_subdirectory(OpenFX EXCLUDE_FROM_ALL)
-# ARCHDIR, OFX_PLUGIN_BUILD_DIR and add_ofx_plugin() (redefined below until
-# OpenFX.cmake has the arguments we need)
-list(APPEND CMAKE_MODULE_PATH "${PROJECT_SOURCE_DIR}/OpenFX/cmake")
-include(OpenFX)
+# OpenGL: libGL on Linux, as Makefile.master (-lGL), not GLVND's libOpenGL
+if(NOT DEFINED OpenGL_GL_PREFERENCE)
+  set(OpenGL_GL_PREFERENCE LEGACY)
+endif()
 
 ########################################################################
 # TODO: replace with OpenFX.cmake, SupportExt and IOSupport when available.
@@ -98,13 +94,26 @@ set(OFX_CXX_STANDARD 17 CACHE STRING "C++ standard of the plug-ins (17: Natron 2
 option(OFX_USE_OPENMP "Build the plug-ins that ask for it with OpenMP" ON)
 option(OFX_DEPLOY_BUNDLES "Copy the non-system libraries into the installed bundles (macOS: osxDeploy.sh, in Release and RelWithDebInfo)" OFF)
 
-# Where the bundles are installed: OFX/Plugins, relative to CMAKE_INSTALL_PREFIX, unless
-# given (OpenFX.cmake at 366b9709 defaults to its examples' folder)
+# Where the bundles are installed: OFX/Plugins by default. A STRING, so that a relative
+# path stays relative to CMAKE_INSTALL_PREFIX; declared before add_subdirectory(OpenFX),
+# whose CACHE PATH declaration would make a relative -DPLUGIN_INSTALLDIR absolute, and
+# whose OpenFX.cmake (366b9709) defaults to its examples' folder.
 if("$CACHE{PLUGIN_INSTALLDIR}" STREQUAL "")
-  set(PLUGIN_INSTALLDIR "OFX/Plugins")
+  set(_ofx_installdir "OFX/Plugins")
 else()
-  set(PLUGIN_INSTALLDIR "$CACHE{PLUGIN_INSTALLDIR}")
+  set(_ofx_installdir "$CACHE{PLUGIN_INSTALLDIR}")
 endif()
+set(PLUGIN_INSTALLDIR "${_ofx_installdir}" CACHE STRING "Where the OFX bundles are installed (relative: to CMAKE_INSTALL_PREFIX)" FORCE)
+
+# (not a stand-in: here because of PLUGIN_INSTALLDIR above)
+# openfx::Api and openfx::Support (with the OFX_EXTENSIONS_* and
+# OFX_SUPPORTS_OPENGLRENDER definitions of Makefile.master). EXCLUDE_FROM_ALL:
+# build only what Arena links, and install none of openfx.
+add_subdirectory(OpenFX EXCLUDE_FROM_ALL)
+# ARCHDIR, OFX_PLUGIN_BUILD_DIR and add_ofx_plugin() (redefined below until
+# OpenFX.cmake has the arguments we need)
+list(APPEND CMAKE_MODULE_PATH "${PROJECT_SOURCE_DIR}/OpenFX/cmake")
+include(OpenFX)
 
 set(_OFX_SUPPORT_INCLUDE_DIR "${_OFX_CMAKE_MODULE_DIR}/../Support/include") # osxSymbols, linuxSymbols, osxDeploy.sh
 
@@ -373,10 +382,6 @@ endfunction()
 # end of the TODO block
 ########################################################################
 
-# OpenGL: libGL on Linux, as Makefile.master (-lGL), not GLVND's libOpenGL
-if(NOT DEFINED OpenGL_GL_PREFERENCE)
-  set(OpenGL_GL_PREFERENCE LEGACY)
-endif()
 
 # Libraries, found by pkg-config as in Makefile.master. Like Makefile.master, link
 # with "pkg-config --static --libs": e.g. MacPorts' ImageMagick +natron (Natron's
