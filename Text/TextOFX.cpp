@@ -2204,6 +2204,10 @@ template<unsigned int majorVersion>
 void
 TextFXPluginFactory<majorVersion>::describe(OFX::ImageEffectDescriptor &desc)
 {
+    if (majorVersion < kPluginVersionMajor) {
+        // hidden from the hosts' menus (e.g. Natron), still loaded by old projects
+        desc.setIsDeprecated(true);
+    }
     // basic labels
     desc.setLabel(kPluginName);
     desc.setPluginGrouping(kPluginGrouping);
