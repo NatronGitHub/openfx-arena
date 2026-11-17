@@ -126,7 +126,7 @@ Options (the Makefile equivalents are in parentheses):
   * ``-DMINGW_STATIC=ON``: link MinGW bundles statically, for hosts other than Natron (``LDFLAGS_ADD=-static``)
   * ``-DHALDCLUT=ON``, ``-DOCL=ON``: also build ``HaldCLUT.ofx.bundle`` and ``OCL.ofx.bundle`` (``make -C Magick/HaldCLUT``, ``make -C OCL``)
   * ``-DBUNDLE_FONTS_CONF=ON``: Bundle fonts.conf *(If not using Natron and on Windows/macOS)*
-  * ``-DREADMISC_LEGACY=ON``, ``-DOLD_POPPLER=ON``: legacy formats in ``ReadMisc``, poppler < 0.83
+  * ``-DOLD_POPPLER=ON``: poppler < 0.83
   * ``-DBUILD_TESTING=ON``: ``ctest`` loads the bundles
 
 ## License

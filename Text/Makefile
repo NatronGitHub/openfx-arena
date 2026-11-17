@@ -4,7 +4,8 @@ PLUGINOBJECTS = RichText.o RichTextOFX.o TextOFX.o
 
 PLUGINOBJECTS += \
     ofxsTransform3x3.o \
-    ofxsTransformInteract.o
+    ofxsTransformInteract.o \
+    ofxsShutter.o
 
 RESOURCES = \
     net.fxarena.openfx.Text.png \
@@ -15,6 +16,6 @@ RESOURCES = \
 SRCDIR = ..
 include $(SRCDIR)/Makefile.master
 
-CXXFLAGS  += $(FCONFIG_CXXFLAGS) $(PANGO_CXXFLAGS)
+CXXFLAGS  += $(FCONFIG_CXXFLAGS) $(PANGO_CXXFLAGS) -I$(SRCDIR)/Magick
 LINKFLAGS += $(FCONFIG_LINKFLAGS) $(PANGO_LINKFLAGS)
 

@@ -7,7 +7,7 @@ OFXS_NAMESPACE_ANONYMOUS_ENTER
 #define kPluginGrouping "Extra/Misc"
 #define kPluginIdentifier "net.fxarena.openfx.Morphology"
 #define kPluginDescription "Morphology modifies an image in various ways based on the nearby neighbourhood of the other pixels that surround it. This in turn can provide a huge range of effects, Shape expansion and contraction (dilate/erode), to distance from edge, to thining down to a skeleton, or mid-line axis. For more information read  https://imagemagick.org/Usage/morphology/#basic"
-#define kPluginVersionMajor 1
+#define kPluginVersionMajor 2 // 2: unpremultiply the source before ImageMagick (see PackedImage::PackedSrc)
 #define kPluginVersionMinor 0
 
 #define kSupportsTiles 0
@@ -37,8 +37,8 @@ class MorphologyPlugin
     : public MagickPluginHelper<kSupportsRenderScale>
 {
 public:
-    MorphologyPlugin(OfxImageEffectHandle handle)
-        : MagickPluginHelper<kSupportsRenderScale>(handle)
+    MorphologyPlugin(OfxImageEffectHandle handle, bool unpremultSrc)
+        : MagickPluginHelper<kSupportsRenderScale>(handle, unpremultSrc)
         , _iterations(NULL)
         , _method(NULL)
         , _kernel(NULL)
@@ -129,7 +129,62 @@ public:
         default:
             method = MagickCore::UndefinedMorphology;
         }
+#if MagickLibVersion >= 0x700
+        // IM7 applies every method to alpha too (Distance made the output transparent). IM6 did
+        // that only for the convolutions and the intensity methods, and applied the others to its
+        // default channels, RGB: keep the IM6 behaviour
+        switch (method) {
+        case MagickCore::ConvolveMorphology:
+        case MagickCore::CorrelateMorphology: {
+            // IM6 convolved the opacity (1-alpha) and IM7 convolves alpha, so they differ unless
+            // the kernel sums to 1 (with Sobel, the output was transparent). Convolve a negated
+            // copy of alpha, as IM6 did, and put it back
+            Magick::Image opacity(image);
+            opacity.channel(Magick::AlphaChannel);
+            opacity.negate();
+            // opacity has no alpha channel: give its border the opacity IM6 read from the virtual
+            // pixels (1 for Transparent, 0 for the opaque colours)
+            switch (image.virtualPixelMethod()) {
+            case Magick::TransparentVirtualPixelMethod:
+                opacity.virtualPixelMethod(Magick::WhiteVirtualPixelMethod);
+                break;
+            case Magick::BlackVirtualPixelMethod:
+            case Magick::GrayVirtualPixelMethod:
+            case Magick::WhiteVirtualPixelMethod:
+                opacity.virtualPixelMethod(Magick::BlackVirtualPixelMethod);
+                break;
+            case Magick::BackgroundVirtualPixelMethod:
+            case Magick::CheckerTileVirtualPixelMethod:
+            case Magick::HorizontalTileVirtualPixelMethod: // background above and below
+            case Magick::VerticalTileVirtualPixelMethod: // background left and right
+                opacity.backgroundColor(Magick::ColorGray(1. - Magick::ColorRGB(image.backgroundColor()).alpha()));
+                opacity.virtualPixelMethod(image.virtualPixelMethod());
+                break;
+            default:
+                // Random may differ from IM6: the two passes draw their virtual pixels independently
+                opacity.virtualPixelMethod(image.virtualPixelMethod());
+                break;
+            }
+            opacity.morphology(method, kernel, iterations);
+            opacity.negate();
+            image.morphology(method, kernel, iterations);
+            image.composite(opacity, 0, 0, Magick::CopyAlphaCompositeOp);
+            break;
+        }
+        case MagickCore::ErodeIntensityMorphology:
+        case MagickCore::DilateIntensityMorphology:
+        case MagickCore::OpenIntensityMorphology:
+        case MagickCore::CloseIntensityMorphology:
+            image.morphology(method, kernel, iterations);
+            break;
+        default:
+            image.morphologyChannel(Magick::ChannelType(Magick::RedChannel | Magick::GreenChannel | Magick::BlueChannel),
+                                    method, kernel, iterations);
+            break;
+        }
+#else
         image.morphology(method, kernel, iterations);
+#endif
     }
 private:
     IntParam *_iterations;
@@ -137,10 +192,14 @@ private:
     StringParam *_kernel;
 };
 
-mDeclarePluginFactory(MorphologyPluginFactory, {}, {});
+mDeclarePluginFactoryVersioned(MorphologyPluginFactory, {}, {});
 
-void MorphologyPluginFactory::describe(ImageEffectDescriptor &desc)
+template<unsigned int majorVersion>
+void MorphologyPluginFactory<majorVersion>::describe(ImageEffectDescriptor &desc)
 {
+    if (majorVersion < kPluginVersionMajor) {
+        desc.setIsDeprecated(true);
+    }
     desc.setLabel(kPluginName);
     desc.setPluginGrouping(kPluginGrouping);
     desc.setPluginDescription(kPluginDescription);
@@ -155,7 +214,8 @@ void MorphologyPluginFactory::describe(ImageEffectDescriptor &desc)
     desc.setHostMixingEnabled(kHostMixing);
 }
 
-void MorphologyPluginFactory::describeInContext(ImageEffectDescriptor &desc,
+template<unsigned int majorVersion>
+void MorphologyPluginFactory<majorVersion>::describeInContext(ImageEffectDescriptor &desc,
                                                 ContextEnum context)
 {
     OFX::PageParamDescriptor *page = MorphologyPlugin::describeInContextBegin(desc, context);
@@ -216,15 +276,18 @@ void MorphologyPluginFactory::describeInContext(ImageEffectDescriptor &desc,
     MorphologyPlugin::describeInContextEnd(desc, context, page);
 }
 
-ImageEffect* MorphologyPluginFactory::createInstance(OfxImageEffectHandle handle,
+template<unsigned int majorVersion>
+ImageEffect* MorphologyPluginFactory<majorVersion>::createInstance(OfxImageEffectHandle handle,
                                                      ContextEnum /*context*/)
 {
-    return new MorphologyPlugin(handle);
+    // versions before 2 fed premultiplied pixels to ImageMagick: keep their output
+    return new MorphologyPlugin(handle, majorVersion >= 2);
 }
 
-static MorphologyPluginFactory p(kPluginIdentifier,
-                                 kPluginVersionMajor,
-                                 kPluginVersionMinor);
+static MorphologyPluginFactory<kPluginVersionMajor> p(kPluginIdentifier, kPluginVersionMinor);
 mRegisterPluginFactoryInstance(p)
+// version 1, kept so that existing projects render as before
+static MorphologyPluginFactory<1> p1(kPluginIdentifier, 0);
+mRegisterPluginFactoryInstance(p1)
 
 OFXS_NAMESPACE_ANONYMOUS_EXIT

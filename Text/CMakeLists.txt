@@ -40,7 +40,11 @@ find_package(PkgConfig REQUIRED)
 pkg_search_module(FONTCONFIG REQUIRED fontconfig)
 pkg_search_module(PANGO REQUIRED pangocairo)
 
-set (CMAKE_CXX_STANDARD 11)
+# C++17 by default (Natron RB-2.6 Qt5 builds); callers may ask for C++20
+# (Qt6 builds) with -DCMAKE_CXX_STANDARD=20. The code must build with both.
+if(NOT DEFINED CMAKE_CXX_STANDARD)
+    set(CMAKE_CXX_STANDARD 17)
+endif()
 
 # Use -Ofast when applicable (implies -ffast-math)
 if("${CMAKE_CXX_COMPILER_ID}" STREQUAL "GNU")
@@ -64,6 +68,7 @@ endif()
 
 # C++ Include directories
 INCLUDE_DIRECTORIES(${CMAKE_CURRENT_SOURCE_DIR})
+INCLUDE_DIRECTORIES(${CMAKE_CURRENT_SOURCE_DIR}/../Magick) # PackedImage.h
 INCLUDE_DIRECTORIES(${OPENFX_PATH}/include)
 INCLUDE_DIRECTORIES(${OPENFX_PATH}/Support/include)
 INCLUDE_DIRECTORIES(${OPENFX_PATH}/Support/Plugins/include)
