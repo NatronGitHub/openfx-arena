@@ -22,6 +22,7 @@ PLUGINOBJECTS = \
     ofxsOGLTextRenderer.o \
     ofxsOGLFontData.o \
     ofxsRectangleInteract.o \
+    ofxsMultiPlane.o \
     GenericReader.o \
     GenericOCIO.o \
     SequenceParsing.o
@@ -117,6 +118,3 @@ ifeq ($(IM),68)
 CXXFLAGS += -DNOMAGICKSEED
 endif
 
-ifeq ($(READMISC_LEGACY),1)
-CXXFLAGS += -DREADMISC_LEGACY
-endif

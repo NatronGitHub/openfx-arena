@@ -17,6 +17,7 @@
 */
 
 #include "MagickCommon.h"
+#include "PackedImage.h"
 
 #include "ofxsMacros.h"
 #include "ofxsMultiThread.h"
@@ -28,8 +29,8 @@
 #define kPluginName "PolarOFX"
 #define kPluginGrouping "Extra/Distort"
 #define kPluginIdentifier "net.fxarena.openfx.Polar"
-#define kPluginVersionMajor 4
-#define kPluginVersionMinor 3
+#define kPluginVersionMajor 5 // 5: unpremultiply the source before ImageMagick (see PackedImage::PackedSrc)
+#define kPluginVersionMinor 0
 
 #define kParamVPixel "pixel"
 #define kParamVPixelLabel "Virtual Pixel"
@@ -74,11 +75,12 @@ static bool _hasOpenMP = false;
 class PolarPlugin : public OFX::ImageEffect
 {
 public:
-    PolarPlugin(OfxImageEffectHandle handle);
+    PolarPlugin(OfxImageEffectHandle handle, bool unpremultSrc);
     virtual ~PolarPlugin();
     virtual void render(const OFX::RenderArguments &args) OVERRIDE FINAL;
     virtual bool getRegionOfDefinition(const OFX::RegionOfDefinitionArguments &args, OfxRectD &rod) OVERRIDE FINAL;
 private:
+    bool unpremultSrc_; // false in versions released before the premultiplication fix
     OFX::Clip *dstClip_;
     OFX::Clip *srcClip_;
     OFX::ChoiceParam *vpixel_;
@@ -89,8 +91,9 @@ private:
     OFX::BooleanParam *enableOpenMP_;
 };
 
-PolarPlugin::PolarPlugin(OfxImageEffectHandle handle)
+PolarPlugin::PolarPlugin(OfxImageEffectHandle handle, bool unpremultSrc)
 : OFX::ImageEffect(handle)
+, unpremultSrc_(unpremultSrc)
 , dstClip_(NULL)
 , srcClip_(NULL)
 {
@@ -203,8 +206,13 @@ void PolarPlugin::render(const OFX::RenderArguments &args)
     // read image
     Magick::Image image(Magick::Geometry(width,height),Magick::Color("rgba(0,0,0,0)"));
     Magick::Image output(Magick::Geometry(width,height),Magick::Color("rgba(0,0,0,1)"));
-    if (srcClip_ && srcClip_->isConnected())
-        image.read(width,height,"RGBA",Magick::FloatPixel,(float*)srcImg->getPixelData());
+    if (srcClip_ && srcClip_->isConnected()) {
+        // ImageMagick expects straight colour. With Matte, alpha is discarded and the
+        // premultiplied colour is the intended "flattened over black" input.
+        PackedImage::PackedSrc srcPixels(srcImg.get(), srcRod,
+                                         unpremultSrc_ && !matte && srcImg->getPreMultiplication() == OFX::eImagePreMultiplied);
+        image.read(width,height,"RGBA",Magick::FloatPixel,srcPixels.data());
+    }
 
     // flip
     image.flip();
@@ -318,7 +326,9 @@ void PolarPlugin::render(const OFX::RenderArguments &args)
 #else
         output.composite(image, 0, 0, Magick::CopyOpacityCompositeOp);
 #endif
-        output.write(0,0,args.renderWindow.x2 - args.renderWindow.x1,args.renderWindow.y2 - args.renderWindow.y1,"RGBA",Magick::FloatPixel,(float*)dstImg->getPixelData());
+        PackedImage::PackedDst dstPixels(dstImg.get(), args.renderWindow);
+        output.write(0,0,args.renderWindow.x2 - args.renderWindow.x1,args.renderWindow.y2 - args.renderWindow.y1,"RGBA",Magick::FloatPixel,dstPixels.data());
+        dstPixels.commit();
     }
 }
 
@@ -338,11 +348,15 @@ bool PolarPlugin::getRegionOfDefinition(const OFX::RegionOfDefinitionArguments &
     return true;
 }
 
-mDeclarePluginFactory(PolarPluginFactory, {}, {});
+mDeclarePluginFactoryVersioned(PolarPluginFactory, {}, {});
 
 /** @brief The basic describe function, passed a plugin descriptor */
-void PolarPluginFactory::describe(OFX::ImageEffectDescriptor &desc)
+template<unsigned int majorVersion>
+void PolarPluginFactory<majorVersion>::describe(OFX::ImageEffectDescriptor &desc)
 {
+    if (majorVersion < kPluginVersionMajor) {
+        desc.setIsDeprecated(true);
+    }
     // basic labels
     desc.setLabel(kPluginName);
     desc.setPluginGrouping(kPluginGrouping);
@@ -364,7 +378,8 @@ void PolarPluginFactory::describe(OFX::ImageEffectDescriptor &desc)
 }
 
 /** @brief The describe in context function, passed a plugin descriptor and a context */
-void PolarPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, ContextEnum /*context*/)
+template<unsigned int majorVersion>
+void PolarPluginFactory<majorVersion>::describeInContext(OFX::ImageEffectDescriptor &desc, ContextEnum /*context*/)
 {
 
     std::string features = MagickCore::GetMagickFeatures();
@@ -457,10 +472,15 @@ void PolarPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, Con
 }
 
 /** @brief The create instance function, the plugin must return an object derived from the \ref OFX::ImageEffect class */
-ImageEffect* PolarPluginFactory::createInstance(OfxImageEffectHandle handle, ContextEnum /*context*/)
+template<unsigned int majorVersion>
+ImageEffect* PolarPluginFactory<majorVersion>::createInstance(OfxImageEffectHandle handle, ContextEnum /*context*/)
 {
-    return new PolarPlugin(handle);
+    // versions before 5 fed premultiplied pixels to ImageMagick: keep their output
+    return new PolarPlugin(handle, majorVersion >= 5);
 }
 
-static PolarPluginFactory p(kPluginIdentifier, kPluginVersionMajor, kPluginVersionMinor);
+static PolarPluginFactory<kPluginVersionMajor> p(kPluginIdentifier, kPluginVersionMinor);
 mRegisterPluginFactoryInstance(p)
+// version 4, kept so that existing projects render as before
+static PolarPluginFactory<4> p4(kPluginIdentifier, 3);
+mRegisterPluginFactoryInstance(p4)

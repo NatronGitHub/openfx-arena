@@ -16,6 +16,7 @@
 */
 
 #include "MagickCommon.h"
+#include "PackedImage.h"
 
 #include "ofxsMacros.h"
 #include "ofxsMultiThread.h"
@@ -27,8 +28,8 @@
 #define kPluginName "SketchOFX"
 #define kPluginGrouping "Extra/Filter"
 #define kPluginIdentifier "net.fxarena.openfx.Sketch"
-#define kPluginVersionMajor 2
-#define kPluginVersionMinor 2
+#define kPluginVersionMajor 3 // 3: unpremultiply the source before ImageMagick (see PackedImage::PackedSrc)
+#define kPluginVersionMinor 0
 
 #define kParamRadius "radius"
 #define kParamRadiusLabel "Radius"
@@ -62,11 +63,12 @@ static bool _hasOpenMP = false;
 class SketchPlugin : public OFX::ImageEffect
 {
 public:
-    SketchPlugin(OfxImageEffectHandle handle);
+    SketchPlugin(OfxImageEffectHandle handle, bool unpremultSrc);
     virtual ~SketchPlugin();
     virtual void render(const OFX::RenderArguments &args) OVERRIDE FINAL;
     virtual bool getRegionOfDefinition(const OFX::RegionOfDefinitionArguments &args, OfxRectD &rod) OVERRIDE FINAL;
 private:
+    bool unpremultSrc_; // false in versions released before the premultiplication fix
     OFX::Clip *dstClip_;
     OFX::Clip *srcClip_;
     OFX::DoubleParam *radius_;
@@ -75,8 +77,9 @@ private:
     OFX::BooleanParam *enableOpenMP_;
 };
 
-SketchPlugin::SketchPlugin(OfxImageEffectHandle handle)
+SketchPlugin::SketchPlugin(OfxImageEffectHandle handle, bool unpremultSrc)
 : OFX::ImageEffect(handle)
+, unpremultSrc_(unpremultSrc)
 , dstClip_(NULL)
 , srcClip_(NULL)
 , radius_(NULL)
@@ -185,8 +188,12 @@ void SketchPlugin::render(const OFX::RenderArguments &args)
     // read image
     Magick::Image image(Magick::Geometry(width,height),Magick::Color("rgba(0,0,0,0)"));
     Magick::Image output(Magick::Geometry(width,height),Magick::Color("rgba(0,0,0,1)"));
-    if (srcClip_ && srcClip_->isConnected())
-        image.read(width,height,"RGBA",Magick::FloatPixel,(float*)srcImg->getPixelData());
+    if (srcClip_ && srcClip_->isConnected()) {
+        // ImageMagick expects straight colour
+        PackedImage::PackedSrc srcPixels(srcImg.get(), srcRod,
+                                         unpremultSrc_ && srcImg->getPreMultiplication() == OFX::eImagePreMultiplied);
+        image.read(width,height,"RGBA",Magick::FloatPixel,srcPixels.data());
+    }
 
     // sketch
     image.sketch(std::floor(radius * args.renderScale.x + 0.5),std::floor(sigma * args.renderScale.x + 0.5),angle);
@@ -199,7 +206,9 @@ void SketchPlugin::render(const OFX::RenderArguments &args)
 #else
         output.composite(image, 0, 0, Magick::CopyOpacityCompositeOp);
 #endif
-        output.write(0,0,args.renderWindow.x2 - args.renderWindow.x1,args.renderWindow.y2 - args.renderWindow.y1,"RGBA",Magick::FloatPixel,(float*)dstImg->getPixelData());
+        PackedImage::PackedDst dstPixels(dstImg.get(), args.renderWindow);
+        output.write(0,0,args.renderWindow.x2 - args.renderWindow.x1,args.renderWindow.y2 - args.renderWindow.y1,"RGBA",Magick::FloatPixel,dstPixels.data());
+        dstPixels.commit();
     }
 }
 
@@ -218,11 +227,15 @@ bool SketchPlugin::getRegionOfDefinition(const OFX::RegionOfDefinitionArguments 
     return true;
 }
 
-mDeclarePluginFactory(SketchPluginFactory, {}, {});
+mDeclarePluginFactoryVersioned(SketchPluginFactory, {}, {});
 
 /** @brief The basic describe function, passed a plugin descriptor */
-void SketchPluginFactory::describe(OFX::ImageEffectDescriptor &desc)
+template<unsigned int majorVersion>
+void SketchPluginFactory<majorVersion>::describe(OFX::ImageEffectDescriptor &desc)
 {
+    if (majorVersion < kPluginVersionMajor) {
+        desc.setIsDeprecated(true);
+    }
     // basic labels
     desc.setLabel(kPluginName);
     desc.setPluginGrouping(kPluginGrouping);
@@ -244,7 +257,8 @@ void SketchPluginFactory::describe(OFX::ImageEffectDescriptor &desc)
 }
 
 /** @brief The describe in context function, passed a plugin descriptor and a context */
-void SketchPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, ContextEnum /*context*/)
+template<unsigned int majorVersion>
+void SketchPluginFactory<majorVersion>::describeInContext(OFX::ImageEffectDescriptor &desc, ContextEnum /*context*/)
 {
     std::string features = MagickCore::GetMagickFeatures();
     if (features.find("OpenMP") != std::string::npos)
@@ -306,10 +320,15 @@ void SketchPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, Co
 }
 
 /** @brief The create instance function, the plugin must return an object derived from the \ref OFX::ImageEffect class */
-ImageEffect* SketchPluginFactory::createInstance(OfxImageEffectHandle handle, ContextEnum /*context*/)
+template<unsigned int majorVersion>
+ImageEffect* SketchPluginFactory<majorVersion>::createInstance(OfxImageEffectHandle handle, ContextEnum /*context*/)
 {
-    return new SketchPlugin(handle);
+    // versions before 3 fed premultiplied pixels to ImageMagick: keep their output
+    return new SketchPlugin(handle, majorVersion >= 3);
 }
 
-static SketchPluginFactory p(kPluginIdentifier, kPluginVersionMajor, kPluginVersionMinor);
+static SketchPluginFactory<kPluginVersionMajor> p(kPluginIdentifier, kPluginVersionMinor);
 mRegisterPluginFactoryInstance(p)
+// version 2, kept so that existing projects render as before
+static SketchPluginFactory<2> p2(kPluginIdentifier, 2);
+mRegisterPluginFactoryInstance(p2)

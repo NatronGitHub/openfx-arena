@@ -19,6 +19,9 @@
 #define MagickPlugin_h
 
 #include "MagickCommon.h"
+#include "PackedImage.h"
+
+#include <string>
 
 #include <string>
 
@@ -70,6 +73,9 @@ protected:
     OFX::BooleanParam *_matte;
     OFX::ChoiceParam *_vpixel;
     int _renderscale;
+    // Unpremultiply premultiplied sources before handing them to ImageMagick
+    // (false in plugin versions released before this fix, to keep their output).
+    bool _unpremultSrc;
 };
 
 template <int SupportsRenderScale>
@@ -78,10 +84,11 @@ class MagickPluginHelper
 {
 public:
 
-    MagickPluginHelper(OfxImageEffectHandle handle)
+    MagickPluginHelper(OfxImageEffectHandle handle, bool unpremultSrc)
         : MagickPluginHelperBase(handle)
     {
         _renderscale = SupportsRenderScale;
+        _unpremultSrc = unpremultSrc;
 
         // set ImageMagick resources
         Magick::InitializeMagick(NULL);
@@ -184,7 +191,11 @@ void MagickPluginHelper<SupportsRenderScale>::render(const OFX::RenderArguments 
     Magick::Image image(Magick::Geometry(width, height), Magick::Color("rgba(0,0,0,0)"));
     Magick::Image output(Magick::Geometry(width, height), Magick::Color("rgba(0,0,0,1)"));
     if (_srcClip && _srcClip->isConnected()) {
-        image.read(width, height, "RGBA", Magick::FloatPixel, (float*)srcImg->getPixelData());
+        // ImageMagick expects straight colour. With Matte, alpha is discarded right below and the
+        // premultiplied colour is the intended "flattened over black" input, so only unpremultiply without Matte.
+        PackedImage::PackedSrc srcPixels(srcImg.get(), args.renderWindow,
+                                         _unpremultSrc && !matte && srcImg->getPreMultiplication() == OFX::eImagePreMultiplied);
+        image.read(width, height, "RGBA", Magick::FloatPixel, srcPixels.data());
         image.flip();
         switch (vpixel) {
         case 0:
@@ -255,7 +266,9 @@ void MagickPluginHelper<SupportsRenderScale>::render(const OFX::RenderArguments 
 #else
         output.composite(image, 0, 0, Magick::CopyOpacityCompositeOp);
 #endif
-        output.write(0, 0, args.renderWindow.x2 - args.renderWindow.x1,args.renderWindow.y2 - args.renderWindow.y1, "RGBA", Magick::FloatPixel, (float*)dstImg->getPixelData());
+        PackedImage::PackedDst dstPixels(dstImg.get(), args.renderWindow);
+        output.write(0, 0, args.renderWindow.x2 - args.renderWindow.x1,args.renderWindow.y2 - args.renderWindow.y1, "RGBA", Magick::FloatPixel, dstPixels.data());
+        dstPixels.commit();
     }
 
 }

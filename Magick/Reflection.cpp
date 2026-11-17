@@ -17,6 +17,7 @@
 */
 
 #include "MagickCommon.h"
+#include "PackedImage.h"
 
 #include "ofxsMacros.h"
 #include "ofxsMultiThread.h"
@@ -28,8 +29,8 @@
 #define kPluginName "ReflectionOFX"
 #define kPluginGrouping "Extra/Transform"
 #define kPluginIdentifier "net.fxarena.openfx.Reflection"
-#define kPluginVersionMajor 3
-#define kPluginVersionMinor 2
+#define kPluginVersionMajor 4 // 4: unpremultiply the source before ImageMagick (see PackedImage::PackedSrc)
+#define kPluginVersionMinor 0
 
 #define kParamSpace "spacing"
 #define kParamSpaceLabel "Reflection spacing"
@@ -73,11 +74,12 @@ static bool _hasOpenMP = false;
 class ReflectionPlugin : public OFX::ImageEffect
 {
 public:
-    ReflectionPlugin(OfxImageEffectHandle handle);
+    ReflectionPlugin(OfxImageEffectHandle handle, bool unpremultSrc);
     virtual ~ReflectionPlugin();
     virtual void render(const OFX::RenderArguments &args) OVERRIDE FINAL;
     virtual bool getRegionOfDefinition(const OFX::RegionOfDefinitionArguments &args, OfxRectD &rod) OVERRIDE FINAL;
 private:
+    bool unpremultSrc_; // false in versions released before the premultiplication fix
     OFX::Clip *dstClip_;
     OFX::Clip *srcClip_;
     OFX::IntParam *spacing_;
@@ -88,8 +90,9 @@ private:
     OFX::BooleanParam *enableOpenMP_;
 };
 
-ReflectionPlugin::ReflectionPlugin(OfxImageEffectHandle handle)
+ReflectionPlugin::ReflectionPlugin(OfxImageEffectHandle handle, bool unpremultSrc)
 : OFX::ImageEffect(handle)
+, unpremultSrc_(unpremultSrc)
 , dstClip_(NULL)
 , srcClip_(NULL)
 , spacing_(NULL)
@@ -216,8 +219,13 @@ void ReflectionPlugin::render(const OFX::RenderArguments &args)
     // read source image
     Magick::Image container(Magick::Geometry(srcWidth,srcHeight),Magick::Color("rgba(0,0,0,0)"));
     Magick::Image output(Magick::Geometry(srcWidth,srcHeight),Magick::Color("rgba(0,0,0,1)"));
-    if (srcClip_ && srcClip_->isConnected())
-        image.read(srcWidth,srcHeight,"RGBA",Magick::FloatPixel,(float*)srcImg->getPixelData());
+    if (srcClip_ && srcClip_->isConnected()) {
+        // ImageMagick expects straight colour. With Matte, alpha is discarded and the
+        // premultiplied colour is the intended "flattened over black" input.
+        PackedImage::PackedSrc srcPixels(srcImg.get(), srcRod,
+                                         unpremultSrc_ && !matte && srcImg->getPreMultiplication() == OFX::eImagePreMultiplied);
+        image.read(srcWidth,srcHeight,"RGBA",Magick::FloatPixel,srcPixels.data());
+    }
 
     if (matte) {
 #if MagickLibVersion >= 0x700
@@ -375,7 +383,9 @@ void ReflectionPlugin::render(const OFX::RenderArguments &args)
 #else
         output.composite(container, 0, 0, Magick::CopyOpacityCompositeOp);
 #endif
-        output.write(0,0,args.renderWindow.x2 - args.renderWindow.x1,args.renderWindow.y2 - args.renderWindow.y1,"RGBA",Magick::FloatPixel,(float*)dstImg->getPixelData());
+        PackedImage::PackedDst dstPixels(dstImg.get(), args.renderWindow);
+        output.write(0,0,args.renderWindow.x2 - args.renderWindow.x1,args.renderWindow.y2 - args.renderWindow.y1,"RGBA",Magick::FloatPixel,dstPixels.data());
+        dstPixels.commit();
     }
 }
 
@@ -394,11 +404,15 @@ bool ReflectionPlugin::getRegionOfDefinition(const OFX::RegionOfDefinitionArgume
     return true;
 }
 
-mDeclarePluginFactory(ReflectionPluginFactory, {}, {});
+mDeclarePluginFactoryVersioned(ReflectionPluginFactory, {}, {});
 
 /** @brief The basic describe function, passed a plugin descriptor */
-void ReflectionPluginFactory::describe(OFX::ImageEffectDescriptor &desc)
+template<unsigned int majorVersion>
+void ReflectionPluginFactory<majorVersion>::describe(OFX::ImageEffectDescriptor &desc)
 {
+    if (majorVersion < kPluginVersionMajor) {
+        desc.setIsDeprecated(true);
+    }
     // basic labels
     desc.setLabel(kPluginName);
     desc.setPluginGrouping(kPluginGrouping);
@@ -421,7 +435,8 @@ void ReflectionPluginFactory::describe(OFX::ImageEffectDescriptor &desc)
 }
 
 /** @brief The describe in context function, passed a plugin descriptor and a context */
-void ReflectionPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, ContextEnum /*context*/)
+template<unsigned int majorVersion>
+void ReflectionPluginFactory<majorVersion>::describeInContext(OFX::ImageEffectDescriptor &desc, ContextEnum /*context*/)
 {
     std::string features = MagickCore::GetMagickFeatures();
     if (features.find("OpenMP") != std::string::npos)
@@ -510,10 +525,15 @@ void ReflectionPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc
 }
 
 /** @brief The create instance function, the plugin must return an object derived from the \ref OFX::ImageEffect class */
-ImageEffect* ReflectionPluginFactory::createInstance(OfxImageEffectHandle handle, ContextEnum /*context*/)
+template<unsigned int majorVersion>
+ImageEffect* ReflectionPluginFactory<majorVersion>::createInstance(OfxImageEffectHandle handle, ContextEnum /*context*/)
 {
-    return new ReflectionPlugin(handle);
+    // versions before 4 fed premultiplied pixels to ImageMagick: keep their output
+    return new ReflectionPlugin(handle, majorVersion >= 4);
 }
 
-static ReflectionPluginFactory p(kPluginIdentifier, kPluginVersionMajor, kPluginVersionMinor);
+static ReflectionPluginFactory<kPluginVersionMajor> p(kPluginIdentifier, kPluginVersionMinor);
 mRegisterPluginFactoryInstance(p)
+// version 3, kept so that existing projects render as before
+static ReflectionPluginFactory<3> p3(kPluginIdentifier, 2);
+mRegisterPluginFactoryInstance(p3)

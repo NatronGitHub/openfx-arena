@@ -17,6 +17,7 @@
 */
 
 #include "MagickCommon.h"
+#include "PackedImage.h"
 
 #include "ofxsMacros.h"
 #include "ofxsMultiThread.h"
@@ -26,8 +27,8 @@
 #define kPluginName "ModulateOFX"
 #define kPluginGrouping "Extra/Color"
 #define kPluginIdentifier "net.fxarena.openfx.Modulate"
-#define kPluginVersionMajor 1
-#define kPluginVersionMinor 2
+#define kPluginVersionMajor 2 // 2: unpremultiply the source before ImageMagick (see PackedImage::PackedSrc)
+#define kPluginVersionMinor 0
 
 #define kParamSaturation "saturation"
 #define kParamSaturationLabel "Saturation"
@@ -68,11 +69,12 @@ static bool _hasOpenCL = false;
 class ModulatePlugin : public OFX::ImageEffect
 {
 public:
-    ModulatePlugin(OfxImageEffectHandle handle);
+    ModulatePlugin(OfxImageEffectHandle handle, bool unpremultSrc);
     virtual ~ModulatePlugin();
     virtual void render(const OFX::RenderArguments &args) OVERRIDE FINAL;
     virtual bool getRegionOfDefinition(const OFX::RegionOfDefinitionArguments &args, OfxRectD &rod) OVERRIDE FINAL;
 private:
+    bool unpremultSrc_; // false in versions released before the premultiplication fix
     OFX::Clip *dstClip_;
     OFX::Clip *srcClip_;
     OFX::DoubleParam *brightness_;
@@ -82,8 +84,9 @@ private:
     OFX::BooleanParam *enableOpenCL_;
 };
 
-ModulatePlugin::ModulatePlugin(OfxImageEffectHandle handle)
+ModulatePlugin::ModulatePlugin(OfxImageEffectHandle handle, bool unpremultSrc)
 : OFX::ImageEffect(handle)
+, unpremultSrc_(unpremultSrc)
 , dstClip_(NULL)
 , srcClip_(NULL)
 {
@@ -204,8 +207,12 @@ void ModulatePlugin::render(const OFX::RenderArguments &args)
     // read image
     Magick::Image image(Magick::Geometry(width,height),Magick::Color("rgba(0,0,0,0)"));
     Magick::Image output(Magick::Geometry(width,height),Magick::Color("rgba(0,0,0,1)"));
-    if (srcClip_ && srcClip_->isConnected())
-        image.read(width,height,"RGBA",Magick::FloatPixel,(float*)srcImg->getPixelData());
+    if (srcClip_ && srcClip_->isConnected()) {
+        // ImageMagick expects straight colour
+        PackedImage::PackedSrc srcPixels(srcImg.get(), srcRod,
+                                         unpremultSrc_ && srcImg->getPreMultiplication() == OFX::eImagePreMultiplied);
+        image.read(width,height,"RGBA",Magick::FloatPixel,srcPixels.data());
+    }
 
     // modulate
     image.modulate(brightness,saturation,hue);
@@ -218,7 +225,9 @@ void ModulatePlugin::render(const OFX::RenderArguments &args)
 #else
         output.composite(image, 0, 0, Magick::CopyOpacityCompositeOp);
 #endif
-        output.write(0,0,args.renderWindow.x2 - args.renderWindow.x1,args.renderWindow.y2 - args.renderWindow.y1,"RGBA",Magick::FloatPixel,(float*)dstImg->getPixelData());
+        PackedImage::PackedDst dstPixels(dstImg.get(), args.renderWindow);
+        output.write(0,0,args.renderWindow.x2 - args.renderWindow.x1,args.renderWindow.y2 - args.renderWindow.y1,"RGBA",Magick::FloatPixel,dstPixels.data());
+        dstPixels.commit();
     }
 }
 
@@ -237,11 +246,15 @@ bool ModulatePlugin::getRegionOfDefinition(const OFX::RegionOfDefinitionArgument
     return true;
 }
 
-mDeclarePluginFactory(ModulatePluginFactory, {}, {});
+mDeclarePluginFactoryVersioned(ModulatePluginFactory, {}, {});
 
 /** @brief The basic describe function, passed a plugin descriptor */
-void ModulatePluginFactory::describe(OFX::ImageEffectDescriptor &desc)
+template<unsigned int majorVersion>
+void ModulatePluginFactory<majorVersion>::describe(OFX::ImageEffectDescriptor &desc)
 {
+    if (majorVersion < kPluginVersionMajor) {
+        desc.setIsDeprecated(true);
+    }
     // basic labels
     desc.setLabel(kPluginName);
     desc.setPluginGrouping(kPluginGrouping);
@@ -263,7 +276,8 @@ void ModulatePluginFactory::describe(OFX::ImageEffectDescriptor &desc)
 }
 
 /** @brief The describe in context function, passed a plugin descriptor and a context */
-void ModulatePluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, ContextEnum /*context*/)
+template<unsigned int majorVersion>
+void ModulatePluginFactory<majorVersion>::describeInContext(OFX::ImageEffectDescriptor &desc, ContextEnum /*context*/)
 {
     std::string features = MagickCore::GetMagickFeatures();
     if (features.find("OpenMP") != std::string::npos)
@@ -337,10 +351,15 @@ void ModulatePluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, 
 }
 
 /** @brief The create instance function, the plugin must return an object derived from the \ref OFX::ImageEffect class */
-ImageEffect* ModulatePluginFactory::createInstance(OfxImageEffectHandle handle, ContextEnum /*context*/)
+template<unsigned int majorVersion>
+ImageEffect* ModulatePluginFactory<majorVersion>::createInstance(OfxImageEffectHandle handle, ContextEnum /*context*/)
 {
-    return new ModulatePlugin(handle);
+    // versions before 2 fed premultiplied pixels to ImageMagick: keep their output
+    return new ModulatePlugin(handle, majorVersion >= 2);
 }
 
-static ModulatePluginFactory p(kPluginIdentifier, kPluginVersionMajor, kPluginVersionMinor);
+static ModulatePluginFactory<kPluginVersionMajor> p(kPluginIdentifier, kPluginVersionMinor);
 mRegisterPluginFactoryInstance(p)
+// version 1, kept so that existing projects render as before
+static ModulatePluginFactory<1> p1(kPluginIdentifier, 2);
+mRegisterPluginFactoryInstance(p1)
