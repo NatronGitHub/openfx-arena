@@ -25,6 +25,7 @@
 #include <ofxNatron.h>
 #include "GenericReader.h"
 #include "GenericOCIO.h"
+#include "PackedImage.h"
 #include "ofxsMacros.h"
 #include "ofxsImageEffect.h"
 #include "ofxsMultiPlane.h"
@@ -303,8 +304,8 @@ OpenRasterPlugin::getClipComponents(const OFX::ClipComponentsArguments& args, OF
 }
 
 void
-OpenRasterPlugin::decodePlane(const std::string& filename, OfxTime /*time*/, int /*view*/, bool /*isPlayback*/, const OfxRectI& renderWindow, const OfxPointD& renderScale, float *pixelData, const OfxRectI& /*bounds*/,
-                                 OFX::PixelComponentEnum /*pixelComponents*/, OFX::PixelComponentEnum /*remappedComponents*/, int pixelComponentCount, const std::string& rawComponents, int /*rowBytes*/)
+OpenRasterPlugin::decodePlane(const std::string& filename, OfxTime /*time*/, int /*view*/, bool /*isPlayback*/, const OfxRectI& renderWindow, const OfxPointD& renderScale, float *pixelData, const OfxRectI& bounds,
+                                 OFX::PixelComponentEnum /*pixelComponents*/, OFX::PixelComponentEnum /*remappedComponents*/, int pixelComponentCount, const std::string& rawComponents, int rowBytes)
 {
     assert(renderScale.x == 1. && renderScale.y == 1.);
     unused(renderScale);
@@ -395,13 +396,17 @@ OpenRasterPlugin::decodePlane(const std::string& filename, OfxTime /*time*/, int
         }
     }
 
+    // pixels is packed, bottom-up, and covers renderWindow. pixelData has the given
+    // bounds and rowBytes, which may differ from renderWindow, be padded, or be negative.
     int offset = 0;
     for (int y = 0; y < height; y++) {
+        float* dst = PackedImage::pixelAddress(pixelData, bounds, rowBytes, pixelComponentCount, renderWindow.x1, renderWindow.y1 + y);
         for (int x = 0; x < width; x++) {
-            pixelData[offset + 0] = pixels[offset + 0] * (1.f / 255);
-            pixelData[offset + 1] = pixels[offset + 1] * (1.f / 255);
-            pixelData[offset + 2] = pixels[offset + 2] * (1.f / 255);
-            pixelData[offset + 3] = pixels[offset + 3] * (1.f / 255);
+            dst[0] = pixels[offset + 0] * (1.f / 255);
+            dst[1] = pixels[offset + 1] * (1.f / 255);
+            dst[2] = pixels[offset + 2] * (1.f / 255);
+            dst[3] = pixels[offset + 3] * (1.f / 255);
+            dst += pixelComponentCount;
             offset += pixelComponentCount;
         }
     }

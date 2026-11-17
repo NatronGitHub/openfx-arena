@@ -31,6 +31,7 @@
 
 #include "GenericReader.h"
 #include "GenericOCIO.h"
+#include "PackedImage.h"
 #include "ofxsImageEffect.h"
 
 #define kPluginName "ReadCDR"
@@ -94,10 +95,10 @@ ReadCDRPlugin::decode(const std::string& filename,
                       const OfxRectI& renderWindow,
                       const OfxPointD& renderScale,
                       float *pixelData,
-                      const OfxRectI& /*bounds*/,
+                      const OfxRectI& bounds,
                       OFX::PixelComponentEnum /*pixelComponents*/,
                       int pixelComponentCount,
-                      int /*rowBytes*/)
+                      int rowBytes)
 {
     assert(renderScale.x == 1. && renderScale.y == 1.);
     unused(renderScale);
@@ -200,13 +201,17 @@ ReadCDRPlugin::decode(const std::string& filename,
         }
     }
 
+    // pixels is packed, bottom-up, and covers renderWindow. pixelData has the given
+    // bounds and rowBytes, which may differ from renderWindow, be padded, or be negative.
     int offset = 0;
     for (int y = 0; y < height; y++) {
+        float* dst = PackedImage::pixelAddress(pixelData, bounds, rowBytes, pixelComponentCount, renderWindow.x1, renderWindow.y1 + y);
         for (int x = 0; x < width; x++) {
-            pixelData[offset + 0] = pixels[offset + 2] * (1.f / 255);
-            pixelData[offset + 1] = pixels[offset + 1] * (1.f / 255);
-            pixelData[offset + 2] = pixels[offset + 0] * (1.f / 255);
-            pixelData[offset + 3] = pixels[offset + 3] * (1.f / 255);
+            dst[0] = pixels[offset + 2] * (1.f / 255);
+            dst[1] = pixels[offset + 1] * (1.f / 255);
+            dst[2] = pixels[offset + 0] * (1.f / 255);
+            dst[3] = pixels[offset + 3] * (1.f / 255);
+            dst += pixelComponentCount;
             offset += pixelComponentCount;
         }
     }

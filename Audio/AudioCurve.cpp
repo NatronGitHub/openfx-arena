@@ -20,6 +20,7 @@
 
 #include "sox.h"
 #include "ofxsImageEffect.h"
+#include "PackedImage.h"
 
 #include <stdint.h>
 #include <cstdlib>
@@ -166,7 +167,6 @@ void AudioCurvePlugin::render(const RenderArguments &args)
 
     // are we in the image bounds
     OfxRectI dstBounds = dstImg->getBounds();
-    OfxRectI dstRod = dstImg->getRegionOfDefinition();
     if (args.renderWindow.x1 < dstBounds.x1 ||
         args.renderWindow.x1 >= dstBounds.x2 ||
         args.renderWindow.y1 < dstBounds.y1 ||
@@ -179,23 +179,18 @@ void AudioCurvePlugin::render(const RenderArguments &args)
         return;
     }
 
-    // get options
-    int width = dstRod.x2-dstRod.x1;
-    int height = dstRod.y2-dstRod.y1;
-
-    // write output
-    float* pixelData = (float*)dstImg->getPixelData();
-    int offset = 0;
-    for (int y = 0; y < height; y++) {
-        for (int x = 0; x < width; x++) {
-            pixelData[offset + 0] = 0.f;
-            pixelData[offset + 1] = 0.f;
-            pixelData[offset + 2] = 0.f;
-            pixelData[offset + 3] = 0.f;
-            offset += 4;
+    // write output: transparent black over the render window, addressing dstImg through
+    // its bounds and rowBytes, which may differ from the RoD, include padding, or be
+    // negative (kOfxImagePropRowBytes).
+    for (int y = args.renderWindow.y1; y < args.renderWindow.y2; y++) {
+        float* dst = PackedImage::pixelAddress(dstImg->getPixelData(), dstBounds, dstImg->getRowBytes(), 4, args.renderWindow.x1, y);
+        for (int x = args.renderWindow.x1; x < args.renderWindow.x2; x++, dst += 4) {
+            dst[0] = 0.f;
+            dst[1] = 0.f;
+            dst[2] = 0.f;
+            dst[3] = 0.f;
         }
     }
-    pixelData = nullptr;
 }
 
 void AudioCurvePlugin::changedParam(const InstanceChangedArgs &/*args*/,

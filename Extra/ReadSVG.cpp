@@ -30,6 +30,7 @@
 #include "ofxNatron.h"
 #include "GenericReader.h"
 #include "GenericOCIO.h"
+#include "PackedImage.h"
 #include "ofxsMacros.h"
 #include "ofxsMultiPlane.h"
 #include "ofxsImageEffect.h"
@@ -198,8 +199,8 @@ ReadSVGPlugin::getClipComponents(const OFX::ClipComponentsArguments& args, OFX::
 }
 
 void
-ReadSVGPlugin::decodePlane(const std::string& filename, OfxTime time, int /*view*/, bool /*isPlayback*/, const OfxRectI& renderWindow, const OfxPointD& renderScale, float *pixelData, const OfxRectI& /*bounds*/,
-                                 OFX::PixelComponentEnum /*pixelComponents*/, OFX::PixelComponentEnum remappedComponents, int pixelComponentCount, const std::string& rawComponents, int /*rowBytes*/)
+ReadSVGPlugin::decodePlane(const std::string& filename, OfxTime time, int /*view*/, bool /*isPlayback*/, const OfxRectI& renderWindow, const OfxPointD& renderScale, float *pixelData, const OfxRectI& bounds,
+                                 OFX::PixelComponentEnum /*pixelComponents*/, OFX::PixelComponentEnum remappedComponents, int pixelComponentCount, const std::string& rawComponents, int rowBytes)
 {
     assert(renderScale.x == 1. && renderScale.y == 1.);
     unused(renderScale);
@@ -292,9 +293,12 @@ ReadSVGPlugin::decodePlane(const std::string& filename, OfxTime time, int /*view
     cairo_surface_flush(surface);
 
     unsigned char* cdata = cairo_image_surface_get_data(surface);
-    size_t offset = 0;
+    const int cstride = cairo_image_surface_get_stride(surface);
+    // The surface covers renderWindow, top-down. pixelData has the given bounds and rowBytes,
+    // which may differ from renderWindow, be padded, or be negative.
     for (int y = 0; y < height; ++y) {
-        size_t cdataOffset = (height - 1 - y) * width * 4;
+        size_t cdataOffset = (size_t)(height - 1 - y) * cstride;
+        float* dst = PackedImage::pixelAddress(pixelData, bounds, rowBytes, 4, renderWindow.x1, renderWindow.y1 + y);
         for (int x = 0; x < width; ++x) {
 #if 0
             // check on premulttest.svg that the raw data is premultiplied
@@ -303,11 +307,11 @@ ReadSVGPlugin::decodePlane(const std::string& filename, OfxTime time, int /*view
                 printf("x=%d y=%d r=%d g=%d b=%d a=%d\n", x, y, cdata[cdataOffset + 2], cdata[cdataOffset + 1], cdata[cdataOffset + 0], cdata[cdataOffset + 3]);
             }
 #endif
-            pixelData[offset + 0] = intToFloat<256>(cdata[cdataOffset + 2]);
-            pixelData[offset + 1] = intToFloat<256>(cdata[cdataOffset + 1]);
-            pixelData[offset + 2] = intToFloat<256>(cdata[cdataOffset + 0]);
-            pixelData[offset + 3] = intToFloat<256>(cdata[cdataOffset + 3]);
-            offset += 4;
+            dst[0] = intToFloat<256>(cdata[cdataOffset + 2]);
+            dst[1] = intToFloat<256>(cdata[cdataOffset + 1]);
+            dst[2] = intToFloat<256>(cdata[cdataOffset + 0]);
+            dst[3] = intToFloat<256>(cdata[cdataOffset + 3]);
+            dst += 4;
             cdataOffset += 4;
         }
     }
