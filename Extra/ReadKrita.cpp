@@ -19,10 +19,12 @@
 #include <iostream>
 #include <stdint.h>
 #include <zip.h>
+#include <cstdlib>
 #include <libxml/xmlmemory.h>
 #include <libxml/parser.h>
 #include "GenericReader.h"
 #include "GenericOCIO.h"
+#include "PackedImage.h"
 #include "ofxsMacros.h"
 #include "ofxsImageEffect.h"
 #include "lodepng.h"
@@ -113,8 +115,9 @@ ReadKritaPlugin::parseXML(xmlNode *node,int *width, int *height)
                 xmlChar *imgHchar;
                 imgWchar = xmlGetProp(cur_node,(const xmlChar*)"width");
                 imgHchar = xmlGetProp(cur_node,(const xmlChar*)"height");
-                imgW = atoi((const char*)imgWchar);
-                imgH = atoi((const char*)imgHchar);
+                // xmlGetProp returns NULL if the attribute is missing
+                imgW = imgWchar ? atoi((const char*)imgWchar) : 0;
+                imgH = imgHchar ? atoi((const char*)imgHchar) : 0;
                 xmlFree(imgWchar);
                 xmlFree(imgHchar);
                 if (imgW>0&&imgH>0) {
@@ -157,10 +160,10 @@ ReadKritaPlugin::decode(const std::string& filename,
                       const OfxRectI& renderWindow,
                       const OfxPointD& renderScale,
                       float *pixelData,
-                      const OfxRectI& /*bounds*/,
+                      const OfxRectI& bounds,
                       OFX::PixelComponentEnum /*pixelComponents*/,
                       int pixelComponentCount,
-                      int /*rowBytes*/)
+                      int rowBytes)
 {
     assert(renderScale.x == 1. && renderScale.y == 1.);
     unused(renderScale);
@@ -176,25 +179,38 @@ ReadKritaPlugin::decode(const std::string& filename,
     int renderHeight= renderWindow.y2 - renderWindow.y1;
 
     int err = 0;
+    // zip_open/zip_fopen return NULL on failure (missing or corrupt file)
     zip *imageOpen = zip_open(filename.c_str(),0,&err);
-    struct zip_stat imageSt;
-    zip_stat_init(&imageSt);
-    err=zip_stat(imageOpen,"mergedimage.png",0,&imageSt);
-    if (err!=-1) {
-        char *imageData = new char[imageSt.size];
-        zip_file *imageFile = zip_fopen(imageOpen,"mergedimage.png",0);
-        err=zip_fread(imageFile,imageData,imageSt.size);
-        if (err!=-1) {
-            zip_fclose(imageFile);
-            if ((imageData!=NULL)&&(imageSt.size>0)) {
-                lodepng_decode32(&buffer,(unsigned int*)&width,(unsigned int*)&height,(unsigned char *)imageData,(size_t)imageSt.size);
+    if (imageOpen) {
+        struct zip_stat imageSt;
+        zip_stat_init(&imageSt);
+        err=zip_stat(imageOpen,"mergedimage.png",0,&imageSt);
+        if (err!=-1 && imageSt.size>0) {
+            zip_file *imageFile = zip_fopen(imageOpen,"mergedimage.png",0);
+            if (imageFile) {
+                char *imageData = new char[imageSt.size];
+                zip_int64_t nread = zip_fread(imageFile,imageData,imageSt.size);
+                zip_fclose(imageFile);
+                if (nread == (zip_int64_t)imageSt.size) {
+                    unsigned w = 0, h = 0;
+                    unsigned pngErr = lodepng_decode32(&buffer,&w,&h,(unsigned char *)imageData,(size_t)imageSt.size);
+                    if (pngErr) {
+                        // lodepng may allocate the output even on error
+                        free(buffer);
+                        buffer = NULL;
+                    } else {
+                        width = (int)w;
+                        height = (int)h;
+                    }
+                }
+                delete[] imageData;
             }
         }
-        delete[] imageData;
+        zip_close(imageOpen);
     }
-    zip_close(imageOpen);
 
     if (buffer==NULL || width!=renderWidth || height!=renderHeight) {
+        free(buffer); // allocated by lodepng with malloc
         setPersistentMessage(OFX::Message::eMessageError, "", "Unable to read image");
         OFX::throwSuiteStatusException(kOfxStatErrFormat);
     }
@@ -207,17 +223,22 @@ ReadKritaPlugin::decode(const std::string& filename,
         }
     }
 
+    // pixels is packed, bottom-up, and covers renderWindow. pixelData has the given
+    // bounds and rowBytes, which may differ from renderWindow, be padded, or be negative.
     int offset = 0;
     for (int y = 0; y < height; y++) {
+        float* dst = PackedImage::pixelAddress(pixelData, bounds, rowBytes, pixelComponentCount, renderWindow.x1, renderWindow.y1 + y);
         for (int x = 0; x < width; x++) {
-            pixelData[offset + 0] = pixels[offset + 0] * (1.f / 255);
-            pixelData[offset + 1] = pixels[offset + 1] * (1.f / 255);
-            pixelData[offset + 2] = pixels[offset + 2] * (1.f / 255);
-            pixelData[offset + 3] = pixels[offset + 3] * (1.f / 255);
+            dst[0] = pixels[offset + 0] * (1.f / 255);
+            dst[1] = pixels[offset + 1] * (1.f / 255);
+            dst[2] = pixels[offset + 2] * (1.f / 255);
+            dst[3] = pixels[offset + 3] * (1.f / 255);
+            dst += pixelComponentCount;
             offset += pixelComponentCount;
         }
     }
 
+    free(buffer); // allocated by lodepng with malloc; was leaked on every render
     buffer = NULL;
     delete[] pixels;
 }

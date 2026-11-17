@@ -17,6 +17,7 @@
 */
 
 #include "MagickCommon.h"
+#include "PackedImage.h"
 
 #include <iostream>
 #include <stdint.h>
@@ -79,10 +80,10 @@ ReadMiscPlugin::decode(const std::string& filename,
                       const OfxRectI& renderWindow,
                       const OfxPointD& renderScale,
                       float *pixelData,
-                      const OfxRectI& /*bounds*/,
+                      const OfxRectI& bounds,
                       OFX::PixelComponentEnum /*pixelComponents*/,
                       int /*pixelComponentCount*/,
-                      int /*rowBytes*/)
+                      int rowBytes)
 {
     assert(renderScale.x == 1. && renderScale.y == 1.);
     unused(renderScale);
@@ -118,7 +119,11 @@ ReadMiscPlugin::decode(const std::string& filename,
         }
 #endif
         image.flip();
-        image.write(0,0,renderWindow.x2 - renderWindow.x1,renderWindow.y2 - renderWindow.y1,"RGBA",Magick::FloatPixel,pixelData);
+        // the frame bounds are (0,0,columns,rows), so after flip() the pixel (x,y) of the
+        // Magick image is the OFX pixel (x,y). pixelData has the given bounds and rowBytes.
+        PackedImage::PackedDst dstPixels(pixelData, bounds, rowBytes, 4, renderWindow);
+        image.write(renderWindow.x1,renderWindow.y1,renderWindow.x2 - renderWindow.x1,renderWindow.y2 - renderWindow.y1,"RGBA",Magick::FloatPixel,dstPixels.data());
+        dstPixels.commit();
     }
     else {
         setPersistentMessage(OFX::Message::eMessageError, "", "Unable to read image");

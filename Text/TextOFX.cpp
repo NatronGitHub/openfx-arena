@@ -31,15 +31,17 @@
 #include <cstring>
 #include <algorithm>
 #include <fstream>
+#include <mutex>
 
 #include "fx.h"
+#include "PackedImage.h"
 #include "RichText.h" // common text related functions (will be renamed to CommonText in the future)
 
 #define kPluginName "TextOFX"
 #define kPluginGrouping "Draw"
 #define kPluginIdentifier "net.fxarena.openfx.Text"
 #define kPluginVersionMajor 6
-#define kPluginVersionMinor 14
+#define kPluginVersionMinor 15
 
 #define kSupportsTiles 0
 #define kSupportsMultiResolution 0
@@ -161,6 +163,11 @@
 #define kParamLetterSpaceHint "Spacing between letters. Disabled if markup is used."
 #define kParamLetterSpaceDefault 0
 
+#define kParamLineSpace "lineSpace"
+#define kParamLineSpaceLabel "Line spacing"
+#define kParamLineSpaceHint "Extra space between lines, in pixels (may be negative)."
+#define kParamLineSpaceDefault 0.
+
 #define kParamCircleRadius "circleRadius"
 #define kParamCircleRadiusLabel "Circle radius"
 #define kParamCircleRadiusHint "Circle radius. Effect only works if auto size is disabled."
@@ -242,8 +249,10 @@ std::list<std::string> _genFonts(OFX::ChoiceParam *fontName, OFX::StringParam *f
     int altFont = 0;
     int fontIndex = 0;
 
+    // if no config was given, use a temporary one and release it before returning
+    FcConfig *tmpConfig = NULL;
     if (!fontConfig) {
-        fontConfig = FcInitLoadConfigAndFonts();
+        fontConfig = tmpConfig = FcInitLoadConfigAndFonts();
     }
 
     if (fontOverride) {
@@ -264,14 +273,25 @@ std::list<std::string> _genFonts(OFX::ChoiceParam *fontName, OFX::StringParam *f
     FcFontSet *fs = FcFontList(fontConfig, p, os);
     std::list<std::string> fonts;
     for (int i=0; fs && i < fs->nfont; i++) {
-        FcPattern *font = fs->fonts[i];
-        FcChar8 *s;
-        s = FcPatternFormat(font,(const FcChar8 *)"%{family[0]}");
-        std::string fontName(reinterpret_cast<char*>(s));
-        fonts.push_back(fontName);
-        if (font) {
-            FcPatternDestroy(font);
+        FcPattern *font = fs->fonts[i]; // owned by fs
+        FcChar8 *s = font ? FcPatternFormat(font,(const FcChar8 *)"%{family[0]}") : NULL;
+        if (s) {
+            std::string fontName(reinterpret_cast<char*>(s));
+            fonts.push_back(fontName);
+            FcStrFree(s);
         }
+    }
+    if (fs) {
+        FcFontSetDestroy(fs); // also destroys the patterns it contains
+    }
+    if (os) {
+        FcObjectSetDestroy(os);
+    }
+    if (p) {
+        FcPatternDestroy(p);
+    }
+    if (tmpConfig) {
+        FcConfigDestroy(tmpConfig);
     }
 
     fonts.sort();
@@ -315,6 +335,26 @@ std::list<std::string> _genFonts(OFX::ChoiceParam *fontName, OFX::StringParam *f
     return fonts;
 }
 
+// Make the calling thread's default pango fontmap a fontconfig/FreeType one that uses fcConfig.
+// The default fontmap is per-thread, so this does not affect other render threads.
+// pango_fc_font_map_set_config() takes its own reference on fcConfig (pango >= 1.42).
+static void
+setupFontmap(FcConfig *fcConfig)
+{
+    PangoFontMap* fontmap = pango_cairo_font_map_get_default(); // transfer none
+    if (pango_cairo_font_map_get_font_type((PangoCairoFontMap*)(fontmap)) != CAIRO_FONT_TYPE_FT) {
+        // e.g. CoreText on macOS, Win32 on Windows
+        PangoFontMap* ftFontmap = pango_cairo_font_map_new_for_font_type(CAIRO_FONT_TYPE_FT); // transfer full, may be NULL
+        if (!ftFontmap) {
+            return; // pango was built without FreeType support: keep the default fontmap
+        }
+        pango_cairo_font_map_set_default((PangoCairoFontMap*)(ftFontmap)); // takes its own reference
+        g_object_unref(ftFontmap);
+        fontmap = ftFontmap;
+    }
+    pango_fc_font_map_set_config((PangoFcFontMap*)fontmap, fcConfig);
+}
+
 class TextFXPlugin : public OFX::ImageEffect
 {
 public:
@@ -337,6 +377,9 @@ public:
     void loadSRT();
     void resetCenter(double time);
     void setFontDesc(int stretch, int weight, PangoFontDescription* desc);
+
+    /** @brief return a new reference to the current fontconfig config (may be NULL), release it with FcConfigDestroy() */
+    FcConfig* fcConfigRef();
 
 private:
     // do not need to delete these, the ImageEffect is managing them for us
@@ -366,6 +409,7 @@ private:
     OFX::DoubleParam *_circleRadius;
     OFX::IntParam *_circleWords;
     OFX::IntParam *_letterSpace;
+    OFX::DoubleParam *_lineSpace;
     OFX::Int2DParam *_canvas;
     OFX::DoubleParam *_arcRadius;
     OFX::DoubleParam *_arcAngle;
@@ -380,7 +424,11 @@ private:
     OFX::BooleanParam *_centerInteract;
     OFX::ChoiceParam *_fontName;
     OFX::StringParam *_fontOverride;
+    // After construction, _fcConfig is replaced (never modified) under _fcConfigMutex,
+    // because render threads may be using it concurrently (see fcConfigRef()).
     FcConfig* _fcConfig;
+    std::mutex _fcConfigMutex;
+    std::list<std::string> _fontOverrideFiles; // font files added to _fcConfig, in order
     OFX::DoubleParam *_scrollX;
     OFX::DoubleParam *_scrollY;
     OFX::StringParam *_srt;
@@ -416,6 +464,7 @@ TextFXPlugin::TextFXPlugin(OfxImageEffectHandle handle)
 , _circleRadius(NULL)
 , _circleWords(NULL)
 , _letterSpace(NULL)
+, _lineSpace(NULL)
 , _canvas(NULL)
 , _arcRadius(NULL)
 , _arcAngle(NULL)
@@ -466,6 +515,7 @@ TextFXPlugin::TextFXPlugin(OfxImageEffectHandle handle)
     _circleRadius = fetchDoubleParam(kParamCircleRadius);
     _circleWords = fetchIntParam(kParamCircleWords);
     _letterSpace = fetchIntParam(kParamLetterSpace);
+    _lineSpace = fetchDoubleParam(kParamLineSpace);
     _canvas = fetchInt2DParam(kParamCanvas);
     _arcRadius = fetchDoubleParam(kParamArcRadius);
     _arcAngle = fetchDoubleParam(kParamArcAngle);
@@ -491,7 +541,7 @@ TextFXPlugin::TextFXPlugin(OfxImageEffectHandle handle)
     assert(_text && _fontSize && _fontName && _textColor && _bgColor && _font && _wrap
            && _justify && _align && _valign && _markup && _style && auto_ && stretch_ && weight_ && strokeColor_
            && strokeWidth_ && strokeDash_ && strokeDashPattern_ && fontAA_ && subpixel_ && _hintStyle
-           && _hintMetrics && _circleRadius && _circleWords && _letterSpace && _canvas
+           && _hintMetrics && _circleRadius && _circleWords && _letterSpace && _lineSpace && _canvas
            && _arcRadius && _arcAngle && _rotate && _scale && _position && _move && _txt
            && _skewX && _skewY && _scaleUniform && _centerInteract && _fontOverride && _scrollX && _scrollY
            && _srt && _fps);
@@ -499,6 +549,13 @@ TextFXPlugin::TextFXPlugin(OfxImageEffectHandle handle)
     _fcConfig = FcInitLoadConfigAndFonts();
 
     _genFonts(_fontName, _fontOverride, false, _fcConfig, gHostIsNatron, kParamFontNameDefault, kParamFontNameAltDefault);
+    {
+        std::string fontCustom;
+        _fontOverride->getValue(fontCustom);
+        if (!fontCustom.empty()) {
+            _fontOverrideFiles.push_back(fontCustom);
+        }
+    }
 
     // Setup selected font
     std::string font, fontName;
@@ -538,6 +595,20 @@ TextFXPlugin::TextFXPlugin(OfxImageEffectHandle handle)
 
 TextFXPlugin::~TextFXPlugin()
 {
+    // the render threads' fontmaps hold their own reference, if any
+    if (_fcConfig) {
+        FcConfigDestroy(_fcConfig);
+    }
+}
+
+FcConfig*
+TextFXPlugin::fcConfigRef()
+{
+    std::lock_guard<std::mutex> lock(_fcConfigMutex);
+    if (_fcConfig) {
+        FcConfigReference(_fcConfig);
+    }
+    return _fcConfig;
 }
 
 void TextFXPlugin::resetCenter(double time) {
@@ -768,6 +839,8 @@ void TextFXPlugin::render(const OFX::RenderArguments &args)
     _circleRadius->getValueAtTime(args.time, circleRadius);
     _circleWords->getValueAtTime(args.time, circleWords);
     _letterSpace->getValueAtTime(args.time, letterSpace);
+    double lineSpace = 0.;
+    _lineSpace->getValueAtTime(args.time, lineSpace);
     _canvas->getValueAtTime(args.time, cwidth, cheight);
     _arcRadius->getValueAtTime(args.time, arcRadius);
     _arcAngle->getValueAtTime(args.time, arcAngle);
@@ -826,14 +899,14 @@ void TextFXPlugin::render(const OFX::RenderArguments &args)
     PangoLayout *layout;
     PangoFontDescription *desc;
     PangoAttrList *alist;
-    PangoFontMap* fontmap;
 
-    fontmap = pango_cairo_font_map_get_default();
-    if (pango_cairo_font_map_get_font_type((PangoCairoFontMap*)(fontmap)) != CAIRO_FONT_TYPE_FT) {
-        fontmap = pango_cairo_font_map_new_for_font_type(CAIRO_FONT_TYPE_FT);
+    {
+        FcConfig* fcConfig = fcConfigRef();
+        setupFontmap(fcConfig);
+        if (fcConfig) {
+            FcConfigDestroy(fcConfig); // the fontmap holds its own reference
+        }
     }
-    pango_fc_font_map_set_config((PangoFcFontMap*)fontmap, _fcConfig);
-    pango_cairo_font_map_set_default((PangoCairoFontMap*)(fontmap));
 
     surface = cairo_image_surface_create(CAIRO_FORMAT_ARGB32, width, height);
     cr = cairo_create(surface);
@@ -953,6 +1026,13 @@ void TextFXPlugin::render(const OFX::RenderArguments &args)
         }
     }
 
+    // pango_layout_set_spacing() adds space between lines, in Pango units.
+    // (pango_layout_set_line_spacing() takes a line-height factor instead.)
+    // Set it before the layout is measured for the vertical alignment below.
+    if (lineSpace != 0.) {
+        pango_layout_set_spacing(layout, (int)std::floor((lineSpace*PANGO_SCALE) * args.renderScale.y + 0.5));
+    }
+
     if (!move) {
         switch(align) {
         case 0:
@@ -987,6 +1067,7 @@ void TextFXPlugin::render(const OFX::RenderArguments &args)
     if (letterSpace != 0) {
         pango_attr_list_insert(alist,pango_attr_letter_spacing_new(std::floor((letterSpace*PANGO_SCALE) * args.renderScale.x + 0.5)));
     }
+
 
     if (!markup) {
         pango_layout_set_attributes(layout,alist);
@@ -1052,7 +1133,7 @@ void TextFXPlugin::render(const OFX::RenderArguments &args)
             rotateY = ytext;
         }
         cairo_translate(cr, rotateX, rotateY);
-        cairo_rotate(cr, -rotate * (M_PI/180.0));
+        cairo_rotate(cr, -rotate * (OFXS_PI / 180.0));
         cairo_translate(cr, -rotateX, -rotateY);
     }
 
@@ -1069,7 +1150,9 @@ void TextFXPlugin::render(const OFX::RenderArguments &args)
                     strokeDashZ=0;
                 }
                 double dash[] = {strokeDashX, strokeDashY, strokeDashZ};
-                cairo_set_dash(cr, dash, strokeDash, 0);
+                // only 3 dash lengths exist; strokeDash ranges up to 100,
+                // and larger values made cairo read past the end of dash[]
+                cairo_set_dash(cr, dash, std::min(strokeDash, 3), 0);
             }
 
             cairo_new_path(cr);
@@ -1112,7 +1195,7 @@ void TextFXPlugin::render(const OFX::RenderArguments &args)
                     arcX = xtext;
                     arcY = ytext;
                 }
-                cairo_arc(cr, arcX, arcY, std::floor(arcRadius * args.renderScale.x + 0.5), 0.0, arcAngle * (M_PI/180.0));
+                cairo_arc(cr, arcX, arcY, std::floor(arcRadius * args.renderScale.x + 0.5), 0.0, arcAngle * (OFXS_PI / 180.0));
                 cairo_path_t *path;
                 cairo_save(cr);
                 path = cairo_copy_path_flat(cr);
@@ -1179,17 +1262,26 @@ void TextFXPlugin::render(const OFX::RenderArguments &args)
 
     // get pixels
     unsigned char* cdata = cairo_image_surface_get_data(surface);
-    float* pixelData = (float*)dstImg->getPixelData();
+    const int cstride = cairo_image_surface_get_stride(surface);
 
     // write output
-    int offset = 0;
-    for (int y = 0; y < height; y++) {
-        for (int x = 0; x < width; x++) {
-            pixelData[offset + 0] = cdata[offset + 2] * (1.f / 255);
-            pixelData[offset + 1] = cdata[offset + 1] * (1.f / 255);
-            pixelData[offset + 2] = cdata[offset + 0] * (1.f / 255);
-            pixelData[offset + 3] = cdata[offset + 3] * (1.f / 255);
-            offset += 4;
+    // The surface covers dstRod, its row j being y = dstRod.y1 + j (the context is flipped above).
+    // Write the render window, addressing dstImg through its bounds and rowBytes, which may
+    // differ from dstRod, include padding, or be negative (kOfxImagePropRowBytes).
+    for (int y = args.renderWindow.y1; y < args.renderWindow.y2; y++) {
+        float* dst = PackedImage::pixelAddress(dstImg->getPixelData(), dstBounds, dstImg->getRowBytes(), 4, args.renderWindow.x1, y);
+        const int sy = y - dstRod.y1;
+        for (int x = args.renderWindow.x1; x < args.renderWindow.x2; x++, dst += 4) {
+            const int sx = x - dstRod.x1;
+            if (sx < 0 || sx >= width || sy < 0 || sy >= height) {
+                dst[0] = dst[1] = dst[2] = dst[3] = 0.f;
+                continue;
+            }
+            const unsigned char* src = cdata + (size_t)sy * cstride + (size_t)sx * 4;
+            dst[0] = src[2] * (1.f / 255);
+            dst[1] = src[1] * (1.f / 255);
+            dst[2] = src[0] * (1.f / 255);
+            dst[3] = src[3] * (1.f / 255);
         }
     }
 
@@ -1199,7 +1291,6 @@ void TextFXPlugin::render(const OFX::RenderArguments &args)
     cairo_destroy(cr);
     cairo_surface_destroy(surface);
     cdata = NULL;
-    pixelData = NULL;
 }
 
 void TextFXPlugin::changedParam(const OFX::InstanceChangedArgs &args, const std::string &paramName)
@@ -1245,7 +1336,29 @@ void TextFXPlugin::changedParam(const OFX::InstanceChangedArgs &args, const std:
         if ( font.empty() ) {
             font = kParamFontNameDefault;
         }
-        _genFonts(_fontName, _fontOverride, false, _fcConfig, gHostIsNatron, font, kParamFontNameAltDefault);
+        // Render threads may be using _fcConfig, so do not modify it: build a new config
+        // with the same font files plus the new one, and swap it in.
+        FcConfig* newConfig = FcInitLoadConfigAndFonts();
+        if (newConfig) {
+            for (std::list<std::string>::const_iterator it = _fontOverrideFiles.begin(); it != _fontOverrideFiles.end(); ++it) {
+                FcConfigAppFontAddFile(newConfig, (const FcChar8 *)it->c_str());
+            }
+            _genFonts(_fontName, _fontOverride, false, newConfig, gHostIsNatron, font, kParamFontNameAltDefault);
+            std::string fontCustom;
+            _fontOverride->getValue(fontCustom);
+            if (!fontCustom.empty()) {
+                _fontOverrideFiles.push_back(fontCustom);
+            }
+            FcConfig* oldConfig;
+            {
+                std::lock_guard<std::mutex> lock(_fcConfigMutex);
+                oldConfig = _fcConfig;
+                _fcConfig = newConfig;
+            }
+            if (oldConfig) {
+                FcConfigDestroy(oldConfig);
+            }
+        }
     } else if (paramName == kParamSubtitleFile) {
         loadSRT(); // load subtitle
     }
@@ -1281,6 +1394,8 @@ bool TextFXPlugin::getRegionOfDefinition(const OFX::RegionOfDefinitionArguments 
         weight_->getValueAtTime(args.time, weight);
         strokeWidth_->getValueAtTime(args.time, strokeWidth);
         _letterSpace->getValueAtTime(args.time, letterSpace);
+        double lineSpace = 0.;
+        _lineSpace->getValueAtTime(args.time, lineSpace);
         _txt->getValueAtTime(args.time, txt);
 
         if (!txt.empty()) {
@@ -1326,24 +1441,23 @@ bool TextFXPlugin::getRegionOfDefinition(const OFX::RegionOfDefinitionArguments 
         }
         pangoFont << " " << fontSize;
 
-        width = rod.x2-rod.x1;
-        height = rod.y2-rod.y1;
-
         cairo_t *cr;
         cairo_surface_t *surface;
         PangoLayout *layout;
         PangoFontDescription *desc;
         PangoAttrList *alist;
-        PangoFontMap* fontmap;
 
-        fontmap = pango_cairo_font_map_get_default();
-        if (pango_cairo_font_map_get_font_type((PangoCairoFontMap*)(fontmap)) != CAIRO_FONT_TYPE_FT) {
-            fontmap = pango_cairo_font_map_new_for_font_type(CAIRO_FONT_TYPE_FT);
+        {
+            FcConfig* fcConfig = fcConfigRef();
+            setupFontmap(fcConfig);
+            if (fcConfig) {
+                FcConfigDestroy(fcConfig); // the fontmap holds its own reference
+            }
         }
-        pango_fc_font_map_set_config((PangoFcFontMap*)fontmap, _fcConfig);
-        pango_cairo_font_map_set_default((PangoCairoFontMap*)(fontmap));
 
-        surface = cairo_image_surface_create(CAIRO_FORMAT_ARGB32, width, height);
+        // This surface is only used to measure the layout, and its size does not affect
+        // the measurement. (It used to be sized from the output rod, which is uninitialized here.)
+        surface = cairo_image_surface_create(CAIRO_FORMAT_ARGB32, 1, 1);
         cr = cairo_create(surface);
 
         layout = pango_cairo_create_layout(cr);
@@ -1368,6 +1482,10 @@ bool TextFXPlugin::getRegionOfDefinition(const OFX::RegionOfDefinitionArguments 
 
         if (letterSpace != 0) {
             pango_attr_list_insert(alist,pango_attr_letter_spacing_new(letterSpace*PANGO_SCALE));
+        }
+
+        if (lineSpace != 0.) {
+            pango_layout_set_spacing(layout, (int)std::floor(lineSpace*PANGO_SCALE + 0.5));
         }
 
         if (!markup)
@@ -1727,6 +1845,17 @@ void TextFXPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, Co
         param->setRange(-10000, 10000);
         param->setDisplayRange(-250, 250);
         param->setDefault(kParamLetterSpaceDefault);
+        if (page) {
+            page->addChild(*param);
+        }
+    }
+    {
+        DoubleParamDescriptor* param = desc.defineDoubleParam(kParamLineSpace);
+        param->setLabel(kParamLineSpaceLabel);
+        param->setHint(kParamLineSpaceHint);
+        param->setRange(-10000, 10000);
+        param->setDisplayRange(-100, 100);
+        param->setDefault(kParamLineSpaceDefault);
         param->setLayoutHint(OFX::eLayoutHintDivider);
         if (page) {
             page->addChild(*param);

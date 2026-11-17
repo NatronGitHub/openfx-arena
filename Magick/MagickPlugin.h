@@ -19,6 +19,7 @@
 #define MagickPlugin_h
 
 #include "MagickCommon.h"
+#include "PackedImage.h"
 
 #include "ofxsImageEffect.h"
 #include "ofxsMacros.h"
@@ -174,7 +175,8 @@ void MagickPluginHelper<SupportsRenderScale>::render(const OFX::RenderArguments 
     Magick::Image image(Magick::Geometry(width, height), Magick::Color("rgba(0,0,0,0)"));
     Magick::Image output(Magick::Geometry(width, height), Magick::Color("rgba(0,0,0,1)"));
     if (_srcClip && _srcClip->isConnected()) {
-        image.read(width, height, "RGBA", Magick::FloatPixel, (float*)srcImg->getPixelData());
+        PackedImage::PackedSrc srcPixels(srcImg.get(), args.renderWindow);
+        image.read(width, height, "RGBA", Magick::FloatPixel, srcPixels.data());
         image.flip();
         switch (vpixel) {
         case 0:
@@ -245,7 +247,9 @@ void MagickPluginHelper<SupportsRenderScale>::render(const OFX::RenderArguments 
 #else
         output.composite(image, 0, 0, Magick::CopyOpacityCompositeOp);
 #endif
-        output.write(0, 0, args.renderWindow.x2 - args.renderWindow.x1,args.renderWindow.y2 - args.renderWindow.y1, "RGBA", Magick::FloatPixel, (float*)dstImg->getPixelData());
+        PackedImage::PackedDst dstPixels(dstImg.get(), args.renderWindow);
+        output.write(0, 0, args.renderWindow.x2 - args.renderWindow.x1,args.renderWindow.y2 - args.renderWindow.y1, "RGBA", Magick::FloatPixel, dstPixels.data());
+        dstPixels.commit();
     }
 
 }

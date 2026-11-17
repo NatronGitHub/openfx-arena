@@ -1,12 +1,5 @@
 PLUGINNAME = Magick
 
-ifneq ($(LEGACYIM),1)
-PLUGINOBJECTS += \
-    Sketch.o \
-    Polaroid.o \
-    Edges.o
-endif
-
 PLUGINOBJECTS = \
     Texture.o \
     Tile.o \
@@ -29,9 +22,17 @@ PLUGINOBJECTS = \
     ofxsOGLTextRenderer.o \
     ofxsOGLFontData.o \
     ofxsRectangleInteract.o \
+    ofxsMultiPlane.o \
     GenericReader.o \
     GenericOCIO.o \
     SequenceParsing.o
+
+ifneq ($(LEGACYIM),1)
+PLUGINOBJECTS += \
+    Sketch.o \
+    Polaroid.o \
+    Edges.o
+endif
 
 RESOURCES = \
     Extra.png \

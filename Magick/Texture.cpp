@@ -17,6 +17,7 @@
 */
 
 #include "MagickCommon.h"
+#include "PackedImage.h"
 
 #include "ofxsMacros.h"
 #include "ofxsMultiThread.h"
@@ -178,7 +179,8 @@ void TexturePlugin::render(const OFX::RenderArguments &args)
     }
 
     OFX::PixelComponentEnum dstComponents  = dstImg->getPixelComponents();
-    if ((dstComponents != OFX::ePixelComponentRGBA && dstComponents != OFX::ePixelComponentRGB && dstComponents != OFX::ePixelComponentAlpha)) {
+    // only RGBA is supported by the output clip, and the image is written as "RGBA" below
+    if (dstComponents != OFX::ePixelComponentRGBA) {
         OFX::throwSuiteStatusException(kOfxStatErrFormat);
         return;
     }
@@ -299,8 +301,11 @@ void TexturePlugin::render(const OFX::RenderArguments &args)
     }
 
     // return image
-    if (dstClip_ && dstClip_->isConnected())
-        image.write(0,0,width,height,"RGBA",Magick::FloatPixel,(float*)dstImg->getPixelData());
+    if (dstClip_ && dstClip_->isConnected()) {
+        PackedImage::PackedDst dstPixels(dstImg.get(), dstRod);
+        image.write(0,0,width,height,"RGBA",Magick::FloatPixel,dstPixels.data());
+        dstPixels.commit();
+    }
 }
 
 bool TexturePlugin::getRegionOfDefinition(const OFX::RegionOfDefinitionArguments &args, OfxRectD &rod)

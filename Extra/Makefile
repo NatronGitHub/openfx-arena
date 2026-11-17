@@ -49,7 +49,8 @@ CXXFLAGS  += \
     $(XML_CXXFLAGS) \
     $(ZIP_CXXFLAGS) \
     $(GLIB_CXXFLAGS) \
-    -I$(SRCDIR)/lodepng
+    -I$(SRCDIR)/lodepng \
+    -I$(SRCDIR)/Magick
 
 LINKFLAGS += \
     $(FCONFIG_LINKFLAGS) \
