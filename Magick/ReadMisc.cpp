@@ -31,7 +31,7 @@
 #define kPluginGrouping "Image/Readers"
 #define kPluginIdentifier "fr.inria.openfx.ReadMisc"
 #define kPluginVersionMajor 1
-#define kPluginVersionMinor 2
+#define kPluginVersionMinor 3
 #define kPluginEvaluation 80 // less than ReadOIIO
 
 #define kSupportsRGBA true
@@ -104,6 +104,20 @@ ReadMiscPlugin::decode(const std::string& filename,
     if (!filename.empty())
         image.read(filename);
     if (image.columns()>0 && image.rows()>0) {
+        // No alpha in the file: force an opaque alpha channel. Some coders
+        // (e.g. PCX in ImageMagick 6) fill the canvas with backgroundColor
+        // ("none", transparent) and do not write alpha when the image has none,
+        // so exporting "A" gave 0 and GenericReader's premultiplication made the
+        // image black (#14).
+#if MagickLibVersion >= 0x700
+        if (!image.alpha()) {
+            image.alpha(true);
+        }
+#else
+        if (!image.matte()) {
+            image.matte(true);
+        }
+#endif
         image.flip();
         // the frame bounds are (0,0,columns,rows), so after flip() the pixel (x,y) of the
         // Magick image is the OFX pixel (x,y). pixelData has the given bounds and rowBytes.
@@ -190,9 +204,9 @@ ReadMiscPluginFactory::load()
 {
     _extensions.clear();
     _extensions.push_back("bmp"); // also handled by ReadOIIO (which has a higher evaluation)
-#ifdef READMISC_LEGACY
+    // PCX was disabled in 2021 (READMISC_LEGACY, #14) because it was read as
+    // black; the cause (transparent alpha, see decode()) is fixed.
     _extensions.push_back("pcx");
-#endif
     _extensions.push_back("xpm");
     //_extensions.push_back("gif"); // may be animated - better handled by ReadFFmpeg
     _extensions.push_back("miff");
