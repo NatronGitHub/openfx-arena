@@ -64,7 +64,6 @@ endif()
 
 # C++ Include directories
 INCLUDE_DIRECTORIES(${CMAKE_CURRENT_SOURCE_DIR})
-INCLUDE_DIRECTORIES(${CMAKE_CURRENT_SOURCE_DIR}/../SupportExt)
 INCLUDE_DIRECTORIES(${OPENFX_PATH}/include)
 INCLUDE_DIRECTORIES(${OPENFX_PATH}/Support/include)
 INCLUDE_DIRECTORIES(${OPENFX_PATH}/Support/Plugins/include)
@@ -91,11 +90,6 @@ FILE(GLOB SUPPORT_SOURCES
     "${OFX_SUPPORT_LIBRARY_DIR}/ofxsProperty.cpp"
     "${OFX_SUPPORT_LIBRARY_DIR}/ofxsPropertyValidation.cpp"
     "${OFX_SUPPORT_LIBRARY_DIR}/*.h"
-    "../SupportExt/ofxsTransform3x3.cpp"
-    "../SupportExt/ofxsTransformInteract.cpp"
-    "../SupportExt/ofxsShutter.cpp"
-    "../SupportExt/ofxsMultiPlane.cpp"
-    "../SupportExt/*.h"
 )
 
 FILE(GLOB SOURCES
@@ -135,6 +129,10 @@ ${CMAKE_CURRENT_BINARY_DIR}/fonts.conf
 
 # MODULE: -bundle on macOS, no SONAME elsewhere, as Makefile.master
 ADD_LIBRARY(${PROJECT_NAME} MODULE ${SOURCES} ${SUPPORT_SOURCES})
+# the SupportExt sources it had (TextOFX's transform interact, MultiPlane), built with
+# the plug-in's definitions
+include(${CMAKE_CURRENT_SOURCE_DIR}/../SupportExt/cmake/SupportExt.cmake)
+supportext_add_sources(${PROJECT_NAME} COMPONENTS TRANSFORM3X3 TRANSFORM_INTERACT MULTIPLANE)
 SET_TARGET_PROPERTIES(${PROJECT_NAME} PROPERTIES PREFIX "")
 SET_TARGET_PROPERTIES(${PROJECT_NAME} PROPERTIES SUFFIX ".ofx")
 
