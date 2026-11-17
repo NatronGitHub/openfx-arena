@@ -189,7 +189,17 @@ void SketchPlugin::render(const OFX::RenderArguments &args)
         image.read(width,height,"RGBA",Magick::FloatPixel,(float*)srcImg->getPixelData());
 
     // sketch
+#if MagickLibVersion >= 0x700
+    // IM7's sketch blends with the source alpha (darkening where it is transparent) and leaves a noisy
+    // alpha, which CopyAlphaCompositeOp passes on: sketch the opaque colour, as IM6 did
+    image.alpha(false);
+#endif
     image.sketch(std::floor(radius * args.renderScale.x + 0.5),std::floor(sigma * args.renderScale.x + 0.5),angle);
+#if MagickLibVersion >= 0x700
+    // the IM6 result is opaque
+    image.alpha(false);
+    image.alpha(true);
+#endif
 
     // return image
     if (dstClip_ && dstClip_->isConnected()) {
