@@ -312,10 +312,11 @@ target_include_directories(Arena PRIVATE
     "${CMAKE_CURRENT_SOURCE_DIR}/lodepng")
 target_link_libraries(Arena PRIVATE openfx::Support ${ARENA_LIBRARIES})
 ofx_target_openmp(Arena)
-# ImageMagick's -lomp needs the directory of libomp: ofx_target_openmp() puts the libomp it
-# links on the link path. Without it (OFX_USE_OPENMP=OFF, or no libomp found), as
+# ImageMagick's -lomp needs the directory of libomp: with Apple clang, ofx_target_openmp() puts
+# the libomp it links on the link path. Otherwise (OFX_USE_OPENMP=OFF, no libomp found, or
+# another compiler, e.g. MacPorts clang, which links libomp by full path), as
 # Makefile.master's LIBOMP_PREFIX: next to ImageMagick, else MacPorts' (macOS).
-if(NOT TARGET OpenMP::OpenMP_CXX)
+if(NOT TARGET OpenMP::OpenMP_CXX OR NOT CMAKE_CXX_COMPILER_ID STREQUAL "AppleClang")
   if(EXISTS "${MAGICK_PREFIX}/lib/libomp")
     set(_libomp_dir "${MAGICK_PREFIX}/lib/libomp")
   elseif(APPLE AND EXISTS "/opt/local/lib/libomp")
