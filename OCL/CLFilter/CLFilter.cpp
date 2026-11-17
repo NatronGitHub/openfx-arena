@@ -82,14 +82,14 @@ void CLFilterCLPlugin::changedParam(const OFX::InstanceChangedArgs &args, const 
     std::string source;
     _kSource->getValueAtTime(args.time, source);
 
+    // clear first: setupContext() may set a new error message
+    clearPersistentMessage();
     if (paramName == kParamOCLDevice) {
         setupContext(true, source);
     }
     else if (paramName == kParamKernel) {
         setupContext(false, source);
     }
-
-    clearPersistentMessage();
 }
 
 mDeclarePluginFactory(CLFilterCLPluginFactory, {}, {});
