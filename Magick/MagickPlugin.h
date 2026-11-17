@@ -23,6 +23,8 @@
 
 #include <string>
 
+#include <string>
+
 #include "ofxsImageEffect.h"
 #include "ofxsMacros.h"
 #include "ofxsMultiThread.h"
