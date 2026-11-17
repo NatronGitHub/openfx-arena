@@ -1,5 +1,6 @@
 PLUGINNAME = Arena
 
+# keep in sync with CMakeLists.txt
 PLUGINOBJECTS = \
     lodepng.o \
     RichText.o \
@@ -62,6 +63,7 @@ PLUGINOBJECTS += \
     GenericOCIO.o \
     SequenceParsing.o
 
+# keep in sync with CMakeLists.txt
 RESOURCES = \
     ../Text/net.fxarena.openfx.Text.png \
     ../Text/net.fxarena.openfx.Text.svg \
