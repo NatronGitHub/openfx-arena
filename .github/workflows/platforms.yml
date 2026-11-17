@@ -57,8 +57,9 @@ jobs:
           sudo apt-get update
           # the -dev packages of ImageMagick's own dependencies are needed too, since
           # Makefile.master and CMakeLists.txt link with pkg-config --static (libssl-dev and
-          # libzstd-dev: for libzip and curl)
-          sudo apt-get install -y cmake libssl-dev libzstd-dev libopencolorio-dev libgl-dev libglu1-mesa-dev libmagick++-dev zlib1g-dev libwebp-dev \
+          # libzstd-dev: for libzip and curl). python3-numpy and imagemagick (convert): for ctest's
+          # readpsd_layers (tests/readpsd)
+          sudo apt-get install -y cmake libssl-dev libzstd-dev python3-numpy imagemagick libopencolorio-dev libgl-dev libglu1-mesa-dev libmagick++-dev zlib1g-dev libwebp-dev \
             liblcms2-dev libfontconfig1-dev libpango1.0-dev libxml2-dev libzip-dev librsvg2-dev libglib2.0-dev libfftw3-dev \
             libpoppler-dev libpoppler-glib-dev libpoppler-private-dev librevenge-dev libcdr-dev libsox-dev libcairo-dev \
             libcurl4-openssl-dev libbz2-dev libdjvulibre-dev libexif-dev libfreetype6-dev libjpeg-dev liblqr-1-0-dev \
@@ -122,7 +123,7 @@ jobs:
           cache: true
           pacboy: >-
             cc:p pkgconf:p ntldd:p imagemagick:p opencolorio:p lcms2:p fontconfig:p pango:p librsvg:p
-            libxml2:p libzip:p libcdr:p librevenge:p sox:p curl:p poppler:p cmake:p ninja:p
+            libxml2:p libzip:p libcdr:p librevenge:p sox:p curl:p poppler:p cmake:p ninja:p python-numpy:p
           install: make
       - name: Build (release, CMake)
         if: inputs.build-system == 'cmake'
@@ -214,7 +215,8 @@ jobs:
         shell: bash -eo pipefail {0}
     env:
       # libomp: Apple clang has no OpenMP runtime; Natron builds with -Xpreprocessor -fopenmp
-      PORTS: cmake pkgconfig gsed libomp ImageMagick opencolorio lcms2 fontconfig pango librsvg poppler libxml2 libzip librevenge libcdr-0.1 sox curl
+      # py313-numpy, and python3 selected: for ctest's readpsd_layers (tests/readpsd)
+      PORTS: cmake pkgconfig gsed libomp py313-numpy ImageMagick opencolorio lcms2 fontconfig pango librsvg poppler libxml2 libzip librevenge libcdr-0.1 sox curl
     steps:
       - uses: actions/checkout@v4
         with:
@@ -225,6 +227,7 @@ jobs:
       - name: Install MacPorts packages
         run: |
           sudo port -N install $PORTS
+          sudo port select --set python3 python313
           # same fix as in Natron's INSTALL_MACOS.md
           sudo sed -i '' -e 's/Zstd::Zstd/zstd/' /opt/local/lib/pkgconfig/libzip.pc
       - name: Build (release, CMake)
