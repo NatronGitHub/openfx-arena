@@ -22,6 +22,7 @@ PLUGINOBJECTS = \
     ofxsOGLTextRenderer.o \
     ofxsOGLFontData.o \
     ofxsRectangleInteract.o \
+    ofxsMultiPlane.o \
     GenericReader.o \
     GenericOCIO.o \
     SequenceParsing.o

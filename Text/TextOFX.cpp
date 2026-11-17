@@ -31,6 +31,7 @@
 #include <cstring>
 #include <algorithm>
 #include <fstream>
+#include <mutex>
 
 #include "fx.h"
 #include "RichText.h" // common text related functions (will be renamed to CommonText in the future)
@@ -247,8 +248,10 @@ std::list<std::string> _genFonts(OFX::ChoiceParam *fontName, OFX::StringParam *f
     int altFont = 0;
     int fontIndex = 0;
 
+    // if no config was given, use a temporary one and release it before returning
+    FcConfig *tmpConfig = NULL;
     if (!fontConfig) {
-        fontConfig = FcInitLoadConfigAndFonts();
+        fontConfig = tmpConfig = FcInitLoadConfigAndFonts();
     }
 
     if (fontOverride) {
@@ -269,14 +272,25 @@ std::list<std::string> _genFonts(OFX::ChoiceParam *fontName, OFX::StringParam *f
     FcFontSet *fs = FcFontList(fontConfig, p, os);
     std::list<std::string> fonts;
     for (int i=0; fs && i < fs->nfont; i++) {
-        FcPattern *font = fs->fonts[i];
-        FcChar8 *s;
-        s = FcPatternFormat(font,(const FcChar8 *)"%{family[0]}");
-        std::string fontName(reinterpret_cast<char*>(s));
-        fonts.push_back(fontName);
-        if (font) {
-            FcPatternDestroy(font);
+        FcPattern *font = fs->fonts[i]; // owned by fs
+        FcChar8 *s = font ? FcPatternFormat(font,(const FcChar8 *)"%{family[0]}") : NULL;
+        if (s) {
+            std::string fontName(reinterpret_cast<char*>(s));
+            fonts.push_back(fontName);
+            FcStrFree(s);
         }
+    }
+    if (fs) {
+        FcFontSetDestroy(fs); // also destroys the patterns it contains
+    }
+    if (os) {
+        FcObjectSetDestroy(os);
+    }
+    if (p) {
+        FcPatternDestroy(p);
+    }
+    if (tmpConfig) {
+        FcConfigDestroy(tmpConfig);
     }
 
     fonts.sort();
@@ -320,6 +334,26 @@ std::list<std::string> _genFonts(OFX::ChoiceParam *fontName, OFX::StringParam *f
     return fonts;
 }
 
+// Make the calling thread's default pango fontmap a fontconfig/FreeType one that uses fcConfig.
+// The default fontmap is per-thread, so this does not affect other render threads.
+// pango_fc_font_map_set_config() takes its own reference on fcConfig (pango >= 1.42).
+static void
+setupFontmap(FcConfig *fcConfig)
+{
+    PangoFontMap* fontmap = pango_cairo_font_map_get_default(); // transfer none
+    if (pango_cairo_font_map_get_font_type((PangoCairoFontMap*)(fontmap)) != CAIRO_FONT_TYPE_FT) {
+        // e.g. CoreText on macOS, Win32 on Windows
+        PangoFontMap* ftFontmap = pango_cairo_font_map_new_for_font_type(CAIRO_FONT_TYPE_FT); // transfer full, may be NULL
+        if (!ftFontmap) {
+            return; // pango was built without FreeType support: keep the default fontmap
+        }
+        pango_cairo_font_map_set_default((PangoCairoFontMap*)(ftFontmap)); // takes its own reference
+        g_object_unref(ftFontmap);
+        fontmap = ftFontmap;
+    }
+    pango_fc_font_map_set_config((PangoFcFontMap*)fontmap, fcConfig);
+}
+
 class TextFXPlugin : public OFX::ImageEffect
 {
 public:
@@ -342,6 +376,9 @@ public:
     void loadSRT();
     void resetCenter(double time);
     void setFontDesc(int stretch, int weight, PangoFontDescription* desc);
+
+    /** @brief return a new reference to the current fontconfig config (may be NULL), release it with FcConfigDestroy() */
+    FcConfig* fcConfigRef();
 
 private:
     // do not need to delete these, the ImageEffect is managing them for us
@@ -386,7 +423,11 @@ private:
     OFX::BooleanParam *_centerInteract;
     OFX::ChoiceParam *_fontName;
     OFX::StringParam *_fontOverride;
+    // After construction, _fcConfig is replaced (never modified) under _fcConfigMutex,
+    // because render threads may be using it concurrently (see fcConfigRef()).
     FcConfig* _fcConfig;
+    std::mutex _fcConfigMutex;
+    std::list<std::string> _fontOverrideFiles; // font files added to _fcConfig, in order
     OFX::DoubleParam *_scrollX;
     OFX::DoubleParam *_scrollY;
     OFX::StringParam *_srt;
@@ -507,6 +548,13 @@ TextFXPlugin::TextFXPlugin(OfxImageEffectHandle handle)
     _fcConfig = FcInitLoadConfigAndFonts();
 
     _genFonts(_fontName, _fontOverride, false, _fcConfig, gHostIsNatron, kParamFontNameDefault, kParamFontNameAltDefault);
+    {
+        std::string fontCustom;
+        _fontOverride->getValue(fontCustom);
+        if (!fontCustom.empty()) {
+            _fontOverrideFiles.push_back(fontCustom);
+        }
+    }
 
     // Setup selected font
     std::string font, fontName;
@@ -546,6 +594,20 @@ TextFXPlugin::TextFXPlugin(OfxImageEffectHandle handle)
 
 TextFXPlugin::~TextFXPlugin()
 {
+    // the render threads' fontmaps hold their own reference, if any
+    if (_fcConfig) {
+        FcConfigDestroy(_fcConfig);
+    }
+}
+
+FcConfig*
+TextFXPlugin::fcConfigRef()
+{
+    std::lock_guard<std::mutex> lock(_fcConfigMutex);
+    if (_fcConfig) {
+        FcConfigReference(_fcConfig);
+    }
+    return _fcConfig;
 }
 
 void TextFXPlugin::resetCenter(double time) {
@@ -836,14 +898,14 @@ void TextFXPlugin::render(const OFX::RenderArguments &args)
     PangoLayout *layout;
     PangoFontDescription *desc;
     PangoAttrList *alist;
-    PangoFontMap* fontmap;
 
-    fontmap = pango_cairo_font_map_get_default();
-    if (pango_cairo_font_map_get_font_type((PangoCairoFontMap*)(fontmap)) != CAIRO_FONT_TYPE_FT) {
-        fontmap = pango_cairo_font_map_new_for_font_type(CAIRO_FONT_TYPE_FT);
+    {
+        FcConfig* fcConfig = fcConfigRef();
+        setupFontmap(fcConfig);
+        if (fcConfig) {
+            FcConfigDestroy(fcConfig); // the fontmap holds its own reference
+        }
     }
-    pango_fc_font_map_set_config((PangoFcFontMap*)fontmap, _fcConfig);
-    pango_cairo_font_map_set_default((PangoCairoFontMap*)(fontmap));
 
     surface = cairo_image_surface_create(CAIRO_FORMAT_ARGB32, width, height);
     cr = cairo_create(surface);
@@ -1070,7 +1132,7 @@ void TextFXPlugin::render(const OFX::RenderArguments &args)
             rotateY = ytext;
         }
         cairo_translate(cr, rotateX, rotateY);
-        cairo_rotate(cr, -rotate * (M_PI/180.0));
+        cairo_rotate(cr, -rotate * (OFXS_PI / 180.0));
         cairo_translate(cr, -rotateX, -rotateY);
     }
 
@@ -1087,7 +1149,9 @@ void TextFXPlugin::render(const OFX::RenderArguments &args)
                     strokeDashZ=0;
                 }
                 double dash[] = {strokeDashX, strokeDashY, strokeDashZ};
-                cairo_set_dash(cr, dash, strokeDash, 0);
+                // only 3 dash lengths exist; strokeDash ranges up to 100,
+                // and larger values made cairo read past the end of dash[]
+                cairo_set_dash(cr, dash, std::min(strokeDash, 3), 0);
             }
 
             cairo_new_path(cr);
@@ -1130,7 +1194,7 @@ void TextFXPlugin::render(const OFX::RenderArguments &args)
                     arcX = xtext;
                     arcY = ytext;
                 }
-                cairo_arc(cr, arcX, arcY, std::floor(arcRadius * args.renderScale.x + 0.5), 0.0, arcAngle * (M_PI/180.0));
+                cairo_arc(cr, arcX, arcY, std::floor(arcRadius * args.renderScale.x + 0.5), 0.0, arcAngle * (OFXS_PI / 180.0));
                 cairo_path_t *path;
                 cairo_save(cr);
                 path = cairo_copy_path_flat(cr);
@@ -1263,7 +1327,29 @@ void TextFXPlugin::changedParam(const OFX::InstanceChangedArgs &args, const std:
         if ( font.empty() ) {
             font = kParamFontNameDefault;
         }
-        _genFonts(_fontName, _fontOverride, false, _fcConfig, gHostIsNatron, font, kParamFontNameAltDefault);
+        // Render threads may be using _fcConfig, so do not modify it: build a new config
+        // with the same font files plus the new one, and swap it in.
+        FcConfig* newConfig = FcInitLoadConfigAndFonts();
+        if (newConfig) {
+            for (std::list<std::string>::const_iterator it = _fontOverrideFiles.begin(); it != _fontOverrideFiles.end(); ++it) {
+                FcConfigAppFontAddFile(newConfig, (const FcChar8 *)it->c_str());
+            }
+            _genFonts(_fontName, _fontOverride, false, newConfig, gHostIsNatron, font, kParamFontNameAltDefault);
+            std::string fontCustom;
+            _fontOverride->getValue(fontCustom);
+            if (!fontCustom.empty()) {
+                _fontOverrideFiles.push_back(fontCustom);
+            }
+            FcConfig* oldConfig;
+            {
+                std::lock_guard<std::mutex> lock(_fcConfigMutex);
+                oldConfig = _fcConfig;
+                _fcConfig = newConfig;
+            }
+            if (oldConfig) {
+                FcConfigDestroy(oldConfig);
+            }
+        }
     } else if (paramName == kParamSubtitleFile) {
         loadSRT(); // load subtitle
     }
@@ -1346,24 +1432,23 @@ bool TextFXPlugin::getRegionOfDefinition(const OFX::RegionOfDefinitionArguments 
         }
         pangoFont << " " << fontSize;
 
-        width = rod.x2-rod.x1;
-        height = rod.y2-rod.y1;
-
         cairo_t *cr;
         cairo_surface_t *surface;
         PangoLayout *layout;
         PangoFontDescription *desc;
         PangoAttrList *alist;
-        PangoFontMap* fontmap;
 
-        fontmap = pango_cairo_font_map_get_default();
-        if (pango_cairo_font_map_get_font_type((PangoCairoFontMap*)(fontmap)) != CAIRO_FONT_TYPE_FT) {
-            fontmap = pango_cairo_font_map_new_for_font_type(CAIRO_FONT_TYPE_FT);
+        {
+            FcConfig* fcConfig = fcConfigRef();
+            setupFontmap(fcConfig);
+            if (fcConfig) {
+                FcConfigDestroy(fcConfig); // the fontmap holds its own reference
+            }
         }
-        pango_fc_font_map_set_config((PangoFcFontMap*)fontmap, _fcConfig);
-        pango_cairo_font_map_set_default((PangoCairoFontMap*)(fontmap));
 
-        surface = cairo_image_surface_create(CAIRO_FORMAT_ARGB32, width, height);
+        // This surface is only used to measure the layout, and its size does not affect
+        // the measurement. (It used to be sized from the output rod, which is uninitialized here.)
+        surface = cairo_image_surface_create(CAIRO_FORMAT_ARGB32, 1, 1);
         cr = cairo_create(surface);
 
         layout = pango_cairo_create_layout(cr);
