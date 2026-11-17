@@ -1,0 +1,53 @@
+# The plug-ins of Arena.ofx.bundle, rendered by tests/hostdemo/run.cmake with openfx's
+# hostDemo, once (t=0), with their default parameters and hostDemo's default PAL SD inputs.
+# Every plug-in of the bundle, each major version, must have a line (the test fails otherwise):
+#   <identifier> <major version> <context> [hostDemo arguments]
+#   skip <identifier> <major version> <reason>
+# @SAMPLES@ is the directory of the generated sample files (make_samples.cpp, sample.svg).
+# hostDemo has filter and general contexts only: readers are rendered in the general context.
+net.fxarena.openfx.Text 6 filter
+skip fr.inria.openfx.ReadCDR 1 no CorelDRAW sample: libcdr only reads them, and a hand-written .cdr is not simple
+net.fxarena.openfx.ReadSVG 3 general -s filename=@SAMPLES@/sample.svg
+fr.inria.openfx.ReadKrita 2 general -s filename=@SAMPLES@/sample.kra
+fr.inria.openfx.OpenRaster 2 general -s filename=@SAMPLES@/sample.ora
+skip net.fxarena.openfx.AudioCurve 1 generator context only, which hostDemo doesn't have
+fr.inria.openfx.ReadPDF 1 general -s filename=@SAMPLES@/sample.pdf
+net.fxarena.openfx.Sketch 3 filter
+net.fxarena.openfx.Sketch 2 filter
+net.fxarena.openfx.Polaroid 2 filter
+net.fxarena.openfx.Polaroid 1 filter
+net.fxarena.openfx.Edges 3 filter
+net.fxarena.openfx.Edges 2 filter
+# infinite RoD with the default size (0x0, "project format"): give it a size
+net.fxarena.openfx.Texture 3 general width=320 height=240
+net.fxarena.openfx.Tile 4 filter
+net.fxarena.openfx.Tile 3 filter
+net.fxarena.openfx.Reflection 4 filter
+net.fxarena.openfx.Reflection 3 filter
+net.fxarena.openfx.Arc 5 filter
+net.fxarena.openfx.Arc 4 filter
+net.fxarena.openfx.Polar 5 filter
+net.fxarena.openfx.Polar 4 filter
+net.fxarena.openfx.Roll 3 filter
+net.fxarena.openfx.Roll 2 filter
+net.fxarena.openfx.Wave 4 filter
+net.fxarena.openfx.Wave 3 filter
+net.fxarena.openfx.Wave 2 filter
+net.fxarena.openfx.Swirl 3 filter
+net.fxarena.openfx.Swirl 2 filter
+net.fxarena.openfx.Implode 3 filter
+net.fxarena.openfx.Implode 2 filter
+net.fxarena.openfx.Charcoal 3 filter
+net.fxarena.openfx.Charcoal 2 filter
+net.fxarena.openfx.Oilpaint 3 filter
+net.fxarena.openfx.Oilpaint 2 filter
+net.fxarena.openfx.ReadPSD 2 general -s filename=@SAMPLES@/sample.psd
+net.fxarena.openfx.Modulate 2 filter
+net.fxarena.openfx.Modulate 1 filter
+fr.inria.openfx.ReadMisc 1 general -s filename=@SAMPLES@/sample.bmp
+# Magick/Text.cpp: infinite RoD with the default size, as Texture
+net.fxarena.openfx.Text 5 general width=320 height=240
+net.fxarena.openfx.Morphology 2 filter
+net.fxarena.openfx.Morphology 1 filter
+# RICHTEXT=ON
+net.fxarena.openfx.RichText 0 filter
