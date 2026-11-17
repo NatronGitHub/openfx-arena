@@ -5,13 +5,17 @@
 #   cmake -DHOSTDEMO=<hostDemo> -DVERIFY=<verify_plugin_loads> -DBINARY=<bundle>/Contents/<arch>/<name>.ofx
 #         -DLIST=<list.txt> -DSAMPLES=<dir> -DWORK=<dir> -P run.cmake
 #
-# The list has one line per plug-in: "<identifier> <major> <context> [hostDemo arguments]",
-# or "skip <identifier> <major> <reason>"; "#" starts a comment; @SAMPLES@ is replaced.
+# Relative paths are relative to the current directory. The list has one line per plug-in:
+# "<identifier> <major> <context> [hostDemo arguments]", or "skip <identifier> <major> <reason>";
+# "#" starts a comment; the arguments are split as a shell would, then @SAMPLES@ is replaced
+# in each, so SAMPLES may contain spaces.
 cmake_minimum_required(VERSION 3.16)
 foreach(_v HOSTDEMO VERIFY BINARY LIST SAMPLES WORK)
   if(NOT DEFINED ${_v})
     message(FATAL_ERROR "run.cmake: ${_v} is not set")
   endif()
+  # in script mode, relative to the current directory
+  get_filename_component(${_v} "${${_v}}" ABSOLUTE)
 endforeach()
 string(TIMESTAMP _start "%s")
 
@@ -30,20 +34,37 @@ foreach(_l IN LISTS _lines)
   if(_l STREQUAL "" OR _l MATCHES "^#")
     continue()
   endif()
-  string(REPLACE "@SAMPLES@" "${SAMPLES}" _l "${_l}")
   list(APPEND _entries "${_l}")
 endforeach()
+
+# native paths for hostDemo: backslashes on Windows (file(TO_NATIVE_PATH) would also escape
+# the spaces elsewhere)
+macro(native _out _path)
+  if(CMAKE_HOST_WIN32)
+    file(TO_NATIVE_PATH "${_path}" ${_out})
+  else()
+    set(${_out} "${_path}")
+  endif()
+endmacro()
 
 # the bundle directory: OFX_PLUGIN_PATH is its parent
 get_filename_component(_bundle "${BINARY}" DIRECTORY) # Contents/<arch>
 get_filename_component(_bundle "${_bundle}" DIRECTORY) # Contents
 get_filename_component(_bundle "${_bundle}" DIRECTORY) # <name>.ofx.bundle
 get_filename_component(_pluginpath "${_bundle}" DIRECTORY)
-file(TO_NATIVE_PATH "${_pluginpath}" _pluginpath)
+native(_pluginpath "${_pluginpath}")
 # the readers need an OpenColorIO config: a minimal one, next to this script
-file(TO_NATIVE_PATH "${CMAKE_CURRENT_LIST_DIR}/config.ocio" _ocio)
+native(_ocio "${CMAKE_CURRENT_LIST_DIR}/config.ocio")
 file(REMOVE_RECURSE "${WORK}")
 file(MAKE_DIRECTORY "${WORK}")
+# hostDemo's environment (it is run directly, so that a crash is reported as such): the
+# bundle, the OCIO config, and HOME in the work directory, so that the plug-ins' files in
+# the home directory (e.g. HaldCLUT's ~/.clut) stay in the build tree
+native(_nwork "${WORK}")
+set(ENV{OFX_PLUGIN_PATH} "${_pluginpath}")
+set(ENV{OCIO} "${_ocio}")
+set(ENV{HOME} "${_nwork}")
+set(ENV{USERPROFILE} "${_nwork}")
 
 set(_ok 0)
 set(_skipped 0)
@@ -53,8 +74,9 @@ foreach(_p IN LISTS _plugins)
   list(GET _idv 0 _id)
   list(GET _idv 1 _major)
   set(_entry "")
+  string(REGEX REPLACE "([][+.*()^$?|\\\\{}])" "\\\\\\1" _rid "${_id}")
   foreach(_e IN LISTS _entries)
-    if(_e MATCHES "^(skip )?${_id} ${_major}( |$)")
+    if(_e MATCHES "^(skip )?${_rid} ${_major}( |$)")
       set(_entry "${_e}")
       break()
     endif()
@@ -64,7 +86,12 @@ foreach(_p IN LISTS _plugins)
     list(APPEND _failed "${_id}v${_major}")
     continue()
   endif()
-  separate_arguments(_args UNIX_COMMAND "${_entry}")
+  separate_arguments(_split UNIX_COMMAND "${_entry}")
+  set(_args "")
+  foreach(_a IN LISTS _split)
+    string(REPLACE "@SAMPLES@" "${SAMPLES}" _a "${_a}")
+    list(APPEND _args "${_a}")
+  endforeach()
   if(_entry MATCHES "^skip ")
     string(REGEX REPLACE "^skip [^ ]+ [0-9]+ *" "" _reason "${_entry}")
     message("skip ${_id} v${_major}: ${_reason}")
@@ -75,10 +102,9 @@ foreach(_p IN LISTS _plugins)
   list(REMOVE_AT _args 0 1 2)
   string(REGEX REPLACE "^.*\\." "" _name "${_id}")
   set(_prefix "${WORK}/${_name}${_major}")
-  file(TO_NATIVE_PATH "${_prefix}" _nprefix)
+  native(_nprefix "${_prefix}")
   execute_process(
-    COMMAND "${CMAKE_COMMAND}" -E env "OFX_PLUGIN_PATH=${_pluginpath}" "OCIO=${_ocio}"
-            "${HOSTDEMO}" --quiet --no-std-paths --no-cache -p "${_id}" -m "${_major}" -c "${_ctx}"
+    COMMAND "${HOSTDEMO}" --quiet --no-std-paths --no-cache -p "${_id}" -m "${_major}" -c "${_ctx}"
             --frames 0 -o "${_nprefix}" ${_args}
     WORKING_DIRECTORY "${WORK}"
     RESULT_VARIABLE _r OUTPUT_VARIABLE _log ERROR_VARIABLE _log
