@@ -66,7 +66,7 @@ endif()
 option(BUILD_TESTING "Build a plug-in load test (ctest)" OFF)
 
 # Check that submodule have been initialized and updated
-if(NOT EXISTS "${PROJECT_SOURCE_DIR}/OpenFX/include" OR NOT EXISTS "${PROJECT_SOURCE_DIR}/SupportExt/ofxsMacros.h"
+if(NOT EXISTS "${PROJECT_SOURCE_DIR}/OpenFX/include" OR NOT EXISTS "${PROJECT_SOURCE_DIR}/SupportExt/cmake/SupportExt.cmake"
    OR NOT EXISTS "${PROJECT_SOURCE_DIR}/OpenFX-IO/IOSupport/SequenceParsing/SequenceParsing.cpp")
   message(FATAL_ERROR
     "\n submodule(s) are missing, please update your repository:\n"
@@ -78,6 +78,12 @@ if(NOT DEFINED OpenGL_GL_PREFERENCE)
   set(OpenGL_GL_PREFERENCE LEGACY)
 endif()
 
+# supportext_add_sources(), from Arena's own SupportExt. Included first, before anything
+# that could include OpenFX-IO's copy (OpenFX-IO/SupportExt, e.g. through IOSupport's
+# CMake): the first SupportExt.cmake included is the one every call uses, and the
+# SupportExt submodule is the one Arena pins and the Makefiles build.
+include(SupportExt/cmake/SupportExt.cmake)
+
 # openfx::Api and openfx::Support (with the OFX_EXTENSIONS_* and OFX_SUPPORTS_OPENGLRENDER
 # definitions of Makefile.master), and cmake/OpenFX.cmake: add_ofx_plugin(),
 # ofx_plugin_resources(), ofx_target_openmp(), ofx_deploy_bundle(), ARCHDIR, and the
@@ -87,82 +93,13 @@ endif()
 add_subdirectory(OpenFX EXCLUDE_FROM_ALL)
 
 ########################################################################
-# TODO: replace with SupportExt (supportext#46) and IOSupport (openfx-io#102).
+# TODO: replace with IOSupport (openfx-io#102).
 #
-# Stand-ins, with the names and arguments that SupportExt's cmake/SupportExt.cmake
-# and OpenFX-IO/IOSupport will provide:
-#   supportext_add_sources(<target> [ALL] [OPENGL] [OSMESA] [EGL] [COMPONENTS ...])
+# A stand-in, with the name and arguments that OpenFX-IO/IOSupport will provide:
 #   ioSupport_add_sources(<target>)
-# Nothing Arena-specific goes in this block: delete it when the submodules provide
-# these; the calls stay.
+# Nothing Arena-specific goes in this block: delete it when the submodule provides
+# it; the calls stay.
 ########################################################################
-# supportext_add_sources(<target> [ALL] [OPENGL] [OSMESA] [EGL] [COMPONENTS ...])
-# Add SupportExt sources to <target>, so that they are built with its definitions;
-# a short version of SupportExt's cmake/SupportExt.cmake (openfx-supportext #45),
-# with its component names. Components that draw link OpenGL::GL.
-if(NOT SUPPORTEXT_DIR)
-  set(SUPPORTEXT_DIR "${PROJECT_SOURCE_DIR}/SupportExt")
-endif()
-set(_SE_THREADS tinythread.cpp ofxsThreadSuite.cpp)
-set(_SE_FILEOPEN ofxsFileOpen.cpp)
-set(_SE_LUT ofxsLut.cpp)
-set(_SE_MULTIPLANE ofxsMultiPlane.cpp)
-set(_SE_SHUTTER ofxsShutter.cpp)
-set(_SE_TRANSFORM3X3 ofxsTransform3x3.cpp ofxsShutter.cpp)
-set(_SE_TRANSFORM_INTERACT ofxsTransformInteract.cpp)
-set(_SE_RECTANGLE_INTERACT ofxsRectangleInteract.cpp)
-set(_SE_GENERATOR ofxsGenerator.cpp ofxsRectangleInteract.cpp)
-set(_SE_TEXT ofxsOGLTextRenderer.cpp ofxsOGLFontData.cpp)
-set(_SE_RAMP ofxsRamp.cpp ofxsOGLTextRenderer.cpp ofxsOGLFontData.cpp)
-set(_SE_TRACKING ofxsTracking.cpp ofxsOGLTextRenderer.cpp ofxsOGLFontData.cpp)
-set(_SE_OGL_FUNCTIONS ofxsOGLFunctions_gl.cpp glad/glad.cpp)
-set(_SE_OPENGL ofxsOGLUtilities.cpp glad/glad.cpp ofxsOGLFunctions_gl.cpp ofxsOGLTextRenderer.cpp ofxsOGLFontData.cpp)
-set(_SE_EGL glad/gladegl.cpp)
-set(_SE_ALL THREADS FILEOPEN LUT MULTIPLANE SHUTTER TRANSFORM3X3 TRANSFORM_INTERACT RECTANGLE_INTERACT
-    GENERATOR TEXT RAMP TRACKING OGL_FUNCTIONS OPENGL)
-set(_SE_NO_GL THREADS FILEOPEN LUT MULTIPLANE SHUTTER TRANSFORM3X3 EGL)
-function(supportext_add_sources TARGET)
-  cmake_parse_arguments(PARSE_ARGV 1 _se "ALL;OPENGL;OSMESA;EGL" "" "COMPONENTS")
-  if(_se_OSMESA)
-    message(FATAL_ERROR "supportext_add_sources: OSMESA is not in this stand-in")
-  endif()
-  set(_components ${_se_COMPONENTS})
-  if(_se_ALL)
-    list(APPEND _components ${_SE_ALL})
-  endif()
-  foreach(_opt OPENGL EGL)
-    if(_se_${_opt})
-      list(APPEND _components ${_opt})
-    endif()
-  endforeach()
-  get_property(_files TARGET ${TARGET} PROPERTY _SUPPORTEXT_SOURCES)
-  set(_new "")
-  set(_gl OFF)
-  foreach(_c ${_components})
-    if(NOT DEFINED _SE_${_c} OR _c STREQUAL "ALL" OR _c STREQUAL "NO_GL")
-      message(FATAL_ERROR "supportext_add_sources: unknown component ${_c}")
-    endif()
-    if(NOT _c IN_LIST _SE_NO_GL)
-      set(_gl ON)
-    endif()
-    foreach(_f ${_SE_${_c}})
-      if(NOT _f IN_LIST _files)
-        list(APPEND _files ${_f})
-        list(APPEND _new "${SUPPORTEXT_DIR}/${_f}")
-      endif()
-    endforeach()
-  endforeach()
-  set_property(TARGET ${TARGET} PROPERTY _SUPPORTEXT_SOURCES ${_files})
-  if(_new)
-    target_sources(${TARGET} PRIVATE ${_new})
-  endif()
-  target_include_directories(${TARGET} PRIVATE "${SUPPORTEXT_DIR}" "${SUPPORTEXT_DIR}/glad")
-  if(_gl)
-    find_package(OpenGL REQUIRED)
-    target_link_libraries(${TARGET} PRIVATE OpenGL::GL)
-  endif()
-endfunction()
-
 # ioSupport_add_sources(<target>)
 # Add the IOSupport sources (GenericReader, GenericOCIO, SequenceParsing) to <target>,
 # so that they are built with its definitions (e.g. OFX_IO_USING_OCIO).
