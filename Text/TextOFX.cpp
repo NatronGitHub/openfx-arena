@@ -56,8 +56,13 @@
 #define kPluginName "TextOFX"
 #define kPluginGrouping "Draw"
 #define kPluginIdentifier "net.fxarena.openfx.Text"
-#define kPluginVersionMajor 6
-#define kPluginVersionMinor 16
+// 7.0: the Center is in canonical coordinates (the pixel aspect ratio and the RoD origin are
+// applied), so the text is where the overlay shows it, and Canvas size and Auto size are in
+// pixels. 6.x is kept, unchanged, for old projects (issue #70).
+#define kPluginVersionMajor 7
+#define kPluginVersionMinor 0
+#define kPluginVersionMajorV6 6
+#define kPluginVersionMinorV6 16
 
 #define kSupportsTiles 0
 #define kSupportsMultiResolution 0
@@ -237,6 +242,7 @@ enum SizeUnitEnum
 #define kParamCanvas "canvas"
 #define kParamCanvasLabel "Canvas size"
 #define kParamCanvasHint "Set canvas size, default (0) is project format. Disabled if auto size is active."
+#define kParamCanvasHintV7 "Set canvas size in pixels, default (0) is project format. Disabled if auto size is active."
 #define kParamCanvasDefault 0
 
 #define kParamArcRadius "arcRadius"
@@ -414,7 +420,7 @@ setupFontmap(FcConfig *fcConfig)
 class TextFXPlugin : public OFX::ImageEffect
 {
 public:
-    TextFXPlugin(OfxImageEffectHandle handle);
+    TextFXPlugin(OfxImageEffectHandle handle, bool canonicalCenter);
     virtual ~TextFXPlugin();
 
     /* Override the render */
@@ -452,6 +458,12 @@ private:
     double getPAR() const;
     void updateParamsState();
     void updatePositionIncrement(bool relative);
+
+    // From v7, the Center is in canonical coordinates in render(), and the Canvas and Auto size
+    // are in pixels. v6 took the Center as pixels at scale 1 from the RoD origin, and the
+    // Canvas and Auto size as canonical sizes, which is only right if PAR = 1 and the RoD
+    // starts at (0,0) (issue #70). v6 renders as before, for old projects.
+    const bool _canonicalCenter;
 
     // do not need to delete these, the ImageEffect is managing them for us
     OFX::Clip *_dstClip;
@@ -512,8 +524,9 @@ private:
     OFX::Int2DParam  *_range;
 };
 
-TextFXPlugin::TextFXPlugin(OfxImageEffectHandle handle)
+TextFXPlugin::TextFXPlugin(OfxImageEffectHandle handle, bool canonicalCenter)
 : OFX::ImageEffect(handle)
+, _canonicalCenter(canonicalCenter)
 , _dstClip(NULL)
 , _text(NULL)
 , _fontSize(NULL)
@@ -727,6 +740,20 @@ void TextFXPlugin::resetCenter(double time) {
     }
 }
 
+// The canonical size of a width in pixels at scale 1. Hosts get the pixel RoD as
+// ceil(x2 * renderScale / PAR) (e.g. Natron's RectD::toPixelEnclosing), and w * PAR / PAR can
+// be w plus a rounding error (e.g. w = 31 and PAR = 16/15), which would add a column.
+static double
+pixelWidthToCanonical(int w, double par)
+{
+    double x = w * par;
+    while (x / par > w) {
+        x = std::nextafter(x, 0.);
+    }
+
+    return x;
+}
+
 OfxRectD TextFXPlugin::getRelativeFrame(double time, bool autoSize) const
 {
     OfxRectD frame = {0., 0., 0., 0.};
@@ -735,7 +762,8 @@ OfxRectD TextFXPlugin::getRelativeFrame(double time, bool autoSize) const
         _canvas->getValueAtTime(time, cwidth, cheight);
         // same condition as in getRegionOfDefinition(), where the canvas becomes the RoD
         if (cwidth > 0 && cheight > 0) {
-            frame.x2 = cwidth;
+            // v7: the canvas is in pixels (v6: canonical)
+            frame.x2 = _canonicalCenter ? pixelWidthToCanonical(cwidth, getPAR()) : cwidth;
             frame.y2 = cheight;
             return frame;
         }
@@ -867,7 +895,7 @@ convertPosition(const OfxPointD& p, const OfxRectD& frame, bool toRelative)
     return ret;
 }
 
-// In absolute mode, render() takes the Center as pixels at scale 1 from the bottom-left corner
+// In absolute mode, render() v6 takes the Center as pixels at scale 1 from the bottom-left corner
 // of the RoD (it does not apply the pixel aspect ratio): convert between that and canonical
 // coordinates. rodOrigin is the RoD origin in canonical coordinates.
 static OfxPointD
@@ -902,7 +930,25 @@ bool TextFXPlugin::convertPositionRelative(double time, bool relative)
     if ( (frame.x2 <= frame.x1) || (frame.y2 <= frame.y1) ) {
         return false;
     }
-    // The origin of the RoD that render() uses in absolute mode: render() gets it in pixels
+    if (_canonicalCenter) {
+        // v7: the absolute Center is canonical, as is the frame
+        const int nKeys = getNumKeys(_position);
+        const int n = (nKeys == 0) ? 1 : nKeys;
+        for (int i = 0; i < n; ++i) {
+            const double t = (nKeys == 0) ? time : _position->getKeyTime(i);
+            OfxPointD p;
+            _position->getValueAtTime(t, p.x, p.y);
+            p = convertPosition(p, frame, relative);
+            if (nKeys == 0) {
+                _position->setValue(p);
+            } else {
+                _position->setValueAtTime(t, p);
+            }
+        }
+
+        return true;
+    }
+    // v6: the origin of the RoD that render() uses in absolute mode: render() gets it in pixels
     // (enclosing the canonical RoD, at scale 1 here), so round it the same way.
     const double par = getPAR();
     OfxPointD rodOrigin = {0., 0.};
@@ -1181,22 +1227,36 @@ void TextFXPlugin::render(const OFX::RenderArguments &args)
     _scrollX->getValueAtTime(args.time, scrollX);
     _scrollY->getValueAtTime(args.time, scrollY);
 
-    if ( isPositionRelative(args.time) ) {
-        // The code below takes the position in pixels at scale 1, from the bottom-left corner
-        // of the RoD: convert the relative position to canonical coordinates (in which the
-        // interact works), then to that convention.
-        const OfxPointD p0 = {x, y};
+    double xtext, ytext; // the Center in pixels from the RoD origin, at the render scale
+    if (_canonicalCenter) {
+        // v7: the Center is in canonical coordinates, like the overlay. Map it to pixels as in
+        // ofxCoordSystem.rst, "X' = (X * SX)/PAR, Y' = Y * SY * FS" (no fields here: FS = 1),
+        // from the origin of the RoD, which is in pixel coordinates.
+        OfxPointD c = {x, y};
+        if ( isPositionRelative(args.time) ) {
+            c = convertPosition( c, getRelativeFrame(args.time, autoSize), false );
+        }
         const double par = getPAR();
-        OfxPointD rodOrigin; // canonical
-        rodOrigin.x = dstRod.x1 * par / args.renderScale.x;
-        rodOrigin.y = dstRod.y1 / args.renderScale.y;
-        const OfxPointD p = canonicalToAbsolute(convertPosition( p0, getRelativeFrame(args.time, autoSize), false ), rodOrigin, par);
-        x = p.x;
-        y = p.y;
+        xtext = c.x / par * args.renderScale.x - dstRod.x1;
+        ytext = c.y * args.renderScale.y - dstRod.y1;
+    } else {
+        // v6, unchanged: the code below takes the position in pixels at scale 1, from the
+        // bottom-left corner of the RoD, without the PAR (issue #70).
+        if ( isPositionRelative(args.time) ) {
+            // Convert the relative position to canonical coordinates (in which the
+            // interact works), then to that convention.
+            const OfxPointD p0 = {x, y};
+            const double par = getPAR();
+            OfxPointD rodOrigin; // canonical
+            rodOrigin.x = dstRod.x1 * par / args.renderScale.x;
+            rodOrigin.y = dstRod.y1 / args.renderScale.y;
+            const OfxPointD p = canonicalToAbsolute(convertPosition( p0, getRelativeFrame(args.time, autoSize), false ), rodOrigin, par);
+            x = p.x;
+            y = p.y;
+        }
+        ytext = y*args.renderScale.y;
+        xtext = x*args.renderScale.x;
     }
-
-    double ytext = y*args.renderScale.y;
-    double xtext = x*args.renderScale.x;
     // The cairo surface covers dstRod, whatever the bounds of dstImg (which may be only the
     // render window, see the write below), so flip y within dstRod, not within dstBounds.
     // When dstBounds == dstRod this is the same value as before.
@@ -1885,7 +1945,9 @@ bool TextFXPlugin::getRegionOfDefinition(const OFX::RegionOfDefinitionArguments 
 
     if (width>0 && height>0) {
         rod.x1 = rod.y1 = 0;
-        rod.x2 = width;
+        // The RoD is in canonical coordinates. v7: the canvas and the measured text are in
+        // pixels, so apply the PAR (v6 did not, which cropped or padded the text if PAR != 1).
+        rod.x2 = _canonicalCenter ? pixelWidthToCanonical(width, getPAR()) : width;
         rod.y2 = height;
     }
     else {
@@ -2135,10 +2197,12 @@ class TextTransformOverlayDescriptor
 {
 };
 
-mDeclarePluginFactory(TextFXPluginFactory, {}, {});
+mDeclarePluginFactoryVersioned(TextFXPluginFactory, {}, {});
 
 /** @brief The basic describe function, passed a plugin descriptor */
-void TextFXPluginFactory::describe(OFX::ImageEffectDescriptor &desc)
+template<unsigned int majorVersion>
+void
+TextFXPluginFactory<majorVersion>::describe(OFX::ImageEffectDescriptor &desc)
 {
     // basic labels
     desc.setLabel(kPluginName);
@@ -2162,7 +2226,9 @@ void TextFXPluginFactory::describe(OFX::ImageEffectDescriptor &desc)
 }
 
 /** @brief The describe in context function, passed a plugin descriptor and a context */
-void TextFXPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, ContextEnum context)
+template<unsigned int majorVersion>
+void
+TextFXPluginFactory<majorVersion>::describeInContext(OFX::ImageEffectDescriptor &desc, ContextEnum context)
 {
     // natron?
     gHostIsNatron = (OFX::getImageEffectHostDescription()->isNatron);
@@ -2245,7 +2311,7 @@ void TextFXPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, Co
     {
         Int2DParamDescriptor* param = desc.defineInt2DParam(kParamCanvas);
         param->setLabel(kParamCanvasLabel);
-        param->setHint(kParamCanvasHint);
+        param->setHint(majorVersion >= 7 ? kParamCanvasHintV7 : kParamCanvasHint);
         param->setRange(0, 0, 10000, 10000);
         param->setDisplayRange(0, 0, 4000, 4000);
         param->setDefault(kParamCanvasDefault, kParamCanvasDefault);
@@ -2767,10 +2833,15 @@ void TextFXPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, Co
 }
 
 /** @brief The create instance function, the plugin must return an object derived from the \ref OFX::ImageEffect class */
-ImageEffect* TextFXPluginFactory::createInstance(OfxImageEffectHandle handle, ContextEnum /*context*/)
+template<unsigned int majorVersion>
+ImageEffect*
+TextFXPluginFactory<majorVersion>::createInstance(OfxImageEffectHandle handle, ContextEnum /*context*/)
 {
-    return new TextFXPlugin(handle);
+    return new TextFXPlugin(handle, /*canonicalCenter=*/ majorVersion >= 7);
 }
 
-static TextFXPluginFactory p(kPluginIdentifier, kPluginVersionMajor, kPluginVersionMinor);
+// Each version is its own factory class: two versions sharing one class would share its uid.
+static TextFXPluginFactory<kPluginVersionMajor> p(kPluginIdentifier, kPluginVersionMinor);
+static TextFXPluginFactory<kPluginVersionMajorV6> p6(kPluginIdentifier, kPluginVersionMinorV6);
 mRegisterPluginFactoryInstance(p)
+mRegisterPluginFactoryInstance(p6)

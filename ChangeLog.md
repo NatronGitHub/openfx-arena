@@ -2,6 +2,7 @@
 
 ## Unreleased
 
+ * ``Text`` (TextOFX) 7.0: the Center is in canonical coordinates, as the overlay shows it: the text is now drawn at the Center when the pixel aspect ratio isn't 1 or the RoD doesn't start at (0,0) (e.g. an offset Source). The Canvas size and the Auto size are in pixels, so Auto size no longer crops the text when the pixel aspect ratio isn't 1. Turning Relative position on or off converts the Center with the same mapping. Text 6.16 stays registered and renders as before, so old projects are unchanged (#70).
  * Arena now targets ImageMagick 7 (static, Q32, HDRI, OpenMP), which Natron 2.6 will ship on every platform. ImageMagick 6 still builds and renders as before.
  * ``Charcoal``, ``Sketch``, ``Morphology``, ``Texture``: with ImageMagick 7, alpha is now the same as with ImageMagick 6 (it was grey levels, noise, transparent or negative), except where ImageMagick 7 differs inherently: Morphology Voronoi, the Morphology intensity methods with more than 1 iteration, and Texture Plasma.
  * With ImageMagick 7, these render differently from ImageMagick 6 (largest difference measured, in [0,1] units, and the share of pixels affected):
