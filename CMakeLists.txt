@@ -545,21 +545,34 @@ endif()
         find_program(ARENA_PYTHON3 python3)
         set(_numpy FALSE)
         if(ARENA_PYTHON3)
-            execute_process(COMMAND "${ARENA_PYTHON3}" -c "import numpy"
+            # Python 3.6 or later (Rocky 8's), with NumPy
+            execute_process(COMMAND "${ARENA_PYTHON3}" -c "import sys; assert sys.version_info >= (3, 6); import numpy"
                 RESULT_VARIABLE _r OUTPUT_QUIET ERROR_QUIET)
             if(_r EQUAL 0)
                 set(_numpy TRUE)
             endif()
         endif()
+        # magick or convert next to Magick++, else magick, else a convert that is ImageMagick's
+        # (Windows has System32\convert.exe)
         find_program(ARENA_MAGICK_TOOL NAMES magick convert HINTS "${MAGICK_PREFIX}/bin" NO_DEFAULT_PATH)
-        find_program(ARENA_MAGICK_TOOL NAMES magick convert)
+        find_program(ARENA_MAGICK_TOOL NAMES magick)
+        if(NOT ARENA_MAGICK_TOOL)
+            find_program(_arena_convert convert)
+            if(_arena_convert)
+                execute_process(COMMAND "${_arena_convert}" -version OUTPUT_VARIABLE _v ERROR_QUIET
+                    RESULT_VARIABLE _r TIMEOUT 30)
+                if(_r EQUAL 0 AND _v MATCHES "ImageMagick")
+                    set(ARENA_MAGICK_TOOL "${_arena_convert}" CACHE FILEPATH "ImageMagick's magick or convert" FORCE)
+                endif()
+            endif()
+        endif()
         if(_numpy AND ARENA_MAGICK_TOOL)
             add_test(NAME readpsd_layers COMMAND "${ARENA_PYTHON3}"
                 "${CMAKE_CURRENT_SOURCE_DIR}/tests/readpsd/test_layers.py"
                 --hostdemo $<TARGET_FILE:hostDemo> "${OFX_PLUGIN_BUILD_DIR}")
             set_tests_properties(readpsd_layers PROPERTIES ENVIRONMENT "MAGICK=${ARENA_MAGICK_TOOL}")
         else()
-            message(STATUS "BUILD_TESTING: no ReadPSD layer test (tests/readpsd needs Python 3 with NumPy, and ImageMagick's magick or convert)")
+            message(STATUS "BUILD_TESTING: no ReadPSD layer test (tests/readpsd needs Python 3.6 or later with NumPy, and ImageMagick's magick or convert)")
         endif()
     else()
         message(STATUS "BUILD_TESTING: no hostDemo (openfx's HostSupport examples), no render test")

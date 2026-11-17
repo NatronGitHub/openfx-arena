@@ -180,14 +180,28 @@ def find_magick():
     if os.environ.get('MAGICK'):
         return os.environ['MAGICK']
     try:
-        prefix = subprocess.run(['pkg-config', '--variable=prefix', 'Magick++'], capture_output=True, text=True).stdout.strip()
+        # (stdout/stderr PIPE and universal_newlines: Python 3.6 has no capture_output, text)
+        prefix = subprocess.run(['pkg-config', '--variable=prefix', 'Magick++'], stdout=subprocess.PIPE,
+                                stderr=subprocess.PIPE, universal_newlines=True).stdout.strip()
     except OSError:
         prefix = ''
     for tool in ('magick', 'convert'):
         p = os.path.join(prefix, 'bin', tool) if prefix else ''
         if p and os.access(p, os.X_OK):
             return p
-    return shutil.which('magick') or shutil.which('convert')
+    if shutil.which('magick'):
+        return shutil.which('magick')
+    # a convert from the PATH only if it is ImageMagick's (Windows has System32\convert.exe)
+    conv = shutil.which('convert')
+    if conv:
+        try:
+            out = subprocess.run([conv, '-version'], stdout=subprocess.PIPE, stderr=subprocess.PIPE,
+                                 universal_newlines=True, timeout=30).stdout
+        except (OSError, subprocess.SubprocessError):
+            out = ''
+        if 'ImageMagick' in out:
+            return conv
+    return None
 
 def psd(outdir, ls):
     tool = find_magick()

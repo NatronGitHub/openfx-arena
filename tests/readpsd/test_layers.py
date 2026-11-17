@@ -66,7 +66,9 @@ def render(hostdemo, bundle_dir, workdir, name, settings):
            '-p', 'net.fxarena.openfx.ReadPSD', '-c', 'general', '-o', 'out', '--frames', '0', '-i', 'Source=none']
     cmd += sum((['-s', s] for s in settings), [])
     env = dict(os.environ, OFX_PLUGIN_PATH=bundle_dir, OCIO=os.path.join(workdir, 'identity.ocio'))
-    p = subprocess.run(cmd, cwd=d, env=env, capture_output=True, text=True, timeout=120)
+    # (stdout/stderr PIPE and universal_newlines: Python 3.6 has no capture_output, text)
+    p = subprocess.run(cmd, cwd=d, env=env, stdout=subprocess.PIPE, stderr=subprocess.PIPE,
+                       universal_newlines=True, timeout=120)
     out = None
     msgs = p.stdout + p.stderr
     try:
