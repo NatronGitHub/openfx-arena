@@ -17,6 +17,7 @@
 */
 
 #include "MagickCommon.h"
+#include "PackedImage.h"
 
 #include "ofxsMacros.h"
 #include "ofxsMultiThread.h"
@@ -28,8 +29,8 @@
 #define kPluginName "ImplodeOFX"
 #define kPluginGrouping "Extra/Distort"
 #define kPluginIdentifier "net.fxarena.openfx.Implode"
-#define kPluginVersionMajor 2
-#define kPluginVersionMinor 3
+#define kPluginVersionMajor 3 // 3: unpremultiply the source before ImageMagick (see PackedImage::PackedSrc)
+#define kPluginVersionMinor 0
 
 #define kParamImplode "factor"
 #define kParamImplodeLabel "Factor"
@@ -63,11 +64,12 @@ static bool _hasOpenMP = false;
 class ImplodePlugin : public OFX::ImageEffect
 {
 public:
-    ImplodePlugin(OfxImageEffectHandle handle);
+    ImplodePlugin(OfxImageEffectHandle handle, bool unpremultSrc);
     virtual ~ImplodePlugin();
     virtual void render(const OFX::RenderArguments &args) OVERRIDE FINAL;
     virtual bool getRegionOfDefinition(const OFX::RegionOfDefinitionArguments &args, OfxRectD &rod) OVERRIDE FINAL;
 private:
+    bool unpremultSrc_; // false in versions released before the premultiplication fix
     OFX::Clip *dstClip_;
     OFX::Clip *srcClip_;
     OFX::DoubleParam *implode_;
@@ -76,8 +78,9 @@ private:
     OFX::BooleanParam *enableOpenMP_;
 };
 
-ImplodePlugin::ImplodePlugin(OfxImageEffectHandle handle)
+ImplodePlugin::ImplodePlugin(OfxImageEffectHandle handle, bool unpremultSrc)
 : OFX::ImageEffect(handle)
+, unpremultSrc_(unpremultSrc)
 , dstClip_(NULL)
 , srcClip_(NULL)
 {
@@ -183,8 +186,13 @@ void ImplodePlugin::render(const OFX::RenderArguments &args)
     // read image
     Magick::Image image(Magick::Geometry(width,height),Magick::Color("rgba(0,0,0,0)"));
     Magick::Image output(Magick::Geometry(width,height),Magick::Color("rgba(0,0,0,1)"));
-    if (srcClip_ && srcClip_->isConnected())
-        image.read(width,height,"RGBA",Magick::FloatPixel,(float*)srcImg->getPixelData());
+    if (srcClip_ && srcClip_->isConnected()) {
+        // ImageMagick expects straight colour. With Matte, alpha is discarded and the
+        // premultiplied colour is the intended "flattened over black" input.
+        PackedImage::PackedSrc srcPixels(srcImg.get(), srcRod,
+                                         unpremultSrc_ && !matte && srcImg->getPreMultiplication() == OFX::eImagePreMultiplied);
+        image.read(width,height,"RGBA",Magick::FloatPixel,srcPixels.data());
+    }
 
 
     if (matte) {
@@ -212,7 +220,9 @@ void ImplodePlugin::render(const OFX::RenderArguments &args)
 #else
         output.composite(image, 0, 0, Magick::CopyOpacityCompositeOp);
 #endif
-        output.write(0,0,args.renderWindow.x2 - args.renderWindow.x1,args.renderWindow.y2 - args.renderWindow.y1,"RGBA",Magick::FloatPixel,(float*)dstImg->getPixelData());
+        PackedImage::PackedDst dstPixels(dstImg.get(), args.renderWindow);
+        output.write(0,0,args.renderWindow.x2 - args.renderWindow.x1,args.renderWindow.y2 - args.renderWindow.y1,"RGBA",Magick::FloatPixel,dstPixels.data());
+        dstPixels.commit();
     }
 }
 
@@ -231,11 +241,15 @@ bool ImplodePlugin::getRegionOfDefinition(const OFX::RegionOfDefinitionArguments
     return true;
 }
 
-mDeclarePluginFactory(ImplodePluginFactory, {}, {});
+mDeclarePluginFactoryVersioned(ImplodePluginFactory, {}, {});
 
 /** @brief The basic describe function, passed a plugin descriptor */
-void ImplodePluginFactory::describe(OFX::ImageEffectDescriptor &desc)
+template<unsigned int majorVersion>
+void ImplodePluginFactory<majorVersion>::describe(OFX::ImageEffectDescriptor &desc)
 {
+    if (majorVersion < kPluginVersionMajor) {
+        desc.setIsDeprecated(true);
+    }
     // basic labels
     desc.setLabel(kPluginName);
     desc.setPluginGrouping(kPluginGrouping);
@@ -257,7 +271,8 @@ void ImplodePluginFactory::describe(OFX::ImageEffectDescriptor &desc)
 }
 
 /** @brief The describe in context function, passed a plugin descriptor and a context */
-void ImplodePluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, ContextEnum /*context*/)
+template<unsigned int majorVersion>
+void ImplodePluginFactory<majorVersion>::describeInContext(OFX::ImageEffectDescriptor &desc, ContextEnum /*context*/)
 {
     std::string features = MagickCore::GetMagickFeatures();
     if (features.find("OpenMP") != std::string::npos)
@@ -318,10 +333,15 @@ void ImplodePluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, C
 }
 
 /** @brief The create instance function, the plugin must return an object derived from the \ref OFX::ImageEffect class */
-ImageEffect* ImplodePluginFactory::createInstance(OfxImageEffectHandle handle, ContextEnum /*context*/)
+template<unsigned int majorVersion>
+ImageEffect* ImplodePluginFactory<majorVersion>::createInstance(OfxImageEffectHandle handle, ContextEnum /*context*/)
 {
-    return new ImplodePlugin(handle);
+    // versions before 3 fed premultiplied pixels to ImageMagick: keep their output
+    return new ImplodePlugin(handle, majorVersion >= 3);
 }
 
-static ImplodePluginFactory p(kPluginIdentifier, kPluginVersionMajor, kPluginVersionMinor);
+static ImplodePluginFactory<kPluginVersionMajor> p(kPluginIdentifier, kPluginVersionMinor);
 mRegisterPluginFactoryInstance(p)
+// version 2, kept so that existing projects render as before
+static ImplodePluginFactory<2> p2(kPluginIdentifier, 3);
+mRegisterPluginFactoryInstance(p2)

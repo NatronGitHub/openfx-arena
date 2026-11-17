@@ -17,6 +17,11 @@
    * ``Morphology``: colour differs for Convolve and Correlate with shaped (Octagon, Disk) or zero-sum (Sobel, Laplacian) kernels, even on opaque sources (up to 0.96, mean up to 0.26; with more than 1 iteration, up to 1.0 with any kernel that isn't normalised, mean up to 0.40 on opaque sources and 0.72 with alpha); for Edge, EdgeIn, EdgeOut, TopHat, BottomHat and HitAndMiss on sources with alpha (up to 0.38, mean up to 0.14); for the intensity methods with more than 1 iteration (up to 1.0, mean up to 0.043); and entirely for Voronoi. Normalised kernels (Gaussian, Blur) and the other methods are unchanged.
    * ``Texture``: Plasma and Plasma Fractal are opaque instead of half transparent, and the Loops patterns differ (their values are far outside [0,1] with both versions). The noises, Stripes, Checkerboard and the gradients are unchanged.
    * ``ReadMisc``: some RGB PCX files that ImageMagick 6 read as fully transparent (e.g. Natron-Tests' TestImagePCX) are read as opaque.
+ * ``ReadPSD`` 2.8 (fixed in place, #74):
+   * XCF, hosts other than Natron: the layer menu picks the right layer (it was off by one, and the top layer crashed), and Default merges the layers (it was the bottom layer)
+   * XCF, every host including Natron: the output size is the canvas from the file, instead of the largest layer's size
+   * PSD and XCF, every host, with ImageMagick 6: layers at negative offsets are placed correctly (ImageMagick 7 already did)
+   * XCF: the merged Default skips hidden layers and uses the layers' blend modes. Layer opacity is still ignored (ImageMagick doesn't read it)
 
 ## Natron-2.3.15
 

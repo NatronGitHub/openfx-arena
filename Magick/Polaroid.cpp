@@ -17,6 +17,7 @@
 */
 
 #include "MagickCommon.h"
+#include "PackedImage.h"
 
 #include "ofxsMacros.h"
 #include "ofxsMultiThread.h"
@@ -30,8 +31,8 @@
 #define kPluginName "PolaroidOFX"
 #define kPluginGrouping "Extra/Misc"
 #define kPluginIdentifier "net.fxarena.openfx.Polaroid"
-#define kPluginVersionMajor 1
-#define kPluginVersionMinor 4
+#define kPluginVersionMajor 2 // 2: unpremultiply the source before ImageMagick (see PackedImage::PackedSrc)
+#define kPluginVersionMinor 0
 
 #define kParamText "caption"
 #define kParamTextLabel "Caption"
@@ -80,12 +81,13 @@ static bool _hasOpenMP = false;
 class PolaroidPlugin : public OFX::ImageEffect
 {
 public:
-    PolaroidPlugin(OfxImageEffectHandle handle);
+    PolaroidPlugin(OfxImageEffectHandle handle, bool unpremultSrc);
     virtual ~PolaroidPlugin();
     virtual void render(const OFX::RenderArguments &args) OVERRIDE FINAL;
     virtual void changedParam(const OFX::InstanceChangedArgs &args, const std::string &paramName) OVERRIDE FINAL;
     virtual bool getRegionOfDefinition(const OFX::RegionOfDefinitionArguments &args, OfxRectD &rod) OVERRIDE FINAL;
 private:
+    bool unpremultSrc_; // false in versions released before the premultiplication fix
     OFX::Clip *dstClip_;
     OFX::Clip *srcClip_;
     OFX::StringParam *text_;
@@ -97,8 +99,9 @@ private:
     OFX::BooleanParam *enableOpenMP_;
 };
 
-PolaroidPlugin::PolaroidPlugin(OfxImageEffectHandle handle)
+PolaroidPlugin::PolaroidPlugin(OfxImageEffectHandle handle, bool unpremultSrc)
 : OFX::ImageEffect(handle)
+, unpremultSrc_(unpremultSrc)
 , dstClip_(NULL)
 , srcClip_(NULL)
 , text_(NULL)
@@ -275,8 +278,12 @@ void PolaroidPlugin::render(const OFX::RenderArguments &args)
     // read image
     Magick::Image image(Magick::Geometry(width,height),Magick::Color("rgba(0,0,0,0)"));
     Magick::Image output(Magick::Geometry(width,height),Magick::Color("rgba(0,0,0,1)"));
-    if (srcClip_ && srcClip_->isConnected())
-        image.read(width,height,"RGBA",Magick::FloatPixel,(float*)srcImg->getPixelData());
+    if (srcClip_ && srcClip_->isConnected()) {
+        // ImageMagick expects straight colour
+        PackedImage::PackedSrc srcPixels(srcImg.get(), srcRod,
+                                         unpremultSrc_ && srcImg->getPreMultiplication() == OFX::eImagePreMultiplied);
+        image.read(width,height,"RGBA",Magick::FloatPixel,srcPixels.data());
+    }
     //if (!image.alpha())
         //image.alpha(true);
 
@@ -318,7 +325,9 @@ void PolaroidPlugin::render(const OFX::RenderArguments &args)
 #else
         output.composite(image, 0, 0, Magick::CopyOpacityCompositeOp);
 #endif
-        output.write(0,0,args.renderWindow.x2 - args.renderWindow.x1,args.renderWindow.y2 - args.renderWindow.y1,"RGBA",Magick::FloatPixel,(float*)dstImg->getPixelData());
+        PackedImage::PackedDst dstPixels(dstImg.get(), args.renderWindow);
+        output.write(0,0,args.renderWindow.x2 - args.renderWindow.x1,args.renderWindow.y2 - args.renderWindow.y1,"RGBA",Magick::FloatPixel,dstPixels.data());
+        dstPixels.commit();
     }
 }
 
@@ -367,11 +376,15 @@ bool PolaroidPlugin::getRegionOfDefinition(const OFX::RegionOfDefinitionArgument
     return true;
 }
 
-mDeclarePluginFactory(PolaroidPluginFactory, {}, {});
+mDeclarePluginFactoryVersioned(PolaroidPluginFactory, {}, {});
 
 /** @brief The basic describe function, passed a plugin descriptor */
-void PolaroidPluginFactory::describe(OFX::ImageEffectDescriptor &desc)
+template<unsigned int majorVersion>
+void PolaroidPluginFactory<majorVersion>::describe(OFX::ImageEffectDescriptor &desc)
 {
+    if (majorVersion < kPluginVersionMajor) {
+        desc.setIsDeprecated(true);
+    }
     // basic labels
     desc.setLabel(kPluginName);
     desc.setPluginGrouping(kPluginGrouping);
@@ -393,7 +406,8 @@ void PolaroidPluginFactory::describe(OFX::ImageEffectDescriptor &desc)
 }
 
 /** @brief The describe in context function, passed a plugin descriptor and a context */
-void PolaroidPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, ContextEnum /*context*/)
+template<unsigned int majorVersion>
+void PolaroidPluginFactory<majorVersion>::describeInContext(OFX::ImageEffectDescriptor &desc, ContextEnum /*context*/)
 {
     std::string features = MagickCore::GetMagickFeatures();
     if (features.find("OpenMP") != std::string::npos)
@@ -520,10 +534,15 @@ void PolaroidPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, 
 }
 
 /** @brief The create instance function, the plugin must return an object derived from the \ref OFX::ImageEffect class */
-ImageEffect* PolaroidPluginFactory::createInstance(OfxImageEffectHandle handle, ContextEnum /*context*/)
+template<unsigned int majorVersion>
+ImageEffect* PolaroidPluginFactory<majorVersion>::createInstance(OfxImageEffectHandle handle, ContextEnum /*context*/)
 {
-    return new PolaroidPlugin(handle);
+    // versions before 2 fed premultiplied pixels to ImageMagick: keep their output
+    return new PolaroidPlugin(handle, majorVersion >= 2);
 }
 
-static PolaroidPluginFactory p(kPluginIdentifier, kPluginVersionMajor, kPluginVersionMinor);
+static PolaroidPluginFactory<kPluginVersionMajor> p(kPluginIdentifier, kPluginVersionMinor);
 mRegisterPluginFactoryInstance(p)
+// version 1, kept so that existing projects render as before
+static PolaroidPluginFactory<1> p1(kPluginIdentifier, 4);
+mRegisterPluginFactoryInstance(p1)
