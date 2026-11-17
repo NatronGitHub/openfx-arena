@@ -324,12 +324,13 @@ private:
     virtual void changedFilename(const OFX::InstanceChangedArgs &args) OVERRIDE FINAL;
     void genLayerMenu(const std::vector<Magick::Image>& frames);
     void readFrames(const std::string& filename);
-    void getFrames(std::vector<Magick::Image>* frames, std::string* filename = NULL);
+    void getFrames(std::vector<Magick::Image>* frames, std::string* filename = NULL, int* xcfWidth = NULL, int* xcfHeight = NULL);
     // _psd and _filename are written on the instanceChanged path (readFrames()) while renders read them:
     // they are only accessed under _psdMutex, and the render actions work on a copy (Magick::Image is
     // reference counted, so copying the vector is cheap)
     Mutex _psdMutex;
     std::string _filename; // the file that _psd was read from, empty if none
+    int _xcfWidth, _xcfHeight; // its canvas size if it is an XCF file (read from its header), else 0
     bool _hasLCMS;
     std::vector<Magick::Image> _psd;
     OFX::ChoiceParam *_iccIn;
@@ -357,6 +358,8 @@ ReadPSDPlugin::ReadPSDPlugin(OfxImageEffectHandle handle, const std::vector<std:
 false
 #endif
 )
+,_xcfWidth(0)
+,_xcfHeight(0)
 ,_hasLCMS(false)
 {
     Magick::InitializeMagick(NULL);
@@ -422,6 +425,11 @@ void ReadPSDPlugin::readFrames(const std::string& filename)
         readError = true;
     }
     const bool ok = !readError && !frames.empty() && frames[0].columns() > 0 && frames[0].rows() > 0;
+    // read the XCF canvas once, with the frames, so that it matches them even if the file changes later
+    int xcfWidth = 0, xcfHeight = 0;
+    if ( ok && !hasComposite(frames) && !readXCFCanvas(filename, &xcfWidth, &xcfHeight) ) {
+        xcfWidth = xcfHeight = 0;
+    }
     {
         AutoMutex lock(_psdMutex);
         if (ok) {
@@ -431,6 +439,8 @@ void ReadPSDPlugin::readFrames(const std::string& filename)
             _psd.clear();
             _filename.clear();
         }
+        _xcfWidth = xcfWidth;
+        _xcfHeight = xcfHeight;
     }
     if (readError) {
         setPersistentMessage(OFX::Message::eMessageError, "", "Unable to read image");
@@ -450,13 +460,17 @@ void ReadPSDPlugin::readFrames(const std::string& filename)
     }
 }
 
-// a copy of _psd, and the file it was read from
-void ReadPSDPlugin::getFrames(std::vector<Magick::Image>* frames, std::string* filename)
+// a copy of _psd, and the file it was read from and its XCF canvas size
+void ReadPSDPlugin::getFrames(std::vector<Magick::Image>* frames, std::string* filename, int* xcfWidth, int* xcfHeight)
 {
     AutoMutex lock(_psdMutex);
     *frames = _psd;
     if (filename) {
         *filename = _filename;
+    }
+    if (xcfWidth && xcfHeight) {
+        *xcfWidth = _xcfWidth;
+        *xcfHeight = _xcfHeight;
     }
 }
 
@@ -833,11 +847,14 @@ bool ReadPSDPlugin::getFrameBounds(const std::string& /*filename*/,
     int maxHeight = 0;
     _imageLayer->getValue(layer);
     std::vector<Magick::Image> frames;
-    std::string framesFilename;
-    getFrames(&frames, &framesFilename);
+    int xcfWidth = 0, xcfHeight = 0;
+    getFrames(&frames, NULL, &xcfWidth, &xcfHeight);
     if (frameForLayerChoice(frames, layer) != kNoFrame) {
-        // PSD: the largest frame, i.e. the composite. XCF: the canvas
-        if ( hasComposite(frames) || !readXCFCanvas(framesFilename, &maxWidth, &maxHeight) ) {
+        // XCF: the canvas. PSD (or an XCF whose header couldn't be read): the largest frame, i.e. the composite
+        if (xcfWidth > 0 && xcfHeight > 0) {
+            maxWidth = xcfWidth;
+            maxHeight = xcfHeight;
+        } else {
             for (int i = 0; i < (int)frames.size(); i++) {
                 if ((int)frames[i].columns()>maxWidth)
                     maxWidth = (int)frames[i].columns();
