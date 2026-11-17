@@ -63,7 +63,7 @@ option(BUILD_TESTING "Build a plug-in load test (ctest)" OFF)
 
 # Check that submodule have been initialized and updated
 if(NOT EXISTS "${PROJECT_SOURCE_DIR}/OpenFX/include" OR NOT EXISTS "${PROJECT_SOURCE_DIR}/SupportExt/cmake/SupportExt.cmake"
-   OR NOT EXISTS "${PROJECT_SOURCE_DIR}/OpenFX-IO/IOSupport/SequenceParsing/SequenceParsing.cpp")
+   OR NOT EXISTS "${PROJECT_SOURCE_DIR}/OpenFX-IO/IOSupport/cmake/IOSupport.cmake")
   message(FATAL_ERROR
     "\n submodule(s) are missing, please update your repository:\n"
     "  > git submodule update --init --recursive\n")
@@ -79,6 +79,9 @@ endif()
 # CMake): the first SupportExt.cmake included is the one every call uses, and the
 # SupportExt submodule is the one Arena pins and the Makefiles build.
 include(SupportExt/cmake/SupportExt.cmake)
+# ioSupport_add_sources(), from OpenFX-IO's IOSupport; after SupportExt.cmake, which it uses,
+# so that its supportext_add_sources() calls use Arena's SupportExt
+include(OpenFX-IO/IOSupport/cmake/IOSupport.cmake)
 
 # openfx::Api and openfx::Support (with the OFX_EXTENSIONS_* and OFX_SUPPORTS_OPENGLRENDER
 # definitions of Makefile.master), and cmake/OpenFX.cmake: add_ofx_plugin(),
@@ -92,33 +95,6 @@ if(BUILD_TESTING)
 endif()
 add_subdirectory(OpenFX EXCLUDE_FROM_ALL)
 
-########################################################################
-# TODO: replace with IOSupport (openfx-io#102).
-#
-# A stand-in, with the name and arguments that OpenFX-IO/IOSupport will provide:
-#   ioSupport_add_sources(<target>)
-# Nothing Arena-specific goes in this block: delete it when the submodule provides
-# it; the calls stay.
-########################################################################
-# ioSupport_add_sources(<target>)
-# Add the IOSupport sources (GenericReader, GenericOCIO, SequenceParsing) to <target>,
-# so that they are built with its definitions (e.g. OFX_IO_USING_OCIO).
-if(NOT IOSUPPORT_DIR)
-  set(IOSUPPORT_DIR "${PROJECT_SOURCE_DIR}/OpenFX-IO/IOSupport")
-endif()
-function(ioSupport_add_sources TARGET)
-  target_sources(${TARGET} PRIVATE
-    "${IOSUPPORT_DIR}/GenericReader.cpp"
-    "${IOSUPPORT_DIR}/GenericOCIO.cpp"
-    "${IOSUPPORT_DIR}/SequenceParsing/SequenceParsing.cpp")
-  target_include_directories(${TARGET} PRIVATE
-    "${IOSUPPORT_DIR}"
-    "${IOSUPPORT_DIR}/SequenceParsing"
-    "${IOSUPPORT_DIR}/SequenceParsing/tinydir")
-endfunction()
-########################################################################
-# end of the TODO block
-########################################################################
 
 
 # Libraries, found by pkg-config as in Makefile.master. Like Makefile.master, link
@@ -322,7 +298,10 @@ if(CMAKE_SYSTEM_NAME STREQUAL "Linux")
 endif()
 add_ofx_plugin(Arena INFO_PLIST Bundle/Info.plist RPATH ${_arena_rpath} SOURCES ${SOURCES})
 supportext_add_sources(Arena COMPONENTS TEXT TRANSFORM3X3 TRANSFORM_INTERACT MULTIPLANE)
-ioSupport_add_sources(Arena)
+# GenericReader, with GenericOCIO and SequenceParsing. OpenColorIO is PkgConfig::OCIO, not
+# OpenColorIO::OpenColorIO: the helper adds neither GenericOCIO's OpenGL code nor
+# OFX_IO_USING_OCIO, which Arena sets itself (below), as Makefile.io
+ioSupport_add_sources(Arena COMPONENTS GenericReader)
 target_include_directories(Arena PRIVATE
     "${CMAKE_CURRENT_SOURCE_DIR}"
     "${CMAKE_CURRENT_SOURCE_DIR}/Magick"
