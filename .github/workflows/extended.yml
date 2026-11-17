@@ -1,0 +1,62 @@
+name: Extended builds
+
+# Nightly, only if master had a commit in the last 25 hours, and on demand:
+# - the builds of ci.yml with C++20 (Natron Qt6 builds and RB-2.7);
+# - the per-PR (C++17) macOS build, which isn't required for merging.
+
+on:
+  workflow_dispatch:
+    inputs:
+      cxxstd:
+        description: C++ standard to build with
+        type: choice
+        options: [c++20, c++17]
+        default: c++20
+  schedule:
+    - cron: '17 3 * * *'
+
+permissions:
+  contents: read
+
+concurrency:
+  # event_name keeps a manual dispatch and the nightly run from cancelling each other
+  group: ${{ github.workflow }}-${{ github.event_name }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  # skip the nightly run if master had no commit in the last 25 hours
+  changes:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    outputs:
+      run: ${{ steps.check.outputs.run }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 50
+          persist-credentials: false
+      - id: check
+        shell: bash -eo pipefail {0}
+        run: |
+          if [ "${{ github.event_name }}" != schedule ] || [ -n "$(git log --since='25 hours ago' --format=%h -1)" ]; then
+            echo "run=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "run=false" >> "$GITHUB_OUTPUT"; echo "No commits in the last 25 hours: skipping."
+          fi
+
+  build:
+    needs: changes
+    if: needs.changes.outputs.run == 'true'
+    uses: ./.github/workflows/platforms.yml
+    with:
+      cxxstd: ${{ (github.event_name == 'workflow_dispatch' && inputs.cxxstd) || 'c++20' }}
+      artifacts: false
+
+  macos-cxx17:
+    needs: changes
+    if: needs.changes.outputs.run == 'true'
+    uses: ./.github/workflows/platforms.yml
+    with:
+      cxxstd: c++17
+      artifacts: false
+      macos-only: true
