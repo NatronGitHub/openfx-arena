@@ -213,7 +213,8 @@ jobs:
       run:
         shell: bash -eo pipefail {0}
     env:
-      PORTS: cmake pkgconfig gsed ImageMagick opencolorio lcms2 fontconfig pango librsvg poppler libxml2 libzip librevenge libcdr-0.1 sox curl
+      # libomp: Apple clang has no OpenMP runtime; Natron builds with -Xpreprocessor -fopenmp
+      PORTS: cmake pkgconfig gsed libomp ImageMagick opencolorio lcms2 fontconfig pango librsvg poppler libxml2 libzip librevenge libcdr-0.1 sox curl
     steps:
       - uses: actions/checkout@v4
         with:
