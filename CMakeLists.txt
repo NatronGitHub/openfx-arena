@@ -169,8 +169,9 @@ list(APPEND ARENA_LIBRARIES PkgConfig::OCIO)
 
 # ImageMagick's .pc passes on the -fopenmp it was built with, which Apple clang
 # rejects: drop it, and let ofx_target_openmp() add OpenMP (OFX_USE_OPENMP). Keep
-# its OpenMP runtime (-lomp, -lgomp) in the link, which a static ImageMagick needs;
-# its libomp directory is added after ofx_target_openmp(Arena) below.
+# its OpenMP runtime (-lomp, -lgomp) in the link, which a static ImageMagick needs:
+# ofx_target_openmp() puts libomp's directory on the link path (or see after
+# ofx_target_openmp(Arena) below).
 foreach(_prop INTERFACE_COMPILE_OPTIONS INTERFACE_LINK_LIBRARIES)
   get_target_property(_flags PkgConfig::MAGICK ${_prop})
   if(_flags)
@@ -311,22 +312,20 @@ target_include_directories(Arena PRIVATE
     "${CMAKE_CURRENT_SOURCE_DIR}/lodepng")
 target_link_libraries(Arena PRIVATE openfx::Support ${ARENA_LIBRARIES})
 ofx_target_openmp(Arena)
-# ImageMagick's -lomp needs the directory of libomp, which is not necessarily next
-# to ImageMagick (e.g. an IM7 in its own prefix, #75): use the libomp that
-# ofx_target_openmp() found (OFX_LIBOMP_ROOT, else MacPorts' /opt/local/lib/libomp).
-# Without it (OFX_USE_OPENMP=OFF, or not Apple clang), as Makefile.master's
-# LIBOMP_PREFIX: next to ImageMagick, else MacPorts.
-if(OFX_LIBOMP_LIBRARY)
-  get_filename_component(_libomp_dir "${OFX_LIBOMP_LIBRARY}" DIRECTORY)
-elseif(EXISTS "${MAGICK_PREFIX}/lib/libomp")
-  set(_libomp_dir "${MAGICK_PREFIX}/lib/libomp")
-elseif(APPLE AND EXISTS "/opt/local/lib/libomp")
-  set(_libomp_dir "/opt/local/lib/libomp")
-endif()
-if(_libomp_dir)
-  # an interface property, read at generation: also applies to the targets linked
-  # with PkgConfig::MAGICK before this point
-  set_property(TARGET PkgConfig::MAGICK APPEND PROPERTY INTERFACE_LINK_DIRECTORIES "${_libomp_dir}")
+# ImageMagick's -lomp needs the directory of libomp: ofx_target_openmp() puts the libomp it
+# links on the link path. Without it (OFX_USE_OPENMP=OFF, or no libomp found), as
+# Makefile.master's LIBOMP_PREFIX: next to ImageMagick, else MacPorts' (macOS).
+if(NOT TARGET OpenMP::OpenMP_CXX)
+  if(EXISTS "${MAGICK_PREFIX}/lib/libomp")
+    set(_libomp_dir "${MAGICK_PREFIX}/lib/libomp")
+  elseif(APPLE AND EXISTS "/opt/local/lib/libomp")
+    set(_libomp_dir "/opt/local/lib/libomp")
+  endif()
+  if(_libomp_dir)
+    # an interface property, read at generation: also applies to the targets linked
+    # with PkgConfig::MAGICK before this point
+    set_property(TARGET PkgConfig::MAGICK APPEND PROPERTY INTERFACE_LINK_DIRECTORIES "${_libomp_dir}")
+  endif()
 endif()
 target_compile_definitions(Arena PRIVATE OFX_IO_USING_OCIO)
 if(LEGACYIM)
