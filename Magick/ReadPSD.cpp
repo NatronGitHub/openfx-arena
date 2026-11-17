@@ -828,9 +828,10 @@ bool ReadPSDPlugin::getFrameBounds(const std::string& /*filename*/,
         *par = 1.0;
     } else {
         // bounds and format were not set: report failure instead of
-        // returning garbage bounds to GenericReader
+        // returning garbage bounds to GenericReader. With the file loaded,
+        // it is the layer choice that is past the last layer
         if (error) {
-            *error = "Unable to read image";
+            *error = frames.empty() ? "Unable to read image" : "Layer not found in image";
         }
         return false;
     }
