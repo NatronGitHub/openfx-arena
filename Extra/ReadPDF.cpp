@@ -422,8 +422,11 @@ bool ReadPDFPlugin::getFrameBounds(const std::string& filename,
         OFX::throwSuiteStatusException(kOfxStatErrFormat);
     }
 
-    // a document without pages has no page 0: check it before reading its size
-    page = poppler_document_get_page(document, 0);
+    // a document without pages has no page 0: check it before reading its size (and before
+    // asking for it, which poppler reports as a critical error)
+    if (poppler_document_get_n_pages(document) > 0) {
+        page = poppler_document_get_page(document, 0);
+    }
     if (page != NULL) {
         poppler_page_get_size(page, &imageWidth, &imageHeight);
         width = dpi * imageWidth / kPluginDPI;
