@@ -2217,6 +2217,11 @@ private:
     // round to the power of 10 below the size of a screen pixel, as the helper does
     static double fround(double val, double pscale)
     {
+        // log10(0) = -inf would give pscale10 = 0 and 0 * floor(val / 0) = NaN: a host's pixel
+        // scale is > 0, but don't round otherwise
+        if (pscale <= 0.) {
+            return val;
+        }
         const double pscale10 = std::pow( 10., std::floor( std::log10(pscale) ) );
 
         return pscale10 * std::floor(val / pscale10 + 0.5);
