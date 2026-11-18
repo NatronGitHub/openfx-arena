@@ -8,7 +8,6 @@ VPATH += \
 
 CXXFLAGS += $(shell pkg-config --cflags OpenColorIO)
 CXXFLAGS += -DOFX_IO_USING_OCIO
+# no -rpath into OpenColorIO's libdir: a bundle's RUNPATH only has $ORIGIN-relative entries
+# (openfx's linuxCheckBundle.sh); the installers bundle OpenColorIO in <bundle>/Libraries
 LINKFLAGS += $(shell pkg-config --libs OpenColorIO)
-ifeq ($(OS),Linux)
-LINKFLAGS += -Wl,-rpath,`pkg-config --variable=libdir OpenColorIO`
-endif

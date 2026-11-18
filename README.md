@@ -91,6 +91,7 @@ Optional build options:
   * ``IM=7``: with ``MINGW=1``, also link ``oleaut32`` for ImageMagick 7. Elsewhere it has no effect: the ImageMagick version is detected at compile time
   * ``MINGW=1``: MinGW (MSYS2): add the libraries a static ImageMagick needs (gdi32, freetype, expat, z, ws2_32)
   * ``FREEBSD=1``: FreeBSD: add ``/usr/local/include`` and ``/usr/local/lib`` to the search paths
+  * ``MACOSX_DEPLOYMENT_TARGET=XX`` (environment or make variable): the minimum macOS of the bundles, as CMake's ``CMAKE_OSX_DEPLOYMENT_TARGET``; 14.0 by default, as Natron's macOS plug-ins
   * ``LIBOMP_PREFIX=...``: with Apple clang, when ImageMagick was built with OpenMP, the prefix of libomp (``$(LIBOMP_PREFIX)/{include,lib}/libomp``). The default is the ImageMagick prefix if it has ``lib/libomp``, else MacPorts' ``/opt/local``
 
 ```
@@ -129,6 +130,7 @@ Options (the Makefile equivalents are in parentheses):
   * ``-DMAGICK_PKG_CONFIG=XXX``: Custom Magick++ pkg-config name (default ``Magick++``, which ImageMagick 6 and 7 both install): only needed to pick one of several ImageMagick installs, e.g. ``Magick++-6.Q16HDRI``. The Makefiles always use ``Magick++``
   * ``-DOFX_USE_OPENMP=OFF``: build without OpenMP (on macOS with Apple clang, OpenMP uses MacPorts' libomp)
   * ``-DOFX_CXX_STANDARD=20``: C++ standard (17 by default; ``ReadPDF`` is always built as C++20)
+  * ``-DCMAKE_OSX_DEPLOYMENT_TARGET=XX``: the minimum macOS of the bundles; 14.0 by default, unless the ``MACOSX_DEPLOYMENT_TARGET`` environment variable or a toolchain file sets it (``MACOSX_DEPLOYMENT_TARGET``)
   * ``-DOFX_DEPLOY_BUNDLES=ON``: on macOS, copy the non-system libraries into the installed bundle (Release builds), as the Makefile does
   * ``-DMINGW_STATIC=ON``: link MinGW bundles statically, for hosts other than Natron (``LDFLAGS_ADD=-static``)
   * ``-DHALDCLUT=ON``, ``-DOCL=ON``: also build ``HaldCLUT.ofx.bundle`` and ``OCL.ofx.bundle`` (``make -C Magick/HaldCLUT``, ``make -C OCL``)

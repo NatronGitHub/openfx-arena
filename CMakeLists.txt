@@ -20,6 +20,15 @@
 # Project setup
 ########################################################################
 CMAKE_MINIMUM_REQUIRED(VERSION 3.16) # as Natron and openfx-io; CMake 3.16 has OpenMP imported targets
+# macOS: the bundles target macOS 14.0 (VFX Reference Platform CY2027), as Natron's macOS
+# plug-ins; without it, clang targets the SDK's macOS. CMake reads the deployment target at the
+# first project(), so it is set here, unless CMAKE_OSX_DEPLOYMENT_TARGET, the
+# MACOSX_DEPLOYMENT_TARGET environment variable or a toolchain file says otherwise. Not for cross
+# builds to other Apple systems (e.g. CMAKE_SYSTEM_NAME=iOS). openfx's own default (openfx#160)
+# only applies when openfx is the top-level project, and its Makefile.master defaults to 14.0 too.
+if(CMAKE_HOST_APPLE AND NOT CMAKE_TOOLCHAIN_FILE AND (NOT CMAKE_SYSTEM_NAME OR CMAKE_SYSTEM_NAME STREQUAL "Darwin") AND NOT DEFINED CMAKE_OSX_DEPLOYMENT_TARGET AND "$ENV{MACOSX_DEPLOYMENT_TARGET}" STREQUAL "")
+  set(CMAKE_OSX_DEPLOYMENT_TARGET 14.0 CACHE STRING "Minimum macOS version")
+endif()
 PROJECT(Arena CXX)
 
 if("${CMAKE_SOURCE_DIR}" STREQUAL "${CMAKE_BINARY_DIR}")
@@ -290,13 +299,9 @@ list(APPEND RESOURCES
     Magick/Morphology/net.fxarena.openfx.Morphology.png
     Magick/Morphology/net.fxarena.openfx.Morphology.svg)
 
-# On Linux, OpenColorIO's libdir is in the rpath, as Makefile.io does (also when it is a
-# system directory, which INSTALL_RPATH_USE_LINK_PATH would skip)
-set(_arena_rpath "")
-if(CMAKE_SYSTEM_NAME STREQUAL "Linux")
-    set(_arena_rpath "${OCIO_LIBDIR}")
-endif()
-add_ofx_plugin(Arena INFO_PLIST Bundle/Info.plist RPATH ${_arena_rpath} SOURCES ${SOURCES})
+# No RPATH into OpenColorIO's libdir, as Makefile.io: a Linux bundle's RUNPATH only has
+# $ORIGIN-relative entries (openfx's linuxCheckBundle.sh); the installers bundle OpenColorIO
+add_ofx_plugin(Arena INFO_PLIST Bundle/Info.plist SOURCES ${SOURCES})
 supportext_add_sources(Arena COMPONENTS TEXT TRANSFORM3X3 TRANSFORM_INTERACT MULTIPLANE)
 # GenericReader, with GenericOCIO and SequenceParsing. OpenColorIO is PkgConfig::OCIO, not
 # OpenColorIO::OpenColorIO: the helper adds neither GenericOCIO's OpenGL code nor

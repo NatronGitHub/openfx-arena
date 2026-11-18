@@ -72,6 +72,18 @@ jobs:
             -DCMAKE_INSTALL_PREFIX="$PWD/install"
           cmake --build build --parallel 4
           cmake --install build
+      - name: Check the installed bundle (linuxCheckBundle.sh)
+        if: inputs.build-system == 'cmake'
+        run: |
+          # openfx's linuxCheckBundle.sh, whose path CMake caches as OFX_LINUX_CHECK_BUNDLE.
+          # --no-needed: the bundle links the distribution's libraries instead of bundling them.
+          # The symbol-version limits are disabled (99): Ubuntu 24.04 is newer than the release
+          # baseline, EL9. A Rocky Linux 9 job would keep the defaults (EL9's limits).
+          check=$(sed -n 's/^OFX_LINUX_CHECK_BUNDLE:FILEPATH=//p' build/CMakeCache.txt)
+          test -x "$check"
+          OFX_ABI_GLIBC=99 OFX_ABI_GLIBCXX=99 OFX_ABI_CXXABI=99 OFX_ABI_GCC=99 OFX_ABI_GOMP=99 \
+            OFX_ABI_LIBATOMIC=99 OFX_ABI_ZLIB=99 \
+            "$check" --no-needed install/OFX/Plugins
       - name: Build (debug, CMake)
         if: inputs.build-system == 'cmake'
         run: |
@@ -219,6 +231,11 @@ jobs:
       # py313-numpy, and python3 selected: for ctest's readpsd_layers (tests/readpsd)
       # expat: for openfx's HostSupport (hostDemo, ctest's render_Arena), which no longer bundles it
       PORTS: cmake pkgconfig gsed libomp py313-numpy ImageMagick opencolorio lcms2 fontconfig pango librsvg poppler libxml2 libzip librevenge libcdr-0.1 sox curl expat
+      # every macOS plug-in bundle targets macOS 14.0: CMake takes CMAKE_OSX_DEPLOYMENT_TARGET from it,
+      # and openfx's Makefile.master passes it to -mmacosx-version-min (openfx#149). Both default to
+      # 14.0 already (CMakeLists.txt, openfx#160): kept to make the target explicit. The MacPorts
+      # libraries are built for the runner's macOS, so deploying them warns (OFX_DEPLOY_STRICT_MINOS off)
+      MACOSX_DEPLOYMENT_TARGET: "14.0"
     steps:
       - uses: actions/checkout@v4
         with:
