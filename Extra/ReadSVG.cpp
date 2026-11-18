@@ -25,6 +25,7 @@
 #include <libxml/xmlmemory.h>
 #include <libxml/parser.h>
 
+#include <cmath>
 #include <iostream>
 #include <sys/stat.h>
 
@@ -46,11 +47,17 @@
 #define kPluginGrouping "Image/Readers"
 #define kPluginIdentifier "net.fxarena.openfx.ReadSVG"
 // history:
-// 3.3 the cairo buffer given by rsvg is actually premultiplied
-// 3.4 transform (translate, rotate, scale, skew), with an overlay (shown in Natron from Natron#1284). A minor version is enough: the
-//     transform params default to identity, which renders exactly as 3.3.
-#define kPluginVersionMajor 3
-#define kPluginVersionMinor 4
+// 3.3 the cairo buffer given by rsvg is actually premultiplied (Natron 2.5.0)
+// 3.4 transform (translate, rotate, scale, skew), with an overlay (unreleased, now 4.0 only)
+// 3.5 deprecated: 3.3 (no transform, no overlay, the DPI applied twice to physical units) with the
+//     bug fixes made since: bounds and row bytes, no assert at render scales below 1, the NaN
+//     guards and the empty canvas error. 3.5 rather than 3.4, which had the transform.
+// 4.0 the DPI is applied once to documents in physical units (mm, in, pt...), see getCanvasSize();
+//     the transform and its overlay of 3.4
+#define kPluginVersionMajor 4
+#define kPluginVersionMinor 0
+#define kPluginVersionMajorV3 3
+#define kPluginVersionMinorV3 5
 #define kPluginEvaluation 50
 
 #define kParamDpi "dpi"
@@ -126,10 +133,19 @@ typedef tthread::fast_mutex Mutex;
 typedef OFX::MultiThread::AutoMutexT<tthread::fast_mutex> AutoMutex;
 #endif
 
+// The size of the SVG canvas, and how to render it into an output image of width x height pixels
+struct SVGCanvas {
+    double imageWidth, imageHeight; // the document size, in pixels at the DPI of the handle
+    int width, height; // the output size, in pixels
+    double scaleX, scaleY; // from the pixels of the handle to the output pixels
+    bool exactViewport; // render into an imageWidth x imageHeight viewport (rsvg_handle_render_document)
+    SVGCanvas() : imageWidth(0.), imageHeight(0.), width(0), height(0), scaleX(1.), scaleY(1.), exactViewport(false) {}
+};
+
 class ReadSVGPlugin : public GenericReaderPlugin
 {
 public:
-    ReadSVGPlugin(OfxImageEffectHandle handle, const std::vector<std::string>& extensions);
+    ReadSVGPlugin(OfxImageEffectHandle handle, const std::vector<std::string>& extensions, unsigned int majorVersion);
     virtual ~ReadSVGPlugin();
     virtual void restoreStateFromParams() OVERRIDE FINAL;
     virtual void changedParam(const OFX::InstanceChangedArgs &args, const std::string &paramName) OVERRIDE FINAL;
@@ -169,7 +185,10 @@ private:
     bool getCanvasCenter(double time, OfxPointD* center);
     void resetCenter(double time, bool keepImageFixed);
     void autoCenter(double time);
+    void getCanvasSize(RsvgHandle* handle, int dpi, SVGCanvas* canvas) const;
+    const bool _v4; // version 4 or later: the DPI fix and the transform (see the history)
     OFX::IntParam *_dpi;
+    // the transform params: NULL in version 3, which doesn't have them
     OFX::Double2DParam *_translate;
     OFX::DoubleParam *_rotate;
     OFX::Double2DParam *_scale;
@@ -215,7 +234,7 @@ private:
     CanvasSize _canvasSize;
 };
 
-ReadSVGPlugin::ReadSVGPlugin(OfxImageEffectHandle handle, const std::vector<std::string>& extensions)
+ReadSVGPlugin::ReadSVGPlugin(OfxImageEffectHandle handle, const std::vector<std::string>& extensions, unsigned int majorVersion)
 : GenericReaderPlugin(handle, extensions, kSupportsRGBA, kSupportsRGB, kSupportsXY, kSupportsAlpha, kSupportsTiles,
 #ifdef OFX_EXTENSIONS_NUKE
 (OFX::getImageEffectHostDescription() && OFX::getImageEffectHostDescription()->isMultiPlanar) ? kIsMultiPlanar : false
@@ -223,6 +242,7 @@ ReadSVGPlugin::ReadSVGPlugin(OfxImageEffectHandle handle, const std::vector<std:
 false
 #endif
 )
+,_v4(majorVersion >= 4)
 ,_dpi(NULL)
 ,_translate(NULL)
 ,_rotate(NULL)
@@ -235,6 +255,10 @@ false
 ,_autoCenter(NULL)
 {
     _dpi = fetchIntParam(kParamDpi);
+    assert(_dpi);
+    if (!_v4) {
+        return;
+    }
     _translate = fetchDouble2DParam(kParamTransformTranslate);
     _rotate = fetchDoubleParam(kParamTransformRotate);
     _scale = fetchDouble2DParam(kParamTransformScale);
@@ -244,7 +268,7 @@ false
     _skewOrder = fetchChoiceParam(kParamTransformSkewOrder);
     _center = fetchDouble2DParam(kParamTransformCenter);
     _autoCenter = fetchBooleanParam(kParamAutoCenter);
-    assert(_dpi && _translate && _rotate && _scale && _scaleUniform && _skewX && _skewY && _skewOrder && _center && _autoCenter);
+    assert(_translate && _rotate && _scale && _scaleUniform && _skewX && _skewY && _skewOrder && _center && _autoCenter);
 }
 
 ReadSVGPlugin::~ReadSVGPlugin()
@@ -278,16 +302,22 @@ void ReadSVGPlugin::restoreStateFromParams()
 bool
 ReadSVGPlugin::isTransformAnimated() const
 {
+    if (!_v4) {
+        return false;
+    }
     return (_translate->getNumKeys() > 0 || _rotate->getNumKeys() > 0 || _scale->getNumKeys() > 0 ||
             _scaleUniform->getNumKeys() > 0 || _skewX->getNumKeys() > 0 || _skewY->getNumKeys() > 0 ||
             _skewOrder->getNumKeys() > 0 || _center->getNumKeys() > 0);
 }
 
-// Returns false if the transform is the identity, which renders exactly as ReadSVG 3.3.
+// Returns false if the transform is the identity, or in version 3, which has no transform.
 // Same conventions and matrix as the Transform node (openfx-misc) and its overlay (ofxsTransformInteract).
 bool
 ReadSVGPlugin::getTransformCanonical(double time, Matrix3x3* transform) const
 {
+    if (!_v4) {
+        return false;
+    }
     OfxPointD translate, scaleParam, center;
     _translate->getValueAtTime(time, translate.x, translate.y);
     _scale->getValueAtTime(time, scaleParam.x, scaleParam.y);
@@ -343,7 +373,7 @@ ReadSVGPlugin::getCanvasCenter(double time, OfxPointD* center)
 void
 ReadSVGPlugin::autoCenter(double time)
 {
-    if (!_autoCenter->getValue()) {
+    if (!_v4 || !_autoCenter->getValue()) {
         return;
     }
     resetCenter(time, true);
@@ -396,7 +426,9 @@ ReadSVGPlugin::resetCenter(double time, bool keepImageFixed)
 void
 ReadSVGPlugin::changedParam(const InstanceChangedArgs &args, const std::string &paramName)
 {
-    if (paramName == kParamTransformResetCenter) {
+    if (!_v4) {
+        // no transform params
+    } else if (paramName == kParamTransformResetCenter) {
         resetCenter(args.time, true);
         // follow the canvas again (after resetCenter, whose setValue comes back as a plugin edit)
         if (!_autoCenter->getValue()) {
@@ -499,6 +531,93 @@ ReadSVGPlugin::getClipComponents(const OFX::ClipComponentsArguments& args, OFX::
     return kOfxStatOK;
 }
 
+// The size of the document with the handle at the given DPI, rounded by librsvg to whole pixels.
+// The handle stays at that DPI.
+static void
+getDimensionsAtDpi(RsvgHandle* handle, int dpi, RsvgDimensionData* dimension)
+{
+    rsvg_handle_set_dpi_x_y(handle, dpi, dpi);
+    rsvg_handle_get_dimensions(handle, dimension);
+}
+
+// Get the size of the canvas at the given DPI, and leave the handle at the DPI to render with. The
+// DPI scales the whole document, whatever its units: documents in user units (px) were already
+// scaled by dpi / 90 in version 3, and they keep that.
+void
+ReadSVGPlugin::getCanvasSize(RsvgHandle* handle, int dpi, SVGCanvas* canvas) const
+{
+    if (!_v4) {
+        // Version 3 (3.3, Natron 2.5.0): librsvg converts the physical units (mm, in, pt...) to pixels
+        // at the DPI of the handle, and the result is scaled by dpi / 90 once more, so the DPI applies
+        // twice to them (an image in mm is 4 times as large at 180 DPI as at 90). Kept for old projects.
+        RsvgDimensionData dimension;
+        getDimensionsAtDpi(handle, dpi, &dimension);
+        canvas->imageWidth = dimension.width;
+        canvas->imageHeight = dimension.height;
+        if (dpi != kParamDpiDefault) {
+            canvas->width = canvas->imageWidth * dpi / kParamDpiDefault;
+            canvas->height = canvas->imageHeight * dpi / kParamDpiDefault;
+        } else {
+            canvas->width = canvas->imageWidth;
+            canvas->height = canvas->imageHeight;
+        }
+        // no scale for an empty canvas (0 / 0): decodePlane() fails on it
+        canvas->scaleX = (canvas->imageWidth > 0.) ? canvas->width / canvas->imageWidth : 1.;
+        canvas->scaleY = (canvas->imageHeight > 0.) ? canvas->height / canvas->imageHeight : 1.;
+        canvas->exactViewport = false;
+        return;
+    }
+    // Version 4: render with the handle at the default DPI, at which librsvg converts the physical
+    // units, so that the elements in physical units in the document stay consistent with the canvas,
+    // and scale everything to the size at the given DPI, once. Unlike version 3, which truncated the
+    // size and scaled by the truncated size over the size at 90 DPI, the size is rounded to the
+    // nearest pixel and the scale is dpi / 90: documents in user units render as in version 3 only
+    // when dpi / 90 is an integer (400 x 200 px at 300 DPI: 1333 x 666 in version 3, 1333 x 667 here).
+    const double scale = (double)dpi / kParamDpiDefault;
+#if LIBRSVG_CHECK_VERSION(2, 52, 0)
+    // The exact size, at 90 DPI, scaled by dpi / 90 (100mm is 354.33 pixels at 90 DPI, 708.66 at
+    // 180 DPI: 709 pixels, not 2 * 354), and rendered into a viewport of that exact size.
+    rsvg_handle_set_dpi_x_y(handle, kParamDpiDefault, kParamDpiDefault);
+    gdouble w, h;
+    if (rsvg_handle_get_intrinsic_size_in_pixels(handle, &w, &h)) {
+        canvas->imageWidth = w;
+        canvas->imageHeight = h;
+        canvas->width = (int)std::floor(w * scale + 0.5);
+        canvas->height = (int)std::floor(h * scale + 0.5);
+        canvas->scaleX = canvas->scaleY = scale;
+        canvas->exactViewport = true;
+        return;
+    }
+#endif
+    // An older librsvg (Natron's Linux SDK has 2.40), or no width and height in the document (only
+    // a viewBox): rsvg_handle_get_dimensions() only gives the size rounded to whole pixels, and
+    // rsvg_handle_render_cairo() renders into a viewport of that size. Scaling the size at 90 DPI by
+    // dpi / 90 would multiply its rounding error (up to dpi / 180 pixels: 4720 instead of 4724 for
+    // 100mm at 1200 DPI). So also measure at the given DPI: where the size changes with the DPI,
+    // that axis is in physical units, and librsvg's size at that DPI is the right one, rounded once;
+    // the render scale maps the 90 DPI viewport onto it. Elsewhere (user units), scale by dpi / 90.
+    RsvgDimensionData atDpi, at90;
+    getDimensionsAtDpi(handle, dpi, &atDpi);
+    getDimensionsAtDpi(handle, kParamDpiDefault, &at90); // last: the handle renders at 90 DPI
+    canvas->imageWidth = at90.width;
+    canvas->imageHeight = at90.height;
+    if (atDpi.width != at90.width && at90.width > 0) {
+        canvas->width = atDpi.width;
+        canvas->scaleX = (double)atDpi.width / at90.width;
+    } else {
+        canvas->width = (int)std::floor(at90.width * scale + 0.5);
+        canvas->scaleX = scale;
+    }
+    if (atDpi.height != at90.height && at90.height > 0) {
+        canvas->height = atDpi.height;
+        canvas->scaleY = (double)atDpi.height / at90.height;
+    } else {
+        canvas->height = (int)std::floor(at90.height * scale + 0.5);
+        canvas->scaleY = scale;
+    }
+    canvas->exactViewport = false;
+}
+
 void
 ReadSVGPlugin::decodePlane(const std::string& filename, OfxTime time, int /*view*/, bool /*isPlayback*/, const OfxRectI& renderWindow, const OfxPointD& renderScale, float *pixelData, const OfxRectI& bounds,
                                  OFX::PixelComponentEnum /*pixelComponents*/, OFX::PixelComponentEnum remappedComponents, int pixelComponentCount, const std::string& rawComponents, int rowBytes)
@@ -531,37 +650,25 @@ ReadSVGPlugin::decodePlane(const std::string& filename, OfxTime time, int /*view
 
     GError *error = NULL;
     RsvgHandle *handle;
-    RsvgDimensionData dimension;
     cairo_surface_t *surface;
     cairo_t *cr;
     cairo_status_t status;
-    double imageWidth, imageHeight, scaleWidth, scaleHeight;
     int dpi, width, height, renderWidth, renderHeight;
     _dpi->getValueAtTime(time, dpi);
 
     handle = rsvg_handle_new_from_file(filename.c_str(), &error);
-    rsvg_handle_set_dpi_x_y(handle, dpi, dpi);
 
     if (error != NULL) {
         setPersistentMessage(OFX::Message::eMessageError, "", "Failed to read SVG");
         OFX::throwSuiteStatusException(kOfxStatErrFormat);
     }
 
-    rsvg_handle_get_dimensions(handle, &dimension);
-
-    imageWidth = dimension.width;
-    imageHeight = dimension.height;
+    SVGCanvas canvas;
+    getCanvasSize(handle, dpi, &canvas);
+    width = canvas.width;
+    height = canvas.height;
     renderWidth= renderWindow.x2 - renderWindow.x1;
     renderHeight= renderWindow.y2 - renderWindow.y1;
-
-    if (dpi != kParamDpiDefault) {
-        width = imageWidth * dpi / kParamDpiDefault;
-        height = imageHeight * dpi / kParamDpiDefault;
-    }
-    else {
-        width = imageWidth;
-        height = imageHeight;
-    }
 
     if (width != renderWidth || height != renderHeight) {
         setPersistentMessage(OFX::Message::eMessageError, "", "Image don't match RenderWindow");
@@ -570,7 +677,7 @@ ReadSVGPlugin::decodePlane(const std::string& filename, OfxTime time, int /*view
 
     // An empty canvas (a zero width or height) gave 0 / 0 = NaN scales below, which only
     // cairo's check of the matrix turned into the "Cairo Render failed" error: fail here instead.
-    if (imageWidth <= 0. || imageHeight <= 0.) {
+    if (canvas.imageWidth <= 0. || canvas.imageHeight <= 0.) {
         g_object_unref(handle);
         setPersistentMessage(OFX::Message::eMessageError, "", "Cairo Render failed");
         OFX::throwSuiteStatusException(kOfxStatErrFormat);
@@ -578,9 +685,6 @@ ReadSVGPlugin::decodePlane(const std::string& filename, OfxTime time, int /*view
 
     surface=cairo_image_surface_create(CAIRO_FORMAT_ARGB32, width, height);
     cr=cairo_create(surface);
-
-    scaleWidth = width / imageWidth;
-    scaleHeight = height / imageHeight;
 
     // the transform params animate: evaluate them at the render time, not at the time in the file
     // sequence (`time`), which is constant for a still image
@@ -602,15 +706,39 @@ ReadSVGPlugin::decodePlane(const std::string& filename, OfxTime time, int /*view
         cairo_matrix_init(&cm, m(0, 0), m(1, 0), m(0, 1), m(1, 1), m(0, 2), m(1, 2));
         cairo_transform(cr, &cm);
     }
-    cairo_scale(cr, scaleWidth, scaleHeight);
+    cairo_scale(cr, canvas.scaleX, canvas.scaleY);
 
-    if (layerID.empty()) {
+    std::string layerSub;
+    if (!layerID.empty()) {
+        layerSub = "#" + layerID;
+    }
+#if LIBRSVG_CHECK_VERSION(2, 52, 0)
+    if (canvas.exactViewport) {
+        // version 4: rsvg_handle_render_cairo() renders into a viewport of the size rounded to whole
+        // pixels, which shrinks the document a little (100mm: 354 pixels instead of 354.33 at 90
+        // DPI); the scale would multiply that error. Render into the exact size instead.
+        RsvgRectangle viewport;
+        viewport.x = 0.;
+        viewport.y = 0.;
+        viewport.width = canvas.imageWidth;
+        viewport.height = canvas.imageHeight;
+        GError *renderError = NULL;
+        // as rsvg_handle_render_cairo(), the result is ignored: an error leaves the image empty
+        if (layerSub.empty()) {
+            rsvg_handle_render_document(handle, cr, &viewport, &renderError);
+        } else {
+            rsvg_handle_render_layer(handle, cr, layerSub.c_str(), &viewport, &renderError);
+        }
+        if (renderError) {
+            g_error_free(renderError);
+        }
+    } else
+#endif
+    if (layerSub.empty()) {
         rsvg_handle_render_cairo(handle, cr);
     }
     else {
-        std::ostringstream layerSub;
-        layerSub << "#" << layerID;
-        rsvg_handle_render_cairo_sub(handle, cr, layerSub.str().c_str());
+        rsvg_handle_render_cairo_sub(handle, cr, layerSub.c_str());
     }
 
     status = cairo_status(cr);
@@ -685,30 +813,18 @@ bool ReadSVGPlugin::getFrameBounds(const std::string& filename,
     if (!cached) {
         GError *error = NULL;
         RsvgHandle *handle;
-        RsvgDimensionData dimension;
-        double imageWidth, imageHeight;
 
         handle = rsvg_handle_new_from_file(filename.c_str(), &error);
-        rsvg_handle_set_dpi_x_y(handle, dpi, dpi);
 
         if (error != NULL) {
             setPersistentMessage(OFX::Message::eMessageError, "", "Failed to read SVG");
             OFX::throwSuiteStatusException(kOfxStatErrFormat);
         }
 
-        rsvg_handle_get_dimensions(handle, &dimension);
-
-        imageWidth = dimension.width;
-        imageHeight = dimension.height;
-
-        if (dpi != kParamDpiDefault) {
-            width = imageWidth * dpi / kParamDpiDefault;
-            height = imageHeight * dpi / kParamDpiDefault;
-        }
-        else {
-            width = imageWidth;
-            height = imageHeight;
-        }
+        SVGCanvas canvas;
+        getCanvasSize(handle, dpi, &canvas);
+        width = canvas.width;
+        height = canvas.height;
 
         g_object_unref(handle);
         error = NULL;
@@ -817,10 +933,29 @@ void ReadSVGPlugin::changedFilename(const OFX::InstanceChangedArgs &args)
 
 using namespace OFX;
 
-mDeclareReaderPluginFactory(ReadSVGPluginFactory, {}, false);
+// mDeclareReaderPluginFactory, with the major version as a template parameter: each major version
+// must be a distinct factory class (see mDeclarePluginFactoryVersioned in ofxsImageEffect.h)
+template<unsigned int majorVersion>
+class ReadSVGPluginFactory
+    : public OFX::PluginFactoryHelper<ReadSVGPluginFactory<majorVersion> >
+{
+public:
+    ReadSVGPluginFactory(const std::string& id, unsigned int verMin)
+        : OFX::PluginFactoryHelper<ReadSVGPluginFactory<majorVersion> >(id, majorVersion, verMin)
+    {
+    }
+    virtual void load() OVERRIDE FINAL;
+    virtual void unload() OVERRIDE FINAL {}
+    virtual OFX::ImageEffect* createInstance(OfxImageEffectHandle handle, OFX::ContextEnum context) OVERRIDE FINAL;
+    bool isVideoStreamPlugin() const { return false; }
+    virtual void describe(OFX::ImageEffectDescriptor& desc) OVERRIDE FINAL;
+    virtual void describeInContext(OFX::ImageEffectDescriptor& desc, OFX::ContextEnum context) OVERRIDE FINAL;
+    std::vector<std::string> _extensions;
+};
 
+template<unsigned int majorVersion>
 void
-ReadSVGPluginFactory::load()
+ReadSVGPluginFactory<majorVersion>::load()
 {
     _extensions.clear();
     _extensions.push_back("svg");
@@ -829,10 +964,18 @@ ReadSVGPluginFactory::load()
 
 
 /** @brief The basic describe function, passed a plugin descriptor */
-void ReadSVGPluginFactory::describe(OFX::ImageEffectDescriptor &desc)
+template<unsigned int majorVersion>
+void
+ReadSVGPluginFactory<majorVersion>::describe(OFX::ImageEffectDescriptor &desc)
 {
     GenericReaderDescribe(desc, _extensions, kPluginEvaluation, kSupportsTiles, kIsMultiPlanar);
     desc.setLabel(kPluginName);
+    if (majorVersion < kPluginVersionMajor) {
+        // hidden from the hosts' menus (e.g. Natron), still loaded by old projects
+        desc.setIsDeprecated(true);
+        desc.setPluginDescription("Fast SVG (Scalable Vector Graphics) reader using librsvg and Cairo.");
+        return;
+    }
     desc.setPluginDescription("Fast SVG (Scalable Vector Graphics) reader using librsvg and Cairo.\n"
                               "The Transform parameters are applied before rasterization, so the SVG stays sharp when it is scaled up. "
                               "The result is clipped to the SVG canvas.");
@@ -843,7 +986,9 @@ void ReadSVGPluginFactory::describe(OFX::ImageEffectDescriptor &desc)
 }
 
 /** @brief The describe in context function, passed a plugin descriptor and a context */
-void ReadSVGPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, ContextEnum context)
+template<unsigned int majorVersion>
+void
+ReadSVGPluginFactory<majorVersion>::describeInContext(OFX::ImageEffectDescriptor &desc, ContextEnum context)
 {
     gHostIsNatron = (OFX::getImageEffectHostDescription()->isNatron);
 
@@ -858,6 +1003,11 @@ void ReadSVGPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, C
         param->setAnimates(false);
         param->setLayoutHint(OFX::eLayoutHintDivider);
         page->addChild(*param);
+    }
+    if (majorVersion < 4) {
+        // version 3 has no transform (it was added in 3.4, which was never released, and is now 4.0)
+        GenericReaderDescribeInContextEnd(desc, context, page, "sRGB", "scene_linear");
+        return;
     }
     {
         GroupParamDescriptor* group = desc.defineGroupParam(kGroupTransform);
@@ -909,15 +1059,19 @@ void ReadSVGPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, C
 }
 
 /** @brief The create instance function, the plugin must return an object derived from the \ref OFX::ImageEffect class */
-ImageEffect* ReadSVGPluginFactory::createInstance(OfxImageEffectHandle handle,
-                                     ContextEnum /*context*/)
+template<unsigned int majorVersion>
+ImageEffect*
+ReadSVGPluginFactory<majorVersion>::createInstance(OfxImageEffectHandle handle,
+                                                   ContextEnum /*context*/)
 {
-    ReadSVGPlugin* ret =  new ReadSVGPlugin(handle, _extensions);
+    ReadSVGPlugin* ret =  new ReadSVGPlugin(handle, _extensions, majorVersion);
     ret->restoreStateFromParams();
     return ret;
 }
 
-static ReadSVGPluginFactory p(kPluginIdentifier, kPluginVersionMajor, kPluginVersionMinor);
+static ReadSVGPluginFactory<kPluginVersionMajor> p(kPluginIdentifier, kPluginVersionMinor);
+static ReadSVGPluginFactory<kPluginVersionMajorV3> p3(kPluginIdentifier, kPluginVersionMinorV3);
 mRegisterPluginFactoryInstance(p)
+mRegisterPluginFactoryInstance(p3)
 
 OFXS_NAMESPACE_ANONYMOUS_EXIT

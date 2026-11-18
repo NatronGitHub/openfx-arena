@@ -475,7 +475,7 @@ if(BUILD_TESTING)
         "${CMAKE_CURRENT_SOURCE_DIR}/OpenFX/HostSupport/include" "${CMAKE_CURRENT_SOURCE_DIR}/OpenFX/include")
     target_link_libraries(verify_plugin_loads PRIVATE ${CMAKE_DL_LIBS})
     # the number of plug-ins each bundle must have
-    set(_n_Arena 40) # with AudioCurve and ReadPDF, without RichText: 42, as the CI checks
+    set(_n_Arena 41) # with AudioCurve and ReadPDF, without RichText: 43, as the CI checks
     if(BUILD_AUDIO)
         math(EXPR _n_Arena "${_n_Arena} + 1")
     endif()
@@ -538,6 +538,21 @@ endif()
                     -P "${CMAKE_CURRENT_SOURCE_DIR}/tests/hostdemo/run.cmake")
             endif()
         endforeach()
+
+        # ReadSVG's output size at several DPIs, in physical and user units, for both major
+        # versions (tests/readsvg); string(JSON) needs CMake 3.19
+        if(TARGET Arena AND NOT CMAKE_VERSION VERSION_LESS 3.19)
+            set(_exact OFF)
+            if(NOT SVG_VERSION VERSION_LESS 2.52)
+                set(_exact ON) # rsvg_handle_get_intrinsic_size_in_pixels()
+            endif()
+            add_test(NAME readsvg_dpi COMMAND "${CMAKE_COMMAND}"
+                -DHOSTDEMO=$<TARGET_FILE:hostDemo> -DPLUGIN_PATH=${OFX_PLUGIN_BUILD_DIR}
+                -DSRC=${CMAKE_CURRENT_SOURCE_DIR}/tests/readsvg
+                -DOCIO=${CMAKE_CURRENT_SOURCE_DIR}/tests/hostdemo/config.ocio
+                -DWORK=${CMAKE_CURRENT_BINARY_DIR}/readsvg-dpi -DEXACT=${_exact}
+                -P "${CMAKE_CURRENT_SOURCE_DIR}/tests/readsvg/dpi.cmake")
+        endif()
 
         # ReadPSD's layer menu (tests/readpsd, also "make -C tests check"): needs Python 3 with
         # NumPy, and ImageMagick's magick or convert for the layered PSD (mklayers.py finds it)
