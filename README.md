@@ -91,7 +91,7 @@ Optional build options:
   * ``IM=7``: with ``MINGW=1``, also link ``oleaut32`` for ImageMagick 7. Elsewhere it has no effect: the ImageMagick version is detected at compile time
   * ``MINGW=1``: MinGW (MSYS2): add the libraries a static ImageMagick needs (gdi32, freetype, expat, z, ws2_32)
   * ``FREEBSD=1``: FreeBSD: add ``/usr/local/include`` and ``/usr/local/lib`` to the search paths
-  * ``MACOSX_DEPLOYMENT_TARGET=14.0`` (environment or make variable): the minimum macOS of the bundles, as for CMake's ``CMAKE_OSX_DEPLOYMENT_TARGET``. Natron's macOS plug-ins target macOS 14.0; without it, the bundles need the SDK's macOS
+  * ``MACOSX_DEPLOYMENT_TARGET=XX`` (environment or make variable): the minimum macOS of the bundles, as CMake's ``CMAKE_OSX_DEPLOYMENT_TARGET``; 14.0 by default, as Natron's macOS plug-ins
   * ``LIBOMP_PREFIX=...``: with Apple clang, when ImageMagick was built with OpenMP, the prefix of libomp (``$(LIBOMP_PREFIX)/{include,lib}/libomp``). The default is the ImageMagick prefix if it has ``lib/libomp``, else MacPorts' ``/opt/local``
 
 ```
