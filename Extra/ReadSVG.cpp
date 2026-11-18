@@ -62,6 +62,15 @@
 #define kGroupTransformLabel "Transform"
 #define kGroupTransformHint "Transform the SVG before it is rasterized, so that it stays sharp. " \
     "The result is clipped to the SVG canvas."
+#define kParamTransformCenterHintSVG "Center of rotation and scale. Until it is set, by editing it or by moving it in the viewer, " \
+    "it follows the center of the SVG canvas, without moving the image, when the file or the DPI change. " \
+    "Reset Center makes it follow the canvas again."
+
+// Hidden: whether the transform center follows the SVG canvas (see autoCenter()). A flag rather
+// than a sentinel center value, so that the user can put the center anywhere, (0,0) included.
+#define kParamAutoCenter "autoCenter"
+#define kParamAutoCenterLabel "Auto Center"
+#define kParamAutoCenterHint "The transform center follows the center of the SVG canvas. Cleared when the center is set, set by Reset Center."
 
 #define kSupportsRGBA true
 #define kSupportsRGB false
@@ -169,7 +178,7 @@ private:
     OFX::DoubleParam *_skewY;
     OFX::ChoiceParam *_skewOrder;
     OFX::Double2DParam *_center;
-    OFX::BooleanParam *_centerChanged;
+    OFX::BooleanParam *_autoCenter;
     std::vector<std::string> imageLayers;
     // The canvas size from the last getFrameBounds(), so that it doesn't parse the whole SVG each
     // time: GenericReader calls it from getClipPreferences(), which the host calls again at each
@@ -223,7 +232,7 @@ false
 ,_skewY(NULL)
 ,_skewOrder(NULL)
 ,_center(NULL)
-,_centerChanged(NULL)
+,_autoCenter(NULL)
 {
     _dpi = fetchIntParam(kParamDpi);
     _translate = fetchDouble2DParam(kParamTransformTranslate);
@@ -234,8 +243,8 @@ false
     _skewY = fetchDoubleParam(kParamTransformSkewY);
     _skewOrder = fetchChoiceParam(kParamTransformSkewOrder);
     _center = fetchDouble2DParam(kParamTransformCenter);
-    _centerChanged = fetchBooleanParam(kParamTransformCenterChanged);
-    assert(_dpi && _translate && _rotate && _scale && _scaleUniform && _skewX && _skewY && _skewOrder && _center && _centerChanged);
+    _autoCenter = fetchBooleanParam(kParamAutoCenter);
+    assert(_dpi && _translate && _rotate && _scale && _scaleUniform && _skewX && _skewY && _skewOrder && _center && _autoCenter);
 }
 
 ReadSVGPlugin::~ReadSVGPlugin()
@@ -329,19 +338,15 @@ ReadSVGPlugin::getCanvasCenter(double time, OfxPointD* center)
     return true;
 }
 
-// Unless the user moved the center, move it to the center of the canvas, without moving the image:
+// Unless the user set the center, move it to the center of the canvas, without moving the image:
 // called whenever the canvas is known or changes (instance creation, file and DPI changes).
 void
 ReadSVGPlugin::autoCenter(double time)
 {
-    if (_centerChanged->getValue()) {
+    if (!_autoCenter->getValue()) {
         return;
     }
     resetCenter(time, true);
-    // after resetCenter, whose setValue may come back through changedParam(kParamTransformCenter)
-    if (_centerChanged->getValue()) {
-        _centerChanged->setValue(false);
-    }
 }
 
 // Set the center to the center of the SVG canvas. If keepImageFixed, also change the translation
@@ -393,31 +398,24 @@ ReadSVGPlugin::changedParam(const InstanceChangedArgs &args, const std::string &
 {
     if (paramName == kParamTransformResetCenter) {
         resetCenter(args.time, true);
-        // after resetCenter, which may set it through changedParam(kParamTransformCenter)
-        if (_centerChanged->getValue()) {
-            _centerChanged->setValue(false);
+        // follow the canvas again (after resetCenter, whose setValue comes back as a plugin edit)
+        if (!_autoCenter->getValue()) {
+            _autoCenter->setValue(true);
         }
-    } else if (paramName == kParamTransformCenter && args.reason != eChangeTime) {
-        // Whether the user moved the center is decided from its value, not from the reason: hosts
-        // also send user-edit reasons for their own changes (Natron: restoring defaults, internal
-        // edits), and our own setValue() comes back here as a plugin edit.
-        OfxPointD center, canvasCenter;
-        _center->getValueAtTime(args.time, center.x, center.y);
-        const bool isDefault = (center.x == 0. && center.y == 0.);
-        const bool hasCanvas = getCanvasCenter(args.time, &canvasCenter);
-        if (isDefault) {
-            // reset to the default: follow the canvas again
-            if (_centerChanged->getValue()) {
-                _centerChanged->setValue(false);
-            }
-            if (hasCanvas) {
-                resetCenter(args.time, false);
-            }
-        } else {
-            const bool changed = !(hasCanvas && center.x == canvasCenter.x && center.y == canvasCenter.y);
-            if (_centerChanged->getValue() != changed) {
-                _centerChanged->setValue(changed);
-            }
+    } else if (paramName == kParamTransformCenter && args.reason != eChangeTime && _autoCenter->getValue()) {
+        // The user set the center: stop following the canvas. A user edit always counts. A plugin
+        // edit is either the overlay (TransformInteract) moving the center, or our own setValue in
+        // resetCenter(), which always puts it at the canvas center: hosts may report the latter
+        // later than the setValue (Natron defers instanceChanged inside edit blocks and during
+        // createInstance), so it is recognized by its value rather than by a flag set around it.
+        bool userSet = (args.reason == eChangeUserEdit);
+        if (!userSet) {
+            OfxPointD center, canvasCenter;
+            _center->getValueAtTime(args.time, center.x, center.y);
+            userSet = !(getCanvasCenter(args.time, &canvasCenter) && center.x == canvasCenter.x && center.y == canvasCenter.y);
+        }
+        if (userSet) {
+            _autoCenter->setValue(false);
         }
     } else if (paramName == kParamDpi && args.reason != eChangeTime) {
         // the canvas size changed
@@ -857,13 +855,27 @@ void ReadSVGPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, C
         ofxsTransformDescribeParams(desc, page, group, /*isOpen=*/true, /*oldParams=*/false, /*hasAmount=*/false, /*noTranslate=*/false);
         // ofxsTransformDescribeParams gives the center a normalized default, the center of the
         // project, which is not the center of the SVG. Default to (0,0) in canonical coordinates
-        // instead: the plug-in sets it to the center of the canvas as soon as the file is known
-        // (see autoCenter()), and (0,0) means "follow the canvas".
+        // instead: while autoCenter is set, the plug-in sets it to the center of the canvas as soon
+        // as the file is known (see autoCenter()).
         Double2DParamDescriptor* center = dynamic_cast<Double2DParamDescriptor*>(desc.getParamDescriptor(kParamTransformCenter));
         assert(center);
         if (center) {
+            center->setHint(kParamTransformCenterHintSVG);
             center->setDefaultCoordinateSystem(eCoordinatesCanonical);
             center->setDefault(0., 0.);
+        }
+        {
+            BooleanParamDescriptor* param = desc.defineBooleanParam(kParamAutoCenter);
+            param->setLabel(kParamAutoCenterLabel);
+            param->setHint(kParamAutoCenterHint);
+            param->setDefault(true);
+            param->setIsSecretAndDisabled(true);
+            param->setAnimates(false);
+            param->setEvaluateOnChange(false);
+            param->setParent(*group);
+            if (page) {
+                page->addChild(*param);
+            }
         }
     }
     // the output is frame varying when the transform is animated, see isOutputFrameVarying()
