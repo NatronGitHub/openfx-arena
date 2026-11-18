@@ -23,6 +23,8 @@
 #include <fstream>
 #include <algorithm>
 #include <cmath>
+#include <cstdlib>
+#include <cstring>
 #include <sys/stat.h>
 #include <sys/types.h>
 
@@ -98,6 +100,23 @@ bool RichText::startsWith(const std::string &str,
     return str.rfind(what, 0) == 0;
 }
 
+// atof() of an SRT time field, or false if the number atof() reads is not plain decimal:
+// atof() accepts "nan", "inf" and exponents ("1e999" is inf), and NaN or inf times (inf - inf
+// is NaN) were only dropped by the comparisons of the caller, which -ffast-math may remove.
+static bool
+srtTimeField(const std::string &field, double* value)
+{
+    const char* begin = field.c_str();
+    char* end = NULL;
+    *value = std::strtod(begin, &end); // what atof() returns
+    for (const char* c = begin; c < end; ++c) {
+        if (std::strchr("0123456789.+- \t\n\v\f\r", *c) == NULL) {
+            return false;
+        }
+    }
+    return true;
+}
+
 double RichText::strTimeToSecs(const std::string &str)
 {
     size_t start = 0U;
@@ -111,11 +130,12 @@ double RichText::strTimeToSecs(const std::string &str)
     }
     times.push_back(str.substr(start, end));
     if (times.size()==3) {
-        double h = atof(times.at(0).c_str());
-        double m = atof(times.at(1).c_str());
         std::string t = times.at(2);
         replace(t, ",", ".");
-        double s = atof(t.c_str());
+        double h, m, s;
+        if (!srtTimeField(times.at(0), &h) || !srtTimeField(times.at(1), &m) || !srtTimeField(t, &s)) {
+            return -1;
+        }
         double result = 0.0;
         result += h*3600;
         result += m*60;
