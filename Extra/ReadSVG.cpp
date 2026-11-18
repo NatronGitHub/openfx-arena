@@ -202,7 +202,8 @@ void
 ReadSVGPlugin::decodePlane(const std::string& filename, OfxTime time, int /*view*/, bool /*isPlayback*/, const OfxRectI& renderWindow, const OfxPointD& renderScale, float *pixelData, const OfxRectI& bounds,
                                  OFX::PixelComponentEnum /*pixelComponents*/, OFX::PixelComponentEnum remappedComponents, int pixelComponentCount, const std::string& rawComponents, int rowBytes)
 {
-    assert(renderScale.x == 1. && renderScale.y == 1.);
+    // renderWindow is at full resolution, whatever renderScale: when renderScale is not 1, GenericReader
+    // passes it unchanged and downscales the decoded image (OpenFX-IO GenericReader::render)
     unused(renderScale);
     if (pixelComponentCount != 4) {
         setPersistentMessage(OFX::Message::eMessageError, "", "Wrong pixel components");

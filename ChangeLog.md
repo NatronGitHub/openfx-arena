@@ -22,6 +22,7 @@
    * XCF, every host including Natron: the output size is the canvas from the file, instead of the largest layer's size
    * PSD and XCF, every host, with ImageMagick 6: layers at negative offsets are placed correctly (ImageMagick 7 already did)
    * XCF: the merged Default skips hidden layers and uses the layers' blend modes. Layer opacity is still ignored (ImageMagick doesn't read it)
+ * ``ReadSVG``: debug builds no longer abort at render scales below 1 (proxy mode).
 
 ## Natron-2.3.15
 
