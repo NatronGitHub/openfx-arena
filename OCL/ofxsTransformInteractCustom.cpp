@@ -38,6 +38,7 @@
 
 #include "ofxsMatrix2D.h"
 #include "ofxsTransform3x3.h"
+#include "ofxsOverlayDraw.h" // OFXS_HAVE_KEY_MODIFIERS
 
 #define SCALE_MAX 10000.
 
@@ -626,7 +627,7 @@ TransformInteractCustomHelper::draw(const OFX::DrawArgs &args)
 
         drawEllipse(color, targetCenter, targetRadius, _mouseState == eDraggingCircle || _drawState == eCircleHovered, l);
 
-        drawSquare(color, targetCenter, pscale, _mouseState == eDraggingTranslation || _mouseState == eDraggingCenter || _drawState == eCenterPointHovered, (!_translate || _modifierStateCtrl), l);
+        drawSquare(color, targetCenter, pscale, _mouseState == eDraggingTranslation || _mouseState == eDraggingCenter || _drawState == eCenterPointHovered, ctrlDown(), l);
 
         glPopMatrix();
     }
@@ -902,7 +903,7 @@ TransformInteractCustomHelper::penMotion(const OFX::PenArgs &args)
         double dx = args.penPosition.x - _lastMousePos.x;
         double dy = args.penPosition.y - _lastMousePos.y;
 
-        if ( (_orientation == eOrientationNotSet) && (_modifierStateShift > 0) ) {
+        if ( (_orientation == eOrientationNotSet) && shiftDown() ) {
             _orientation = std::abs(dx) > std::abs(dy) ? eOrientationHorizontal : eOrientationVertical;
         }
 
@@ -924,7 +925,7 @@ TransformInteractCustomHelper::penMotion(const OFX::PenArgs &args)
         double dx = args.penPosition.x - _lastMousePos.x;
         double dy = args.penPosition.y - _lastMousePos.y;
 
-        if ( (_orientation == eOrientationNotSet) && (_modifierStateShift > 0) ) {
+        if ( (_orientation == eOrientationNotSet) && shiftDown() ) {
             _orientation = std::abs(dx) > std::abs(dy) ? eOrientationHorizontal : eOrientationVertical;
         }
 
@@ -1135,8 +1136,8 @@ TransformInteractCustomHelper::penDown(const OFX::PenArgs &args)
     double pressToleranceY = 5 * pscale.y;
     bool didSomething = false;
     if ( squareContains(transformedPos, centerPoint, pressToleranceX, pressToleranceY) ) {
-        _mouseState = ( (!_translate || _modifierStateCtrl) ? eDraggingCenter : eDraggingTranslation );
-        if (_modifierStateShift > 0) {
+        _mouseState = ( ctrlDown() ? eDraggingCenter : eDraggingTranslation );
+        if ( shiftDown() ) {
             _orientation = eOrientationNotSet;
         }
         didSomething = true;
@@ -1239,6 +1240,14 @@ TransformInteractCustomHelper::keyDown(const OFX::KeyArgs &args)
             _orientation = eOrientationNotSet;
         }
     }
+#ifdef OFXS_HAVE_KEY_MODIFIERS
+    // the drawn state comes from Support's modifiers, which the counters may not follow (a
+    // modifier pressed before the overlay got the focus): redraw on every modifier event
+    if ( ( _translate && ( (args.keySymbol == kOfxKey_Control_L) || (args.keySymbol == kOfxKey_Control_R) ) ) ||
+         (args.keySymbol == kOfxKey_Shift_L) || (args.keySymbol == kOfxKey_Shift_R) ) {
+        mustRedraw = true;
+    }
+#endif
     if (mustRedraw) {
         _interact->requestRedraw();
     }
@@ -1246,6 +1255,29 @@ TransformInteractCustomHelper::keyDown(const OFX::KeyArgs &args)
 
     // modifiers are not "caught"
     return false;
+}
+
+bool
+TransformInteractCustomHelper::ctrlDown() const
+{
+    if (!_translate) {
+        return true;
+    }
+#ifdef OFXS_HAVE_KEY_MODIFIERS
+    return (_interact->getKeyModifiers() & kNatronOfxKeyModifierControl) != 0;
+#else
+    return _modifierStateCtrl > 0;
+#endif
+}
+
+bool
+TransformInteractCustomHelper::shiftDown() const
+{
+#ifdef OFXS_HAVE_KEY_MODIFIERS
+    return (_interact->getKeyModifiers() & kNatronOfxKeyModifierShift) != 0;
+#else
+    return _modifierStateShift > 0;
+#endif
 }
 
 // keyUp just updates the modifier state
@@ -1271,10 +1303,23 @@ TransformInteractCustomHelper::keyUp(const OFX::KeyArgs &args)
             --_modifierStateShift;
             mustRedraw = (_modifierStateShift == 0);
         }
+#ifdef OFXS_HAVE_KEY_MODIFIERS
+        // (the modifiers are already updated in keyUp: the other Shift key may still be down)
+        if ( !shiftDown() ) {
+#else
         if (_modifierStateShift == 0) {
+#endif
             _orientation = eOrientationAllDirections;
         }
     }
+#ifdef OFXS_HAVE_KEY_MODIFIERS
+    // the drawn state comes from Support's modifiers, which the counters may not follow (a
+    // modifier pressed before the overlay got the focus): redraw on every modifier event
+    if ( ( _translate && ( (args.keySymbol == kOfxKey_Control_L) || (args.keySymbol == kOfxKey_Control_R) ) ) ||
+         (args.keySymbol == kOfxKey_Shift_L) || (args.keySymbol == kOfxKey_Shift_R) ) {
+        mustRedraw = true;
+    }
+#endif
     if (mustRedraw) {
         _interact->requestRedraw();
     }
