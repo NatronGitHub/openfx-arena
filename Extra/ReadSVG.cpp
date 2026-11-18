@@ -62,15 +62,15 @@
 #define kGroupTransformLabel "Transform"
 #define kGroupTransformHint "Transform the SVG before it is rasterized, so that it stays sharp. " \
     "The result is clipped to the SVG canvas."
-#define kParamTransformCenterHintSVG "Center of rotation and scale. Until it is set, by editing it or by moving it in the viewer, " \
+#define kParamTransformCenterHintSVG "Center of rotation and scale. While it is at the center of the SVG canvas (as in a new node), " \
     "it follows the center of the SVG canvas, without moving the image, when the file or the DPI change. " \
-    "Reset Center makes it follow the canvas again."
+    "Setting it elsewhere, by editing it or by moving it in the viewer, stops that; Reset Center makes it follow the canvas again."
 
 // Hidden: whether the transform center follows the SVG canvas (see autoCenter()). A flag rather
 // than a sentinel center value, so that the user can put the center anywhere, (0,0) included.
 #define kParamAutoCenter "autoCenter"
 #define kParamAutoCenterLabel "Auto Center"
-#define kParamAutoCenterHint "The transform center follows the center of the SVG canvas. Cleared when the center is set, set by Reset Center."
+#define kParamAutoCenterHint "The transform center follows the center of the SVG canvas. Cleared when the center is set elsewhere, set again when it is back at the canvas center or by Reset Center."
 
 #define kSupportsRGBA true
 #define kSupportsRGB false
@@ -402,20 +402,24 @@ ReadSVGPlugin::changedParam(const InstanceChangedArgs &args, const std::string &
         if (!_autoCenter->getValue()) {
             _autoCenter->setValue(true);
         }
-    } else if (paramName == kParamTransformCenter && args.reason != eChangeTime && _autoCenter->getValue()) {
-        // The user set the center: stop following the canvas. A user edit always counts. A plugin
-        // edit is either the overlay (TransformInteract) moving the center, or our own setValue in
-        // resetCenter(), which always puts it at the canvas center: hosts may report the latter
-        // later than the setValue (Natron defers instanceChanged inside edit blocks and during
-        // createInstance), so it is recognized by its value rather than by a flag set around it.
-        bool userSet = (args.reason == eChangeUserEdit);
-        if (!userSet) {
-            OfxPointD center, canvasCenter;
-            _center->getValueAtTime(args.time, center.x, center.y);
-            userSet = !(getCanvasCenter(args.time, &canvasCenter) && center.x == canvasCenter.x && center.y == canvasCenter.y);
+    } else if (paramName == kParamTransformCenter && args.reason != eChangeTime) {
+        // Follow the canvas exactly when the center is at the canvas center, whatever the reason:
+        // the reason can't tell the user from the plug-in. Natron reports undo/redo and Restore
+        // Defaults as user edits (they would otherwise leave a reset node not following the
+        // canvas), the overlay (TransformInteract) moves the center as a plugin edit, and our own
+        // setValue in resetCenter() may come back later than it is made (Natron defers
+        // instanceChanged inside edit blocks and during createInstance). Without a canvas (no file
+        // yet), only a user edit counts.
+        OfxPointD center, canvasCenter;
+        _center->getValueAtTime(args.time, center.x, center.y);
+        bool follow;
+        if (getCanvasCenter(args.time, &canvasCenter)) {
+            follow = (center.x == canvasCenter.x && center.y == canvasCenter.y);
+        } else {
+            follow = _autoCenter->getValue() && args.reason != eChangeUserEdit;
         }
-        if (userSet) {
-            _autoCenter->setValue(false);
+        if (follow != _autoCenter->getValue()) {
+            _autoCenter->setValue(follow);
         }
     } else if (paramName == kParamDpi && args.reason != eChangeTime) {
         // the canvas size changed
