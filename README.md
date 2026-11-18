@@ -130,6 +130,7 @@ Options (the Makefile equivalents are in parentheses):
   * ``-DMAGICK_PKG_CONFIG=XXX``: Custom Magick++ pkg-config name (default ``Magick++``, which ImageMagick 6 and 7 both install): only needed to pick one of several ImageMagick installs, e.g. ``Magick++-6.Q16HDRI``. The Makefiles always use ``Magick++``
   * ``-DOFX_USE_OPENMP=OFF``: build without OpenMP (on macOS with Apple clang, OpenMP uses MacPorts' libomp)
   * ``-DOFX_CXX_STANDARD=20``: C++ standard (17 by default; ``ReadPDF`` is always built as C++20)
+  * ``-DCMAKE_OSX_DEPLOYMENT_TARGET=XX``: the minimum macOS of the bundles; 14.0 by default, unless the ``MACOSX_DEPLOYMENT_TARGET`` environment variable or a toolchain file sets it (``MACOSX_DEPLOYMENT_TARGET``)
   * ``-DOFX_DEPLOY_BUNDLES=ON``: on macOS, copy the non-system libraries into the installed bundle (Release builds), as the Makefile does
   * ``-DMINGW_STATIC=ON``: link MinGW bundles statically, for hosts other than Natron (``LDFLAGS_ADD=-static``)
   * ``-DHALDCLUT=ON``, ``-DOCL=ON``: also build ``HaldCLUT.ofx.bundle`` and ``OCL.ofx.bundle`` (``make -C Magick/HaldCLUT``, ``make -C OCL``)
