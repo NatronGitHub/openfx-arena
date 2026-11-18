@@ -588,7 +588,9 @@ ReadSVGPlugin::decodePlane(const std::string& filename, OfxTime time, int /*view
     if (getTransformCanonical(getRenderTime(), &transform)) {
         // The surface covers renderWindow, at full resolution (see above), top-down: from
         // canonical coordinates, x is divided by the PAR, and y goes down from renderWindow.y2.
-        const double par = _outputClip->getPixelAspectRatio();
+        // a PAR <= 0 (not a valid host value) would make 1 / par and the matrices below inf/NaN
+        const double clipPar = _outputClip->getPixelAspectRatio();
+        const double par = (clipPar > 0.) ? clipPar : 1.;
         const Matrix3x3 canonicalToSurface(1. / par, 0., -renderWindow.x1,
                                            0., -1., renderWindow.y2,
                                            0., 0., 1.);
