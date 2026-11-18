@@ -80,8 +80,8 @@ OFXS_NAMESPACE_ANONYMOUS_ENTER
     "Neither the publisher nor the authors are affiliated with or endorsed by the companies that own the trademarks."
 #define kPluginRepoURL "https://raw.githubusercontent.com/NatronGitHub/clut/master"
 #define kPluginRepoZIP "https://github.com/NatronGitHub/clut/archive/master.zip"
-// Version 2 uses the sRGB transfer function to apply the CLUT to linear input (see HaldCLUTPlugin::render).
-// Version 3 also unpremultiplies the source before ImageMagick (see PackedImage::PackedSrc).
+// Version 3 uses the sRGB transfer function to apply the CLUT to linear input (see HaldCLUTPlugin::render),
+// and unpremultiplies the source before ImageMagick (see PackedImage::PackedSrc).
 #define kPluginVersionMajor 3
 #define kPluginVersionMinor 0
 
@@ -228,9 +228,11 @@ class HaldCLUTPlugin
     : public MagickPluginHelper<kSupportsRenderScale>
 {
 public:
-    HaldCLUTPlugin(OfxImageEffectHandle handle, bool srgbTransfer, bool unpremultSrc)
-        : MagickPluginHelper<kSupportsRenderScale>(handle, unpremultSrc)
-        , _srgbTransfer(srgbTransfer)
+    // fixed is false for version 1, which used a 2.2 power function instead of the sRGB
+    // transfer function and fed premultiplied pixels to ImageMagick: version 3 fixes both
+    HaldCLUTPlugin(OfxImageEffectHandle handle, bool fixed)
+        : MagickPluginHelper<kSupportsRenderScale>(handle, fixed)
+        , _srgbTransfer(fixed)
         , _presets()
         , _preset(NULL)
         , _custom(NULL)
@@ -617,15 +619,11 @@ template<unsigned int majorVersion>
 OFX::ImageEffect*
 HaldCLUTPluginFactory<majorVersion>::createInstance(OfxImageEffectHandle handle, ContextEnum /*context*/)
 {
-    // versions before 3 fed premultiplied pixels to ImageMagick: keep their output
-    return new HaldCLUTPlugin(handle, majorVersion >= 2, majorVersion >= 3);
+    return new HaldCLUTPlugin(handle, majorVersion >= 3);
 }
 
 static HaldCLUTPluginFactory<kPluginVersionMajor> p(kPluginIdentifier, kPluginVersionMinor);
 mRegisterPluginFactoryInstance(p)
-// Version 2 is kept unchanged so that existing projects render as before.
-static HaldCLUTPluginFactory<2> p2(kPluginIdentifier, 0);
-mRegisterPluginFactoryInstance(p2)
 // Version 1 is kept unchanged so that existing projects render as before.
 static HaldCLUTPluginFactory<1> p1(kPluginIdentifier, 1);
 mRegisterPluginFactoryInstance(p1)

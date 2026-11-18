@@ -489,7 +489,7 @@ if(BUILD_TESTING)
     if(RICHTEXT)
         math(EXPR _n_Arena "${_n_Arena} + 1")
     endif()
-    set(_n_HaldCLUT 3)
+    set(_n_HaldCLUT 2)
     set(_n_OCL 9)
     # fail on a non-zero exit status, and unless the count is printed
     file(WRITE "${CMAKE_CURRENT_BINARY_DIR}/verify_plugin_loads.cmake" [=[
