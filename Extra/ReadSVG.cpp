@@ -314,9 +314,9 @@ ReadSVGPlugin::changedParam(const InstanceChangedArgs &args, const std::string &
             _centerChanged->setValue(true);
         }
     } else if (paramName == kParamDpi) {
-        // the canvas size changed
+        // the canvas size changed: move the center to the new canvas center, without moving the image
         if (args.reason == eChangeUserEdit && !_centerChanged->getValue()) {
-            resetCenter(args.time, false);
+            resetCenter(args.time, true);
             if (_centerChanged->getValue()) {
                 _centerChanged->setValue(false);
             }
@@ -695,10 +695,11 @@ void ReadSVGPlugin::changedFilename(const OFX::InstanceChangedArgs &args)
     getLayers(root_element,&imageLayers);
     xmlFreeDoc(doc);
 
-    // center the transform on the new canvas, unless the user moved the center (as the Transform
-    // node does when its input changes)
+    // move the center to the center of the new canvas, unless the user moved it, and change the
+    // translation so that the transformed image doesn't move (as the Transform node does when its
+    // input changes)
     if (args.reason == eChangeUserEdit && !_centerChanged->getValue()) {
-        resetCenter(args.time, false);
+        resetCenter(args.time, true);
         if (_centerChanged->getValue()) {
             _centerChanged->setValue(false);
         }
