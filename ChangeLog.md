@@ -2,7 +2,14 @@
 
 ## Unreleased
 
- * ``Text`` (TextOFX) 7.0: the Center is in canonical coordinates, as the overlay shows it: the text is now drawn at the Center when the pixel aspect ratio isn't 1 or the RoD doesn't start at (0,0) (e.g. an offset Source). The Canvas size and the Auto size are in pixels, so Auto size no longer crops the text when the pixel aspect ratio isn't 1. Turning Relative position on or off converts the Center with the same mapping. Text 6.16 stays registered and renders as before, so old projects are unchanged (#70).
+ * ``Text`` (TextOFX) 7.0 (#70):
+   * The Center is in canonical coordinates, as the overlay shows it: the text is drawn at the Center when the pixel aspect ratio isn't 1 or the RoD doesn't start at (0,0) (e.g. an offset Source).
+   * The text is drawn in canonical units, so it isn't stretched on a PAR-corrected viewer: the glyphs, rotation, skew, scale, circle, arc and stroke are right at any pixel aspect ratio. Auto size fits the text at any pixel aspect ratio. Canvas size is in pixels.
+   * Rotate, Skew and Scale are applied in the overlay's order (scale, then skew, then rotate, about the Center), and Skew Order is honoured. The glyphs no longer overlap with a non-uniform scale or a skew.
+   * When Transform is unchecked, the text is rotated, skewed and scaled about the Center (where the overlay is), instead of the center of the image for the rotation.
+   * The Center is no longer 1 pixel too high, and the vertical scroll is scaled by the vertical render scale.
+   * New: Line spacing, and font size and position relative to the frame (Size unit, Font size (%), Relative position, #19, #63).
+ * ``Text`` (TextOFX) 6: deprecated (hidden from the menus, still used by old projects). It is now 6.17, with the parameters of 6.14 (Natron 2.5.0) and the bug fixes made since: Stroke dash length above 3, fontconfig leaks and an uninitialized RoD read, rendering a render window smaller than the RoD.
  * Arena now targets ImageMagick 7 (static, Q32, HDRI, OpenMP), which Natron 2.6 will ship on every platform. ImageMagick 6 still builds and renders as before.
  * ``Charcoal``, ``Sketch``, ``Morphology``, ``Texture``: with ImageMagick 7, alpha is now the same as with ImageMagick 6 (it was grey levels, noise, transparent or negative), except where ImageMagick 7 differs inherently: Morphology Voronoi, the Morphology intensity methods with more than 1 iteration, and Texture Plasma.
  * With ImageMagick 7, these render differently from ImageMagick 6 (largest difference measured, in [0,1] units, and the share of pixels affected):
