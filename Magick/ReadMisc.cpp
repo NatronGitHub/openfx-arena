@@ -32,7 +32,7 @@
 #define kPluginIdentifier "fr.inria.openfx.ReadMisc"
 #define kPluginVersionMajor 1
 #define kPluginVersionMinor 3
-#define kPluginEvaluation 80 // less than ReadOIIO
+#define kPluginEvaluation 80 // less than ReadOIIO (91), more than ReadFFmpeg (0)
 
 #define kSupportsRGBA true
 #define kSupportsRGB false
@@ -203,12 +203,14 @@ void
 ReadMiscPluginFactory::load()
 {
     _extensions.clear();
-    _extensions.push_back("bmp"); // also handled by ReadOIIO (which has a higher evaluation)
+    // bmp: ReadOIIO denies it (OpenImageIO misreads Natron-Tests' TestImageBMP) and ReadFFmpeg's
+    // denylist removes it, so ReadMisc reads it
+    _extensions.push_back("bmp");
     // PCX was disabled in 2021 (READMISC_LEGACY, #14) because it was read as
     // black; the cause (transparent alpha, see decode()) is fixed.
     _extensions.push_back("pcx");
     _extensions.push_back("xpm");
-    //_extensions.push_back("gif"); // may be animated - better handled by ReadFFmpeg
+    //_extensions.push_back("gif"); // may be animated: ReadFFmpeg reads it (ReadOIIO denies it too)
     _extensions.push_back("miff");
 }
 
