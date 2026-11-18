@@ -26,6 +26,7 @@
 #include <libxml/parser.h>
 
 #include <iostream>
+#include <sys/stat.h>
 
 #include "ofxNatron.h"
 #include "GenericReader.h"
@@ -36,6 +37,10 @@
 #include "ofxsImageEffect.h"
 #include "ofxsMatrix2D.h"
 #include "ofxsTransformInteract.h"
+#include "ofxsMultiThread.h"
+#ifndef OFX_USE_MULTITHREAD_MUTEX
+#include "fast_mutex.h"
+#endif
 
 #define kPluginName "ReadSVG"
 #define kPluginGrouping "Image/Readers"
@@ -76,6 +81,15 @@ OFXS_NAMESPACE_ANONYMOUS_ENTER
 
 static bool gHostIsNatron = false;
 
+// as in GenericOCIO.h
+#ifdef OFX_USE_MULTITHREAD_MUTEX
+typedef OFX::MultiThread::Mutex Mutex;
+typedef OFX::MultiThread::AutoMutex AutoMutex;
+#else
+typedef tthread::fast_mutex Mutex;
+typedef OFX::MultiThread::AutoMutexT<tthread::fast_mutex> AutoMutex;
+#endif
+
 class ReadSVGPlugin : public GenericReaderPlugin
 {
 public:
@@ -111,6 +125,7 @@ private:
     virtual bool getFrameBounds(const std::string& filename, OfxTime time, int view, OfxRectI *bounds, OfxRectI* format, double *par, std::string *error, int *tile_width, int *tile_height) OVERRIDE FINAL;
     virtual bool guessParamsFromFilename(const std::string& filename, std::string *colorspace, OFX::PreMultiplicationEnum *filePremult, OFX::PixelComponentEnum *components, int *componentCount) OVERRIDE FINAL;
     virtual void changedFilename(const OFX::InstanceChangedArgs &args) OVERRIDE FINAL;
+    virtual void clearAnyCache() OVERRIDE FINAL;
     void getLayers(xmlNode *node, std::vector<std::string> *layers);
     bool isTransformAnimated() const;
     // the transform from the untransformed canvas to the output, in canonical coordinates
@@ -127,6 +142,19 @@ private:
     OFX::Double2DParam *_center;
     OFX::BooleanParam *_centerChanged;
     std::vector<std::string> imageLayers;
+    // The canvas size from the last getFrameBounds(), so that it doesn't parse the whole SVG each
+    // time: GenericReader calls it from getClipPreferences(), which the host calls again at each
+    // change of a transform param (they are clip preferences slaves), e.g. while dragging the overlay.
+    struct CanvasSize {
+        std::string filename;
+        int dpi;
+        time_t mtime;
+        off_t size;
+        int width, height;
+        CanvasSize() : dpi(0), mtime(0), size(0), width(0), height(0) {}
+    };
+    Mutex _canvasSizeMutex; // getFrameBounds() is also called from render(), possibly concurrently
+    CanvasSize _canvasSize;
 };
 
 ReadSVGPlugin::ReadSVGPlugin(OfxImageEffectHandle handle, const std::vector<std::string>& extensions)
@@ -526,36 +554,60 @@ bool ReadSVGPlugin::getFrameBounds(const std::string& filename,
     int dpi;
     _dpi->getValueAtTime(time, dpi);
 
-    GError *error = NULL;
-    RsvgHandle *handle;
-    RsvgDimensionData dimension;
-    double imageWidth, imageHeight;
     int width, height;
-
-    handle = rsvg_handle_new_from_file(filename.c_str(), &error);
-    rsvg_handle_set_dpi_x_y(handle, dpi, dpi);
-
-    if (error != NULL) {
-        setPersistentMessage(OFX::Message::eMessageError, "", "Failed to read SVG");
-        OFX::throwSuiteStatusException(kOfxStatErrFormat);
+    // the cache is valid for the same file, unchanged on disk (modification time and size), and DPI
+    struct stat st;
+    const bool statOK = (stat(filename.c_str(), &st) == 0);
+    bool cached = false;
+    if (statOK) {
+        AutoMutex lock(_canvasSizeMutex);
+        if (_canvasSize.filename == filename && _canvasSize.dpi == dpi && _canvasSize.mtime == st.st_mtime && _canvasSize.size == st.st_size) {
+            width = _canvasSize.width;
+            height = _canvasSize.height;
+            cached = true;
+        }
     }
+    if (!cached) {
+        GError *error = NULL;
+        RsvgHandle *handle;
+        RsvgDimensionData dimension;
+        double imageWidth, imageHeight;
 
-    rsvg_handle_get_dimensions(handle, &dimension);
+        handle = rsvg_handle_new_from_file(filename.c_str(), &error);
+        rsvg_handle_set_dpi_x_y(handle, dpi, dpi);
 
-    imageWidth = dimension.width;
-    imageHeight = dimension.height;
+        if (error != NULL) {
+            setPersistentMessage(OFX::Message::eMessageError, "", "Failed to read SVG");
+            OFX::throwSuiteStatusException(kOfxStatErrFormat);
+        }
 
-    if (dpi != kParamDpiDefault) {
-        width = imageWidth * dpi / kParamDpiDefault;
-        height = imageHeight * dpi / kParamDpiDefault;
+        rsvg_handle_get_dimensions(handle, &dimension);
+
+        imageWidth = dimension.width;
+        imageHeight = dimension.height;
+
+        if (dpi != kParamDpiDefault) {
+            width = imageWidth * dpi / kParamDpiDefault;
+            height = imageHeight * dpi / kParamDpiDefault;
+        }
+        else {
+            width = imageWidth;
+            height = imageHeight;
+        }
+
+        g_object_unref(handle);
+        error = NULL;
+
+        if (statOK) {
+            AutoMutex lock(_canvasSizeMutex);
+            _canvasSize.filename = filename;
+            _canvasSize.dpi = dpi;
+            _canvasSize.mtime = st.st_mtime;
+            _canvasSize.size = st.st_size;
+            _canvasSize.width = width;
+            _canvasSize.height = height;
+        }
     }
-    else {
-        width = imageWidth;
-        height = imageHeight;
-    }
-
-    g_object_unref(handle);
-    error = NULL;
 
     if (width > 0 && height > 0) {
         bounds->x1 = 0;
@@ -568,6 +620,13 @@ bool ReadSVGPlugin::getFrameBounds(const std::string& filename,
 
     *tile_width = *tile_height = 0;
     return true;
+}
+
+void
+ReadSVGPlugin::clearAnyCache()
+{
+    AutoMutex lock(_canvasSizeMutex);
+    _canvasSize = CanvasSize();
 }
 
 bool ReadSVGPlugin::guessParamsFromFilename(const std::string& /*newFile*/,
