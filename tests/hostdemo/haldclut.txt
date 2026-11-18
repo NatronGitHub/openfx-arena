@@ -3,5 +3,4 @@
 # (The plug-in still creates its preset folder, ~/.clut, when it is instantiated: run.cmake
 # sets HOME to its work directory.)
 net.fxarena.openfx.HaldCLUT 3 filter custom=@SAMPLES@/sample_hald.png
-net.fxarena.openfx.HaldCLUT 2 filter custom=@SAMPLES@/sample_hald.png
 net.fxarena.openfx.HaldCLUT 1 filter custom=@SAMPLES@/sample_hald.png
