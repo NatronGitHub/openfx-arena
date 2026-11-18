@@ -1,4 +1,4 @@
-# OpenFX-Arena [![GPL2 License](http://img.shields.io/:license-gpl2-blue.svg?style=flat-square)](https://github.com/NatronGitHub/openfx-arena/blob/master/LICENSE) [![Open Hub](https://www.openhub.net/p/openfx-arena/widgets/project_thin_badge?format=gif&ref=Thin+badge)](https://www.openhub.net/p/openfx-arena?ref=Thin+badge) [![Build Status](https://travis-ci.org/NatronGitHub/openfx-arena.svg)](https://travis-ci.org/NatronGitHub/openfx-arena)
+# OpenFX-Arena [![GPL2 License](http://img.shields.io/:license-gpl2-blue.svg?style=flat-square)](https://github.com/NatronGitHub/openfx-arena/blob/master/LICENSE) [![Open Hub](https://www.openhub.net/p/openfx-arena/widgets/project_thin_badge?format=gif&ref=Thin+badge)](https://www.openhub.net/p/openfx-arena?ref=Thin+badge) [![Continuous Integration tests](https://github.com/NatronGitHub/openfx-arena/actions/workflows/ci.yml/badge.svg?branch=master)](https://github.com/NatronGitHub/openfx-arena/actions/workflows/ci.yml) [![Extended builds](https://github.com/NatronGitHub/openfx-arena/actions/workflows/extended.yml/badge.svg?branch=master)](https://github.com/NatronGitHub/openfx-arena/actions/workflows/extended.yml)
 
 A set of [OpenFX](http://openfx.sf.net) plugins designed for [Natron](https://natrongithub.github.io/).
 
@@ -49,7 +49,7 @@ Experimental:
 
 ## Requirements
 
- * OpenColorIO 1.0.9 *(Extra.ofx/Magic.ofx)*
+ * OpenColorIO 2.x *(the readers, through OpenFX-IO's GenericOCIO; its OpenColorIO 1 code path is not tested)*
  * fontconfig *(Extra.ofx/Magick.ofx/Text.ofx)*
  * libxml2 *(OpenRaster/ReadKrita/HaldCLUT)*
  * libzip 1.x *(OpenRaster/ReadKrita)*
@@ -60,7 +60,7 @@ Experimental:
  * librevenge *(ReadCDR)*
  * poppler-glib 0.83+ *(ReadPDF)*
  * lcms 2.x *(ReadPSD)*
- * ImageMagick (Magick++) 6.9.2/7.0.3 with Q16, HDRI, lcms2, zlib, freetype, libpng
+ * ImageMagick (Magick++) 7, or 6.9.2 or later (older ImageMagick 6 with ``IM=68`` or ``LEGACYIM=1``, below), Q16 or Q32, with HDRI, lcms2, zlib, freetype, libpng. HDRI is required, since the plug-ins pass floating-point pixels to ImageMagick (the build doesn't check it). Natron 2.6 targets ImageMagick 7, static, Q32, HDRI, with OpenMP; ImageMagick 6 HDRI still builds.
  * OpenCL 1.2 compatible hardware and drivers *(for optional OCL plugins)*
  * libcurl *(for optional HaldCLUT plugin)*
  * libsox *(AudioCurve)*
@@ -83,8 +83,15 @@ This will build one OFX plugin bundle *(Arena.ofx)*. Only plugins included in th
 
 Optional build options:
 
-  * ``AUDIO=ON``: Enable ``AudioCurve``
+  * ``AUDIO=ON``: Enable ``AudioCurve`` (the default when pkg-config finds sox; ``AUDIO=OFF`` leaves it out)
   * ``RICHTEXT=ON``: Enable ``RichText`` *(WIP, only for developers)*
+  * ``LICENSE=COMMERCIAL``: leave out ``ReadPDF`` and poppler (GPL)
+  * ``LEGACYIM=1``: old ImageMagick: leave out ``Sketch``, ``Polaroid`` and ``Edges``, and build without the code that needs a newer ImageMagick (OpenMP thread count, delegate checks, some Text and ReadPSD options, Modulate's OpenCL, Texture's random seed)
+  * ``IM=68``: ImageMagick 6.8: build ``Texture`` without the random seed
+  * ``IM=7``: with ``MINGW=1``, also link ``oleaut32`` for ImageMagick 7. Elsewhere it has no effect: the ImageMagick version is detected at compile time
+  * ``MINGW=1``: MinGW (MSYS2): add the libraries a static ImageMagick needs (gdi32, freetype, expat, z, ws2_32)
+  * ``FREEBSD=1``: FreeBSD: add ``/usr/local/include`` and ``/usr/local/lib`` to the search paths
+  * ``LIBOMP_PREFIX=...``: with Apple clang, when ImageMagick was built with OpenMP, the prefix of libomp (``$(LIBOMP_PREFIX)/{include,lib}/libomp``). The default is the ImageMagick prefix if it has ``lib/libomp``, else MacPorts' ``/opt/local``
 
 ```
 make CONFIG=release
@@ -118,8 +125,8 @@ Options (the Makefile equivalents are in parentheses):
   * ``-DRICHTEXT=ON``: Enable ``RichText`` *(WIP, only for developers)* (``RICHTEXT=ON``)
   * ``-DOFX_LICENSE=COMMERCIAL``: leave out ``ReadPDF`` and poppler (``LICENSE=COMMERCIAL``)
   * ``-DLEGACYIM=ON``: old ImageMagick, without ``Sketch``, ``Polaroid`` and ``Edges`` (``LEGACYIM=1``)
-  * ``-DIM=68`` or ``-DIM=7``: ImageMagick 6.8 or 7 (``IM=68``, ``IM=7``)
-  * ``-DMAGICK_PKG_CONFIG=XXX``: Custom Magick++ pkg-config name
+  * ``-DIM=68``: ImageMagick 6.8: build ``Texture`` without the random seed (``IM=68``). ``-DIM=7``: with MinGW, also link ``oleaut32`` (``IM=7``); elsewhere it has no effect, the ImageMagick version is detected at compile time.
+  * ``-DMAGICK_PKG_CONFIG=XXX``: Custom Magick++ pkg-config name (default ``Magick++``, which ImageMagick 6 and 7 both install): only needed to pick one of several ImageMagick installs, e.g. ``Magick++-6.Q16HDRI``. The Makefiles always use ``Magick++``
   * ``-DOFX_USE_OPENMP=OFF``: build without OpenMP (on macOS with Apple clang, OpenMP uses MacPorts' libomp)
   * ``-DOFX_CXX_STANDARD=20``: C++ standard (17 by default; ``ReadPDF`` is always built as C++20)
   * ``-DOFX_DEPLOY_BUNDLES=ON``: on macOS, copy the non-system libraries into the installed bundle (Release builds), as the Makefile does
