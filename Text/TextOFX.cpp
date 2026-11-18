@@ -62,8 +62,11 @@
 // pixels. 6.x is kept, unchanged and deprecated, for old projects (issue #70).
 #define kPluginVersionMajor 7
 #define kPluginVersionMinor 0
+// 6.17: the param set of 6.14 (Natron 2.5.0), with the bug fixes made since. The params added in
+// 6.15 (Line spacing) and 6.16 (relative size and position) were never released: they are now
+// in 7.0 only.
 #define kPluginVersionMajorV6 6
-#define kPluginVersionMinorV6 16
+#define kPluginVersionMinorV6 17
 
 #define kSupportsTiles 0
 #define kSupportsMultiResolution 0
@@ -421,7 +424,7 @@ setupFontmap(FcConfig *fcConfig)
 class TextFXPlugin : public OFX::ImageEffect
 {
 public:
-    TextFXPlugin(OfxImageEffectHandle handle, bool canonicalCenter);
+    TextFXPlugin(OfxImageEffectHandle handle, bool v7);
     virtual ~TextFXPlugin();
 
     /* Override the render */
@@ -465,7 +468,9 @@ private:
     // pixels at scale 1 from the RoD origin, drew in pixels, and took the Canvas as a canonical
     // size, which is only right if PAR = 1 and the RoD starts at (0,0) (issue #70). v6 renders
     // as before, for old projects.
-    const bool _canonicalCenter;
+    // Line spacing, and the relative size and position (and their state params) exist in v7
+    // only: in v6 these pointers are NULL.
+    const bool _v7;
 
     // do not need to delete these, the ImageEffect is managing them for us
     OFX::Clip *_dstClip;
@@ -527,9 +532,9 @@ private:
     OFX::Int2DParam  *_range;
 };
 
-TextFXPlugin::TextFXPlugin(OfxImageEffectHandle handle, bool canonicalCenter)
+TextFXPlugin::TextFXPlugin(OfxImageEffectHandle handle, bool v7)
 : OFX::ImageEffect(handle)
-, _canonicalCenter(canonicalCenter)
+, _v7(v7)
 , _dstClip(NULL)
 , _text(NULL)
 , _fontSize(NULL)
@@ -589,11 +594,14 @@ TextFXPlugin::TextFXPlugin(OfxImageEffectHandle handle, bool canonicalCenter)
 
     _text = fetchStringParam(kParamText);
     _fontSize = fetchIntParam(kParamFontSize);
-    _sizeUnit = fetchChoiceParam(kParamSizeUnit);
-    _fontSizeRelative = fetchDoubleParam(kParamFontSizeRelative);
-    _positionRelative = fetchBooleanParam(kParamPositionRelative);
-    _sizeUnitState = fetchIntParam(kParamSizeUnitState);
-    _positionRelativeState = fetchBooleanParam(kParamPositionRelativeState);
+    if (_v7) {
+        _sizeUnit = fetchChoiceParam(kParamSizeUnit);
+        _fontSizeRelative = fetchDoubleParam(kParamFontSizeRelative);
+        _positionRelative = fetchBooleanParam(kParamPositionRelative);
+        _sizeUnitState = fetchIntParam(kParamSizeUnitState);
+        _positionRelativeState = fetchBooleanParam(kParamPositionRelativeState);
+        _lineSpace = fetchDoubleParam(kParamLineSpace);
+    }
     _fontName = fetchChoiceParam(kParamFontName);
     _textColor = fetchRGBAParam(kParamTextColor);
     _bgColor = fetchRGBAParam(kParamBGColor);
@@ -618,7 +626,6 @@ TextFXPlugin::TextFXPlugin(OfxImageEffectHandle handle, bool canonicalCenter)
     _circleRadius = fetchDoubleParam(kParamCircleRadius);
     _circleWords = fetchIntParam(kParamCircleWords);
     _letterSpace = fetchIntParam(kParamLetterSpace);
-    _lineSpace = fetchDoubleParam(kParamLineSpace);
     _canvas = fetchInt2DParam(kParamCanvas);
     _arcRadius = fetchDoubleParam(kParamArcRadius);
     _arcAngle = fetchDoubleParam(kParamArcAngle);
@@ -642,10 +649,11 @@ TextFXPlugin::TextFXPlugin(OfxImageEffectHandle handle, bool canonicalCenter)
         assert(_range);
     }
 
-    assert(_text && _fontSize && _sizeUnit && _fontSizeRelative && _positionRelative && _sizeUnitState && _positionRelativeState && _fontName && _textColor && _bgColor && _font && _wrap
+    assert(!_v7 || (_sizeUnit && _fontSizeRelative && _positionRelative && _sizeUnitState && _positionRelativeState && _lineSpace));
+    assert(_text && _fontSize && _fontName && _textColor && _bgColor && _font && _wrap
            && _justify && _align && _valign && _markup && _style && auto_ && stretch_ && weight_ && strokeColor_
            && strokeWidth_ && strokeDash_ && strokeDashPattern_ && fontAA_ && subpixel_ && _hintStyle
-           && _hintMetrics && _circleRadius && _circleWords && _letterSpace && _lineSpace && _canvas
+           && _hintMetrics && _circleRadius && _circleWords && _letterSpace && _canvas
            && _arcRadius && _arcAngle && _rotate && _scale && _position && _move && _txt
            && _skewX && _skewY && _scaleUniform && _skewOrder && _centerInteract && _fontOverride && _scrollX && _scrollY
            && _srt && _fps);
@@ -696,9 +704,11 @@ TextFXPlugin::TextFXPlugin(OfxImageEffectHandle handle, bool canonicalCenter)
     // need to set a default or else font will be empty if we reset to default
     _font->setDefault(font.empty()? fontName : font);
 
-    updateParamsState();
-    if ( _positionRelativeState->getValue() ) {
-        updatePositionIncrement(true);
+    if (_v7) {
+        updateParamsState();
+        if ( _positionRelativeState->getValue() ) {
+            updatePositionIncrement(true);
+        }
     }
 }
 
@@ -768,7 +778,7 @@ OfxRectD TextFXPlugin::getRelativeFrame(double time, bool autoSize) const
         // same condition as in getRegionOfDefinition(), where the canvas becomes the RoD
         if (cwidth > 0 && cheight > 0) {
             // v7: the canvas is in pixels (v6: canonical)
-            frame.x2 = _canonicalCenter ? pixelWidthToCanonical(cwidth, getPAR()) : cwidth;
+            frame.x2 = _v7 ? pixelWidthToCanonical(cwidth, getPAR()) : cwidth;
             frame.y2 = cheight;
             return frame;
         }
@@ -804,11 +814,17 @@ OfxRectD TextFXPlugin::getRelativeFrame(double time) const
 
 bool TextFXPlugin::isPositionRelative(double time) const
 {
+    if (!_positionRelativeState) {
+        return false; // v6
+    }
     return _positionRelativeState->getValueAtTime(time);
 }
 
 int TextFXPlugin::getSizeUnit(double time) const
 {
+    if (!_sizeUnitState) {
+        return eSizeUnitPixels; // v6
+    }
     return _sizeUnitState->getValueAtTime(time);
 }
 
@@ -900,27 +916,6 @@ convertPosition(const OfxPointD& p, const OfxRectD& frame, bool toRelative)
     return ret;
 }
 
-// In absolute mode, render() v6 takes the Center as pixels at scale 1 from the bottom-left corner
-// of the RoD (it does not apply the pixel aspect ratio): convert between that and canonical
-// coordinates. rodOrigin is the RoD origin in canonical coordinates.
-static OfxPointD
-absoluteToCanonical(const OfxPointD& p, const OfxPointD& rodOrigin, double par)
-{
-    OfxPointD ret;
-    ret.x = rodOrigin.x + p.x * par;
-    ret.y = rodOrigin.y + p.y;
-    return ret;
-}
-
-static OfxPointD
-canonicalToAbsolute(const OfxPointD& c, const OfxPointD& rodOrigin, double par)
-{
-    OfxPointD ret;
-    ret.x = (c.x - rodOrigin.x) / par;
-    ret.y = c.y - rodOrigin.y;
-    return ret;
-}
-
 double TextFXPlugin::getPAR() const
 {
     const double par = _dstClip->getPixelAspectRatio();
@@ -928,22 +923,12 @@ double TextFXPlugin::getPAR() const
 }
 
 // Convert the Center (and its keyframes) to/from relative coordinates, so that the rendered
-// text does not move.
+// text does not move (v7 only: the Center and the frame are canonical).
 bool TextFXPlugin::convertPositionRelative(double time, bool relative)
 {
     const OfxRectD frame = getRelativeFrame(time);
     if ( (frame.x2 <= frame.x1) || (frame.y2 <= frame.y1) ) {
         return false;
-    }
-    // v6 only: the origin of the RoD that render() v6 uses in absolute mode: render() gets it in pixels
-    // (enclosing the canonical RoD, at scale 1 here), so round it the same way.
-    const double par = getPAR();
-    OfxPointD rodOrigin = {0., 0.};
-    const OfxRectD rod = _dstClip->getRegionOfDefinition(time);
-    if ( (kOfxFlagInfiniteMin < rod.x1) && (rod.x1 < kOfxFlagInfiniteMax) &&
-         (kOfxFlagInfiniteMin < rod.y1) && (rod.y1 < kOfxFlagInfiniteMax) ) {
-        rodOrigin.x = std::floor(rod.x1 / par) * par;
-        rodOrigin.y = std::floor(rod.y1);
     }
     const int nKeys = getNumKeys(_position);
     const int n = (nKeys == 0) ? 1 : nKeys;
@@ -951,14 +936,7 @@ bool TextFXPlugin::convertPositionRelative(double time, bool relative)
         const double t = (nKeys == 0) ? time : _position->getKeyTime(i);
         OfxPointD p;
         _position->getValueAtTime(t, p.x, p.y);
-        if (_canonicalCenter) {
-            // v7: the absolute Center is canonical, as is the frame
-            p = convertPosition(p, frame, relative);
-        } else if (relative) {
-            p = convertPosition(absoluteToCanonical(p, rodOrigin, par), frame, true);
-        } else {
-            p = canonicalToAbsolute(convertPosition(p, frame, false), rodOrigin, par);
-        }
+        p = convertPosition(p, frame, relative);
         if (nKeys == 0) {
             _position->setValue(p);
         } else {
@@ -1200,7 +1178,9 @@ void TextFXPlugin::render(const OFX::RenderArguments &args)
     _circleWords->getValueAtTime(args.time, circleWords);
     _letterSpace->getValueAtTime(args.time, letterSpace);
     double lineSpace = 0.;
-    _lineSpace->getValueAtTime(args.time, lineSpace);
+    if (_lineSpace) { // v7
+        _lineSpace->getValueAtTime(args.time, lineSpace);
+    }
     _canvas->getValueAtTime(args.time, cwidth, cheight);
     _arcRadius->getValueAtTime(args.time, arcRadius);
     _arcAngle->getValueAtTime(args.time, arcAngle);
@@ -1218,7 +1198,7 @@ void TextFXPlugin::render(const OFX::RenderArguments &args)
     _scrollY->getValueAtTime(args.time, scrollY);
 
     double xtext, ytext; // the Center in pixels from the RoD origin, at the render scale
-    if (_canonicalCenter) {
+    if (_v7) {
         // v7: the Center is in canonical coordinates, like the overlay. Map it to pixels as in
         // ofxCoordSystem.rst, "X' = (X * SX)/PAR, Y' = Y * SY * FS" (no fields here: FS = 1),
         // from the origin of the RoD, which is in pixel coordinates.
@@ -1232,18 +1212,6 @@ void TextFXPlugin::render(const OFX::RenderArguments &args)
     } else {
         // v6, unchanged: the code below takes the position in pixels at scale 1, from the
         // bottom-left corner of the RoD, without the PAR (issue #70).
-        if ( isPositionRelative(args.time) ) {
-            // Convert the relative position to canonical coordinates (in which the
-            // interact works), then to that convention.
-            const OfxPointD p0 = {x, y};
-            const double par = getPAR();
-            OfxPointD rodOrigin; // canonical
-            rodOrigin.x = dstRod.x1 * par / args.renderScale.x;
-            rodOrigin.y = dstRod.y1 / args.renderScale.y;
-            const OfxPointD p = canonicalToAbsolute(convertPosition( p0, getRelativeFrame(args.time, autoSize), false ), rodOrigin, par);
-            x = p.x;
-            y = p.y;
-        }
         ytext = y*args.renderScale.y;
         xtext = x*args.renderScale.x;
     }
@@ -1252,7 +1220,7 @@ void TextFXPlugin::render(const OFX::RenderArguments &args)
     // When dstBounds == dstRod this is the same value as before.
     // In the flipped context below, y = height is the bottom edge of the RoD: v7 maps the Center
     // there exactly, v6 put it one pixel too high.
-    ytext = (dstRod.y2 - dstRod.y1 - (_canonicalCenter ? 0 : 1)) - ytext;
+    ytext = (dstRod.y2 - dstRod.y1 - (_v7 ? 0 : 1)) - ytext;
 
     if (!txt.empty()) {
         std::string txt_tmp = textFromFile(txt);
@@ -1295,7 +1263,7 @@ void TextFXPlugin::render(const OFX::RenderArguments &args)
     // scaled by 1/PAR in x, so that the glyphs, the rotation, skew and scale, the circle, the
     // arc and the stroke look right on a canonical (PAR-corrected) viewer, as the overlay
     // does. v6 drew everything in pixels (xScale = 1).
-    const double xScale = _canonicalCenter ? getPAR() : 1.;
+    const double xScale = _v7 ? getPAR() : 1.;
     const double drawWidth = width * xScale; // the width of the RoD in drawing units
     xtext *= xScale;
 
@@ -1447,7 +1415,7 @@ void TextFXPlugin::render(const OFX::RenderArguments &args)
         pango_layout_set_spacing(layout, (int)std::floor((lineSpace*PANGO_SCALE) * args.renderScale.y + 0.5));
     }
 
-    if (_canonicalCenter) {
+    if (_v7) {
         // v7: the same transform as the overlay draws (TransformInteractHelper and
         // ofxsMatTransformCanonical() in SupportExt), about the Center whether or not Transform
         // is checked, since that is where the handle is ("Rotation angle in degrees around the
@@ -1529,7 +1497,7 @@ void TextFXPlugin::render(const OFX::RenderArguments &args)
     }
 
     // v6 scaled the vertical scroll by the horizontal render scale
-    const double scrollYScale = _canonicalCenter ? args.renderScale.y : args.renderScale.x;
+    const double scrollYScale = _v7 ? args.renderScale.y : args.renderScale.x;
     if (!move && !autoSize && (scrollX!=0||scrollY!=0) && arcAngle==0 && circleRadius==0) {
         cairo_move_to(cr, std::floor(scrollX * args.renderScale.x), std::floor(scrollY * scrollYScale));
     }
@@ -1542,7 +1510,7 @@ void TextFXPlugin::render(const OFX::RenderArguments &args)
         if (centerInteract) {
             int text_width, text_height;
             pango_layout_get_pixel_size(layout, &text_width, &text_height);
-            if (_canonicalCenter) {
+            if (_v7) {
                 moveX -= text_width / 2.;
                 moveY -= text_height / 2.;
             } else {
@@ -1550,7 +1518,7 @@ void TextFXPlugin::render(const OFX::RenderArguments &args)
                 moveY -= text_height / 2;
             }
         }
-        if (!_canonicalCenter) {
+        if (!_v7) {
             moveX = (int)moveX;
             moveY = (int)moveY;
         }
@@ -1561,7 +1529,7 @@ void TextFXPlugin::render(const OFX::RenderArguments &args)
         moveToLayoutOrigin();
     }
 
-    if (!_canonicalCenter) {
+    if (!_v7) {
         // v6, unchanged
         if (scaleX!=1.0||scaleY!=1.0) {
             if (!autoSize) {
@@ -1675,7 +1643,7 @@ void TextFXPlugin::render(const OFX::RenderArguments &args)
                     moveToLayoutOrigin();
                 }
                 cairo_set_source_rgba(cr, r, g, b, a);
-                if (!_canonicalCenter) {
+                if (!_v7) {
                     // v7 keeps the layout measured as in getRegionOfDefinition() (see the
                     // cairo_scale() above)
                     pango_cairo_update_layout(cr, layout);
@@ -1699,7 +1667,7 @@ void TextFXPlugin::render(const OFX::RenderArguments &args)
             cairo_save(cr);
             cairo_set_source_rgba(cr, r, g, b, a);
             cairo_rotate (cr, angle * G_PI / 180.);
-            if (!_canonicalCenter) {
+            if (!_v7) {
                 // v7 keeps the layout measured as in getRegionOfDefinition() (see the
                 // cairo_scale() above)
                 pango_cairo_update_layout(cr, layout);
@@ -1823,6 +1791,8 @@ void TextFXPlugin::changedParam(const OFX::InstanceChangedArgs &args, const std:
         }
     } else if (paramName == kParamSubtitleFile) {
         loadSRT(); // load subtitle
+    } else if (!_v7) {
+        // v6 has none of the params below
     } else if (paramName == kParamSizeUnit) {
         const int sizeUnit = _sizeUnit->getValueAtTime(args.time);
         if ( sizeUnit != _sizeUnitState->getValue() ) {
@@ -1882,7 +1852,9 @@ bool TextFXPlugin::getRegionOfDefinition(const OFX::RegionOfDefinitionArguments 
         strokeWidth_->getValueAtTime(args.time, strokeWidth);
         _letterSpace->getValueAtTime(args.time, letterSpace);
         double lineSpace = 0.;
-        _lineSpace->getValueAtTime(args.time, lineSpace);
+        if (_lineSpace) { // v7
+            _lineSpace->getValueAtTime(args.time, lineSpace);
+        }
         _txt->getValueAtTime(args.time, txt);
 
         if (!txt.empty()) {
@@ -2002,7 +1974,7 @@ bool TextFXPlugin::getRegionOfDefinition(const OFX::RegionOfDefinitionArguments 
         rod.x1 = rod.y1 = 0;
         // The RoD is in canonical coordinates. v7: the canvas is in pixels, so apply the PAR
         // (v6 did not), and the text is measured in canonical units, as render() draws it.
-        rod.x2 = (_canonicalCenter && !autoSize) ? pixelWidthToCanonical(width, getPAR()) : width;
+        rod.x2 = (_v7 && !autoSize) ? pixelWidthToCanonical(width, getPAR()) : width;
         rod.y2 = height;
     }
     else {
@@ -2281,7 +2253,12 @@ TextFXPluginFactory<majorVersion>::describe(OFX::ImageEffectDescriptor &desc)
     desc.setRenderThreadSafety(kRenderThreadSafety);
 
     Transform3x3Describe(desc, true);
-    desc.setOverlayInteractDescriptor(new TextTransformOverlayDescriptor);
+    if (majorVersion >= 7) {
+        desc.setOverlayInteractDescriptor(new TextTransformOverlayDescriptor);
+    } else {
+        // as 6.14: no relative position
+        desc.setOverlayInteractDescriptor(new TransformOverlayDescriptorOldParams);
+    }
 }
 
 /** @brief The describe in context function, passed a plugin descriptor and a context */
@@ -2332,39 +2309,47 @@ TextFXPluginFactory<majorVersion>::describeInContext(OFX::ImageEffectDescriptor 
         param->setHint(kParamCenterInteractHint);
         param->setDefault(kParamCenterInteractDefault);
         param->setAnimates(false);
-        param->setLayoutHint(eLayoutHintNoNewLine, 1);
+        if (majorVersion >= 7) {
+            param->setLayoutHint(eLayoutHintNoNewLine, 1); // next to Relative position
+        }
         if (page) {
             page->addChild(*param);
         }
     }
-    {
-        BooleanParamDescriptor *param = desc.defineBooleanParam(kParamPositionRelative);
-        param->setLabel(kParamPositionRelativeLabel);
-        param->setHint(kParamPositionRelativeHint);
-        param->setDefault(kParamPositionRelativeDefault);
-        param->setAnimates(false);
-        if (page) {
-            page->addChild(*param);
+    if (majorVersion >= 7) { // added in 6.15/6.16, unreleased, now 7.0 only
+        {
+            BooleanParamDescriptor *param = desc.defineBooleanParam(kParamPositionRelative);
+            param->setLabel(kParamPositionRelativeLabel);
+            param->setHint(kParamPositionRelativeHint);
+            param->setDefault(kParamPositionRelativeDefault);
+            param->setAnimates(false);
+            if (page) {
+                page->addChild(*param);
+            }
         }
     }
-    {
-        BooleanParamDescriptor *param = desc.defineBooleanParam(kParamPositionRelativeState);
-        param->setDefault(kParamPositionRelativeDefault);
-        param->setIsSecretAndDisabled(true);
-        param->setAnimates(false);
-        param->setEvaluateOnChange(false);
-        if (page) {
-            page->addChild(*param);
+    if (majorVersion >= 7) { // added in 6.15/6.16, unreleased, now 7.0 only
+        {
+            BooleanParamDescriptor *param = desc.defineBooleanParam(kParamPositionRelativeState);
+            param->setDefault(kParamPositionRelativeDefault);
+            param->setIsSecretAndDisabled(true);
+            param->setAnimates(false);
+            param->setEvaluateOnChange(false);
+            if (page) {
+                page->addChild(*param);
+            }
         }
     }
-    {
-        IntParamDescriptor *param = desc.defineIntParam(kParamSizeUnitState);
-        param->setDefault(kParamSizeUnitDefault);
-        param->setIsSecretAndDisabled(true);
-        param->setAnimates(false);
-        param->setEvaluateOnChange(false);
-        if (page) {
-            page->addChild(*param);
+    if (majorVersion >= 7) { // added in 6.15/6.16, unreleased, now 7.0 only
+        {
+            IntParamDescriptor *param = desc.defineIntParam(kParamSizeUnitState);
+            param->setDefault(kParamSizeUnitDefault);
+            param->setIsSecretAndDisabled(true);
+            param->setAnimates(false);
+            param->setEvaluateOnChange(false);
+            if (page) {
+                page->addChild(*param);
+            }
         }
     }
     {
@@ -2571,32 +2556,36 @@ TextFXPluginFactory<majorVersion>::describeInContext(OFX::ImageEffectDescriptor 
             page->addChild(*param);
         }
     }
-    {
-        ChoiceParamDescriptor *param = desc.defineChoiceParam(kParamSizeUnit);
-        param->setLabel(kParamSizeUnitLabel);
-        param->setHint(kParamSizeUnitHint);
-        assert(param->getNOptions() == eSizeUnitPixels);
-        param->appendOption(kParamSizeUnitOptionPixels);
-        assert(param->getNOptions() == eSizeUnitFrameHeight);
-        param->appendOption(kParamSizeUnitOptionFrameHeight);
-        param->setDefault(kParamSizeUnitDefault);
-        param->setAnimates(false);
-        param->setLayoutHint(eLayoutHintNoNewLine, 1);
-        if (page) {
-            page->addChild(*param);
+    if (majorVersion >= 7) { // added in 6.15/6.16, unreleased, now 7.0 only
+        {
+            ChoiceParamDescriptor *param = desc.defineChoiceParam(kParamSizeUnit);
+            param->setLabel(kParamSizeUnitLabel);
+            param->setHint(kParamSizeUnitHint);
+            assert(param->getNOptions() == eSizeUnitPixels);
+            param->appendOption(kParamSizeUnitOptionPixels);
+            assert(param->getNOptions() == eSizeUnitFrameHeight);
+            param->appendOption(kParamSizeUnitOptionFrameHeight);
+            param->setDefault(kParamSizeUnitDefault);
+            param->setAnimates(false);
+            param->setLayoutHint(eLayoutHintNoNewLine, 1);
+            if (page) {
+                page->addChild(*param);
+            }
         }
     }
-    {
-        DoubleParamDescriptor* param = desc.defineDoubleParam(kParamFontSizeRelative);
-        param->setLabel(kParamFontSizeRelativeLabel);
-        param->setHint(kParamFontSizeRelativeHint);
-        param->setRange(kParamFontSizeRelativeMin, kParamFontSizeRelativeMax);
-        param->setDisplayRange(0., 50.);
-        param->setIncrement(0.1);
-        param->setDefault(kParamFontSizeRelativeDefault);
-        param->setAnimates(true);
-        if (page) {
-            page->addChild(*param);
+    if (majorVersion >= 7) { // added in 6.15/6.16, unreleased, now 7.0 only
+        {
+            DoubleParamDescriptor* param = desc.defineDoubleParam(kParamFontSizeRelative);
+            param->setLabel(kParamFontSizeRelativeLabel);
+            param->setHint(kParamFontSizeRelativeHint);
+            param->setRange(kParamFontSizeRelativeMin, kParamFontSizeRelativeMax);
+            param->setDisplayRange(0., 50.);
+            param->setIncrement(0.1);
+            param->setDefault(kParamFontSizeRelativeDefault);
+            param->setAnimates(true);
+            if (page) {
+                page->addChild(*param);
+            }
         }
     }
     {
@@ -2626,20 +2615,25 @@ TextFXPluginFactory<majorVersion>::describeInContext(OFX::ImageEffectDescriptor 
         param->setRange(-10000, 10000);
         param->setDisplayRange(-250, 250);
         param->setDefault(kParamLetterSpaceDefault);
+        if (majorVersion < 7) {
+            param->setLayoutHint(OFX::eLayoutHintDivider); // as 6.14 (v7: after Line spacing)
+        }
         if (page) {
             page->addChild(*param);
         }
     }
-    {
-        DoubleParamDescriptor* param = desc.defineDoubleParam(kParamLineSpace);
-        param->setLabel(kParamLineSpaceLabel);
-        param->setHint(kParamLineSpaceHint);
-        param->setRange(-10000, 10000);
-        param->setDisplayRange(-100, 100);
-        param->setDefault(kParamLineSpaceDefault);
-        param->setLayoutHint(OFX::eLayoutHintDivider);
-        if (page) {
-            page->addChild(*param);
+    if (majorVersion >= 7) { // added in 6.15/6.16, unreleased, now 7.0 only
+        {
+            DoubleParamDescriptor* param = desc.defineDoubleParam(kParamLineSpace);
+            param->setLabel(kParamLineSpaceLabel);
+            param->setHint(kParamLineSpaceHint);
+            param->setRange(-10000, 10000);
+            param->setDisplayRange(-100, 100);
+            param->setDefault(kParamLineSpaceDefault);
+            param->setLayoutHint(OFX::eLayoutHintDivider);
+            if (page) {
+                page->addChild(*param);
+            }
         }
     }
     {
@@ -2896,7 +2890,7 @@ template<unsigned int majorVersion>
 ImageEffect*
 TextFXPluginFactory<majorVersion>::createInstance(OfxImageEffectHandle handle, ContextEnum /*context*/)
 {
-    return new TextFXPlugin(handle, /*canonicalCenter=*/ majorVersion >= 7);
+    return new TextFXPlugin(handle, /*v7=*/ majorVersion >= 7);
 }
 
 // Each version is its own factory class: two versions sharing one class would share its uid.
