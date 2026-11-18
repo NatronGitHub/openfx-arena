@@ -81,6 +81,33 @@ OFXS_NAMESPACE_ANONYMOUS_ENTER
 
 static bool gHostIsNatron = false;
 
+// the nanoseconds of the modification and status change times, 0 where struct stat doesn't have them
+static long
+statMtimeNsec(const struct stat& st)
+{
+#if defined(__APPLE__)
+    return st.st_mtimespec.tv_nsec;
+#elif defined(_WIN32)
+    (void)st;
+    return 0;
+#else
+    return st.st_mtim.tv_nsec;
+#endif
+}
+
+static long
+statCtimeNsec(const struct stat& st)
+{
+#if defined(__APPLE__)
+    return st.st_ctimespec.tv_nsec;
+#elif defined(_WIN32)
+    (void)st;
+    return 0;
+#else
+    return st.st_ctim.tv_nsec;
+#endif
+}
+
 // as in GenericOCIO.h
 #ifdef OFX_USE_MULTITHREAD_MUTEX
 typedef OFX::MultiThread::Mutex Mutex;
@@ -148,10 +175,30 @@ private:
     struct CanvasSize {
         std::string filename;
         int dpi;
-        time_t mtime;
+        // the file: atomic saves replace the inode; mtime has a 1 s resolution, so also the
+        // nanoseconds where available, and ctime
+        dev_t dev;
+        ino_t ino;
+        time_t mtime, ctime;
+        long mtimeNsec, ctimeNsec;
         off_t size;
         int width, height;
-        CanvasSize() : dpi(0), mtime(0), size(0), width(0), height(0) {}
+        CanvasSize() : dpi(0), dev(0), ino(0), mtime(0), ctime(0), mtimeNsec(0), ctimeNsec(0), size(0), width(0), height(0) {}
+        void setFile(const struct stat& st)
+        {
+            dev = st.st_dev;
+            ino = st.st_ino;
+            mtime = st.st_mtime;
+            ctime = st.st_ctime;
+            mtimeNsec = statMtimeNsec(st);
+            ctimeNsec = statCtimeNsec(st);
+            size = st.st_size;
+        }
+        bool sameFile(const struct stat& st) const
+        {
+            return dev == st.st_dev && ino == st.st_ino && mtime == st.st_mtime && ctime == st.st_ctime &&
+                   mtimeNsec == statMtimeNsec(st) && ctimeNsec == statCtimeNsec(st) && size == st.st_size;
+        }
     };
     Mutex _canvasSizeMutex; // getFrameBounds() is also called from render(), possibly concurrently
     CanvasSize _canvasSize;
@@ -557,13 +604,13 @@ bool ReadSVGPlugin::getFrameBounds(const std::string& filename,
     _dpi->getValueAtTime(time, dpi);
 
     int width, height;
-    // the cache is valid for the same file, unchanged on disk (modification time and size), and DPI
+    // the cache is valid for the same file, unchanged on disk (see CanvasSize), and DPI
     struct stat st;
     const bool statOK = (stat(filename.c_str(), &st) == 0);
     bool cached = false;
     if (statOK) {
         AutoMutex lock(_canvasSizeMutex);
-        if (_canvasSize.filename == filename && _canvasSize.dpi == dpi && _canvasSize.mtime == st.st_mtime && _canvasSize.size == st.st_size) {
+        if (_canvasSize.filename == filename && _canvasSize.dpi == dpi && _canvasSize.sameFile(st)) {
             width = _canvasSize.width;
             height = _canvasSize.height;
             cached = true;
@@ -604,8 +651,7 @@ bool ReadSVGPlugin::getFrameBounds(const std::string& filename,
             AutoMutex lock(_canvasSizeMutex);
             _canvasSize.filename = filename;
             _canvasSize.dpi = dpi;
-            _canvasSize.mtime = st.st_mtime;
-            _canvasSize.size = st.st_size;
+            _canvasSize.setFile(st);
             _canvasSize.width = width;
             _canvasSize.height = height;
         }
