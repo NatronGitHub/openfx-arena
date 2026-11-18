@@ -34,20 +34,29 @@
 #include "ofxsMacros.h"
 #include "ofxsMultiPlane.h"
 #include "ofxsImageEffect.h"
+#include "ofxsMatrix2D.h"
+#include "ofxsTransformInteract.h"
 
 #define kPluginName "ReadSVG"
 #define kPluginGrouping "Image/Readers"
 #define kPluginIdentifier "net.fxarena.openfx.ReadSVG"
 // history:
 // 3.3 the cairo buffer given by rsvg is actually premultiplied
+// 3.4 transform (translate, rotate, scale, skew) with an overlay. A minor version is enough: the
+//     transform params default to identity, which renders exactly as 3.3.
 #define kPluginVersionMajor 3
-#define kPluginVersionMinor 3
+#define kPluginVersionMinor 4
 #define kPluginEvaluation 50
 
 #define kParamDpi "dpi"
 #define kParamDpiLabel "DPI"
 #define kParamDpiHint "Dots-per-inch (90 is default)"
 #define kParamDpiDefault 90
+
+#define kGroupTransform "transformGroup"
+#define kGroupTransformLabel "Transform"
+#define kGroupTransformHint "Transform the SVG before it is rasterized, so that it stays sharp. " \
+    "The result is clipped to the SVG canvas."
 
 #define kSupportsRGBA true
 #define kSupportsRGB false
@@ -73,7 +82,10 @@ public:
     ReadSVGPlugin(OfxImageEffectHandle handle, const std::vector<std::string>& extensions);
     virtual ~ReadSVGPlugin();
     virtual void restoreStateFromParams() OVERRIDE FINAL;
+    virtual void changedParam(const OFX::InstanceChangedArgs &args, const std::string &paramName) OVERRIDE FINAL;
+    virtual bool isIdentity(const OFX::IsIdentityArguments &args, OFX::Clip* &identityClip, double &identityTime, int& view, std::string& plane) OVERRIDE FINAL;
 private:
+    virtual bool isOutputFrameVarying() const OVERRIDE FINAL { return isTransformAnimated(); }
     virtual bool isVideoStream(const std::string& /*filename*/) OVERRIDE FINAL { return false; }
     virtual void decode(const std::string& filename, OfxTime time, int view, bool isPlayback, const OfxRectI& renderWindow, const OfxPointD& renderScale, float *pixelData, const OfxRectI& bounds, OFX::PixelComponentEnum pixelComponents, int pixelComponentCount, int rowBytes) OVERRIDE FINAL
     {
@@ -100,7 +112,20 @@ private:
     virtual bool guessParamsFromFilename(const std::string& filename, std::string *colorspace, OFX::PreMultiplicationEnum *filePremult, OFX::PixelComponentEnum *components, int *componentCount) OVERRIDE FINAL;
     virtual void changedFilename(const OFX::InstanceChangedArgs &args) OVERRIDE FINAL;
     void getLayers(xmlNode *node, std::vector<std::string> *layers);
+    bool isTransformAnimated() const;
+    // the transform from the untransformed canvas to the output, in canonical coordinates
+    bool getTransformCanonical(double time, OFX::Matrix3x3* transform) const;
+    void resetCenter(double time, bool keepImageFixed);
     OFX::IntParam *_dpi;
+    OFX::Double2DParam *_translate;
+    OFX::DoubleParam *_rotate;
+    OFX::Double2DParam *_scale;
+    OFX::BooleanParam *_scaleUniform;
+    OFX::DoubleParam *_skewX;
+    OFX::DoubleParam *_skewY;
+    OFX::ChoiceParam *_skewOrder;
+    OFX::Double2DParam *_center;
+    OFX::BooleanParam *_centerChanged;
     std::vector<std::string> imageLayers;
 };
 
@@ -113,9 +138,27 @@ false
 #endif
 )
 ,_dpi(NULL)
+,_translate(NULL)
+,_rotate(NULL)
+,_scale(NULL)
+,_scaleUniform(NULL)
+,_skewX(NULL)
+,_skewY(NULL)
+,_skewOrder(NULL)
+,_center(NULL)
+,_centerChanged(NULL)
 {
     _dpi = fetchIntParam(kParamDpi);
-    assert(_dpi);
+    _translate = fetchDouble2DParam(kParamTransformTranslate);
+    _rotate = fetchDoubleParam(kParamTransformRotate);
+    _scale = fetchDouble2DParam(kParamTransformScale);
+    _scaleUniform = fetchBooleanParam(kParamTransformScaleUniform);
+    _skewX = fetchDoubleParam(kParamTransformSkewX);
+    _skewY = fetchDoubleParam(kParamTransformSkewY);
+    _skewOrder = fetchChoiceParam(kParamTransformSkewOrder);
+    _center = fetchDouble2DParam(kParamTransformCenter);
+    _centerChanged = fetchBooleanParam(kParamTransformCenterChanged);
+    assert(_dpi && _translate && _rotate && _scale && _scaleUniform && _skewX && _skewY && _skewOrder && _center && _centerChanged);
 }
 
 ReadSVGPlugin::~ReadSVGPlugin()
@@ -138,6 +181,131 @@ void ReadSVGPlugin::restoreStateFromParams()
         getLayers(root_element,&imageLayers);
         xmlFreeDoc(doc);
     }
+}
+
+bool
+ReadSVGPlugin::isTransformAnimated() const
+{
+    return (_translate->getNumKeys() > 0 || _rotate->getNumKeys() > 0 || _scale->getNumKeys() > 0 ||
+            _scaleUniform->getNumKeys() > 0 || _skewX->getNumKeys() > 0 || _skewY->getNumKeys() > 0 ||
+            _skewOrder->getNumKeys() > 0 || _center->getNumKeys() > 0);
+}
+
+// Returns false if the transform is the identity, which renders exactly as ReadSVG 3.3.
+// Same conventions and matrix as the Transform node (openfx-misc) and its overlay (ofxsTransformInteract).
+bool
+ReadSVGPlugin::getTransformCanonical(double time, Matrix3x3* transform) const
+{
+    OfxPointD translate, scaleParam, center;
+    _translate->getValueAtTime(time, translate.x, translate.y);
+    _scale->getValueAtTime(time, scaleParam.x, scaleParam.y);
+    const bool scaleUniform = _scaleUniform->getValueAtTime(time);
+    const double rotate = _rotate->getValueAtTime(time);
+    const double skewX = _skewX->getValueAtTime(time);
+    const double skewY = _skewY->getValueAtTime(time);
+    const int skewOrder = _skewOrder->getValueAtTime(time);
+    _center->getValueAtTime(time, center.x, center.y);
+    OfxPointD scale;
+    ofxsTransformGetScale(scaleParam, scaleUniform, &scale);
+    if (translate.x == 0. && translate.y == 0. && rotate == 0. && scale.x == 1. && scale.y == 1. && skewX == 0. && skewY == 0.) {
+        return false;
+    }
+    *transform = ofxsMatTransformCanonical(translate.x, translate.y, scale.x, scale.y, skewX, skewY, (bool)skewOrder,
+                                           ofxsToRadians(rotate), center.x, center.y);
+    return true;
+}
+
+// Set the center to the center of the SVG canvas. If keepImageFixed, also change the translation
+// so that the image doesn't move (as the Transform node's Reset Center).
+void
+ReadSVGPlugin::resetCenter(double time, bool keepImageFixed)
+{
+    std::string filename;
+    OfxStatus st = getFilenameAtTime(getStartingTime(), &filename);
+    if (st != kOfxStatOK || filename.empty()) {
+        return;
+    }
+    OfxRectI bounds, format;
+    double par = 1.;
+    std::string error;
+    int tile_width, tile_height;
+    if (!getFrameBounds(filename, time, 0, &bounds, &format, &par, &error, &tile_width, &tile_height) ||
+        format.x2 <= format.x1 || format.y2 <= format.y1) {
+        return;
+    }
+    // canonical coordinates: x is scaled by the PAR, see the OpenFX spec on coordinate systems. Use
+    // the output clip's PAR, as GenericReader's RoD does (the host may not use the one from getFrameBounds)
+    par = _outputClip->getPixelAspectRatio();
+    OfxPointD newCenter = { (format.x1 + format.x2) * par / 2., (format.y1 + format.y2) / 2. };
+    OfxPointD center;
+    _center->getValueAtTime(time, center.x, center.y);
+    if (newCenter.x == center.x && newCenter.y == center.y) {
+        return;
+    }
+    OfxPointD translate;
+    _translate->getValueAtTime(time, translate.x, translate.y);
+    OfxPointD newTranslate = translate;
+    if (keepImageFixed) {
+        OfxPointD scaleParam;
+        _scale->getValueAtTime(time, scaleParam.x, scaleParam.y);
+        OfxPointD scale;
+        ofxsTransformGetScale(scaleParam, _scaleUniform->getValueAtTime(time), &scale);
+        const double rot = ofxsToRadians(_rotate->getValueAtTime(time));
+        const Matrix3x3 Rinv = (ofxsMatRotation(-rot) *
+                                ofxsMatSkewXY(_skewX->getValueAtTime(time), _skewY->getValueAtTime(time), _skewOrder->getValueAtTime(time) != 0) *
+                                ofxsMatScale(scale.x, scale.y));
+        const double dxrot = newCenter.x - center.x;
+        const double dyrot = newCenter.y - center.y;
+        Point3D dRot(dxrot, dyrot, 1.);
+        dRot = Rinv * dRot;
+        if (dRot.z != 0) {
+            dRot.x /= dRot.z;
+            dRot.y /= dRot.z;
+        }
+        newTranslate.x = translate.x + dRot.x - dxrot;
+        newTranslate.y = translate.y + dRot.y - dyrot;
+    }
+    EditBlock eb(*this, "resetCenter", newTranslate.x != translate.x || newTranslate.y != translate.y);
+    _center->setValue(newCenter.x, newCenter.y);
+    if (newTranslate.x != translate.x || newTranslate.y != translate.y) {
+        _translate->setValue(newTranslate.x, newTranslate.y);
+    }
+}
+
+void
+ReadSVGPlugin::changedParam(const InstanceChangedArgs &args, const std::string &paramName)
+{
+    if (paramName == kParamTransformResetCenter) {
+        resetCenter(args.time, true);
+        // after resetCenter, which may set it through changedParam(kParamTransformCenter)
+        if (_centerChanged->getValue()) {
+            _centerChanged->setValue(false);
+        }
+    } else if (paramName == kParamTransformCenter) {
+        if ((args.reason == eChangeUserEdit || args.reason == eChangePluginEdit) && !_centerChanged->getValue()) {
+            _centerChanged->setValue(true);
+        }
+    } else if (paramName == kParamDpi) {
+        // the canvas size changed
+        if (args.reason == eChangeUserEdit && !_centerChanged->getValue()) {
+            resetCenter(args.time, false);
+            if (_centerChanged->getValue()) {
+                _centerChanged->setValue(false);
+            }
+        }
+    }
+    GenericReaderPlugin::changedParam(args, paramName);
+}
+
+bool
+ReadSVGPlugin::isIdentity(const IsIdentityArguments &args, Clip* &identityClip, double &identityTime, int& view, std::string& plane)
+{
+    // GenericReader holds a still image by telling Natron that the output at another time is the
+    // same, which is false when the transform is animated
+    if (isTransformAnimated()) {
+        return false;
+    }
+    return GenericReaderPlugin::isIdentity(args, identityClip, identityTime, view, plane);
 }
 
 void
@@ -273,6 +441,24 @@ ReadSVGPlugin::decodePlane(const std::string& filename, OfxTime time, int /*view
     scaleWidth = width / imageWidth;
     scaleHeight = height / imageHeight;
 
+    // the transform params animate: evaluate them at the render time, not at the time in the file
+    // sequence (`time`), which is constant for a still image
+    Matrix3x3 transform;
+    if (getTransformCanonical(getRenderTime(), &transform)) {
+        // The surface covers renderWindow, at full resolution (see above), top-down: from
+        // canonical coordinates, x is divided by the PAR, and y goes down from renderWindow.y2.
+        const double par = _outputClip->getPixelAspectRatio();
+        const Matrix3x3 canonicalToSurface(1. / par, 0., -renderWindow.x1,
+                                           0., -1., renderWindow.y2,
+                                           0., 0., 1.);
+        const Matrix3x3 surfaceToCanonical(par, 0., renderWindow.x1 * par,
+                                           0., -1., renderWindow.y2,
+                                           0., 0., 1.);
+        const Matrix3x3 m = canonicalToSurface * transform * surfaceToCanonical;
+        cairo_matrix_t cm;
+        cairo_matrix_init(&cm, m(0, 0), m(1, 0), m(0, 1), m(1, 1), m(0, 2), m(1, 2));
+        cairo_transform(cr, &cm);
+    }
     cairo_scale(cr, scaleWidth, scaleHeight);
 
     if (layerID.empty()) {
@@ -449,6 +635,15 @@ void ReadSVGPlugin::changedFilename(const OFX::InstanceChangedArgs &args)
     root_element = xmlDocGetRootElement(doc);
     getLayers(root_element,&imageLayers);
     xmlFreeDoc(doc);
+
+    // center the transform on the new canvas, unless the user moved the center (as the Transform
+    // node does when its input changes)
+    if (args.reason == eChangeUserEdit && !_centerChanged->getValue()) {
+        resetCenter(args.time, false);
+        if (_centerChanged->getValue()) {
+            _centerChanged->setValue(false);
+        }
+    }
 }
 
 using namespace OFX;
@@ -469,7 +664,10 @@ void ReadSVGPluginFactory::describe(OFX::ImageEffectDescriptor &desc)
 {
     GenericReaderDescribe(desc, _extensions, kPluginEvaluation, kSupportsTiles, kIsMultiPlanar);
     desc.setLabel(kPluginName);
-    desc.setPluginDescription("Fast SVG (Scalable Vector Graphics) reader using librsvg and Cairo.");
+    desc.setPluginDescription("Fast SVG (Scalable Vector Graphics) reader using librsvg and Cairo.\n"
+                              "The Transform parameters are applied before rasterization, so the SVG stays sharp when it is scaled up. "
+                              "The result is clipped to the SVG canvas.");
+    desc.setOverlayInteractDescriptor(new TransformOverlayDescriptor);
 }
 
 /** @brief The describe in context function, passed a plugin descriptor and a context */
@@ -488,6 +686,27 @@ void ReadSVGPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, C
         param->setAnimates(false);
         param->setLayoutHint(OFX::eLayoutHintDivider);
         page->addChild(*param);
+    }
+    {
+        GroupParamDescriptor* group = desc.defineGroupParam(kGroupTransform);
+        group->setLabel(kGroupTransformLabel);
+        group->setHint(kGroupTransformHint);
+        if (page) {
+            page->addChild(*group);
+        }
+        ofxsTransformDescribeParams(desc, page, group, /*isOpen=*/true, /*oldParams=*/false, /*hasAmount=*/false, /*noTranslate=*/false);
+    }
+    // the output is frame varying when the transform is animated, see isOutputFrameVarying()
+    {
+        const char* params[] = { kParamTransformTranslate, kParamTransformRotate, kParamTransformScale, kParamTransformScaleUniform,
+                                 kParamTransformSkewX, kParamTransformSkewY, kParamTransformSkewOrder, kParamTransformCenter };
+        for (std::size_t i = 0; i < sizeof(params) / sizeof(params[0]); ++i) {
+            ParamDescriptor* param = desc.getParamDescriptor(params[i]);
+            assert(param);
+            if (param) {
+                desc.addClipPreferencesSlaveParam(*param);
+            }
+        }
     }
 
     GenericReaderDescribeInContextEnd(desc, context, page, "sRGB", "scene_linear");
