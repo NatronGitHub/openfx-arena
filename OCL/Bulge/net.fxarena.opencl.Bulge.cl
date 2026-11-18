@@ -25,7 +25,9 @@ kernel void filter(__read_only image2d_t input, __write_only image2d_t output, f
    float strength = effect;
    float dist = length(convert_float2(coord_center));
 
-   if (dist < radius) {
+   // the center pixel (dist == 0) stays where it is: radius / dist below is inf there, and
+   // pow(0, e) * inf or 0 * inf gave NaN coordinates (strength < 0)
+   if (dist > 0.0f && dist < radius) {
          float percent = dist / radius;
          if (strength > 0.0f) {
               coord_center *= mix(1.0f, smoothstep(0.0f, radius / dist, percent), strength * 0.75f);
