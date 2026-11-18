@@ -26,6 +26,7 @@
 #include "ofxsTransform3x3.h"
 #include "ofxsTransformInteract.h"
 
+#include <climits>
 #include <iostream>
 #include <cmath>
 #include <cstring>
@@ -996,8 +997,14 @@ void TextFXPlugin::loadSRT()
     _text->deleteAllKeys();
 
     for (int i=0;i<subtitles.size();++i) { // add each subtitle at given time
-        int startFrame = subtitles.at(i).start*fps;
-        int endFrame = subtitles.at(i).end*fps;
+        // skip the subtitles whose frames don't fit in an int (converting them is undefined)
+        const double startTime = subtitles.at(i).start * fps;
+        const double endTime = subtitles.at(i).end * fps;
+        if (startTime < INT_MIN || startTime > INT_MAX || endTime < INT_MIN || endTime > INT_MAX) {
+            continue;
+        }
+        int startFrame = startTime;
+        int endFrame = endTime;
         std::string textFrame = subtitles.at(i).str;
         _text->setValueAtTime(startFrame, textFrame); // start frame
         _text->setValueAtTime(endFrame, ""); // end frame

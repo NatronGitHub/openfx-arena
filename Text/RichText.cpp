@@ -24,6 +24,7 @@
 #include <algorithm>
 #include <cmath>
 #include <cstdlib>
+#include <cerrno>
 #include <cstring>
 #include <sys/stat.h>
 #include <sys/types.h>
@@ -108,7 +109,12 @@ srtTimeField(const std::string &field, double* value)
 {
     const char* begin = field.c_str();
     char* end = NULL;
+    errno = 0;
     *value = std::strtod(begin, &end); // what atof() returns
+    if (errno == ERANGE) {
+        // more than ~308 digits: strtod() returns HUGE_VAL, an infinite time
+        return false;
+    }
     for (const char* c = begin; c < end; ++c) {
         if (std::strchr("0123456789.+- \t\n\v\f\r", *c) == NULL) {
             return false;
