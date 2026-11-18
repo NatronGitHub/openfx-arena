@@ -26,6 +26,7 @@
 #include "ofxsTransform3x3.h"
 #include "ofxsTransformInteract.h"
 
+#include <climits>
 #include <iostream>
 #include <cmath>
 #include <cstring>
@@ -988,6 +989,10 @@ void TextFXPlugin::loadSRT()
     double fps = 0.0;
     _srt->getValue(filename);
     _fps->getValue(fps);
+    if (fps <= 0. || fps > 1e6) {
+        // no frame for a subtitle (start*fps could be inf*0 = NaN), or an infinite FPS
+        return;
+    }
     if (!RichText::fileExists(filename)) { return; }
     std::vector<RichText::RichTextSubtitle> subtitles = RichText::parseSRT(filename);
     if (subtitles.size()==0) { return; }
@@ -996,8 +1001,14 @@ void TextFXPlugin::loadSRT()
     _text->deleteAllKeys();
 
     for (int i=0;i<subtitles.size();++i) { // add each subtitle at given time
-        int startFrame = subtitles.at(i).start*fps;
-        int endFrame = subtitles.at(i).end*fps;
+        // skip the subtitles whose frames don't fit in an int (converting them is undefined)
+        const double startTime = subtitles.at(i).start * fps;
+        const double endTime = subtitles.at(i).end * fps;
+        if (startTime < INT_MIN || startTime > INT_MAX || endTime < INT_MIN || endTime > INT_MAX) {
+            continue;
+        }
+        int startFrame = startTime;
+        int endFrame = endTime;
         std::string textFrame = subtitles.at(i).str;
         _text->setValueAtTime(startFrame, textFrame); // start frame
         _text->setValueAtTime(endFrame, ""); // end frame
@@ -2217,6 +2228,11 @@ private:
     // round to the power of 10 below the size of a screen pixel, as the helper does
     static double fround(double val, double pscale)
     {
+        // log10(0) = -inf would give pscale10 = 0 and 0 * floor(val / 0) = NaN: a host's pixel
+        // scale is > 0, but don't round otherwise
+        if (pscale <= 0.) {
+            return val;
+        }
         const double pscale10 = std::pow( 10., std::floor( std::log10(pscale) ) );
 
         return pscale10 * std::floor(val / pscale10 + 0.5);

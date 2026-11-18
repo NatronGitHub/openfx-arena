@@ -568,6 +568,14 @@ ReadSVGPlugin::decodePlane(const std::string& filename, OfxTime time, int /*view
         OFX::throwSuiteStatusException(kOfxStatErrFormat);
     }
 
+    // An empty canvas (a zero width or height) gave 0 / 0 = NaN scales below, which only
+    // cairo's check of the matrix turned into the "Cairo Render failed" error: fail here instead.
+    if (imageWidth <= 0. || imageHeight <= 0.) {
+        g_object_unref(handle);
+        setPersistentMessage(OFX::Message::eMessageError, "", "Cairo Render failed");
+        OFX::throwSuiteStatusException(kOfxStatErrFormat);
+    }
+
     surface=cairo_image_surface_create(CAIRO_FORMAT_ARGB32, width, height);
     cr=cairo_create(surface);
 
@@ -580,7 +588,9 @@ ReadSVGPlugin::decodePlane(const std::string& filename, OfxTime time, int /*view
     if (getTransformCanonical(getRenderTime(), &transform)) {
         // The surface covers renderWindow, at full resolution (see above), top-down: from
         // canonical coordinates, x is divided by the PAR, and y goes down from renderWindow.y2.
-        const double par = _outputClip->getPixelAspectRatio();
+        // a PAR <= 0 (not a valid host value) would make 1 / par and the matrices below inf/NaN
+        const double clipPar = _outputClip->getPixelAspectRatio();
+        const double par = (clipPar > 0.) ? clipPar : 1.;
         const Matrix3x3 canonicalToSurface(1. / par, 0., -renderWindow.x1,
                                            0., -1., renderWindow.y2,
                                            0., 0., 1.);

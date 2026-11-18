@@ -705,6 +705,10 @@ static double
 fround(double val,
        double pscale)
 {
+    if (pscale <= 0.) {
+        // log10() of a scale <= 0 is -inf or NaN, and 0 * floor(val / 0) is NaN: don't round
+        return val;
+    }
     double pscale10 = std::pow( 10., std::floor( std::log10(pscale) ) );
 
     return pscale10 * std::floor(val / pscale10 + 0.5);

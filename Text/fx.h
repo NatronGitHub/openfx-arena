@@ -393,6 +393,15 @@ inline static void point_on_path(parametrized_path_t* param, double* x, double* 
 		data = (&last_move_to) - 1;
 
 	case CAIRO_PATH_LINE_TO:
+		/* A zero-length segment has no direction: the_x / 0 and the_y / 0 gave NaN or inf
+		 * (inf - inf below), e.g. for an arc of radius 0, which cairo makes a move_to and a
+		 * line_to to the same point. Collapse the point onto the segment instead. */
+		if (parametrization[i] <= 0.0) {
+			*x = data[1].point.x;
+			*y = data[1].point.y;
+
+			break;
+		}
 		ratio = the_x / parametrization[i];
 		/* Line polynomial */
 		*x = current_point.point.x * (1 - ratio) + data[1].point.x * ratio;
@@ -427,7 +436,9 @@ inline static void point_on_path(parametrized_path_t* param, double* x, double* 
 		double _1__4ratio_1_0_3ratio_2_0;
 		double _2ratio_1_0_3ratio_2_0;
 
-		ratio     = the_x / parametrization[i];
+		/* (TextOFX maps onto flattened paths, which have no curve_to.) A zero-length curve
+		 * gave 0 / 0: start at its first point instead. */
+		ratio     = (parametrization[i] > 0.0) ? the_x / parametrization[i] : 0.0;
 		ratio_1_0 = ratio;
 		ratio_0_1 = 1 - ratio;
 		ratio_2_0 = ratio_1_0 * ratio_1_0;
@@ -466,9 +477,15 @@ inline static void point_on_path(parametrized_path_t* param, double* x, double* 
 			+ 3 * data[3].point.y * ratio_2_0
 		;
 
-		ratio  = the_y / sqrt(dx * dx + dy * dy);
-		*x    += -dy * ratio;
-		*y    += dx * ratio;
+		/* no offset where the gradient vanishes (no normal there): the_y / 0 gave NaN or inf */
+		{
+			const double norm = sqrt(dx * dx + dy * dy);
+			if (norm > 0.0) {
+				ratio  = the_y / norm;
+				*x    += -dy * ratio;
+				*y    += dx * ratio;
+			}
+		}
 
 		break;
 	}
