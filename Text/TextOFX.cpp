@@ -1661,22 +1661,56 @@ void TextFXPlugin::render(const OFX::RenderArguments &args)
             circleY = ytext;
         }
         cairo_translate(cr, circleX, circleY);
-        for (int i = 0; i < circleWords; i++) {
+        if (_v7) {
+            // v7 builds the path of the word once, under an axis-aligned CTM, and rotates the
+            // path, not the CTM (issues #86, #88). FreeType 2.15.0 (a98c7c2, fixed in 05f343a
+            // after 2.15.0) computes |det| wrongly in FT_Matrix_Check() when the determinant is
+            // negative, as with the y flip of this context, so FT_Set_Transform() drops some
+            // rotations (0 <= cos 2a <= 1/16, e.g. [43.21, 45.01) and [135, 136.8) degrees) and
+            // the glyph outlines come out unrotated, at the rotated glyph positions: e.g. the
+            // diagonal words with 8 or 16 words at PAR 1, 1.09 or 1.2. The path is in user
+            // coordinates, which don't depend on the CTM: only the hinting does, and it is done
+            // once, as for unrotated text, so it is the same for every word.
+            // v7 keeps the layout measured as in getRegionOfDefinition() (see the cairo_scale()
+            // above), so it is the same for all words.
             int rwidth, rheight;
-            double angle = (360. * i) / circleWords;
-            cairo_save(cr);
-            cairo_set_source_rgba(cr, r, g, b, a);
-            cairo_rotate (cr, angle * G_PI / 180.);
-            if (!_v7) {
-                // v7 keeps the layout measured as in getRegionOfDefinition() (see the
-                // cairo_scale() above)
-                pango_cairo_update_layout(cr, layout);
-            }
             pango_layout_get_size(layout, &rwidth, &rheight);
+            cairo_matrix_t ctm;
+            cairo_get_matrix(cr, &ctm);
+            // the CTM of untransformed text: the 1/PAR scale and the flip above, without the
+            // transform, at the same origin
+            const cairo_matrix_t axisAligned = { 1. / xScale, 0., 0., -1., ctm.x0, ctm.y0 };
+            cairo_set_matrix(cr, &axisAligned);
+            cairo_new_path(cr);
             cairo_move_to(cr, - ((double)rwidth / PANGO_SCALE) / 2, - std::floor(circleRadius * args.renderScale.x + 0.5));
             pango_cairo_layout_path(cr, layout);
-            cairo_fill(cr);
-            cairo_restore (cr);
+            cairo_path_t* wordPath = cairo_copy_path(cr);
+            cairo_new_path(cr);
+            cairo_set_matrix(cr, &ctm);
+            cairo_set_source_rgba(cr, r, g, b, a);
+            for (int i = 0; i < circleWords; i++) {
+                const double angle = (360. * i) / circleWords;
+                cairo_save(cr);
+                cairo_rotate(cr, angle * G_PI / 180.);
+                cairo_append_path(cr, wordPath);
+                cairo_fill(cr);
+                cairo_restore(cr);
+            }
+            cairo_path_destroy(wordPath);
+        } else {
+            for (int i = 0; i < circleWords; i++) {
+                int rwidth, rheight;
+                double angle = (360. * i) / circleWords;
+                cairo_save(cr);
+                cairo_set_source_rgba(cr, r, g, b, a);
+                cairo_rotate (cr, angle * G_PI / 180.);
+                pango_cairo_update_layout(cr, layout);
+                pango_layout_get_size(layout, &rwidth, &rheight);
+                cairo_move_to(cr, - ((double)rwidth / PANGO_SCALE) / 2, - std::floor(circleRadius * args.renderScale.x + 0.5));
+                pango_cairo_layout_path(cr, layout);
+                cairo_fill(cr);
+                cairo_restore (cr);
+            }
         }
     }
 
