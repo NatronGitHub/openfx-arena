@@ -6,8 +6,10 @@
 #         -DOCIO=<config.ocio> -DWORK=<dir> [-DEXACT=ON] -P dpi.cmake
 #
 # EXACT (librsvg 2.52 or later): ReadSVG 4 then has the exact sizes and renders a document in
-# millimetres exactly as the same document with a viewBox in user units. Older versions of librsvg
-# only give the size in whole pixels at 90 DPI: the sizes may then be 1 pixel off.
+# millimetres exactly as the same document with a viewBox in user units. With older versions of
+# librsvg, ReadSVG 4 takes the size in physical units from librsvg at the DPI, in whole pixels: it
+# is allowed to be 1 pixel off, for librsvg's own rounding, at any DPI (multiplying the size
+# rounded at 90 DPI by dpi / 90 would be up to dpi / 180 pixels off, e.g. 4 at 1200 DPI).
 cmake_minimum_required(VERSION 3.19) # string(JSON)
 foreach(_v HOSTDEMO PLUGIN_PATH SRC OCIO WORK)
   if(NOT DEFINED ${_v})
@@ -102,15 +104,21 @@ endif()
 check(4 mm 90 354 177 ${_tol})
 check(4 mm 180 709 354 ${_tol})
 check(4 mm 300 1181 591 ${_tol})
+check(4 mm 600 2362 1181 ${_tol})
+check(4 mm 1200 4724 2362 ${_tol})
 check(4 mm_units 180 709 354 ${_tol})
 set(_crc_mm_units "${_crc}")
-# user units: 400 x 200 at 90 DPI, scaled by dpi / 90, as in version 3
+check(4 mm_units 1200 4724 2362 ${_tol})
+# user units: 400 x 200 at 90 DPI, scaled by dpi / 90, rounded to the nearest pixel
 check(4 px 90 400 200 0)
 check(4 px 180 800 400 0)
-# version 3: the DPI applied twice to physical units (4 times the size at 180 DPI)
+check(4 px 300 1333 667 0)
+# version 3: the DPI applied twice to physical units (4 times the size at 180 DPI), and the size
+# truncated
 check(3 mm 90 354 177 ${_tol})
 check(3 mm 180 1418 708 ${_tol})
 check(3 px 180 800 400 0)
+check(3 px 300 1333 666 0)
 if(EXACT)
   # the same document in millimetres, and with a viewBox in user units: the same image
   render(4 mm 180)

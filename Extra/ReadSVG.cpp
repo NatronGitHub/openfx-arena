@@ -531,9 +531,18 @@ ReadSVGPlugin::getClipComponents(const OFX::ClipComponentsArguments& args, OFX::
     return kOfxStatOK;
 }
 
-// Set the DPI of the handle, and get the size of the canvas at the given DPI. The DPI scales the
-// whole document, whatever its units: documents in user units (px) were already scaled by
-// dpi / 90 in version 3, and they must keep that.
+// The size of the document with the handle at the given DPI, rounded by librsvg to whole pixels.
+// The handle stays at that DPI.
+static void
+getDimensionsAtDpi(RsvgHandle* handle, int dpi, RsvgDimensionData* dimension)
+{
+    rsvg_handle_set_dpi_x_y(handle, dpi, dpi);
+    rsvg_handle_get_dimensions(handle, dimension);
+}
+
+// Get the size of the canvas at the given DPI, and leave the handle at the DPI to render with. The
+// DPI scales the whole document, whatever its units: documents in user units (px) were already
+// scaled by dpi / 90 in version 3, and they keep that.
 void
 ReadSVGPlugin::getCanvasSize(RsvgHandle* handle, int dpi, SVGCanvas* canvas) const
 {
@@ -541,9 +550,8 @@ ReadSVGPlugin::getCanvasSize(RsvgHandle* handle, int dpi, SVGCanvas* canvas) con
         // Version 3 (3.3, Natron 2.5.0): librsvg converts the physical units (mm, in, pt...) to pixels
         // at the DPI of the handle, and the result is scaled by dpi / 90 once more, so the DPI applies
         // twice to them (an image in mm is 4 times as large at 180 DPI as at 90). Kept for old projects.
-        rsvg_handle_set_dpi_x_y(handle, dpi, dpi);
         RsvgDimensionData dimension;
-        rsvg_handle_get_dimensions(handle, &dimension);
+        getDimensionsAtDpi(handle, dpi, &dimension);
         canvas->imageWidth = dimension.width;
         canvas->imageHeight = dimension.height;
         if (dpi != kParamDpiDefault) {
@@ -559,33 +567,55 @@ ReadSVGPlugin::getCanvasSize(RsvgHandle* handle, int dpi, SVGCanvas* canvas) con
         canvas->exactViewport = false;
         return;
     }
-    // Version 4: measure and render at the default DPI, at which librsvg converts the physical units,
-    // and the elements in physical units in the document stay consistent with the canvas. Then
-    // scale everything by dpi / 90, once.
-    rsvg_handle_set_dpi_x_y(handle, kParamDpiDefault, kParamDpiDefault);
-    bool exact = false;
+    // Version 4: render with the handle at the default DPI, at which librsvg converts the physical
+    // units, so that the elements in physical units in the document stay consistent with the canvas,
+    // and scale everything to the size at the given DPI, once. Unlike version 3, which truncated the
+    // size and scaled by the truncated size over the size at 90 DPI, the size is rounded to the
+    // nearest pixel and the scale is dpi / 90: documents in user units render as in version 3 only
+    // when dpi / 90 is an integer (400 x 200 px at 300 DPI: 1333 x 666 in version 3, 1333 x 667 here).
+    const double scale = (double)dpi / kParamDpiDefault;
 #if LIBRSVG_CHECK_VERSION(2, 52, 0)
-    // the exact size: rsvg_handle_get_dimensions() rounds it to whole pixels at 90 DPI, which the
-    // scale would multiply (100mm is 354.33 pixels at 90 DPI, 708.66 at 180 DPI, not 2 * 354)
+    // The exact size, at 90 DPI, scaled by dpi / 90 (100mm is 354.33 pixels at 90 DPI, 708.66 at
+    // 180 DPI: 709 pixels, not 2 * 354), and rendered into a viewport of that exact size.
+    rsvg_handle_set_dpi_x_y(handle, kParamDpiDefault, kParamDpiDefault);
     gdouble w, h;
     if (rsvg_handle_get_intrinsic_size_in_pixels(handle, &w, &h)) {
         canvas->imageWidth = w;
         canvas->imageHeight = h;
-        exact = true;
+        canvas->width = (int)std::floor(w * scale + 0.5);
+        canvas->height = (int)std::floor(h * scale + 0.5);
+        canvas->scaleX = canvas->scaleY = scale;
+        canvas->exactViewport = true;
+        return;
     }
 #endif
-    if (!exact) {
-        // no width and height in the document (only a viewBox), or an older librsvg
-        RsvgDimensionData dimension;
-        rsvg_handle_get_dimensions(handle, &dimension);
-        canvas->imageWidth = dimension.width;
-        canvas->imageHeight = dimension.height;
+    // An older librsvg (Natron's Linux SDK has 2.40), or no width and height in the document (only
+    // a viewBox): rsvg_handle_get_dimensions() only gives the size rounded to whole pixels, and
+    // rsvg_handle_render_cairo() renders into a viewport of that size. Scaling the size at 90 DPI by
+    // dpi / 90 would multiply its rounding error (up to dpi / 180 pixels: 4720 instead of 4724 for
+    // 100mm at 1200 DPI). So also measure at the given DPI: where the size changes with the DPI,
+    // that axis is in physical units, and librsvg's size at that DPI is the right one, rounded once;
+    // the render scale maps the 90 DPI viewport onto it. Elsewhere (user units), scale by dpi / 90.
+    RsvgDimensionData atDpi, at90;
+    getDimensionsAtDpi(handle, dpi, &atDpi);
+    getDimensionsAtDpi(handle, kParamDpiDefault, &at90); // last: the handle renders at 90 DPI
+    canvas->imageWidth = at90.width;
+    canvas->imageHeight = at90.height;
+    if (atDpi.width != at90.width && at90.width > 0) {
+        canvas->width = atDpi.width;
+        canvas->scaleX = (double)atDpi.width / at90.width;
+    } else {
+        canvas->width = (int)std::floor(at90.width * scale + 0.5);
+        canvas->scaleX = scale;
     }
-    const double scale = (double)dpi / kParamDpiDefault;
-    canvas->width = (int)std::floor(canvas->imageWidth * scale + 0.5);
-    canvas->height = (int)std::floor(canvas->imageHeight * scale + 0.5);
-    canvas->scaleX = canvas->scaleY = scale;
-    canvas->exactViewport = exact;
+    if (atDpi.height != at90.height && at90.height > 0) {
+        canvas->height = atDpi.height;
+        canvas->scaleY = (double)atDpi.height / at90.height;
+    } else {
+        canvas->height = (int)std::floor(at90.height * scale + 0.5);
+        canvas->scaleY = scale;
+    }
+    canvas->exactViewport = false;
 }
 
 void
