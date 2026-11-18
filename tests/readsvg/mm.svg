@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- ReadSVG DPI test (tests/readsvg/dpi.cmake): a 100mm x 50mm canvas, in user units through the viewBox -->
+<svg xmlns="http://www.w3.org/2000/svg" width="100mm" height="50mm" viewBox="0 0 100 50">
+  <rect x="10" y="10" width="80" height="30" fill="red"/>
+</svg>

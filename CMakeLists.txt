@@ -539,6 +539,21 @@ endif()
             endif()
         endforeach()
 
+        # ReadSVG's output size at several DPIs, in physical and user units, for both major
+        # versions (tests/readsvg); string(JSON) needs CMake 3.19
+        if(TARGET Arena AND NOT CMAKE_VERSION VERSION_LESS 3.19)
+            set(_exact OFF)
+            if(NOT SVG_VERSION VERSION_LESS 2.52)
+                set(_exact ON) # rsvg_handle_get_intrinsic_size_in_pixels()
+            endif()
+            add_test(NAME readsvg_dpi COMMAND "${CMAKE_COMMAND}"
+                -DHOSTDEMO=$<TARGET_FILE:hostDemo> -DPLUGIN_PATH=${OFX_PLUGIN_BUILD_DIR}
+                -DSRC=${CMAKE_CURRENT_SOURCE_DIR}/tests/readsvg
+                -DOCIO=${CMAKE_CURRENT_SOURCE_DIR}/tests/hostdemo/config.ocio
+                -DWORK=${CMAKE_CURRENT_BINARY_DIR}/readsvg-dpi -DEXACT=${_exact}
+                -P "${CMAKE_CURRENT_SOURCE_DIR}/tests/readsvg/dpi.cmake")
+        endif()
+
         # ReadPSD's layer menu (tests/readpsd, also "make -C tests check"): needs Python 3 with
         # NumPy, and ImageMagick's magick or convert for the layered PSD (mklayers.py finds it)
         # (python3 from the PATH, as "make -C tests check": FindPython3 may pick another one)
