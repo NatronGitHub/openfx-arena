@@ -393,7 +393,7 @@ bool ReadPDFPlugin::getFrameBounds(const std::string& filename,
                               OfxRectI *bounds,
                                    OfxRectI* format,
                               double *par,
-                              std::string* /*error*/,int *tile_width, int *tile_height)
+                              std::string* errorMsg,int *tile_width, int *tile_height)
 {
     if (filename.empty()) {
         setPersistentMessage(OFX::Message::eMessageError, "", "No filename");
@@ -422,25 +422,32 @@ bool ReadPDFPlugin::getFrameBounds(const std::string& filename,
         OFX::throwSuiteStatusException(kOfxStatErrFormat);
     }
 
+    // a document without pages has no page 0: check it before reading its size
     page = poppler_document_get_page(document, 0);
-    poppler_page_get_size(page, &imageWidth, &imageHeight);
-    if (page !=NULL) {
+    if (page != NULL) {
+        poppler_page_get_size(page, &imageWidth, &imageHeight);
         width = dpi * imageWidth / kPluginDPI;
         height = dpi * imageHeight / kPluginDPI;
+        g_object_unref(page);
     }
 
-    g_object_unref(page);
     g_object_unref(document);
     error = NULL;
 
-    if (width > 0 && height > 0) {
-        bounds->x1 = 0;
-        bounds->x2 = width;
-        bounds->y1 = 0;
-        bounds->y2 = height;
-        *format = *bounds;
-        *par = 1.0;
+    if (width <= 0 || height <= 0) {
+        // bounds and format were not set: report failure instead of returning garbage
+        // bounds to GenericReader
+        if (errorMsg) {
+            *errorMsg = page == NULL ? "Failed to read page" : "Empty page";
+        }
+        return false;
     }
+    bounds->x1 = 0;
+    bounds->x2 = width;
+    bounds->y1 = 0;
+    bounds->y2 = height;
+    *format = *bounds;
+    *par = 1.0;
 
     *tile_width = *tile_height = 0;
     return true;
