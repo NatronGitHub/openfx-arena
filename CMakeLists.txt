@@ -299,13 +299,9 @@ list(APPEND RESOURCES
     Magick/Morphology/net.fxarena.openfx.Morphology.png
     Magick/Morphology/net.fxarena.openfx.Morphology.svg)
 
-# On Linux, OpenColorIO's libdir is in the rpath, as Makefile.io does (also when it is a
-# system directory, which INSTALL_RPATH_USE_LINK_PATH would skip)
-set(_arena_rpath "")
-if(CMAKE_SYSTEM_NAME STREQUAL "Linux")
-    set(_arena_rpath "${OCIO_LIBDIR}")
-endif()
-add_ofx_plugin(Arena INFO_PLIST Bundle/Info.plist RPATH ${_arena_rpath} SOURCES ${SOURCES})
+# No RPATH into OpenColorIO's libdir, as Makefile.io: a Linux bundle's RUNPATH only has
+# $ORIGIN-relative entries (openfx's linuxCheckBundle.sh); the installers bundle OpenColorIO
+add_ofx_plugin(Arena INFO_PLIST Bundle/Info.plist SOURCES ${SOURCES})
 supportext_add_sources(Arena COMPONENTS TEXT TRANSFORM3X3 TRANSFORM_INTERACT MULTIPLANE)
 # GenericReader, with GenericOCIO and SequenceParsing. OpenColorIO is PkgConfig::OCIO, not
 # OpenColorIO::OpenColorIO: the helper adds neither GenericOCIO's OpenGL code nor
