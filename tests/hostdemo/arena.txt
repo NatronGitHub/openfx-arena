@@ -8,6 +8,7 @@
 net.fxarena.openfx.Text 7 filter
 net.fxarena.openfx.Text 6 filter
 skip fr.inria.openfx.ReadCDR 1 no CorelDRAW sample: libcdr only reads them, and a hand-written .cdr is not simple
+net.fxarena.openfx.ReadSVG 4 general -s filename=@SAMPLES@/sample.svg
 net.fxarena.openfx.ReadSVG 3 general -s filename=@SAMPLES@/sample.svg
 fr.inria.openfx.ReadKrita 2 general -s filename=@SAMPLES@/sample.kra
 fr.inria.openfx.OpenRaster 2 general -s filename=@SAMPLES@/sample.ora
