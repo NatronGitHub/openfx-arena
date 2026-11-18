@@ -989,8 +989,8 @@ void TextFXPlugin::loadSRT()
     double fps = 0.0;
     _srt->getValue(filename);
     _fps->getValue(fps);
-    if (fps <= 0.) {
-        // no frame for a subtitle (and start*fps could be inf*0 = NaN)
+    if (fps <= 0. || fps > 1e6) {
+        // no frame for a subtitle (start*fps could be inf*0 = NaN), or an infinite FPS
         return;
     }
     if (!RichText::fileExists(filename)) { return; }
