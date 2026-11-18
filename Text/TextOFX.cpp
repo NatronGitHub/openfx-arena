@@ -511,6 +511,7 @@ private:
     OFX::DoubleParam *_skewX;
     OFX::DoubleParam *_skewY;
     OFX::BooleanParam *_scaleUniform;
+    OFX::ChoiceParam *_skewOrder; // used from v7
     OFX::BooleanParam *_centerInteract;
     OFX::ChoiceParam *_fontName;
     OFX::StringParam *_fontOverride;
@@ -572,6 +573,7 @@ TextFXPlugin::TextFXPlugin(OfxImageEffectHandle handle, bool canonicalCenter)
 , _skewX(NULL)
 , _skewY(NULL)
 , _scaleUniform(NULL)
+, _skewOrder(NULL)
 , _centerInteract(NULL)
 , _fontName(NULL)
 , _fontOverride(NULL)
@@ -628,6 +630,7 @@ TextFXPlugin::TextFXPlugin(OfxImageEffectHandle handle, bool canonicalCenter)
     _skewX = fetchDoubleParam(kParamTransformSkewXOld);
     _skewY = fetchDoubleParam(kParamTransformSkewYOld);
     _scaleUniform = fetchBooleanParam(kParamTransformScaleUniformOld);
+    _skewOrder = fetchChoiceParam(kParamTransformSkewOrderOld);
     _centerInteract = fetchBooleanParam(kParamCenterInteract);
     _fontOverride = fetchStringParam(kParamFontOverride);
     _scrollX = fetchDoubleParam(kParamScrollX);
@@ -644,7 +647,7 @@ TextFXPlugin::TextFXPlugin(OfxImageEffectHandle handle, bool canonicalCenter)
            && strokeWidth_ && strokeDash_ && strokeDashPattern_ && fontAA_ && subpixel_ && _hintStyle
            && _hintMetrics && _circleRadius && _circleWords && _letterSpace && _lineSpace && _canvas
            && _arcRadius && _arcAngle && _rotate && _scale && _position && _move && _txt
-           && _skewX && _skewY && _scaleUniform && _centerInteract && _fontOverride && _scrollX && _scrollY
+           && _skewX && _skewY && _scaleUniform && _skewOrder && _centerInteract && _fontOverride && _scrollX && _scrollY
            && _srt && _fps);
 
     _fcConfig = FcInitLoadConfigAndFonts();
@@ -1318,9 +1321,10 @@ void TextFXPlugin::render(const OFX::RenderArguments &args)
     alist = pango_attr_list_new();
     if (xScale != 1.) {
         // After the layout is created: its context keeps the identity transform, so that it is
-        // measured as in getRegionOfDefinition(), and is not updated to this one below. With
-        // hinted metrics, Pango rounds the advances in device space under a non-uniform
-        // transform, which spaced the glyphs out (twice as much at PAR 2).
+        // measured as in getRegionOfDefinition(), and v7 never updates it to the transforms
+        // below. With hinted metrics, Pango rounds the advances in device space under a
+        // non-uniform transform, which spaced the glyphs out (twice as much at PAR 2), or
+        // made them overlap with a non-uniform scale or a skew (v6 does that at any PAR).
         cairo_scale(cr, 1. / xScale, 1.);
     }
 
@@ -1443,6 +1447,47 @@ void TextFXPlugin::render(const OFX::RenderArguments &args)
         pango_layout_set_spacing(layout, (int)std::floor((lineSpace*PANGO_SCALE) * args.renderScale.y + 0.5));
     }
 
+    if (_canonicalCenter) {
+        // v7: the same transform as the overlay draws (TransformInteractHelper and
+        // ofxsMatTransformCanonical() in SupportExt), about the Center whether or not Transform
+        // is checked, since that is where the handle is ("Rotation angle in degrees around the
+        // Center", "Center of rotation and scale"): in canonical coordinates (y up),
+        // p' = C + R(rotate) * Skew(skewX, skewY, skewOrder) * Scale(scale) * (p - C),
+        // with R counterclockwise. v6 applied rotate first, then skew, then scale, ignored the
+        // skew order, and rotated about the center of the RoD if Transform was unchecked.
+        // This is done before the alignment, the scroll and the moves below, so that they are
+        // transformed too: the whole layout is transformed about the Center (v6 did these
+        // before the transform, which moved its pivot by the vertical alignment).
+        if ( !autoSize && ( (scaleX != 1.) || (scaleY != 1.) || (skewX != 0.) || (skewY != 0.) || (rotate != 0.) ) ) {
+            const double sx = scaleX;
+            const double sy = scaleUniform ? scaleX : scaleY;
+            const bool skewOrderYX = (_skewOrder->getValueAtTime(args.time) != 0);
+            // skew matrix, as ofxsMatSkewXY()
+            const double k11 = skewOrderYX ? 1. : (1. + skewX * skewY);
+            const double k12 = skewX;
+            const double k21 = skewY;
+            const double k22 = skewOrderYX ? (1. + skewX * skewY) : 1.;
+            const double rads = rotate * (OFXS_PI / 180.0);
+            const double c = std::cos(rads);
+            const double sn = std::sin(rads);
+            // A = R * K * S, in y-up coordinates
+            const double a11 = (c * k11 - sn * k21) * sx;
+            const double a12 = (c * k12 - sn * k22) * sy;
+            const double a21 = (sn * k11 + c * k21) * sx;
+            const double a22 = (sn * k12 + c * k22) * sy;
+            // The drawing units are canonical (times the render scale) with y down: conjugate
+            // A by the flip diag(1, -1). cairo_matrix_t is {xx, yx, xy, yy, x0, y0}.
+            cairo_matrix_t m = {
+                a11, -a21,
+                -a12, a22,
+                0., 0.
+            };
+            cairo_translate(cr, xtext, ytext);
+            cairo_transform(cr, &m);
+            cairo_translate(cr, -xtext, -ytext);
+        }
+    }
+
     if (!move) {
         switch(align) {
         case 0:
@@ -1516,50 +1561,54 @@ void TextFXPlugin::render(const OFX::RenderArguments &args)
         moveToLayoutOrigin();
     }
 
-    if (scaleX!=1.0||scaleY!=1.0) {
-        if (!autoSize) {
-            cairo_translate(cr, xtext, ytext);
-            if (scaleUniform) {
-                cairo_scale(cr, scaleX, scaleX);
-            } else {
-                cairo_scale(cr, scaleX, scaleY);
+    if (!_canonicalCenter) {
+        // v6, unchanged
+        if (scaleX!=1.0||scaleY!=1.0) {
+            if (!autoSize) {
+                cairo_translate(cr, xtext, ytext);
+                if (scaleUniform) {
+                    cairo_scale(cr, scaleX, scaleX);
+                } else {
+                    cairo_scale(cr, scaleX, scaleY);
+                }
+                cairo_translate(cr, -xtext, -ytext);
             }
+        }
+
+        if (skewX != 0.0 && !autoSize) {
+            cairo_matrix_t matrixSkewX = {
+                1.0, 0.0,
+                -skewX, 1.0,
+                0.0, 0.0
+            };
+            cairo_translate(cr, xtext, ytext);
+            cairo_transform(cr, &matrixSkewX);
             cairo_translate(cr, -xtext, -ytext);
         }
-    }
 
-    if (skewX != 0.0 && !autoSize) {
-        cairo_matrix_t matrixSkewX = {
-            1.0, 0.0,
-            -skewX, 1.0,
-            0.0, 0.0
-        };
-        cairo_translate(cr, xtext, ytext);
-        cairo_transform(cr, &matrixSkewX);
-        cairo_translate(cr, -xtext, -ytext);
-    }
-
-    if (skewY !=0.0 && !autoSize) {
-        cairo_matrix_t matrixSkewY = {
-            1.0, -skewY,
-            0.0, 1.0,
-            0.0, 0.0
-        };
-        cairo_translate(cr, xtext, ytext);
-        cairo_transform(cr, &matrixSkewY);
-        cairo_translate(cr, -xtext, -ytext);
-    }
-
-    if (rotate !=0 && !autoSize) {
-        double rotateX = drawWidth/2.0;
-        double rotateY = height/2.0;
-        if (move) {
-            rotateX = xtext;
-            rotateY = ytext;
+        if (skewY !=0.0 && !autoSize) {
+            cairo_matrix_t matrixSkewY = {
+                1.0, -skewY,
+                0.0, 1.0,
+                0.0, 0.0
+            };
+            cairo_translate(cr, xtext, ytext);
+            cairo_transform(cr, &matrixSkewY);
+            cairo_translate(cr, -xtext, -ytext);
         }
-        cairo_translate(cr, rotateX, rotateY);
-        cairo_rotate(cr, -rotate * (OFXS_PI / 180.0));
-        cairo_translate(cr, -rotateX, -rotateY);
+
+        if (rotate !=0 && !autoSize) {
+            double rotateX = drawWidth/2.0;
+            double rotateY = height/2.0;
+            if (move) {
+                rotateX = xtext;
+                rotateY = ytext;
+            }
+            cairo_translate(cr, rotateX, rotateY);
+            cairo_rotate(cr, -rotate * (OFXS_PI / 180.0));
+            cairo_translate(cr, -rotateX, -rotateY);
+        }
+
     }
 
     if (strokeWidth>0 && arcAngle==0) {
@@ -1626,8 +1675,9 @@ void TextFXPlugin::render(const OFX::RenderArguments &args)
                     moveToLayoutOrigin();
                 }
                 cairo_set_source_rgba(cr, r, g, b, a);
-                if (xScale == 1.) {
-                    // (see the cairo_scale() above)
+                if (!_canonicalCenter) {
+                    // v7 keeps the layout measured as in getRegionOfDefinition() (see the
+                    // cairo_scale() above)
                     pango_cairo_update_layout(cr, layout);
                 }
                 pango_cairo_show_layout(cr, layout);
@@ -1649,8 +1699,9 @@ void TextFXPlugin::render(const OFX::RenderArguments &args)
             cairo_save(cr);
             cairo_set_source_rgba(cr, r, g, b, a);
             cairo_rotate (cr, angle * G_PI / 180.);
-            if (xScale == 1.) {
-                // (see the cairo_scale() above)
+            if (!_canonicalCenter) {
+                // v7 keeps the layout measured as in getRegionOfDefinition() (see the
+                // cairo_scale() above)
                 pango_cairo_update_layout(cr, layout);
             }
             pango_layout_get_size(layout, &rwidth, &rheight);
