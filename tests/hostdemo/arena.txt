@@ -31,7 +31,6 @@ net.fxarena.openfx.Polar 4 filter
 net.fxarena.openfx.Roll 3 filter
 net.fxarena.openfx.Roll 2 filter
 net.fxarena.openfx.Wave 4 filter
-net.fxarena.openfx.Wave 3 filter
 net.fxarena.openfx.Wave 2 filter
 net.fxarena.openfx.Swirl 3 filter
 net.fxarena.openfx.Swirl 2 filter

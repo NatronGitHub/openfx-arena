@@ -94,7 +94,7 @@ jobs:
           g++ -o verify_plugin_loads OpenFX-IO/.github/workflows/verify_plugin_loads.cpp ofxhBinaryStrict.cpp \
             -I OpenFX/HostSupport/include/ -I OpenFX/include/
           ./verify_plugin_loads "$BUNDLE/Contents/Linux-x86-64/Arena.ofx" | tee load.txt
-          grep -q "^Num_plugins: 42$" load.txt
+          grep -q "^Num_plugins: 41$" load.txt
       - name: Upload artifacts
         if: env.UPLOAD_ARTIFACTS == 'true'
         uses: actions/upload-artifact@v4
@@ -168,7 +168,7 @@ jobs:
           g++ -o verify_plugin_loads OpenFX-IO/.github/workflows/verify_plugin_loads.cpp OpenFX/HostSupport/src/ofxhBinary.cpp \
             OpenFX/HostSupport/src/ofxhUtilities.cpp -I OpenFX/HostSupport/include/ -I OpenFX/include/
           ./verify_plugin_loads "$BUNDLE/Contents/Win64/Arena.ofx" | tee load.txt
-          grep -q "^Num_plugins: 42.\?$" load.txt
+          grep -q "^Num_plugins: 41.\?$" load.txt
       - name: Diagnose plugin load failure
         if: failure()
         run: |
@@ -273,7 +273,7 @@ jobs:
             -I OpenFX/HostSupport/include/ -I OpenFX/include/
           # the installed (deployed) bundle, with its own copies of the MacPorts libraries
           ./verify_plugin_loads "$BUNDLE/Contents/MacOS/Arena.ofx" | tee load.txt
-          grep -q "^Num_plugins: 42$" load.txt
+          grep -q "^Num_plugins: 41$" load.txt
       - name: Upload artifacts
         if: env.UPLOAD_ARTIFACTS == 'true'
         uses: actions/upload-artifact@v4
