@@ -5,6 +5,7 @@
 #   skip <identifier> <major version> <reason>
 # @SAMPLES@ is the directory of the generated sample files (make_samples.cpp, sample.svg).
 # hostDemo has filter and general contexts only: readers are rendered in the general context.
+net.fxarena.openfx.Text 7 filter
 net.fxarena.openfx.Text 6 filter
 skip fr.inria.openfx.ReadCDR 1 no CorelDRAW sample: libcdr only reads them, and a hand-written .cdr is not simple
 net.fxarena.openfx.ReadSVG 3 general -s filename=@SAMPLES@/sample.svg

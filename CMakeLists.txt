@@ -475,7 +475,7 @@ if(BUILD_TESTING)
         "${CMAKE_CURRENT_SOURCE_DIR}/OpenFX/HostSupport/include" "${CMAKE_CURRENT_SOURCE_DIR}/OpenFX/include")
     target_link_libraries(verify_plugin_loads PRIVATE ${CMAKE_DL_LIBS})
     # the number of plug-ins each bundle must have
-    set(_n_Arena 39) # with AudioCurve and ReadPDF, without RichText: 41, as the CI checks
+    set(_n_Arena 40) # with AudioCurve and ReadPDF, without RichText: 42, as the CI checks
     if(BUILD_AUDIO)
         math(EXPR _n_Arena "${_n_Arena} + 1")
     endif()
