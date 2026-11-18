@@ -157,7 +157,9 @@ private:
     bool isTransformAnimated() const;
     // the transform from the untransformed canvas to the output, in canonical coordinates
     bool getTransformCanonical(double time, OFX::Matrix3x3* transform) const;
+    bool getCanvasCenter(double time, OfxPointD* center);
     void resetCenter(double time, bool keepImageFixed);
+    void autoCenter(double time);
     OFX::IntParam *_dpi;
     OFX::Double2DParam *_translate;
     OFX::DoubleParam *_rotate;
@@ -256,6 +258,12 @@ void ReadSVGPlugin::restoreStateFromParams()
         getLayers(root_element,&imageLayers);
         xmlFreeDoc(doc);
     }
+
+    // The file may already be set at instance creation, without a later instanceChanged: on project
+    // load, and when Natron's Read node switches to this decoder with its filename already set
+    // (Natron sends no instanceChanged for the filename then, before Natron#1284). Center the
+    // transform on the canvas then too.
+    autoCenter(startingTime);
 }
 
 bool
@@ -290,28 +298,61 @@ ReadSVGPlugin::getTransformCanonical(double time, Matrix3x3* transform) const
     return true;
 }
 
-// Set the center to the center of the SVG canvas. If keepImageFixed, also change the translation
-// so that the image doesn't move (as the Transform node's Reset Center).
-void
-ReadSVGPlugin::resetCenter(double time, bool keepImageFixed)
+// The center of the SVG canvas, i.e. of the RoD, in canonical coordinates. False if there is no
+// readable file.
+bool
+ReadSVGPlugin::getCanvasCenter(double time, OfxPointD* center)
 {
     std::string filename;
     OfxStatus st = getFilenameAtTime(getStartingTime(), &filename);
     if (st != kOfxStatOK || filename.empty()) {
-        return;
+        return false;
     }
     OfxRectI bounds, format;
     double par = 1.;
     std::string error;
     int tile_width, tile_height;
-    if (!getFrameBounds(filename, time, 0, &bounds, &format, &par, &error, &tile_width, &tile_height) ||
-        format.x2 <= format.x1 || format.y2 <= format.y1) {
-        return;
+    try {
+        if (!getFrameBounds(filename, time, 0, &bounds, &format, &par, &error, &tile_width, &tile_height) ||
+            format.x2 <= format.x1 || format.y2 <= format.y1) {
+            return false;
+        }
+    } catch (...) {
+        // getFrameBounds() throws if the file can't be read (and sets a persistent message)
+        return false;
     }
     // canonical coordinates: x is scaled by the PAR, see the OpenFX spec on coordinate systems. Use
     // the output clip's PAR, as GenericReader's RoD does (the host may not use the one from getFrameBounds)
     par = _outputClip->getPixelAspectRatio();
-    OfxPointD newCenter = { (format.x1 + format.x2) * par / 2., (format.y1 + format.y2) / 2. };
+    center->x = (format.x1 + format.x2) * par / 2.;
+    center->y = (format.y1 + format.y2) / 2.;
+    return true;
+}
+
+// Unless the user moved the center, move it to the center of the canvas, without moving the image:
+// called whenever the canvas is known or changes (instance creation, file and DPI changes).
+void
+ReadSVGPlugin::autoCenter(double time)
+{
+    if (_centerChanged->getValue()) {
+        return;
+    }
+    resetCenter(time, true);
+    // after resetCenter, whose setValue may come back through changedParam(kParamTransformCenter)
+    if (_centerChanged->getValue()) {
+        _centerChanged->setValue(false);
+    }
+}
+
+// Set the center to the center of the SVG canvas. If keepImageFixed, also change the translation
+// so that the image doesn't move (as the Transform node's Reset Center).
+void
+ReadSVGPlugin::resetCenter(double time, bool keepImageFixed)
+{
+    OfxPointD newCenter;
+    if (!getCanvasCenter(time, &newCenter)) {
+        return;
+    }
     OfxPointD center;
     _center->getValueAtTime(time, center.x, center.y);
     if (newCenter.x == center.x && newCenter.y == center.y) {
@@ -356,18 +397,31 @@ ReadSVGPlugin::changedParam(const InstanceChangedArgs &args, const std::string &
         if (_centerChanged->getValue()) {
             _centerChanged->setValue(false);
         }
-    } else if (paramName == kParamTransformCenter) {
-        if ((args.reason == eChangeUserEdit || args.reason == eChangePluginEdit) && !_centerChanged->getValue()) {
-            _centerChanged->setValue(true);
-        }
-    } else if (paramName == kParamDpi) {
-        // the canvas size changed: move the center to the new canvas center, without moving the image
-        if (args.reason == eChangeUserEdit && !_centerChanged->getValue()) {
-            resetCenter(args.time, true);
+    } else if (paramName == kParamTransformCenter && args.reason != eChangeTime) {
+        // Whether the user moved the center is decided from its value, not from the reason: hosts
+        // also send user-edit reasons for their own changes (Natron: restoring defaults, internal
+        // edits), and our own setValue() comes back here as a plugin edit.
+        OfxPointD center, canvasCenter;
+        _center->getValueAtTime(args.time, center.x, center.y);
+        const bool isDefault = (center.x == 0. && center.y == 0.);
+        const bool hasCanvas = getCanvasCenter(args.time, &canvasCenter);
+        if (isDefault) {
+            // reset to the default: follow the canvas again
             if (_centerChanged->getValue()) {
                 _centerChanged->setValue(false);
             }
+            if (hasCanvas) {
+                resetCenter(args.time, false);
+            }
+        } else {
+            const bool changed = !(hasCanvas && center.x == canvasCenter.x && center.y == canvasCenter.y);
+            if (_centerChanged->getValue() != changed) {
+                _centerChanged->setValue(changed);
+            }
         }
+    } else if (paramName == kParamDpi && args.reason != eChangeTime) {
+        // the canvas size changed
+        autoCenter(args.time);
     }
     GenericReaderPlugin::changedParam(args, paramName);
 }
@@ -745,13 +799,8 @@ void ReadSVGPlugin::changedFilename(const OFX::InstanceChangedArgs &args)
 
     // move the center to the center of the new canvas, unless the user moved it, and change the
     // translation so that the transformed image doesn't move (as the Transform node does when its
-    // input changes)
-    if (args.reason == eChangeUserEdit && !_centerChanged->getValue()) {
-        resetCenter(args.time, true);
-        if (_centerChanged->getValue()) {
-            _centerChanged->setValue(false);
-        }
-    }
+    // input changes). GenericReader calls changedFilename() for any reason but eChangeTime.
+    autoCenter(args.time);
 }
 
 using namespace OFX;
@@ -807,6 +856,16 @@ void ReadSVGPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, C
             page->addChild(*group);
         }
         ofxsTransformDescribeParams(desc, page, group, /*isOpen=*/true, /*oldParams=*/false, /*hasAmount=*/false, /*noTranslate=*/false);
+        // ofxsTransformDescribeParams gives the center a normalized default, the center of the
+        // project, which is not the center of the SVG. Default to (0,0) in canonical coordinates
+        // instead: the plug-in sets it to the center of the canvas as soon as the file is known
+        // (see autoCenter()), and (0,0) means "follow the canvas".
+        Double2DParamDescriptor* center = dynamic_cast<Double2DParamDescriptor*>(desc.getParamDescriptor(kParamTransformCenter));
+        assert(center);
+        if (center) {
+            center->setDefaultCoordinateSystem(eCoordinatesCanonical);
+            center->setDefault(0., 0.);
+        }
     }
     // the output is frame varying when the transform is animated, see isOutputFrameVarying()
     {
