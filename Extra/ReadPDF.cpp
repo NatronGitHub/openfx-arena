@@ -20,6 +20,8 @@
 #include <GlobalParams.h>
 #include <cairo.h>
 #include <string>
+#include <vector>
+#include <sstream>
 #include <mutex>
 
 #include <iostream>
@@ -85,6 +87,70 @@ namespace OCIO = OCIO_NAMESPACE;
 OFXS_NAMESPACE_ANONYMOUS_ENTER
 
 static bool gHostIsNatron = false;
+
+// Open a PDF file: NULL if it can't be read. The URI, the GError and the copy of the
+// filename are freed here, on every path (they leaked, and the copy was free()d although
+// g_strdup() memory must be g_free()d).
+static PopplerDocument*
+openDocument(const std::string& filename)
+{
+    GError *error = NULL;
+    gchar *uri = g_filename_to_uri(filename.c_str(), NULL, &error);
+    if (uri == NULL) {
+        if (error) {
+            g_error_free(error);
+        }
+        return NULL;
+    }
+    PopplerDocument *document = poppler_document_new_from_file(uri, NULL, &error);
+    g_free(uri);
+    if (error) {
+        g_error_free(error);
+        if (document) {
+            g_object_unref(document);
+        }
+        return NULL;
+    }
+    return document;
+}
+
+// Unrefs the poppler objects and destroys the cairo objects it holds when it goes out of
+// scope, so that the error paths, which throw, release them too.
+struct PDFResources
+{
+    PopplerDocument *document;
+    PopplerPage *page;
+    PopplerPage *fpage;
+    cairo_surface_t *surface;
+    cairo_t *cr;
+
+    PDFResources() : document(NULL), page(NULL), fpage(NULL), surface(NULL), cr(NULL) {}
+    ~PDFResources()
+    {
+        if (cr) { cairo_destroy(cr); }
+        if (surface) { cairo_surface_destroy(surface); }
+        if (page) { g_object_unref(page); }
+        if (fpage) { g_object_unref(fpage); }
+        if (document) { g_object_unref(document); }
+    }
+private:
+    PDFResources(const PDFResources&);
+    PDFResources& operator=(const PDFResources&);
+};
+
+// the page names ("0", "1", ...) of a document, empty if it is NULL
+static std::vector<std::string>
+pageNames(PopplerDocument* document)
+{
+    std::vector<std::string> names;
+    const int pages = document ? poppler_document_get_n_pages(document) : 0;
+    for (int i = 0; i < pages; i++) {
+        std::ostringstream pageName;
+        pageName << i;
+        names.push_back(pageName.str());
+    }
+    return names;
+}
 
 class ReadPDFPlugin : public GenericReaderPlugin
 {
@@ -171,34 +237,14 @@ void ReadPDFPlugin::restoreStateFromParams()
     OfxStatus st = getFilenameAtTime(startingTime, &filename);
     // && (was ||): with no file set, this tried to open "" and reported an error
     if ( st == kOfxStatOK && !filename.empty() ) {
-        GError *error = NULL;
-        PopplerDocument *document = NULL;
-
-        gchar *absolute, *uri;
-        absolute = g_strdup(filename.c_str());
-        uri = g_filename_to_uri(absolute, NULL, &error);
-        free(absolute);
-
-        document = poppler_document_new_from_file(uri, NULL, &error);
-
-        imageLayers.clear();
-        if (error != NULL) {
+        PopplerDocument *document = openDocument(filename);
+        if (document == NULL) {
             setPersistentMessage(OFX::Message::eMessageError, "", "Failed to read PDF");
-        } else {
-            int pages = 0;
-            pages = poppler_document_get_n_pages(document);
-            if (pages<0)
-                pages=0;
-
-            for (int i = 0; i < pages; i++) {
-                std::ostringstream pageName;
-                pageName << i;
-                imageLayers.push_back(pageName.str());
-            }
         }
-
-        g_object_unref(document);
-        error = NULL;
+        imageLayers = pageNames(document);
+        if (document) {
+            g_object_unref(document);
+        }
     }
 }
 
@@ -277,12 +323,7 @@ ReadPDFPlugin::decodePlane(const std::string& filename, OfxTime time, int /*view
         OFX::throwSuiteStatusException(kOfxStatErrFormat);
     }
 
-    GError *error = NULL;
-    PopplerDocument *document = NULL;
-    PopplerPage *page = NULL;
-    PopplerPage *fpage = NULL;
-    cairo_surface_t *surface;
-    cairo_t *cr;
+    PDFResources r; // released on every path, including the throws below
     cairo_status_t status;
     double dpi, imageWidth, imageHeight, scaleWidth, scaleHeight;
     int width, height, renderWidth, renderHeight;
@@ -298,26 +339,26 @@ ReadPDFPlugin::decodePlane(const std::string& filename, OfxTime time, int /*view
         }
     }
 
-    gchar *absolute, *uri;
-    absolute = g_strdup(filename.c_str());
-    uri = g_filename_to_uri(absolute, NULL, &error);
-    free(absolute);
-
-    document = poppler_document_new_from_file(uri, NULL, &error);
-
-    if (error != NULL) {
+    r.document = openDocument(filename);
+    if (r.document == NULL) {
         setPersistentMessage(OFX::Message::eMessageError, "", "Failed to read PDF");
         OFX::throwSuiteStatusException(kOfxStatErrFormat);
     }
 
-    page = poppler_document_get_page(document, layer);
-    fpage = poppler_document_get_page(document, 0);
-    if (page == NULL || fpage == NULL) {
+    // poppler reports a page index out of range as a GLib critical: check it first
+    const int nPages = poppler_document_get_n_pages(r.document);
+    if (layer >= 0 && layer < nPages) {
+        r.page = poppler_document_get_page(r.document, layer);
+    }
+    if (nPages > 0) {
+        r.fpage = poppler_document_get_page(r.document, 0);
+    }
+    if (r.page == NULL || r.fpage == NULL) {
         setPersistentMessage(OFX::Message::eMessageError, "", "Failed to read page");
         OFX::throwSuiteStatusException(kOfxStatErrFormat);
     }
 
-    poppler_page_get_size(fpage, &imageWidth, &imageHeight);
+    poppler_page_get_size(r.fpage, &imageWidth, &imageHeight);
 
     renderWidth= renderWindow.x2 - renderWindow.x1;
     renderHeight= renderWindow.y2 - renderWindow.y1;
@@ -330,15 +371,16 @@ ReadPDFPlugin::decodePlane(const std::string& filename, OfxTime time, int /*view
         OFX::throwSuiteStatusException(kOfxStatErrFormat);
     }
 
-    surface=cairo_image_surface_create(CAIRO_FORMAT_ARGB32, width, height);
-    cr=cairo_create(surface);
+    r.surface = cairo_image_surface_create(CAIRO_FORMAT_ARGB32, width, height);
+    r.cr = cairo_create(r.surface);
+    cairo_t *cr = r.cr;
 
     scaleWidth = dpi/kPluginDPI;
     scaleHeight = dpi/kPluginDPI;
 
     cairo_scale(cr, scaleWidth, scaleHeight);
 
-    poppler_page_render(page, cr);
+    poppler_page_render(r.page, cr);
 
     cairo_set_operator(cr, CAIRO_OPERATOR_DEST_OVER);
     cairo_set_source_rgb(cr, 1, 1, 1);
@@ -351,10 +393,10 @@ ReadPDFPlugin::decodePlane(const std::string& filename, OfxTime time, int /*view
         OFX::throwSuiteStatusException(kOfxStatErrFormat);
     }
 
-    cairo_surface_flush(surface);
+    cairo_surface_flush(r.surface);
 
-    unsigned char* cdata = cairo_image_surface_get_data(surface);
-    unsigned char* pixels = new unsigned char[width * height * pixelComponentCount];
+    unsigned char* cdata = cairo_image_surface_get_data(r.surface);
+    std::vector<unsigned char> pixels(width * height * pixelComponentCount);
     for (int i = 0; i < width; ++i) {
         for (int j = 0; j < height; ++j) {
             for (int k = 0; k < pixelComponentCount; ++k)
@@ -377,14 +419,6 @@ ReadPDFPlugin::decodePlane(const std::string& filename, OfxTime time, int /*view
         }
     }
 
-    g_object_unref(page);
-    g_object_unref(fpage);
-    g_object_unref(document);
-    cairo_destroy(cr);
-    cairo_surface_destroy(surface);
-    cdata = NULL;
-    error = NULL;
-    delete[] pixels;
 }
 
 bool ReadPDFPlugin::getFrameBounds(const std::string& filename,
@@ -403,21 +437,13 @@ bool ReadPDFPlugin::getFrameBounds(const std::string& filename,
     double dpi;
     _dpi->getValueAtTime(time, dpi);
 
-    GError *error = NULL;
-    PopplerDocument *document = NULL;
     PopplerPage *page = NULL;
     double imageWidth, imageHeight;
     int width = 0;
     int height = 0;
 
-    gchar *absolute, *uri;
-    absolute = g_strdup(filename.c_str());
-    uri = g_filename_to_uri(absolute, NULL, &error);
-    free(absolute);
-
-    document = poppler_document_new_from_file(uri, NULL, &error);
-
-    if (error != NULL) {
+    PopplerDocument *document = openDocument(filename);
+    if (document == NULL) {
         setPersistentMessage(OFX::Message::eMessageError, "", "Failed to read PDF");
         OFX::throwSuiteStatusException(kOfxStatErrFormat);
     }
@@ -435,7 +461,6 @@ bool ReadPDFPlugin::getFrameBounds(const std::string& filename,
     }
 
     g_object_unref(document);
-    error = NULL;
 
     if (width <= 0 || height <= 0) {
         // bounds and format were not set: report failure instead of returning garbage
@@ -473,34 +498,14 @@ bool ReadPDFPlugin::guessParamsFromFilename(const std::string& /*newFile*/,
         return false;
     }
 
-    GError *error = NULL;
-    PopplerDocument *document = NULL;
-
-    gchar *absolute, *uri;
-    absolute = g_strdup(filename.c_str());
-    uri = g_filename_to_uri(absolute, NULL, &error);
-    free(absolute);
-
-    document = poppler_document_new_from_file(uri, NULL, &error);
-
-    imageLayers.clear();
-    if (error != NULL) {
+    PopplerDocument *document = openDocument(filename);
+    if (document == NULL) {
         setPersistentMessage(OFX::Message::eMessageError, "", "Failed to read PDF");
-    } else {
-        int pages = 0;
-        pages = poppler_document_get_n_pages(document);
-        if (pages<0)
-            pages=0;
-
-        for (int i = 0; i < pages; i++) {
-            std::ostringstream pageName;
-            pageName << i;
-            imageLayers.push_back(pageName.str());
-        }
     }
-
-    g_object_unref(document);
-    error = NULL;
+    imageLayers = pageNames(document);
+    if (document) {
+        g_object_unref(document);
+    }
 
     *components = OFX::ePixelComponentRGBA;
     *filePremult = OFX::eImageUnPreMultiplied;
@@ -520,34 +525,14 @@ void ReadPDFPlugin::changedFilename(const OFX::InstanceChangedArgs &args)
         OFX::throwSuiteStatusException(kOfxStatErrFormat);
     }
 
-    GError *error = NULL;
-    PopplerDocument *document = NULL;
-
-    gchar *absolute, *uri;
-    absolute = g_strdup(filename.c_str());
-    uri = g_filename_to_uri(absolute, NULL, &error);
-    free(absolute);
-
-    document = poppler_document_new_from_file(uri, NULL, &error);
-
-    imageLayers.clear();
-    if (error != NULL) {
+    PopplerDocument *document = openDocument(filename);
+    if (document == NULL) {
         setPersistentMessage(OFX::Message::eMessageError, "", "Failed to read PDF");
-    } else {
-        int pages = 0;
-        pages = poppler_document_get_n_pages(document);
-        if (pages<0)
-            pages=0;
-
-        for (int i = 0; i < pages; i++) {
-            std::ostringstream pageName;
-            pageName << i;
-            imageLayers.push_back(pageName.str());
-        }
     }
-
-    g_object_unref(document);
-    error = NULL;
+    imageLayers = pageNames(document);
+    if (document) {
+        g_object_unref(document);
+    }
 }
 
 using namespace OFX;
