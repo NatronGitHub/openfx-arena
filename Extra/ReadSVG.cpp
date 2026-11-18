@@ -47,7 +47,7 @@
 #define kPluginIdentifier "net.fxarena.openfx.ReadSVG"
 // history:
 // 3.3 the cairo buffer given by rsvg is actually premultiplied
-// 3.4 transform (translate, rotate, scale, skew), with an overlay (not shown by Natron 2.5's Read node). A minor version is enough: the
+// 3.4 transform (translate, rotate, scale, skew), with an overlay (shown in Natron from Natron#1284). A minor version is enough: the
 //     transform params default to identity, which renders exactly as 3.3.
 #define kPluginVersionMajor 3
 #define kPluginVersionMinor 4
@@ -824,10 +824,9 @@ void ReadSVGPluginFactory::describe(OFX::ImageEffectDescriptor &desc)
     desc.setPluginDescription("Fast SVG (Scalable Vector Graphics) reader using librsvg and Cairo.\n"
                               "The Transform parameters are applied before rasterization, so the SVG stays sharp when it is scaled up. "
                               "The result is clipped to the SVG canvas.");
-    // Natron runs readers inside its Read node, which (up to Natron 2.5) doesn't forward the overlay
-    // actions (hasOverlay, draw, pen and key) to the reader, so this overlay only shows in hosts that
-    // use the reader directly, and in Natron once the Read node forwards them (Natron RB-2.6,
-    // branch readnode-overlay-forwarding). The params work everywhere.
+    // Natron runs readers inside its Read node, which forwards the overlay actions (hasOverlay, draw,
+    // pen and key) to the reader from Natron#1284 (RB-2.6); released Natron 2.5 doesn't, so it
+    // doesn't show this overlay. The params work everywhere.
     desc.setOverlayInteractDescriptor(new TransformOverlayDescriptor);
 }
 

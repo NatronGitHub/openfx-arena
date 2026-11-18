@@ -22,7 +22,7 @@
    * XCF, every host including Natron: the output size is the canvas from the file, instead of the largest layer's size
    * PSD and XCF, every host, with ImageMagick 6: layers at negative offsets are placed correctly (ImageMagick 7 already did)
    * XCF: the merged Default skips hidden layers and uses the layers' blend modes. Layer opacity is still ignored (ImageMagick doesn't read it)
- * ``ReadSVG`` 3.4: Transform parameters (translate, rotate, scale, skew, center), applied before rasterization so that the SVG stays sharp when it is scaled up. The result is clipped to the SVG canvas. The transform can be animated. The defaults are the identity, so existing projects render exactly as before (issue #25). The plug-in also has the Transform node's overlay, but Natron's Read node doesn't forward overlays to readers up to Natron 2.5, so it only shows in Natron once the Read node does (Natron RB-2.6, branch ``readnode-overlay-forwarding``); the parameters work without it.
+ * ``ReadSVG`` 3.4: Transform parameters (translate, rotate, scale, skew, center), applied before rasterization so that the SVG stays sharp when it is scaled up. The result is clipped to the SVG canvas. The transform can be animated. The defaults are the identity, so existing projects render exactly as before (issue #25). The plug-in also has the Transform node's overlay, which Natron shows once its Read node forwards overlays to readers: Natron's Read node forwards overlays from Natron#1284 (RB-2.6); released Natron 2.5 doesn't. The parameters work without it.
  * ``ReadSVG``: debug builds no longer abort at render scales below 1 (proxy mode).
 
 ## Natron-2.3.15
