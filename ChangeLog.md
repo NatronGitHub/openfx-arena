@@ -8,7 +8,7 @@
    * Rotate, Skew and Scale are applied in the overlay's order (scale, then skew, then rotate, about the Center), and Skew Order is honoured. The glyphs no longer overlap with a non-uniform scale or a skew.
    * When Transform is unchecked, the text is rotated, skewed and scaled about the Center (where the overlay is), instead of the center of the image for the rotation.
    * The Center is no longer 1 pixel too high, and the vertical scroll is scaled by the vertical render scale.
-   * Circle: the words at angles near 45 degrees (e.g. the diagonal ones with 8 or 16 words) are drawn on the circle, rotated like the others (their glyphs were drawn unrotated, at some pixel aspect ratios including 1, #86).
+   * Circle: the words at angles near 45 degrees (e.g. the diagonal ones with 8 or 16 words) are drawn on the circle, rotated like the others (with FreeType 2.15.0, which ignores some rotations of a mirrored transform, their glyphs were drawn unrotated, at some pixel aspect ratios including 1, #86, #88).
    * New: Line spacing, and font size and position relative to the frame (Size unit, Font size (%), Relative position, #19, #63).
  * ``Text`` (TextOFX) 6: deprecated (hidden from the menus, still used by old projects). It is now 6.17, with the parameters of 6.14 (Natron 2.5.0) and the bug fixes made since: Stroke dash length above 3, fontconfig leaks and an uninitialized RoD read, rendering a render window smaller than the RoD.
  * Arena now targets ImageMagick 7 (static, Q32, HDRI, OpenMP), which Natron 2.6 will ship on every platform. ImageMagick 6 still builds and renders as before.

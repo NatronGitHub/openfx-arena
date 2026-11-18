@@ -1663,12 +1663,14 @@ void TextFXPlugin::render(const OFX::RenderArguments &args)
         cairo_translate(cr, circleX, circleY);
         if (_v7) {
             // v7 builds the path of the word once, under an axis-aligned CTM, and rotates the
-            // path, not the CTM (issue #86). With cairo's FreeType backend, glyph outlines drawn
-            // under the CTM of this context (which has the y flip, so it is a reflection) rotated
-            // by an angle close to 45 degrees (mod 90) come out unrotated, at the rotated glyph
-            // positions: e.g. the diagonal words with 8 or 16 words at PAR 1, 1.09 or 1.2 (the
-            // bad angles move with the PAR). The path is in user coordinates, which don't depend
-            // on the CTM (only the hinting does, and it is done as for unrotated text).
+            // path, not the CTM (issues #86, #88). FreeType 2.15.0 (a98c7c2, fixed in 05f343a
+            // after 2.15.0) computes |det| wrongly in FT_Matrix_Check() when the determinant is
+            // negative, as with the y flip of this context, so FT_Set_Transform() drops some
+            // rotations (0 <= cos 2a <= 1/16, e.g. [43.21, 45.01) and [135, 136.8) degrees) and
+            // the glyph outlines come out unrotated, at the rotated glyph positions: e.g. the
+            // diagonal words with 8 or 16 words at PAR 1, 1.09 or 1.2. The path is in user
+            // coordinates, which don't depend on the CTM: only the hinting does, and it is done
+            // once, as for unrotated text, so it is the same for every word.
             // v7 keeps the layout measured as in getRegionOfDefinition() (see the cairo_scale()
             // above), so it is the same for all words.
             int rwidth, rheight;
