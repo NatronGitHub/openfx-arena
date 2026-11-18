@@ -47,7 +47,7 @@
 #define kPluginIdentifier "net.fxarena.openfx.ReadSVG"
 // history:
 // 3.3 the cairo buffer given by rsvg is actually premultiplied
-// 3.4 transform (translate, rotate, scale, skew) with an overlay. A minor version is enough: the
+// 3.4 transform (translate, rotate, scale, skew), with an overlay (not shown by Natron 2.5's Read node). A minor version is enough: the
 //     transform params default to identity, which renders exactly as 3.3.
 #define kPluginVersionMajor 3
 #define kPluginVersionMinor 4
@@ -328,8 +328,10 @@ ReadSVGPlugin::changedParam(const InstanceChangedArgs &args, const std::string &
 bool
 ReadSVGPlugin::isIdentity(const IsIdentityArguments &args, Clip* &identityClip, double &identityTime, int& view, std::string& plane)
 {
-    // GenericReader holds a still image by telling Natron that the output at another time is the
-    // same, which is false when the transform is animated
+    // For a held still image, GenericReader's isIdentity() says that the output is the one at
+    // another time (only on Natron; on other hosts it returns false). That is wrong when the
+    // transform is animated. Natron's Read node doesn't forward isIdentity to the reader at the
+    // time of writing, so this is for hosts that use the reader directly and for future versions.
     if (isTransformAnimated()) {
         return false;
     }
@@ -727,6 +729,10 @@ void ReadSVGPluginFactory::describe(OFX::ImageEffectDescriptor &desc)
     desc.setPluginDescription("Fast SVG (Scalable Vector Graphics) reader using librsvg and Cairo.\n"
                               "The Transform parameters are applied before rasterization, so the SVG stays sharp when it is scaled up. "
                               "The result is clipped to the SVG canvas.");
+    // Natron runs readers inside its Read node, which (up to Natron 2.5) doesn't forward the overlay
+    // actions (hasOverlay, draw, pen and key) to the reader, so this overlay only shows in hosts that
+    // use the reader directly, and in Natron once the Read node forwards them (Natron RB-2.6,
+    // branch readnode-overlay-forwarding). The params work everywhere.
     desc.setOverlayInteractDescriptor(new TransformOverlayDescriptor);
 }
 
