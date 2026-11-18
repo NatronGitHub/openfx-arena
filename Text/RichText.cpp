@@ -115,6 +115,11 @@ srtTimeField(const std::string &field, double* value)
         // more than ~308 digits: strtod() returns HUGE_VAL, an infinite time
         return false;
     }
+    if (*value < 0. || *value > 1e6) {
+        // SRT fields are non-negative, and bounding them keeps h*3600 + m*60 + s finite:
+        // a huge or negative field could give inf, or inf - inf = NaN
+        return false;
+    }
     for (const char* c = begin; c < end; ++c) {
         if (std::strchr("0123456789.+- \t\n\v\f\r", *c) == NULL) {
             return false;

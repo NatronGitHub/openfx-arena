@@ -989,6 +989,10 @@ void TextFXPlugin::loadSRT()
     double fps = 0.0;
     _srt->getValue(filename);
     _fps->getValue(fps);
+    if (fps <= 0.) {
+        // no frame for a subtitle (and start*fps could be inf*0 = NaN)
+        return;
+    }
     if (!RichText::fileExists(filename)) { return; }
     std::vector<RichText::RichTextSubtitle> subtitles = RichText::parseSRT(filename);
     if (subtitles.size()==0) { return; }
