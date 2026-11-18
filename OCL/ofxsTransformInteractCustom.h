@@ -122,8 +122,13 @@ protected:
 
     DrawStateEnum _drawState;
     MouseStateEnum _mouseState;
+    // the modifier keys that are down: counted from keyDown/keyUp, used for the redraws and the
+    // orientation, and for the state with openfx versions that don't track the modifiers
     int _modifierStateCtrl;
     int _modifierStateShift;
+    // Control (center mode: always on without a translate param), Shift
+    bool ctrlDown() const;
+    bool shiftDown() const;
     OrientationEnum _orientation;
     ImageEffect* _effect;
     Interact* _interact;
