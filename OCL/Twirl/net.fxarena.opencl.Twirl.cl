@@ -31,7 +31,10 @@ kernel void filter (read_only image2d_t in, write_only image2d_t out, float cent
     int x = pos.x - centerW;
     int y = pos.y - centerH;
 
-    float a = amount*exp(-(x*x+y*y)/(radius*radius));
+    // a radius of 0 twirls nothing: -(x*x+y*y) / 0 gave NaN at the center (0 / 0) and
+    // exp(-inf) = 0 elsewhere
+    float r2 = radius*radius;
+    float a = r2 > 0.f ? amount*exp(-(x*x+y*y)/r2) : 0.f;
     float u = (cos(a)*x + sin(a)*y);
     float v = (-sin(a)*x + cos(a)*y);
 
