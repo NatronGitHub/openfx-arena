@@ -543,6 +543,17 @@ endif()
                     -P "${CMAKE_CURRENT_SOURCE_DIR}/tests/hostdemo/run.cmake")
             endif()
         endforeach()
+        # the same, with hostDemo as an OFX 1.4 host (--ofx14): every plug-in must also work
+        # in a host that has neither OFX 1.5 nor the extensions (HaldCLUT and OCL, which the
+        # CI doesn't build, only get the default pass)
+        if(TARGET Arena)
+            add_test(NAME render_Arena_ofx14 COMMAND "${CMAKE_COMMAND}"
+                -DHOSTDEMO=$<TARGET_FILE:hostDemo> -DVERIFY=$<TARGET_FILE:verify_plugin_loads>
+                -DBINARY=$<TARGET_FILE:Arena> -DLIST=${CMAKE_CURRENT_SOURCE_DIR}/tests/hostdemo/arena.txt
+                -DSAMPLES=${_samples} -DWORK=${CMAKE_CURRENT_BINARY_DIR}/hostdemo-Arena-ofx14
+                -DCACHE=${CMAKE_CURRENT_BINARY_DIR}/hostdemo-cache -DOFX14=ON
+                -P "${CMAKE_CURRENT_SOURCE_DIR}/tests/hostdemo/run.cmake")
+        endif()
 
         # ReadSVG's output size at several DPIs, in physical and user units, for both major
         # versions (tests/readsvg); string(JSON) needs CMake 3.19
