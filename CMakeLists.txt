@@ -101,6 +101,11 @@ include(OpenFX-IO/IOSupport/cmake/IOSupport.cmake)
 if(BUILD_TESTING)
   set(BUILD_EXAMPLE_HOSTS ON)
 endif()
+# SupportExt's OFX 1.5 DrawSuite overlay backend (SupportExt/ofxsOverlayDraw.h), as in
+# Makefile.master and Arena.xcodeproj. It must have the same value in every translation unit
+# (ODR: it changes class layouts and inline functions; MSVC checks it with
+# #pragma detect_mismatch), so it is set for the whole tree, before add_subdirectory(OpenFX).
+add_compile_definitions(OFXS_HAVE_DRAWSUITE=1)
 add_subdirectory(OpenFX EXCLUDE_FROM_ALL)
 
 
