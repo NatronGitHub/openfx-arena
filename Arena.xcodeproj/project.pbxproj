@@ -60,6 +60,7 @@
 		AC7F582D1DA40E3E00939A29 /* ofxsCore.cpp in Sources */ = {isa = PBXBuildFile; fileRef = ACE3CB5E1BB7E19B0042BAF9 /* ofxsCore.cpp */; };
 		AC7F582E1DA40E4100939A29 /* ofxsImageEffect.cpp in Sources */ = {isa = PBXBuildFile; fileRef = ACE3CB601BB7E19B0042BAF9 /* ofxsImageEffect.cpp */; };
 		AC7F582F1DA40E4300939A29 /* ofxsInteract.cpp in Sources */ = {isa = PBXBuildFile; fileRef = ACE3CB611BB7E19B0042BAF9 /* ofxsInteract.cpp */; };
+		862AA1A1B944F9264D8A9376 /* ofxsDrawContextOpenGL.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 2E85AEE56A28E53CDD430599 /* ofxsDrawContextOpenGL.cpp */; };
 		AC7F58301DA40E4600939A29 /* ofxsLog.cpp in Sources */ = {isa = PBXBuildFile; fileRef = ACE3CB621BB7E19B0042BAF9 /* ofxsLog.cpp */; };
 		AC7F58311DA40E4F00939A29 /* ofxsMultiThread.cpp in Sources */ = {isa = PBXBuildFile; fileRef = ACE3CB631BB7E19B0042BAF9 /* ofxsMultiThread.cpp */; };
 		AC7F58321DA40E5100939A29 /* ofxsParams.cpp in Sources */ = {isa = PBXBuildFile; fileRef = ACE3CB641BB7E19B0042BAF9 /* ofxsParams.cpp */; };
@@ -76,6 +77,7 @@
 		AC7F583F1DA40E6400939A29 /* ofxsCore.cpp in Sources */ = {isa = PBXBuildFile; fileRef = ACE3CB5E1BB7E19B0042BAF9 /* ofxsCore.cpp */; };
 		AC7F58401DA40E6400939A29 /* ofxsImageEffect.cpp in Sources */ = {isa = PBXBuildFile; fileRef = ACE3CB601BB7E19B0042BAF9 /* ofxsImageEffect.cpp */; };
 		AC7F58411DA40E6400939A29 /* ofxsInteract.cpp in Sources */ = {isa = PBXBuildFile; fileRef = ACE3CB611BB7E19B0042BAF9 /* ofxsInteract.cpp */; };
+		5915F0F4C77788DDE8900461 /* ofxsDrawContextOpenGL.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 2E85AEE56A28E53CDD430599 /* ofxsDrawContextOpenGL.cpp */; };
 		AC7F58421DA40E6400939A29 /* ofxsLog.cpp in Sources */ = {isa = PBXBuildFile; fileRef = ACE3CB621BB7E19B0042BAF9 /* ofxsLog.cpp */; };
 		AC7F58431DA40E6400939A29 /* ofxsMultiThread.cpp in Sources */ = {isa = PBXBuildFile; fileRef = ACE3CB631BB7E19B0042BAF9 /* ofxsMultiThread.cpp */; };
 		AC7F58441DA40E6400939A29 /* ofxsParams.cpp in Sources */ = {isa = PBXBuildFile; fileRef = ACE3CB641BB7E19B0042BAF9 /* ofxsParams.cpp */; };
@@ -94,6 +96,7 @@
 		AC7F585A1DA40E6600939A29 /* ofxsCore.cpp in Sources */ = {isa = PBXBuildFile; fileRef = ACE3CB5E1BB7E19B0042BAF9 /* ofxsCore.cpp */; };
 		AC7F585B1DA40E6600939A29 /* ofxsImageEffect.cpp in Sources */ = {isa = PBXBuildFile; fileRef = ACE3CB601BB7E19B0042BAF9 /* ofxsImageEffect.cpp */; };
 		AC7F585C1DA40E6600939A29 /* ofxsInteract.cpp in Sources */ = {isa = PBXBuildFile; fileRef = ACE3CB611BB7E19B0042BAF9 /* ofxsInteract.cpp */; };
+		CD2A159EC54197B0CBEBAE9E /* ofxsDrawContextOpenGL.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 2E85AEE56A28E53CDD430599 /* ofxsDrawContextOpenGL.cpp */; };
 		AC7F585D1DA40E6600939A29 /* ofxsLog.cpp in Sources */ = {isa = PBXBuildFile; fileRef = ACE3CB621BB7E19B0042BAF9 /* ofxsLog.cpp */; };
 		AC7F585E1DA40E6600939A29 /* ofxsMultiThread.cpp in Sources */ = {isa = PBXBuildFile; fileRef = ACE3CB631BB7E19B0042BAF9 /* ofxsMultiThread.cpp */; };
 		AC7F585F1DA40E6600939A29 /* ofxsParams.cpp in Sources */ = {isa = PBXBuildFile; fileRef = ACE3CB641BB7E19B0042BAF9 /* ofxsParams.cpp */; };
@@ -1423,6 +1426,7 @@
 		ACE3CB5F1BB7E19B0042BAF9 /* ofxsHWNDInteract.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = ofxsHWNDInteract.cpp; sourceTree = "<group>"; };
 		ACE3CB601BB7E19B0042BAF9 /* ofxsImageEffect.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = ofxsImageEffect.cpp; sourceTree = "<group>"; };
 		ACE3CB611BB7E19B0042BAF9 /* ofxsInteract.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = ofxsInteract.cpp; sourceTree = "<group>"; };
+		2E85AEE56A28E53CDD430599 /* ofxsDrawContextOpenGL.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = ofxsDrawContextOpenGL.cpp; sourceTree = "<group>"; };
 		ACE3CB621BB7E19B0042BAF9 /* ofxsLog.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = ofxsLog.cpp; sourceTree = "<group>"; };
 		ACE3CB631BB7E19B0042BAF9 /* ofxsMultiThread.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = ofxsMultiThread.cpp; sourceTree = "<group>"; };
 		ACE3CB641BB7E19B0042BAF9 /* ofxsParams.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = ofxsParams.cpp; sourceTree = "<group>"; };
@@ -3373,6 +3377,7 @@
 				ACE3CB5E1BB7E19B0042BAF9 /* ofxsCore.cpp */,
 				ACE3CB5F1BB7E19B0042BAF9 /* ofxsHWNDInteract.cpp */,
 				ACE3CB601BB7E19B0042BAF9 /* ofxsImageEffect.cpp */,
+				2E85AEE56A28E53CDD430599 /* ofxsDrawContextOpenGL.cpp */,
 				ACE3CB611BB7E19B0042BAF9 /* ofxsInteract.cpp */,
 				ACE3CB621BB7E19B0042BAF9 /* ofxsLog.cpp */,
 				ACE3CB631BB7E19B0042BAF9 /* ofxsMultiThread.cpp */,
@@ -5707,6 +5712,7 @@
 				AC7F582D1DA40E3E00939A29 /* ofxsCore.cpp in Sources */,
 				AC7F582E1DA40E4100939A29 /* ofxsImageEffect.cpp in Sources */,
 				AC7F582F1DA40E4300939A29 /* ofxsInteract.cpp in Sources */,
+				862AA1A1B944F9264D8A9376 /* ofxsDrawContextOpenGL.cpp in Sources */,
 				AC7F58301DA40E4600939A29 /* ofxsLog.cpp in Sources */,
 				AC7F58311DA40E4F00939A29 /* ofxsMultiThread.cpp in Sources */,
 				AC7F58321DA40E5100939A29 /* ofxsParams.cpp in Sources */,
@@ -5759,6 +5765,7 @@
 				AC7F583F1DA40E6400939A29 /* ofxsCore.cpp in Sources */,
 				AC7F58401DA40E6400939A29 /* ofxsImageEffect.cpp in Sources */,
 				AC7F58411DA40E6400939A29 /* ofxsInteract.cpp in Sources */,
+				5915F0F4C77788DDE8900461 /* ofxsDrawContextOpenGL.cpp in Sources */,
 				AC7F58421DA40E6400939A29 /* ofxsLog.cpp in Sources */,
 				AC7F58431DA40E6400939A29 /* ofxsMultiThread.cpp in Sources */,
 				AC7F58441DA40E6400939A29 /* ofxsParams.cpp in Sources */,
@@ -5797,6 +5804,7 @@
 				AC7F585A1DA40E6600939A29 /* ofxsCore.cpp in Sources */,
 				AC7F585B1DA40E6600939A29 /* ofxsImageEffect.cpp in Sources */,
 				AC7F585C1DA40E6600939A29 /* ofxsInteract.cpp in Sources */,
+				CD2A159EC54197B0CBEBAE9E /* ofxsDrawContextOpenGL.cpp in Sources */,
 				AC7F585D1DA40E6600939A29 /* ofxsLog.cpp in Sources */,
 				AC7F585E1DA40E6600939A29 /* ofxsMultiThread.cpp in Sources */,
 				AC7F585F1DA40E6600939A29 /* ofxsParams.cpp in Sources */,
