@@ -3,7 +3,11 @@
 # crash, on a missing output frame, and on a plug-in that the list doesn't mention.
 #
 #   cmake -DHOSTDEMO=<hostDemo> -DVERIFY=<verify_plugin_loads> -DBINARY=<bundle>/Contents/<arch>/<name>.ofx
-#         -DLIST=<list.txt> -DSAMPLES=<dir> -DWORK=<dir> [-DCACHE=<dir>] -P run.cmake
+#         -DLIST=<list.txt> -DSAMPLES=<dir> -DWORK=<dir> [-DCACHE=<dir>] [-DOFX14=ON] -P run.cmake
+#
+# OFX14=ON runs hostDemo with --ofx14, as an OFX 1.4 host (only the OFX 1.4 host properties
+# and suites, no OfxSetHost, no StrChoice or Bytes params, one view), to check that every
+# plug-in also works in a host that doesn't implement OFX 1.5 or the extensions.
 #
 # WORK is wiped at each run; CACHE (default: WORK-cache) is not: it holds the caches that
 # would otherwise go to the home directory, e.g. fontconfig's.
@@ -24,6 +28,10 @@ if(NOT DEFINED CACHE)
   set(CACHE "${WORK}-cache")
 endif()
 get_filename_component(CACHE "${CACHE}" ABSOLUTE)
+set(_hostargs "")
+if(OFX14)
+  set(_hostargs --ofx14)
+endif()
 file(MAKE_DIRECTORY "${CACHE}")
 string(TIMESTAMP _start "%s")
 
@@ -120,18 +128,19 @@ foreach(_p IN LISTS _plugins)
   native(_nprefix "${_prefix}")
   execute_process(
     COMMAND "${HOSTDEMO}" --quiet --no-std-paths --no-cache -p "${_id}" -m "${_major}" -c "${_ctx}"
-            --frames 0 -o "${_nprefix}" ${_args}
+            --frames 0 -o "${_nprefix}" ${_hostargs} ${_args}
     WORKING_DIRECTORY "${WORK}"
     RESULT_VARIABLE _r OUTPUT_VARIABLE _log ERROR_VARIABLE _log
     TIMEOUT 600)
-  # hostDemo writes <prefix>.0.ppm, or <prefix>.0l.ppm and <prefix>.0r.ppm (multi-view)
+  # hostDemo writes <prefix>.0.ppm, or <prefix>.0l.ppm and <prefix>.0r.ppm (multi-view);
+  # with --ofx14 (one view), always <prefix>.0.ppm
   set(_frame FALSE)
-  if(EXISTS "${_prefix}.0.ppm")
+  if(EXISTS "${_prefix}.0.ppm" AND NOT (OFX14 AND (EXISTS "${_prefix}.0l.ppm" OR EXISTS "${_prefix}.0r.ppm")))
     file(SIZE "${_prefix}.0.ppm" _s)
     if(_s GREATER 0)
       set(_frame TRUE)
     endif()
-  elseif(EXISTS "${_prefix}.0l.ppm" AND EXISTS "${_prefix}.0r.ppm")
+  elseif(NOT OFX14 AND EXISTS "${_prefix}.0l.ppm" AND EXISTS "${_prefix}.0r.ppm")
     file(SIZE "${_prefix}.0l.ppm" _s)
     file(SIZE "${_prefix}.0r.ppm" _s2)
     if(_s GREATER 0 AND _s2 GREATER 0)
@@ -157,7 +166,11 @@ string(TIMESTAMP _end "%s")
 math(EXPR _t "${_end} - ${_start}")
 list(LENGTH _plugins _n)
 list(LENGTH _failed _nf)
-message("${_n} plug-ins: ${_ok} rendered, ${_skipped} skipped, ${_nf} failed (${_t} s)")
+set(_mode "")
+if(OFX14)
+  set(_mode " (OFX 1.4 host)")
+endif()
+message("${_n} plug-ins${_mode}: ${_ok} rendered, ${_skipped} skipped, ${_nf} failed (${_t} s)")
 if(_n EQUAL 0 OR _failed)
   message(FATAL_ERROR "render test failed: ${_failed}")
 endif()
