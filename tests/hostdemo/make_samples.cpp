@@ -2,7 +2,7 @@
 // directory given as argument, with the libraries Arena links: ImageMagick (PNG, PSD for
 // ReadPSD, BMP for ReadMisc), libzip (OpenRaster and Krita documents around the PNG), and
 // a hand-written one-page PDF for ReadPDF, and an identity Hald CLUT (512x512) for
-// HaldCLUT, which would otherwise download one.
+// HaldCLUT, which would otherwise download one. The sample_xy files are for tests/readerwindow.
 #include <Magick++.h>
 #include <zip.h>
 
@@ -53,13 +53,9 @@ static bool writeZip(const std::string& path, const std::vector<std::pair<std::s
     return zip_close(z) == 0;
 }
 
-// a one-page PDF with a filled rectangle, with a correct cross-reference table
-static bool writePDF(const std::string& path)
+// a one-page PDF with the given content stream, with a correct cross-reference table
+static bool writePDF(const std::string& path, const std::string& stream)
 {
-    std::ostringstream content;
-    content << "0.2 0.4 0.8 rg 0 0 " << kWidth << " " << kHeight << " re f "
-            << "0.9 0.8 0.1 rg 16 12 32 24 re f";
-    const std::string stream = content.str();
     std::vector<std::string> objects;
     objects.push_back("<< /Type /Catalog /Pages 2 0 R >>");
     objects.push_back("<< /Type /Pages /Kids [3 0 R] /Count 1 >>");
@@ -118,9 +114,32 @@ int main(int argc, char** argv)
         std::cerr << "ImageMagick: " << e.what() << std::endl;
         return 1;
     }
+    // the samples of the render window test (tests/readerwindow): their pixels differ along x
+    // and y, unlike the vertical gradient, so that a window copied at the wrong offset shows;
+    // the alpha varies too, for the premultiplication in GenericReader
+    try {
+        std::vector<unsigned char> rgba((size_t)kWidth * kHeight * 4);
+        for (int y = 0; y < kHeight; ++y) {
+            for (int x = 0; x < kWidth; ++x) {
+                unsigned char* p = &rgba[((size_t)y * kWidth + x) * 4];
+                p[0] = (unsigned char)(x * 4);
+                p[1] = (unsigned char)(y * 5);
+                p[2] = (unsigned char)((x * 7 + y * 13) % 256);
+                p[3] = (unsigned char)(128 + (x + 2 * y) % 128);
+            }
+        }
+        Magick::Image xy;
+        xy.read(kWidth, kHeight, "RGBA", Magick::CharPixel, &rgba[0]);
+        xy.depth(8);
+        xy.write("PNG32:" + dir + "/sample_xy.png");
+    } catch (const std::exception& e) {
+        std::cerr << "ImageMagick: " << e.what() << std::endl;
+        return 1;
+    }
     const std::string png = readFile(dir + "/sample.png");
-    if (png.empty()) {
-        std::cerr << "could not read " << dir << "/sample.png" << std::endl;
+    const std::string pngXY = readFile(dir + "/sample_xy.png");
+    if (png.empty() || pngXY.empty()) {
+        std::cerr << "could not read " << dir << "/sample.png or sample_xy.png" << std::endl;
         return 1;
     }
     std::ostringstream size;
@@ -130,8 +149,11 @@ int main(int argc, char** argv)
     ora.push_back(std::make_pair(std::string("stack.xml"),
         "<?xml version='1.0' encoding='UTF-8'?>\n<image version=\"0.0.3\" " + size.str() +
         "><stack><layer name=\"background\" src=\"data/layer0.png\" x=\"0\" y=\"0\" opacity=\"1.0\"/></stack></image>\n"));
+    std::vector<std::pair<std::string, std::string> > oraXY = ora;
     ora.push_back(std::make_pair(std::string("data/layer0.png"), png));
     ora.push_back(std::make_pair(std::string("mergedimage.png"), png));
+    oraXY.push_back(std::make_pair(std::string("data/layer0.png"), pngXY));
+    oraXY.push_back(std::make_pair(std::string("mergedimage.png"), pngXY));
     std::ostringstream kritaSize;
     kritaSize << "width=\"" << kWidth << "\" height=\"" << kHeight << "\"";
     std::vector<std::pair<std::string, std::string> > kra;
@@ -139,8 +161,23 @@ int main(int argc, char** argv)
     kra.push_back(std::make_pair(std::string("maindoc.xml"),
         "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<DOC><IMAGE name=\"sample\" " + kritaSize.str() +
         " colorspacename=\"RGBA\" mime=\"application/x-kra\"/></DOC>\n"));
+    std::vector<std::pair<std::string, std::string> > kraXY = kra;
     kra.push_back(std::make_pair(std::string("mergedimage.png"), png));
-    if (!writeZip(dir + "/sample.ora", ora) || !writeZip(dir + "/sample.kra", kra) || !writePDF(dir + "/sample.pdf")) {
+    kraXY.push_back(std::make_pair(std::string("mergedimage.png"), pngXY));
+    // a filled rectangle
+    std::ostringstream content;
+    content << "0.2 0.4 0.8 rg 0 0 " << kWidth << " " << kHeight << " re f "
+            << "0.9 0.8 0.1 rg 16 12 32 24 re f";
+    // 8 x 6 cells of 8 x 8 points, each of another colour (for tests/readerwindow)
+    std::ostringstream contentXY;
+    for (int j = 0; j < 6; ++j) {
+        for (int i = 0; i < 8; ++i) {
+            contentXY << i / 7. << " " << j / 5. << " " << ((i + 2 * j) % 3) / 2. << " rg "
+                      << i * 8 << " " << j * 8 << " 8 8 re f ";
+        }
+    }
+    if (!writeZip(dir + "/sample.ora", ora) || !writeZip(dir + "/sample.kra", kra) || !writePDF(dir + "/sample.pdf", content.str()) ||
+        !writeZip(dir + "/sample_xy.ora", oraXY) || !writeZip(dir + "/sample_xy.kra", kraXY) || !writePDF(dir + "/sample_xy.pdf", contentXY.str())) {
         std::cerr << "could not write the samples in " << dir << std::endl;
         return 1;
     }

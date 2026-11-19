@@ -527,7 +527,8 @@ endif()
         add_executable(make_samples tests/hostdemo/make_samples.cpp)
         target_link_libraries(make_samples PRIVATE PkgConfig::MAGICK PkgConfig::ZIP)
         ofx_target_openmp(make_samples)
-        set(_sample_files sample.png sample.psd sample.bmp sample.ora sample.kra sample.pdf sample.svg sample_hald.png)
+        set(_sample_files sample.png sample.psd sample.bmp sample.ora sample.kra sample.pdf sample.svg sample_hald.png
+            sample_xy.png sample_xy.ora sample_xy.kra sample_xy.pdf)
         list(TRANSFORM _sample_files PREPEND "${_samples}/")
         add_custom_command(OUTPUT ${_sample_files}
             COMMAND "${CMAKE_COMMAND}" -E make_directory "${_samples}"
@@ -582,6 +583,23 @@ endif()
                 -DOCIO=${CMAKE_CURRENT_SOURCE_DIR}/tests/hostdemo/config.ocio
                 -DWORK=${CMAKE_CURRENT_BINARY_DIR}/readsvg-dpi -DEXACT=${_exact}
                 -P "${CMAKE_CURRENT_SOURCE_DIR}/tests/readsvg/dpi.cmake")
+        endif()
+
+        # the readers with render windows smaller than the image (#105, tests/readerwindow):
+        # reader_window is a small host built from hostDemo's host classes, since hostDemo
+        # renders the whole RoD of a plug-in without tiles, whatever --window
+        if(TARGET Arena)
+            set(_hd "${CMAKE_CURRENT_SOURCE_DIR}/OpenFX/HostSupport/examples")
+            add_executable(reader_window tests/readerwindow/reader_window.cpp
+                "${_hd}/hostDemoClipInstance.cpp" "${_hd}/hostDemoEffectInstance.cpp"
+                "${_hd}/hostDemoHostDescriptor.cpp" "${_hd}/hostDemoParamInstance.cpp")
+            target_include_directories(reader_window PRIVATE "${_hd}")
+            target_link_libraries(reader_window PRIVATE OfxHost)
+            add_test(NAME reader_window COMMAND "${CMAKE_COMMAND}"
+                -DREADER_WINDOW=$<TARGET_FILE:reader_window> -DPLUGIN_PATH=${OFX_PLUGIN_BUILD_DIR}
+                -DSAMPLES=${_samples} -DOCIO=${CMAKE_CURRENT_SOURCE_DIR}/tests/hostdemo/config.ocio
+                -DWORK=${CMAKE_CURRENT_BINARY_DIR}/reader-window
+                -P "${CMAKE_CURRENT_SOURCE_DIR}/tests/readerwindow/run.cmake")
         endif()
 
         # ReadPSD's layer menu (tests/readpsd, also "make -C tests check"): needs Python 3 with
