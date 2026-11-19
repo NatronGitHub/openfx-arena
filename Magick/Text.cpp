@@ -688,7 +688,8 @@ void TextPluginFactory::describe(OFX::ImageEffectDescriptor &desc)
     desc.setSupportsMultiResolution(kSupportsMultiResolution);
     desc.setRenderThreadSafety(kRenderThreadSafety);
     desc.setHostFrameThreading(kHostFrameThreading);
-    desc.setOverlayInteractDescriptor(new PositionOverlayDescriptor<PositionInteractParam>);
+    // V2 (OFX 1.5 DrawSuite) on hosts with the DrawSuite, else V1 (OpenGL), as before
+    ofxsSetOverlayInteractDescriptorV2(desc, new PositionOverlayDescriptorV2<PositionInteractParam>);
 
     desc.setIsDeprecated(true);
 }

@@ -982,7 +982,9 @@ ReadSVGPluginFactory<majorVersion>::describe(OFX::ImageEffectDescriptor &desc)
     // Natron runs readers inside its Read node, which forwards the overlay actions (hasOverlay, draw,
     // pen and key) to the reader from Natron#1284 (RB-2.6); released Natron 2.5 doesn't, so it
     // doesn't show this overlay. The params work everywhere.
-    desc.setOverlayInteractDescriptor(new TransformOverlayDescriptor);
+    // V2 (OFX 1.5 DrawSuite) on hosts with the DrawSuite, else V1 (OpenGL), as before.
+    // ReadSVG 3 returns above, without an overlay.
+    ofxsSetOverlayInteractDescriptorV2(desc, new TransformOverlayDescriptorV2);
 }
 
 /** @brief The describe in context function, passed a plugin descriptor and a context */

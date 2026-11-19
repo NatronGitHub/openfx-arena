@@ -85,6 +85,9 @@ FILE(GLOB SUPPORT_SOURCES
     "${OFX_SUPPORT_LIBRARY_DIR}/ofxsParams.cpp"
     "${OFX_SUPPORT_LIBRARY_DIR}/ofxsProperty.cpp"
     "${OFX_SUPPORT_LIBRARY_DIR}/ofxsPropertyValidation.cpp"
+    # DrawArgs::isOpenGLContextCurrent() and the OpenGL draw context, used by SupportExt's
+    # overlays with OFXS_HAVE_DRAWSUITE (it loads OpenGL at run time: needs CMAKE_DL_LIBS)
+    "${OFX_SUPPORT_LIBRARY_DIR}/ofxsDrawContextOpenGL.cpp"
     "${OFX_SUPPORT_LIBRARY_DIR}/*.h"
 )
 
@@ -155,9 +158,13 @@ TARGET_COMPILE_DEFINITIONS(
     OFX_EXTENSIONS_NATRON
     OFX_EXTENSIONS_TUTTLE
     OFX_SUPPORTS_OPENGLRENDER
+    # as the root CMakeLists.txt and Makefile.master: SupportExt's DrawSuite overlays (V2), with
+    # the same value in every translation unit (ofxsOverlayDraw.h's #pragma detect_mismatch)
+    OFXS_HAVE_DRAWSUITE=1
     NOMINMAX
 )
 TARGET_LINK_LIBRARIES(${PROJECT_NAME} OpenGL::GL)
+TARGET_LINK_LIBRARIES(${PROJECT_NAME} ${CMAKE_DL_LIBS})
 
 include_directories(
     ${FONTCONFIG_INCLUDE_DIRS}

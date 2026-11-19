@@ -2086,23 +2086,31 @@ public:
         _dragCenter.x = _dragCenter.y = 0.;
     }
 
-    virtual bool draw(const OFX::DrawArgs &args) OVERRIDE
+protected:
+    // The helper's draw() calls this with its OverlayDraw d once d.canDraw() is true. The shift
+    // must go through that d, not OpenGL: a V2 draw must use the DrawSuite only, and the
+    // DrawSuite backend emulates the modelview matrix inside d. This draws nothing itself,
+    // so it has no shadow to skip with the DrawSuite. With OpenGL, the calls are as before.
+    virtual bool drawOverlay(OFX::OverlayDraw &d,
+                             const OFX::DrawArgs &args) OVERRIDE
     {
         OfxRectD frame;
         OfxPointD shift;
         if (_relativeDrag) {
             shift = _dragShift;
         } else if ( (_mouseState != eReleased) || !getRelativeShift(args.time, &frame, &shift) ) {
-            return TransformInteractHelperOldParams::draw(args);
+            return TransformInteractHelperOldParams::drawOverlay(d, args);
         }
-        glMatrixMode(GL_MODELVIEW);
-        glPushMatrix();
-        glTranslated(shift.x, shift.y, 0.);
-        bool ret = TransformInteractHelperOldParams::draw(args);
-        glPopMatrix();
+        d.glMatrixMode(GL_MODELVIEW);
+        d.glPushMatrix();
+        d.glTranslated(shift.x, shift.y, 0.);
+        bool ret = TransformInteractHelperOldParams::drawOverlay(d, args);
+        d.glPopMatrix();
 
         return ret;
     }
+
+public:
 
     virtual bool penDown(const OFX::PenArgs &args) OVERRIDE
     {
@@ -2269,8 +2277,9 @@ private:
 
 typedef OverlayInteractFromHelper<TextTransformInteractHelper> TextTransformInteract;
 
-class TextTransformOverlayDescriptor
-    : public DefaultEffectOverlayDescriptor<TextTransformOverlayDescriptor, TextTransformInteract>
+// V2 descriptor: the overlay draws with the DrawSuite when registered as V2, else with OpenGL
+class TextTransformOverlayDescriptorV2
+    : public DefaultEffectOverlayDescriptorV2<TextTransformOverlayDescriptorV2, TextTransformInteract>
 {
 };
 
@@ -2303,11 +2312,13 @@ TextFXPluginFactory<majorVersion>::describe(OFX::ImageEffectDescriptor &desc)
     desc.setRenderThreadSafety(kRenderThreadSafety);
 
     Transform3x3Describe(desc, true);
+    // V2 (OFX 1.5 DrawSuite) on hosts with the DrawSuite, else V1 (OpenGL), as before. The
+    // overlay doesn't change what TextOFX 6 renders, so it is converted too.
     if (majorVersion >= 7) {
-        desc.setOverlayInteractDescriptor(new TextTransformOverlayDescriptor);
+        ofxsSetOverlayInteractDescriptorV2(desc, new TextTransformOverlayDescriptorV2);
     } else {
         // as 6.14: no relative position
-        desc.setOverlayInteractDescriptor(new TransformOverlayDescriptorOldParams);
+        ofxsSetOverlayInteractDescriptorV2(desc, new TransformOverlayDescriptorOldParamsV2);
     }
 }
 
