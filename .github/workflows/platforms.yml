@@ -90,8 +90,9 @@ jobs:
           cmake -S . -B build-debug -DCMAKE_BUILD_TYPE=Debug -DOFX_CXX_STANDARD="${CXXSTD#c++}"
           cmake --build build-debug --parallel 4
       - name: Load and render tests (ctest, hostDemo)
+        # -V: print every test's output (the per-plug-in load and render results), not only on failure
         if: inputs.build-system == 'cmake'
-        run: ctest --test-dir build --output-on-failure
+        run: ctest --test-dir build -V --output-on-failure
       - name: Build (release, Make)
         if: inputs.build-system == 'make'
         run: make -j4 CONFIG=release CXX="g++ -std=$CXXSTD"
@@ -153,10 +154,11 @@ jobs:
           cmake -S . -B build-debug -G Ninja -DCMAKE_BUILD_TYPE=Debug -DOFX_CXX_STANDARD="${CXXSTD#c++}" -DIM=7
           cmake --build build-debug --parallel 4
       - name: Load and render tests (ctest, hostDemo)
+        # -V: print every test's output (the per-plug-in load and render results), not only on failure
         if: inputs.build-system == 'cmake'
         run: |
           set -eo pipefail
-          ctest --test-dir build --output-on-failure
+          ctest --test-dir build -V --output-on-failure
       - name: Build (release, Make)
         if: inputs.build-system == 'make'
         run: |
@@ -268,10 +270,11 @@ jobs:
           cmake -S . -B build-debug -DCMAKE_BUILD_TYPE=Debug -DOFX_CXX_STANDARD="${CXXSTD#c++}"
           cmake --build build-debug --parallel 4
       - name: Load and render tests (ctest, hostDemo)
+        # -V: print every test's output (the per-plug-in load and render results), not only on failure
         if: inputs.build-system == 'cmake'
         run: |
           export PATH=/opt/local/bin:/opt/local/sbin:$PATH
-          ctest --test-dir build --output-on-failure
+          ctest --test-dir build -V --output-on-failure
       - name: Build (release, Make)
         if: inputs.build-system == 'make'
         run: |
