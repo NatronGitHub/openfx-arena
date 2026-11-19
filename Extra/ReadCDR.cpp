@@ -142,7 +142,7 @@ ReadCDRPlugin::decode(const std::string& filename,
     cairo_t *cr;
     cairo_status_t status;
     double imageWidth, imageHeight, scaleWidth, scaleHeight;
-    int dpi, width, height, renderWidth, renderHeight;
+    int dpi, width, height;
     _dpi->getValueAtTime(time, dpi);
 
     handle = rsvg_handle_new_from_data((guint8 *)stream.str().c_str(), stream.str().size(), &error);
@@ -157,8 +157,6 @@ ReadCDRPlugin::decode(const std::string& filename,
 
     imageWidth = dimension.width;
     imageHeight = dimension.height;
-    renderWidth= renderWindow.x2 - renderWindow.x1;
-    renderHeight= renderWindow.y2 - renderWindow.y1;
 
     if (dpi != kParamDpiDefault) {
         width = imageWidth * dpi / kParamDpiDefault;
@@ -169,14 +167,20 @@ ReadCDRPlugin::decode(const std::string& filename,
         height = imageHeight;
     }
 
-    if (width != renderWidth || height != renderHeight) {
-        setPersistentMessage(OFX::Message::eMessageError, "", "Image don't match RenderWindow");
-        OFX::throwSuiteStatusException(kOfxStatErrFormat);
-    }
+    // The whole drawing is rendered, at (0,0,width,height) as in getFrameBounds(), and only the
+    // part of renderWindow that it covers is copied: a host may ask for a render window smaller
+    // than the image, even without tiles (#105). This used to fail unless renderWindow was the
+    // drawing.
+    OfxRectI image;
+    image.x1 = 0;
+    image.y1 = 0;
+    image.x2 = width;
+    image.y2 = height;
 
     // An empty canvas (a zero width or height) gave 0 / 0 = NaN scales below, which only
     // cairo's check of the matrix turned into the "Render failed" error: fail here instead.
-    if (imageWidth <= 0. || imageHeight <= 0.) {
+    // (width or height 0 used to fail as "Image don't match RenderWindow")
+    if (imageWidth <= 0. || imageHeight <= 0. || width <= 0 || height <= 0) {
         g_object_unref(handle);
         setPersistentMessage(OFX::Message::eMessageError, "", "Render failed");
         OFX::throwSuiteStatusException(kOfxStatErrFormat);
@@ -209,12 +213,16 @@ ReadCDRPlugin::decode(const std::string& filename,
         }
     }
 
-    // pixels is packed, bottom-up, and covers renderWindow. pixelData has the given
-    // bounds and rowBytes, which may differ from renderWindow, be padded, or be negative.
-    int offset = 0;
-    for (int y = 0; y < height; y++) {
-        float* dst = PackedImage::pixelAddress(pixelData, bounds, rowBytes, pixelComponentCount, renderWindow.x1, renderWindow.y1 + y);
-        for (int x = 0; x < width; x++) {
+    // pixels is packed, bottom-up, and covers image. Copy the part of renderWindow inside the
+    // image (clamped, so that a window larger than the image or outside of it doesn't read out of
+    // pixels), and clear the rest of the window. pixelData has the given bounds and rowBytes,
+    // which may differ from renderWindow, be padded, or be negative.
+    const OfxRectI copied = PackedImage::intersection(renderWindow, image);
+    PackedImage::clearOutside(pixelData, bounds, rowBytes, pixelComponentCount, renderWindow, copied);
+    for (int y = copied.y1; y < copied.y2; y++) {
+        size_t offset = ((size_t)y * width + copied.x1) * pixelComponentCount;
+        float* dst = PackedImage::pixelAddress(pixelData, bounds, rowBytes, pixelComponentCount, copied.x1, y);
+        for (int x = copied.x1; x < copied.x2; x++) {
             dst[0] = pixels[offset + 2] * (1.f / 255);
             dst[1] = pixels[offset + 1] * (1.f / 255);
             dst[2] = pixels[offset + 0] * (1.f / 255);
