@@ -175,8 +175,6 @@ ReadKritaPlugin::decode(const std::string& filename,
     int width = 0;
     int height = 0;
     unsigned char* buffer = NULL;
-    int renderWidth= renderWindow.x2 - renderWindow.x1;
-    int renderHeight= renderWindow.y2 - renderWindow.y1;
 
     int err = 0;
     // zip_open/zip_fopen return NULL on failure (missing or corrupt file)
@@ -209,11 +207,25 @@ ReadKritaPlugin::decode(const std::string& filename,
         zip_close(imageOpen);
     }
 
-    if (buffer==NULL || width!=renderWidth || height!=renderHeight) {
+    // The whole merged image is decoded, and only the part of renderWindow that it covers is copied:
+    // a host may ask for a render window smaller than the image, even without tiles (#105). This
+    // used to fail unless renderWindow was the image. It must still have the size of the frame
+    // bounds (getFrameBounds()), as it had to before: a merged image of another size is an error.
+    int frameWidth = 0;
+    int frameHeight = 0;
+    if (buffer != NULL) {
+        getImageSize(&frameWidth, &frameHeight, filename);
+    }
+    if (buffer==NULL || width<=0 || height<=0 || width!=frameWidth || height!=frameHeight) {
         free(buffer); // allocated by lodepng with malloc
         setPersistentMessage(OFX::Message::eMessageError, "", "Unable to read image");
         OFX::throwSuiteStatusException(kOfxStatErrFormat);
     }
+    OfxRectI image;
+    image.x1 = 0;
+    image.y1 = 0;
+    image.x2 = width;
+    image.y2 = height;
 
     unsigned char* pixels = new unsigned char[width * height * pixelComponentCount];
     for (int i = 0; i < width; ++i) {
@@ -223,12 +235,16 @@ ReadKritaPlugin::decode(const std::string& filename,
         }
     }
 
-    // pixels is packed, bottom-up, and covers renderWindow. pixelData has the given
-    // bounds and rowBytes, which may differ from renderWindow, be padded, or be negative.
-    int offset = 0;
-    for (int y = 0; y < height; y++) {
-        float* dst = PackedImage::pixelAddress(pixelData, bounds, rowBytes, pixelComponentCount, renderWindow.x1, renderWindow.y1 + y);
-        for (int x = 0; x < width; x++) {
+    // pixels is packed, bottom-up, and covers image. Copy the part of renderWindow inside the
+    // image (clamped, so that a window larger than the image or outside of it doesn't read out of
+    // pixels), and clear the rest of the window. pixelData has the given bounds and rowBytes,
+    // which may differ from renderWindow, be padded, or be negative.
+    const OfxRectI copied = PackedImage::intersection(renderWindow, image);
+    PackedImage::clearOutside(pixelData, bounds, rowBytes, pixelComponentCount, renderWindow, copied);
+    for (int y = copied.y1; y < copied.y2; y++) {
+        size_t offset = ((size_t)y * width + copied.x1) * pixelComponentCount;
+        float* dst = PackedImage::pixelAddress(pixelData, bounds, rowBytes, pixelComponentCount, copied.x1, y);
+        for (int x = copied.x1; x < copied.x2; x++) {
             dst[0] = pixels[offset + 0] * (1.f / 255);
             dst[1] = pixels[offset + 1] * (1.f / 255);
             dst[2] = pixels[offset + 2] * (1.f / 255);
