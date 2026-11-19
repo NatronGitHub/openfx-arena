@@ -210,6 +210,13 @@ false
     // instances could be rendering with it on other threads.
     static std::once_flag popplerDataOnce;
     std::call_once(popplerDataOnce, [this]() {
+        // popplerDataOnce lives in this binary, but globalParams lives in libpoppler: if the host
+        // unloads the binary and loads it again (HostSupport does after its scan, openfx #174)
+        // while libpoppler stays loaded, the flag is fresh but globalParams may already be set,
+        // by the previous load or by poppler-glib. Keep it: replacing it is the bug above.
+        if (globalParams) {
+            return;
+        }
         std::string popplerData = getResourcesPath();
         if (!popplerData.empty()) {
             struct stat sb;
