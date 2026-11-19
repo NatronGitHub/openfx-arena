@@ -653,7 +653,7 @@ ReadSVGPlugin::decodePlane(const std::string& filename, OfxTime time, int /*view
     cairo_surface_t *surface;
     cairo_t *cr;
     cairo_status_t status;
-    int dpi, width, height, renderWidth, renderHeight;
+    int dpi, width, height;
     _dpi->getValueAtTime(time, dpi);
 
     handle = rsvg_handle_new_from_file(filename.c_str(), &error);
@@ -667,17 +667,19 @@ ReadSVGPlugin::decodePlane(const std::string& filename, OfxTime time, int /*view
     getCanvasSize(handle, dpi, &canvas);
     width = canvas.width;
     height = canvas.height;
-    renderWidth= renderWindow.x2 - renderWindow.x1;
-    renderHeight= renderWindow.y2 - renderWindow.y1;
-
-    if (width != renderWidth || height != renderHeight) {
-        setPersistentMessage(OFX::Message::eMessageError, "", "Image don't match RenderWindow");
-        OFX::throwSuiteStatusException(kOfxStatErrFormat);
-    }
+    // The whole canvas is rendered, at (0,0,width,height) as in getFrameBounds(), and only the part
+    // of renderWindow that it covers is copied: a host may ask for a render window smaller than
+    // the image, even without tiles (#105). This used to fail unless renderWindow was the canvas.
+    OfxRectI image;
+    image.x1 = 0;
+    image.y1 = 0;
+    image.x2 = width;
+    image.y2 = height;
 
     // An empty canvas (a zero width or height) gave 0 / 0 = NaN scales below, which only
     // cairo's check of the matrix turned into the "Cairo Render failed" error: fail here instead.
-    if (canvas.imageWidth <= 0. || canvas.imageHeight <= 0.) {
+    // (width or height 0 used to fail as "Image don't match RenderWindow")
+    if (canvas.imageWidth <= 0. || canvas.imageHeight <= 0. || width <= 0 || height <= 0) {
         g_object_unref(handle);
         setPersistentMessage(OFX::Message::eMessageError, "", "Cairo Render failed");
         OFX::throwSuiteStatusException(kOfxStatErrFormat);
@@ -690,16 +692,18 @@ ReadSVGPlugin::decodePlane(const std::string& filename, OfxTime time, int /*view
     // sequence (`time`), which is constant for a still image
     Matrix3x3 transform;
     if (getTransformCanonical(getRenderTime(), &transform)) {
-        // The surface covers renderWindow, at full resolution (see above), top-down: from
-        // canonical coordinates, x is divided by the PAR, and y goes down from renderWindow.y2.
+        // The surface covers the whole image, at full resolution (see above), top-down: from
+        // canonical coordinates, x is divided by the PAR, and y goes down from image.y2.
+        // (not from renderWindow, which may be only a part of the image: the transformed canvas
+        // must not depend on it)
         // a PAR <= 0 (not a valid host value) would make 1 / par and the matrices below inf/NaN
         const double clipPar = _outputClip->getPixelAspectRatio();
         const double par = (clipPar > 0.) ? clipPar : 1.;
-        const Matrix3x3 canonicalToSurface(1. / par, 0., -renderWindow.x1,
-                                           0., -1., renderWindow.y2,
+        const Matrix3x3 canonicalToSurface(1. / par, 0., -image.x1,
+                                           0., -1., image.y2,
                                            0., 0., 1.);
-        const Matrix3x3 surfaceToCanonical(par, 0., renderWindow.x1 * par,
-                                           0., -1., renderWindow.y2,
+        const Matrix3x3 surfaceToCanonical(par, 0., image.x1 * par,
+                                           0., -1., image.y2,
                                            0., 0., 1.);
         const Matrix3x3 m = canonicalToSurface * transform * surfaceToCanonical;
         cairo_matrix_t cm;
@@ -752,12 +756,17 @@ ReadSVGPlugin::decodePlane(const std::string& filename, OfxTime time, int /*view
 
     unsigned char* cdata = cairo_image_surface_get_data(surface);
     const int cstride = cairo_image_surface_get_stride(surface);
-    // The surface covers renderWindow, top-down. pixelData has the given bounds and rowBytes,
-    // which may differ from renderWindow, be padded, or be negative.
-    for (int y = 0; y < height; ++y) {
-        size_t cdataOffset = (size_t)(height - 1 - y) * cstride;
-        float* dst = PackedImage::pixelAddress(pixelData, bounds, rowBytes, 4, renderWindow.x1, renderWindow.y1 + y);
-        for (int x = 0; x < width; ++x) {
+    // The surface covers image, top-down: the OFX row y is the surface row height - 1 - y.
+    // Copy the part of renderWindow inside the image (clamped, so that a window larger than the
+    // image or outside of it doesn't read out of the surface), and clear the rest of the window.
+    // pixelData has the given bounds and rowBytes, which may differ from renderWindow, be padded,
+    // or be negative.
+    const OfxRectI copied = PackedImage::intersection(renderWindow, image);
+    PackedImage::clearOutside(pixelData, bounds, rowBytes, 4, renderWindow, copied);
+    for (int y = copied.y1; y < copied.y2; ++y) {
+        size_t cdataOffset = (size_t)(height - 1 - y) * cstride + (size_t)copied.x1 * 4;
+        float* dst = PackedImage::pixelAddress(pixelData, bounds, rowBytes, 4, copied.x1, y);
+        for (int x = copied.x1; x < copied.x2; ++x) {
 #if 0
             // check on premulttest.svg that the raw data is premultiplied
             // See also TestImageSVGPremult in Natron-Tests github repository.
