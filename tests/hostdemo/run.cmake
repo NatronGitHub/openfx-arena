@@ -3,11 +3,19 @@
 # crash, on a missing output frame, and on a plug-in that the list doesn't mention.
 #
 #   cmake -DHOSTDEMO=<hostDemo> -DVERIFY=<verify_plugin_loads> -DBINARY=<bundle>/Contents/<arch>/<name>.ofx
-#         -DLIST=<list.txt> -DSAMPLES=<dir> -DWORK=<dir> [-DCACHE=<dir>] [-DOFX14=ON] -P run.cmake
+#         -DLIST=<list.txt> -DSAMPLES=<dir> -DWORK=<dir> [-DCACHE=<dir>] [-DOFX14=ON]
+#         [-DKEEP_LOADED=ON] -P run.cmake
 #
 # OFX14=ON runs hostDemo with --ofx14, as an OFX 1.4 host (only the OFX 1.4 host properties
 # and suites, no OfxSetHost, no StrChoice or Bytes params, one view), to check that every
 # plug-in also works in a host that doesn't implement OFX 1.5 or the extensions.
+#
+# Each plug-in is rendered by its own hostDemo process, without the plug-in cache. By default,
+# hostDemo's scan sends every plug-in of the binary kOfxActionLoad, kOfxActionDescribe and
+# kOfxActionUnload, then unloads the binary, and the first use loads it again (OfxSetHost, Load,
+# Describe, then the instance): every run checks that the plug-ins survive two load cycles of the
+# binary in one process (openfx #174). KEEP_LOADED=ON sets OFX_HOSTDEMO_KEEP_LOADED=1 instead
+# (Host::keepPluginsLoadedAfterScan(), as Natron 2.6): one load cycle, the binary stays loaded.
 #
 # WORK is wiped at each run; CACHE (default: WORK-cache) is not: it holds the caches that
 # would otherwise go to the home directory, e.g. fontconfig's.
@@ -81,6 +89,13 @@ set(ENV{OFX_PLUGIN_PATH} "${_pluginpath}")
 set(ENV{OCIO} "${_ocio}")
 set(ENV{HOME} "${_nwork}")
 set(ENV{USERPROFILE} "${_nwork}")
+# the load mode, whatever the caller's environment says: the default (unload after the scan)
+# unless KEEP_LOADED
+if(KEEP_LOADED)
+  set(ENV{OFX_HOSTDEMO_KEEP_LOADED} 1)
+else()
+  unset(ENV{OFX_HOSTDEMO_KEEP_LOADED})
+endif()
 # ... but the caches in a directory that is kept, so that fontconfig doesn't rebuild its
 # cache at every run (XDG_CACHE_HOME; LOCALAPPDATA on Windows)
 native(_ncache "${CACHE}")
@@ -168,7 +183,12 @@ list(LENGTH _plugins _n)
 list(LENGTH _failed _nf)
 set(_mode "")
 if(OFX14)
-  set(_mode " (OFX 1.4 host)")
+  string(APPEND _mode " (OFX 1.4 host)")
+endif()
+if(KEEP_LOADED)
+  string(APPEND _mode " (kept loaded after the scan)")
+else()
+  string(APPEND _mode " (unloaded after the scan)")
 endif()
 message("${_n} plug-ins${_mode}: ${_ok} rendered, ${_skipped} skipped, ${_nf} failed (${_t} s)")
 if(_n EQUAL 0 OR _failed)

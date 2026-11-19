@@ -553,6 +553,15 @@ endif()
                 -DSAMPLES=${_samples} -DWORK=${CMAKE_CURRENT_BINARY_DIR}/hostdemo-Arena-ofx14
                 -DCACHE=${CMAKE_CURRENT_BINARY_DIR}/hostdemo-cache -DOFX14=ON
                 -P "${CMAKE_CURRENT_SOURCE_DIR}/tests/hostdemo/run.cmake")
+            # render_Arena runs hostDemo in its default mode, which unloads the binary after the
+            # scan and loads it again at the first use (two load cycles per run, openfx #174);
+            # this pass keeps it loaded (OFX_HOSTDEMO_KEEP_LOADED=1), as Natron 2.6 will
+            add_test(NAME render_Arena_keep_loaded COMMAND "${CMAKE_COMMAND}"
+                -DHOSTDEMO=$<TARGET_FILE:hostDemo> -DVERIFY=$<TARGET_FILE:verify_plugin_loads>
+                -DBINARY=$<TARGET_FILE:Arena> -DLIST=${CMAKE_CURRENT_SOURCE_DIR}/tests/hostdemo/arena.txt
+                -DSAMPLES=${_samples} -DWORK=${CMAKE_CURRENT_BINARY_DIR}/hostdemo-Arena-keep-loaded
+                -DCACHE=${CMAKE_CURRENT_BINARY_DIR}/hostdemo-cache -DKEEP_LOADED=ON
+                -P "${CMAKE_CURRENT_SOURCE_DIR}/tests/hostdemo/run.cmake")
         endif()
 
         # ReadSVG's output size at several DPIs, in physical and user units, for both major
