@@ -160,7 +160,7 @@ public:
     virtual void restoreStateFromParams() OVERRIDE FINAL;
 private:
     virtual bool isVideoStream(const std::string& /*filename*/) OVERRIDE FINAL { return false; }
-    virtual void decode(const std::string& filename, OfxTime time, int view, bool isPlayback, const OfxRectI& renderWindow, const OfxPointD& renderScale, float *pixelData, const OfxRectI& bounds, OFX::PixelComponentEnum pixelComponents, int pixelComponentCount, int rowBytes) OVERRIDE FINAL
+    virtual void decode(const std::string& filename, OfxTime time, int view, const OfxRectI& renderWindow, const OfxPointD& renderScale, float *pixelData, const OfxRectI& bounds, OFX::PixelComponentEnum pixelComponents, int pixelComponentCount, int rowBytes) OVERRIDE FINAL
     {
         std::string rawComps;
         switch (pixelComponents) {
@@ -177,9 +177,9 @@ private:
                 OFX::throwSuiteStatusException(kOfxStatFailed);
                 return;
         }
-        decodePlane(filename, time, view, isPlayback, renderWindow, renderScale, pixelData, bounds, pixelComponents, pixelComponents, pixelComponentCount, rawComps, rowBytes);
+        decodePlane(filename, time, view, renderWindow, renderScale, pixelData, bounds, pixelComponents, pixelComponents, pixelComponentCount, rawComps, rowBytes);
     }
-    virtual void decodePlane(const std::string& filename, OfxTime time, int view, bool isPlayback, const OfxRectI& renderWindow, const OfxPointD& renderScale, float *pixelData, const OfxRectI& bounds, OFX::PixelComponentEnum pixelComponents, OFX::PixelComponentEnum remappedComponents, int pixelComponentCount, const std::string& rawComponents, int rowBytes) OVERRIDE FINAL;
+    virtual void decodePlane(const std::string& filename, OfxTime time, int view, const OfxRectI& renderWindow, const OfxPointD& renderScale, float *pixelData, const OfxRectI& bounds, OFX::PixelComponentEnum pixelComponents, OFX::PixelComponentEnum remappedComponents, int pixelComponentCount, const std::string& rawComponents, int rowBytes) OVERRIDE FINAL;
     virtual OfxStatus getClipComponents(const OFX::ClipComponentsArguments& args, OFX::ClipComponentsSetter& clipComponents) OVERRIDE FINAL;
     virtual bool getFrameBounds(const std::string& filename, OfxTime time, int view, OfxRectI *bounds, OfxRectI* format, double *par, std::string *error,int *tile_width, int *tile_height) OVERRIDE FINAL;
     virtual bool guessParamsFromFilename(const std::string& filename, std::string *colorspace, OFX::PreMultiplicationEnum *filePremult, OFX::PixelComponentEnum *components, int *componentCount) OVERRIDE FINAL;
@@ -315,7 +315,7 @@ ReadPDFPlugin::getClipComponents(const OFX::ClipComponentsArguments& args, OFX::
 }
 
 void
-ReadPDFPlugin::decodePlane(const std::string& filename, OfxTime time, int /*view*/, bool /*isPlayback*/, const OfxRectI& renderWindow, const OfxPointD& renderScale, float *pixelData, const OfxRectI& bounds,
+ReadPDFPlugin::decodePlane(const std::string& filename, OfxTime time, int /*view*/, const OfxRectI& renderWindow, const OfxPointD& renderScale, float *pixelData, const OfxRectI& bounds,
                                  OFX::PixelComponentEnum /*pixelComponents*/, OFX::PixelComponentEnum /*remappedComponents*/, int pixelComponentCount, const std::string& rawComponents, int rowBytes)
 {
     assert(renderScale.x == 1. && renderScale.y == 1.);
@@ -421,8 +421,11 @@ ReadPDFPlugin::decodePlane(const std::string& filename, OfxTime time, int /*view
     // image (clamped, so that a window larger than the image or outside of it doesn't read out of
     // pixels), and clear the rest of the window. pixelData has the given bounds and rowBytes,
     // which may differ from renderWindow, be padded, or be negative.
-    const OfxRectI copied = PackedImage::intersection(renderWindow, image);
-    PackedImage::clearOutside(pixelData, bounds, rowBytes, pixelComponentCount, renderWindow, copied);
+    // GenericReader's clipToFile() does both (copied is empty if the window is not in the
+    // image), and tells render() that only copied comes from the file: call it once per decode(),
+    // with decode()'s renderWindow (see GenericReader.h)
+    OfxRectI copied;
+    clipToFile(renderWindow, image, pixelData, bounds, pixelComponentCount, OFX::eBitDepthFloat, rowBytes, &copied);
     for (int y = copied.y1; y < copied.y2; y++) {
         size_t offset = ((size_t)y * width + copied.x1) * pixelComponentCount;
         float* dst = PackedImage::pixelAddress(pixelData, bounds, rowBytes, pixelComponentCount, copied.x1, y);

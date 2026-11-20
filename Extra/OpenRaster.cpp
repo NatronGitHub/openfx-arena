@@ -25,7 +25,6 @@
 #include <ofxNatron.h>
 #include "GenericReader.h"
 #include "GenericOCIO.h"
-#include "PackedImage.h"
 #include "ofxsMacros.h"
 #include "ofxsImageEffect.h"
 #include "ofxsMultiPlane.h"
@@ -54,6 +53,86 @@ namespace OCIO = OCIO_NAMESPACE;
 
 OFXS_NAMESPACE_ANONYMOUS_ENTER
 
+// The entry name of an open zip archive, or "" if it can't be read.
+static std::string
+readZipEntry(zip* archive, const char* name)
+{
+    std::string output;
+    struct zip_stat st;
+    zip_stat_init(&st);
+    if (!archive || zip_stat(archive, name, 0, &st) == -1 || st.size == 0) {
+        return output;
+    }
+    zip_file* file = zip_fopen(archive, name, 0);
+    if (!file) {
+        return output;
+    }
+    std::string data((size_t)st.size, '\0');
+    const zip_int64_t nread = zip_fread(file, &data[0], st.size);
+    zip_fclose(file);
+    if (nread == (zip_int64_t)st.size) {
+        output.swap(data);
+    }
+    return output;
+}
+
+// The canvas size (the image element's w and h) of a parsed copy of stack.xml, and the x,y offset
+// (from the top-left corner of the canvas) of the layer whose src is layerFile (0,0 if there is
+// none, e.g. mergedimage.png).
+static void
+getLayerGeometry(const std::string& xml, const std::string& layerFile, int* canvasWidth, int* canvasHeight, int* x, int* y)
+{
+    *canvasWidth = *canvasHeight = *x = *y = 0;
+    if (xml.empty()) {
+        return;
+    }
+    xmlDocPtr doc = xmlParseDoc((const xmlChar*)xml.c_str());
+    if (!doc) {
+        return;
+    }
+    xmlNode* root = xmlDocGetRootElement(doc);
+    bool layerFound = false;
+    // depth first, as getLayersInfo() (stacks may be nested)
+    std::vector<xmlNode*> todo;
+    if (root) {
+        todo.push_back(root);
+    }
+    while (!todo.empty()) {
+        xmlNode* node = todo.back();
+        todo.pop_back();
+        for (; node; node = node->next) {
+            if (node->type != XML_ELEMENT_NODE) {
+                continue;
+            }
+            if (node == root && !xmlStrcmp(node->name, (const xmlChar*)"image")) {
+                xmlChar* w = xmlGetProp(node, (const xmlChar*)"w");
+                xmlChar* h = xmlGetProp(node, (const xmlChar*)"h");
+                *canvasWidth = w ? std::atoi((const char*)w) : 0;
+                *canvasHeight = h ? std::atoi((const char*)h) : 0;
+                xmlFree(w);
+                xmlFree(h);
+            } else if (!layerFound && !xmlStrcmp(node->name, (const xmlChar*)"layer")) {
+                xmlChar* src = xmlGetProp(node, (const xmlChar*)"src");
+                if (src && layerFile == (const char*)src) {
+                    xmlChar* lx = xmlGetProp(node, (const xmlChar*)"x");
+                    xmlChar* ly = xmlGetProp(node, (const xmlChar*)"y");
+                    *x = lx ? std::atoi((const char*)lx) : 0;
+                    *y = ly ? std::atoi((const char*)ly) : 0;
+                    xmlFree(lx);
+                    xmlFree(ly);
+                    layerFound = true;
+                }
+                xmlFree(src);
+            }
+            if (node->children) {
+                todo.push_back(node->children);
+            }
+        }
+    }
+    xmlFreeDoc(doc);
+}
+
+
 static bool gHostIsNatron = false;
 
 class OpenRasterPlugin : public GenericReaderPlugin
@@ -64,7 +143,7 @@ public:
     virtual void restoreStateFromParams() OVERRIDE FINAL;
 private:
     virtual bool isVideoStream(const std::string& /*filename*/) OVERRIDE FINAL { return false; }
-    virtual void decode(const std::string& filename, OfxTime time, int view, bool isPlayback, const OfxRectI& renderWindow, const OfxPointD& renderScale, float *pixelData, const OfxRectI& bounds, OFX::PixelComponentEnum pixelComponents, int pixelComponentCount, int rowBytes) OVERRIDE FINAL
+    virtual void decode(const std::string& filename, OfxTime time, int view, const OfxRectI& renderWindow, const OfxPointD& renderScale, float *pixelData, const OfxRectI& bounds, OFX::PixelComponentEnum pixelComponents, int pixelComponentCount, int rowBytes) OVERRIDE FINAL
     {
         std::string rawComps;
         switch (pixelComponents) {
@@ -81,9 +160,9 @@ private:
                 OFX::throwSuiteStatusException(kOfxStatFailed);
                 return;
         }
-        decodePlane(filename, time, view, isPlayback, renderWindow, renderScale, pixelData, bounds, pixelComponents, pixelComponents, pixelComponentCount, rawComps, rowBytes);
+        decodePlane(filename, time, view, renderWindow, renderScale, pixelData, bounds, pixelComponents, pixelComponents, pixelComponentCount, rawComps, rowBytes);
     }
-    virtual void decodePlane(const std::string& filename, OfxTime time, int view, bool isPlayback, const OfxRectI& renderWindow, const OfxPointD& renderScale, float *pixelData, const OfxRectI& bounds, OFX::PixelComponentEnum pixelComponents, OFX::PixelComponentEnum remappedComponents, int pixelComponentCount, const std::string& rawComponents, int rowBytes) OVERRIDE FINAL;
+    virtual void decodePlane(const std::string& filename, OfxTime time, int view, const OfxRectI& renderWindow, const OfxPointD& renderScale, float *pixelData, const OfxRectI& bounds, OFX::PixelComponentEnum pixelComponents, OFX::PixelComponentEnum remappedComponents, int pixelComponentCount, const std::string& rawComponents, int rowBytes) OVERRIDE FINAL;
     virtual OfxStatus getClipComponents(const OFX::ClipComponentsArguments& args, OFX::ClipComponentsSetter& clipComponents) OVERRIDE FINAL;
     virtual bool getFrameBounds(const std::string& filename, OfxTime time, int view, OfxRectI *bounds, OfxRectI* format, double *par, std::string *error, int *tile_width, int *tile_height) OVERRIDE FINAL;
     virtual bool guessParamsFromFilename(const std::string& filename, std::string *colorspace, OFX::PreMultiplicationEnum *filePremult, OFX::PixelComponentEnum *components, int *componentCount) OVERRIDE FINAL;
@@ -304,8 +383,8 @@ OpenRasterPlugin::getClipComponents(const OFX::ClipComponentsArguments& args, OF
 }
 
 void
-OpenRasterPlugin::decodePlane(const std::string& filename, OfxTime /*time*/, int /*view*/, bool /*isPlayback*/, const OfxRectI& renderWindow, const OfxPointD& renderScale, float *pixelData, const OfxRectI& bounds,
-                                 OFX::PixelComponentEnum /*pixelComponents*/, OFX::PixelComponentEnum /*remappedComponents*/, int pixelComponentCount, const std::string& rawComponents, int rowBytes)
+OpenRasterPlugin::decodePlane(const std::string& filename, OfxTime /*time*/, int /*view*/, const OfxRectI& renderWindow, const OfxPointD& renderScale, float *pixelData, const OfxRectI& bounds,
+                                 OFX::PixelComponentEnum /*pixelComponents*/, OFX::PixelComponentEnum remappedComponents, int pixelComponentCount, const std::string& rawComponents, int rowBytes)
 {
     assert(renderScale.x == 1. && renderScale.y == 1.);
     unused(renderScale);
@@ -347,6 +426,12 @@ OpenRasterPlugin::decodePlane(const std::string& filename, OfxTime /*time*/, int
 
     int width = 0;
     int height = 0;
+    // the canvas size and the layer offset in stack.xml, read from the archive that the layer is
+    // decoded from
+    int canvasWidth = 0;
+    int canvasHeight = 0;
+    int offsetX = 0;
+    int offsetY = 0;
     unsigned char* buffer = NULL;
 
     int err = 0;
@@ -377,59 +462,53 @@ OpenRasterPlugin::decodePlane(const std::string& filename, OfxTime /*time*/, int
                 delete[] layerData;
             }
         }
+        if (buffer != NULL) {
+            getLayerGeometry(readZipEntry(layerOpen, "stack.xml"), imageLayers[layer][1], &canvasWidth, &canvasHeight, &offsetX, &offsetY);
+        }
         zip_close(layerOpen);
     }
 
-    // The whole layer is decoded, and only the part of renderWindow that it covers is copied:
-    // a host may ask for a render window smaller than the image, even without tiles (#105). This
-    // used to fail unless renderWindow was the image. It must still have the size of the frame
-    // bounds (getFrameBounds()), as it had to before: a layer of another size is an error.
-    int frameWidth = 0;
-    int frameHeight = 0;
-    if (buffer != NULL) {
-        getImageSize(&frameWidth, &frameHeight, filename);
-    }
-    if (buffer==NULL || width<=0 || height<=0 || width!=frameWidth || height!=frameHeight) {
+    // The whole layer is decoded, and only the part of renderWindow that it covers is copied: a
+    // host may ask for a render window smaller than the image, even without tiles (#105).
+    if (buffer==NULL || width<=0 || height<=0) {
         free(buffer); // allocated by lodepng with malloc
         setPersistentMessage(OFX::Message::eMessageError, "", "Unable to read image");
         OFX::throwSuiteStatusException(kOfxStatErrFormat);
     }
-    OfxRectI image;
-    image.x1 = 0;
-    image.y1 = 0;
-    image.x2 = width;
-    image.y2 = height;
-
-    unsigned char* pixels = new unsigned char[width * height * pixelComponentCount];
-    for (int i = 0; i < width; ++i) {
-        for (int j = 0; j < height; ++j) {
-            for (int k = 0; k < pixelComponentCount; ++k)
-                pixels[(i + j * width) * pixelComponentCount + k] = buffer[(i + (height - 1 - j) * width) * pixelComponentCount + k];
-        }
+    // The layer is placed in the canvas (the frame bounds, (0,0)-(W,H)) as stack.xml says, read
+    // from the same open archive (#108): no second zip_open, and the geometry is the one of the
+    // file that the PNG comes from. A layer PNG may be smaller than the canvas, at an x,y offset
+    // from the top-left corner of the canvas (GIMP and MyPaint crop the layers on save); the
+    // merged image has no offset. OpenRaster's y goes down from the top, OFX's goes up from the
+    // bottom, so the PNG covers (x, H-y-h)-(x+w, H-y), clamped to the canvas, and the rest is
+    // transparent black (such layers used to fail with "Unable to read image").
+    if (canvasHeight <= 0) {
+        canvasHeight = height; // no size in stack.xml: the PNG is the canvas
     }
+    OfxRectI image;
+    image.x1 = offsetX;
+    image.x2 = offsetX + width;
+    image.y2 = canvasHeight - offsetY;
+    image.y1 = image.y2 - height;
 
-    // pixels is packed, bottom-up, and covers image. Copy the part of renderWindow inside the
-    // image (clamped, so that a window larger than the image or outside of it doesn't read out of
-    // pixels), and clear the rest of the window. pixelData has the given bounds and rowBytes,
-    // which may differ from renderWindow, be padded, or be negative.
-    const OfxRectI copied = PackedImage::intersection(renderWindow, image);
-    PackedImage::clearOutside(pixelData, bounds, rowBytes, pixelComponentCount, renderWindow, copied);
-    for (int y = copied.y1; y < copied.y2; y++) {
-        size_t offset = ((size_t)y * width + copied.x1) * pixelComponentCount;
-        float* dst = PackedImage::pixelAddress(pixelData, bounds, rowBytes, pixelComponentCount, copied.x1, y);
-        for (int x = copied.x1; x < copied.x2; x++) {
-            dst[0] = pixels[offset + 0] * (1.f / 255);
-            dst[1] = pixels[offset + 1] * (1.f / 255);
-            dst[2] = pixels[offset + 2] * (1.f / 255);
-            dst[3] = pixels[offset + 3] * (1.f / 255);
-            dst += pixelComponentCount;
-            offset += pixelComponentCount;
-        }
+    // buffer is lodepng's RGBA, 8 bits per component, packed and top-down, and covers image. Copy
+    // the part of renderWindow inside the image (clamped, so that a window larger than the image
+    // or outside of it doesn't read out of buffer), and clear the rest of the window. pixelData
+    // has the given bounds and rowBytes, which may differ from renderWindow, be padded, or be
+    // negative.
+    // GenericReader's clipToFile() does both (copied is empty if the window is not in the
+    // image), and tells render() that only copied comes from the file: call it once per decode(),
+    // with decode()'s renderWindow (see GenericReader.h)
+    OfxRectI copied;
+    if (clipToFile(renderWindow, image, pixelData, bounds, pixelComponentCount, OFX::eBitDepthFloat, rowBytes, &copied)) {
+        // GenericReader's conversion reads the top-down buffer directly (no transposed copy), with the
+        // formula of the copy that it replaces (x * (1.f / 255)), so the output is the same
+        convertDepthAndComponents(buffer, copied, renderScale, image, OFX::ePixelComponentRGBA, OFX::eBitDepthUByte, width * 4,
+                                  pixelData, bounds, remappedComponents, rowBytes);
     }
 
     free(buffer); // allocated by lodepng with malloc; was leaked on every render
     buffer = NULL;
-    delete[] pixels;
 }
 
 bool OpenRasterPlugin::getFrameBounds(const std::string& filename,

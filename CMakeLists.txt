@@ -482,7 +482,7 @@ if(BUILD_TESTING)
     string(REPLACE "RTLD_LAZY" "RTLD_NOW" _binary "${_binary}")
     file(WRITE "${CMAKE_CURRENT_BINARY_DIR}/ofxhBinaryStrict.cpp" "${_binary}")
     add_executable(verify_plugin_loads
-        OpenFX-IO/.github/workflows/verify_plugin_loads.cpp
+        OpenFX-IO/tests/verify_plugin_loads.cpp
         "${CMAKE_CURRENT_BINARY_DIR}/ofxhBinaryStrict.cpp")
     if(WIN32)
         target_sources(verify_plugin_loads PRIVATE OpenFX/HostSupport/src/ofxhUtilities.cpp)
@@ -534,7 +534,7 @@ endif()
         target_link_libraries(make_samples PRIVATE PkgConfig::MAGICK PkgConfig::ZIP)
         ofx_target_openmp(make_samples)
         set(_sample_files sample.png sample.psd sample.bmp sample.ora sample.kra sample.pdf sample.svg sample_hald.png
-            sample_xy.png sample_xy.ora sample_xy.kra sample_xy.pdf)
+            sample_xy.png sample_xy.ora sample_xy.kra sample_xy.pdf sample_big.ora sample_big.kra sample_offset.ora)
         list(TRANSFORM _sample_files PREPEND "${_samples}/")
         add_custom_command(OUTPUT ${_sample_files}
             COMMAND "${CMAKE_COMMAND}" -E make_directory "${_samples}"
