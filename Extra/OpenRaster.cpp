@@ -53,6 +53,86 @@ namespace OCIO = OCIO_NAMESPACE;
 
 OFXS_NAMESPACE_ANONYMOUS_ENTER
 
+// The entry name of an open zip archive, or "" if it can't be read.
+static std::string
+readZipEntry(zip* archive, const char* name)
+{
+    std::string output;
+    struct zip_stat st;
+    zip_stat_init(&st);
+    if (!archive || zip_stat(archive, name, 0, &st) == -1 || st.size == 0) {
+        return output;
+    }
+    zip_file* file = zip_fopen(archive, name, 0);
+    if (!file) {
+        return output;
+    }
+    std::string data((size_t)st.size, '\0');
+    const zip_int64_t nread = zip_fread(file, &data[0], st.size);
+    zip_fclose(file);
+    if (nread == (zip_int64_t)st.size) {
+        output.swap(data);
+    }
+    return output;
+}
+
+// The canvas size (the image element's w and h) of a parsed copy of stack.xml, and the x,y offset
+// (from the top-left corner of the canvas) of the layer whose src is layerFile (0,0 if there is
+// none, e.g. mergedimage.png).
+static void
+getLayerGeometry(const std::string& xml, const std::string& layerFile, int* canvasWidth, int* canvasHeight, int* x, int* y)
+{
+    *canvasWidth = *canvasHeight = *x = *y = 0;
+    if (xml.empty()) {
+        return;
+    }
+    xmlDocPtr doc = xmlParseDoc((const xmlChar*)xml.c_str());
+    if (!doc) {
+        return;
+    }
+    xmlNode* root = xmlDocGetRootElement(doc);
+    bool layerFound = false;
+    // depth first, as getLayersInfo() (stacks may be nested)
+    std::vector<xmlNode*> todo;
+    if (root) {
+        todo.push_back(root);
+    }
+    while (!todo.empty()) {
+        xmlNode* node = todo.back();
+        todo.pop_back();
+        for (; node; node = node->next) {
+            if (node->type != XML_ELEMENT_NODE) {
+                continue;
+            }
+            if (node == root && !xmlStrcmp(node->name, (const xmlChar*)"image")) {
+                xmlChar* w = xmlGetProp(node, (const xmlChar*)"w");
+                xmlChar* h = xmlGetProp(node, (const xmlChar*)"h");
+                *canvasWidth = w ? std::atoi((const char*)w) : 0;
+                *canvasHeight = h ? std::atoi((const char*)h) : 0;
+                xmlFree(w);
+                xmlFree(h);
+            } else if (!layerFound && !xmlStrcmp(node->name, (const xmlChar*)"layer")) {
+                xmlChar* src = xmlGetProp(node, (const xmlChar*)"src");
+                if (src && layerFile == (const char*)src) {
+                    xmlChar* lx = xmlGetProp(node, (const xmlChar*)"x");
+                    xmlChar* ly = xmlGetProp(node, (const xmlChar*)"y");
+                    *x = lx ? std::atoi((const char*)lx) : 0;
+                    *y = ly ? std::atoi((const char*)ly) : 0;
+                    xmlFree(lx);
+                    xmlFree(ly);
+                    layerFound = true;
+                }
+                xmlFree(src);
+            }
+            if (node->children) {
+                todo.push_back(node->children);
+            }
+        }
+    }
+    xmlFreeDoc(doc);
+}
+
+
 static bool gHostIsNatron = false;
 
 class OpenRasterPlugin : public GenericReaderPlugin
@@ -346,6 +426,12 @@ OpenRasterPlugin::decodePlane(const std::string& filename, OfxTime /*time*/, int
 
     int width = 0;
     int height = 0;
+    // the canvas size and the layer offset in stack.xml, read from the archive that the layer is
+    // decoded from
+    int canvasWidth = 0;
+    int canvasHeight = 0;
+    int offsetX = 0;
+    int offsetY = 0;
     unsigned char* buffer = NULL;
 
     int err = 0;
@@ -376,25 +462,34 @@ OpenRasterPlugin::decodePlane(const std::string& filename, OfxTime /*time*/, int
                 delete[] layerData;
             }
         }
+        if (buffer != NULL) {
+            getLayerGeometry(readZipEntry(layerOpen, "stack.xml"), imageLayers[layer][1], &canvasWidth, &canvasHeight, &offsetX, &offsetY);
+        }
         zip_close(layerOpen);
     }
 
-    // The whole layer is decoded, and only the part of renderWindow that it covers is
-    // copied: a host may ask for a render window smaller than the image, even without tiles
-    // (#105). Its size is not checked against the one in stack.xml (getFrameBounds()): that
-    // opened the zip again at every render, and could read another file than the one decoded
-    // here if the file changed in between (#108). An image of another size is copied from the
-    // origin, clamped, and the rest of the render window is black.
+    // The whole layer is decoded, and only the part of renderWindow that it covers is copied: a
+    // host may ask for a render window smaller than the image, even without tiles (#105).
     if (buffer==NULL || width<=0 || height<=0) {
         free(buffer); // allocated by lodepng with malloc
         setPersistentMessage(OFX::Message::eMessageError, "", "Unable to read image");
         OFX::throwSuiteStatusException(kOfxStatErrFormat);
     }
+    // The layer is placed in the canvas (the frame bounds, (0,0)-(W,H)) as stack.xml says, read
+    // from the same open archive (#108): no second zip_open, and the geometry is the one of the
+    // file that the PNG comes from. A layer PNG may be smaller than the canvas, at an x,y offset
+    // from the top-left corner of the canvas (GIMP and MyPaint crop the layers on save); the
+    // merged image has no offset. OpenRaster's y goes down from the top, OFX's goes up from the
+    // bottom, so the PNG covers (x, H-y-h)-(x+w, H-y), clamped to the canvas, and the rest is
+    // transparent black (such layers used to fail with "Unable to read image").
+    if (canvasHeight <= 0) {
+        canvasHeight = height; // no size in stack.xml: the PNG is the canvas
+    }
     OfxRectI image;
-    image.x1 = 0;
-    image.y1 = 0;
-    image.x2 = width;
-    image.y2 = height;
+    image.x1 = offsetX;
+    image.x2 = offsetX + width;
+    image.y2 = canvasHeight - offsetY;
+    image.y1 = image.y2 - height;
 
     // buffer is lodepng's RGBA, 8 bits per component, packed and top-down, and covers image. Copy
     // the part of renderWindow inside the image (clamped, so that a window larger than the image

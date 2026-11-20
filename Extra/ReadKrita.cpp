@@ -51,6 +51,30 @@ namespace OCIO = OCIO_NAMESPACE;
 
 OFXS_NAMESPACE_ANONYMOUS_ENTER
 
+// The entry name of an open zip archive, or "" if it can't be read.
+static std::string
+readZipEntry(zip* archive, const char* name)
+{
+    std::string output;
+    struct zip_stat st;
+    zip_stat_init(&st);
+    if (!archive || zip_stat(archive, name, 0, &st) == -1 || st.size == 0) {
+        return output;
+    }
+    zip_file* file = zip_fopen(archive, name, 0);
+    if (!file) {
+        return output;
+    }
+    std::string data((size_t)st.size, '\0');
+    const zip_int64_t nread = zip_fread(file, &data[0], st.size);
+    zip_fclose(file);
+    if (nread == (zip_int64_t)st.size) {
+        output.swap(data);
+    }
+    return output;
+}
+
+
 class ReadKritaPlugin : public GenericReaderPlugin
 {
 public:
@@ -64,6 +88,8 @@ private:
     std::string extractXML(std::string kritaFile);
     void parseXML(xmlNode *node,int *width, int *height);
     void getImageSize(int *width, int *height, std::string filename);
+    // the image size in maindoc.xml, from a parsed copy of it
+    void getImageSizeFromXML(const std::string& xml, int *width, int *height);
 };
 
 ReadKritaPlugin::ReadKritaPlugin(OfxImageEffectHandle handle, const std::vector<std::string>& extensions)
@@ -134,7 +160,12 @@ ReadKritaPlugin::parseXML(xmlNode *node,int *width, int *height)
 void
 ReadKritaPlugin::getImageSize(int *width, int *height, std::string filename)
 {
-    std::string xml = extractXML(filename);
+    getImageSizeFromXML(extractXML(filename), width, height);
+}
+
+void
+ReadKritaPlugin::getImageSizeFromXML(const std::string& xml, int *width, int *height)
+{
     if (!xml.empty()) {
         int imgW = 0;
         int imgH = 0;
@@ -172,6 +203,9 @@ ReadKritaPlugin::decode(const std::string& filename,
 
     int width = 0;
     int height = 0;
+    // the image size in maindoc.xml, read from the archive that the merged image is decoded from
+    int docWidth = 0;
+    int docHeight = 0;
     unsigned char* buffer = NULL;
 
     int err = 0;
@@ -202,25 +236,33 @@ ReadKritaPlugin::decode(const std::string& filename,
                 delete[] imageData;
             }
         }
+        if (buffer != NULL) {
+            getImageSizeFromXML(readZipEntry(imageOpen, "maindoc.xml"), &docWidth, &docHeight);
+        }
         zip_close(imageOpen);
     }
 
     // The whole merged image is decoded, and only the part of renderWindow that it covers is
     // copied: a host may ask for a render window smaller than the image, even without tiles
-    // (#105). Its size is not checked against the one in maindoc.xml (getFrameBounds()): that
-    // opened the zip again at every render, and could read another file than the one decoded
-    // here if the file changed in between (#108). An image of another size is copied from the
-    // origin, clamped, and the rest of the render window is black.
+    // (#105).
     if (buffer==NULL || width<=0 || height<=0) {
         free(buffer); // allocated by lodepng with malloc
         setPersistentMessage(OFX::Message::eMessageError, "", "Unable to read image");
         OFX::throwSuiteStatusException(kOfxStatErrFormat);
     }
+    // The merged image is placed in the image of maindoc.xml (the frame bounds, (0,0)-(W,H)),
+    // read from the same open archive (#108): no second zip_open, and the size is the one of the
+    // file that the PNG comes from. Krita's y goes down from the top, OFX's goes up from the
+    // bottom, so the PNG is anchored at the top-left corner: a PNG of another size than the image
+    // is clamped, with transparent black around it (it used to fail with "Unable to read image").
+    if (docHeight <= 0) {
+        docHeight = height; // no size in maindoc.xml: the PNG is the image
+    }
     OfxRectI image;
     image.x1 = 0;
-    image.y1 = 0;
     image.x2 = width;
-    image.y2 = height;
+    image.y2 = docHeight;
+    image.y1 = docHeight - height;
 
     // buffer is lodepng's RGBA, 8 bits per component, packed and top-down, and covers image. Copy
     // the part of renderWindow inside the image (clamped, so that a window larger than the image
