@@ -2,7 +2,8 @@
 # (mt_unload.cpp): each run must succeed and exit with status 0, without crashing, even at exit.
 #
 #   cmake -DMT_UNLOAD=<mt_unload> -DPLUGIN_PATH=<dir with Arena.ofx.bundle> -DSAMPLES=<dir>
-#         -DOCIO=<config.ocio> -DWORK=<dir> [-DCACHE=<dir>] [-DTHREADS=4] [-DREPEAT=1] [-DREADPDF=ON] -P run.cmake
+#         -DOCIO=<config.ocio> -DWORK=<dir> [-DCACHE=<dir>] [-DTHREADS=4] [-DREPEAT=1] [-DREADPDF=ON]
+#         [-DMAGICK_OPENMP=ON] -P run.cmake
 #
 # openfx-gmic crashed after a successful render when the host unloaded its binary: worker threads
 # of a runtime that it links were still running, or were torn down by a static destructor of the
@@ -13,6 +14,8 @@
 # render, and unloaded before exit). OMP_NUM_THREADS is THREADS, so that the OpenMP runtime has
 # that many threads even on a machine with fewer CPUs. SAMPLES has the files of tests/hostdemo.
 # READPDF=OFF: the bundle has no ReadPDF (OFX_LICENSE=COMMERCIAL).
+# MAGICK_OPENMP=OFF: ImageMagick has no OpenMP (e.g. MacPorts' default variant), so the Magick
+# plug-ins start no thread: the unload is still tested, but not the thread check.
 cmake_minimum_required(VERSION 3.21...3.31) # as CMakeLists.txt
 foreach(_v MT_UNLOAD PLUGIN_PATH SAMPLES OCIO WORK)
   if(NOT DEFINED ${_v})
@@ -32,6 +35,9 @@ if(NOT DEFINED REPEAT)
 endif()
 if(NOT DEFINED READPDF)
   set(READPDF ON)
+endif()
+if(NOT DEFINED MAGICK_OPENMP)
+  set(MAGICK_OPENMP ON)
 endif()
 
 macro(native _out _path)
@@ -104,7 +110,11 @@ macro(check _id _major _ctx)
 endmacro()
 
 # the Magick plug-ins with OpenMP: MagickPluginHelper (Morphology, Swirl) and their own render()
-set(_min 2)
+if(MAGICK_OPENMP)
+  set(_min 2)
+else()
+  message("note: ImageMagick has no OpenMP: the Magick plug-ins start no OpenMP thread, so their thread check is skipped (only the unload is tested)")
+endif()
 check(net.fxarena.openfx.Charcoal 3 filter openmp=1)
 check(net.fxarena.openfx.Sketch 3 filter openmp=1)
 check(net.fxarena.openfx.Morphology 2 filter openmp=1)
