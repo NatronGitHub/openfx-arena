@@ -83,6 +83,10 @@ check(fr.inria.openfx.ReadKrita 2 sample_xy.kra filePremult=1)
 check(fr.inria.openfx.OpenRaster 2 sample.ora)
 check(fr.inria.openfx.OpenRaster 2 sample_xy.ora)
 check(fr.inria.openfx.OpenRaster 2 sample_xy.ora filePremult=1)
+# a PNG smaller than the image size in the XML: it is copied from the origin, black around it
+# (#108; it used to fail)
+check(fr.inria.openfx.ReadKrita 2 sample_big.kra)
+check(fr.inria.openfx.OpenRaster 2 sample_big.ora)
 # ReadPSD and ReadMisc already copied just the window
 check(net.fxarena.openfx.ReadPSD 2 sample.psd)
 check(fr.inria.openfx.ReadMisc 1 sample.bmp)
