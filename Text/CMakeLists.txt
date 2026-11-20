@@ -19,8 +19,11 @@
 ########################################################################
 # Project setup
 ########################################################################
-CMAKE_MINIMUM_REQUIRED(VERSION 3.16) # as Natron and openfx-io
+CMAKE_MINIMUM_REQUIRED(VERSION 3.21...3.31) # as the top-level CMakeLists.txt and openfx
 PROJECT(Text CXX)
+# No C++20 modules here: with CMP0155 (NEW since the 3.28 policies), Ninja would scan the
+# sources for module dependencies with -DCMAKE_CXX_STANDARD=20 and GCC 14+; keep the 3.16 behaviour.
+set(CMAKE_CXX_SCAN_FOR_MODULES OFF)
 
 if("${CMAKE_SOURCE_DIR}" STREQUAL "${CMAKE_BINARY_DIR}")
   message(FATAL_ERROR "Prevented in-tree built. This is bad practice.")

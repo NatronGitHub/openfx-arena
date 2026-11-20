@@ -19,7 +19,10 @@
 ########################################################################
 # Project setup
 ########################################################################
-CMAKE_MINIMUM_REQUIRED(VERSION 3.16) # as Natron and openfx-io; CMake 3.16 has OpenMP imported targets
+# CMake 3.21: openfx's cmake/OpenFX.cmake needs it (NatronGitHub/openfx#196). The policies up to
+# CMake 3.31 are NEW when this CMake knows them (later ones stay OLD until the upper bound is
+# raised after testing a newer CMake).
+CMAKE_MINIMUM_REQUIRED(VERSION 3.21...3.31)
 # macOS: the bundles target macOS 14.0 (VFX Reference Platform CY2027), as Natron's macOS
 # plug-ins; without it, clang targets the SDK's macOS. CMake reads the deployment target at the
 # first project(), so it is set here, unless CMAKE_OSX_DEPLOYMENT_TARGET, the
@@ -30,6 +33,9 @@ if(CMAKE_HOST_APPLE AND NOT CMAKE_TOOLCHAIN_FILE AND (NOT CMAKE_SYSTEM_NAME OR C
   set(CMAKE_OSX_DEPLOYMENT_TARGET 14.0 CACHE STRING "Minimum macOS version")
 endif()
 PROJECT(Arena CXX)
+# No C++20 modules here: with CMP0155 (NEW since the 3.28 policies), Ninja would scan the
+# C++20 sources (e.g. ReadPDF) for module dependencies with GCC 14+; keep the 3.16 behaviour.
+set(CMAKE_CXX_SCAN_FOR_MODULES OFF)
 
 if("${CMAKE_SOURCE_DIR}" STREQUAL "${CMAKE_BINARY_DIR}")
   message(FATAL_ERROR "Prevented in-tree built. This is bad practice.")
@@ -571,8 +577,8 @@ endif()
         endif()
 
         # ReadSVG's output size at several DPIs, in physical and user units, for both major
-        # versions (tests/readsvg); string(JSON) needs CMake 3.19
-        if(TARGET Arena AND NOT CMAKE_VERSION VERSION_LESS 3.19)
+        # versions (tests/readsvg)
+        if(TARGET Arena)
             set(_exact OFF)
             if(NOT SVG_VERSION VERSION_LESS 2.52)
                 set(_exact ON) # rsvg_handle_get_intrinsic_size_in_pixels()
