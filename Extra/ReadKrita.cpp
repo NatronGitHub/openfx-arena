@@ -24,7 +24,6 @@
 #include <libxml/parser.h>
 #include "GenericReader.h"
 #include "GenericOCIO.h"
-#include "PackedImage.h"
 #include "ofxsMacros.h"
 #include "ofxsImageEffect.h"
 #include "lodepng.h"
@@ -160,7 +159,7 @@ ReadKritaPlugin::decode(const std::string& filename,
                       const OfxPointD& renderScale,
                       float *pixelData,
                       const OfxRectI& bounds,
-                      OFX::PixelComponentEnum /*pixelComponents*/,
+                      OFX::PixelComponentEnum pixelComponents,
                       int pixelComponentCount,
                       int rowBytes)
 {
@@ -226,39 +225,24 @@ ReadKritaPlugin::decode(const std::string& filename,
     image.x2 = width;
     image.y2 = height;
 
-    unsigned char* pixels = new unsigned char[width * height * pixelComponentCount];
-    for (int i = 0; i < width; ++i) {
-        for (int j = 0; j < height; ++j) {
-            for (int k = 0; k < pixelComponentCount; ++k)
-                pixels[(i + j * width) * pixelComponentCount + k] = buffer[(i + (height - 1 - j) * width) * pixelComponentCount + k];
-        }
-    }
-
-    // pixels is packed, bottom-up, and covers image. Copy the part of renderWindow inside the
-    // image (clamped, so that a window larger than the image or outside of it doesn't read out of
-    // pixels), and clear the rest of the window. pixelData has the given bounds and rowBytes,
-    // which may differ from renderWindow, be padded, or be negative.
+    // buffer is lodepng's RGBA, 8 bits per component, packed and top-down, and covers image. Copy
+    // the part of renderWindow inside the image (clamped, so that a window larger than the image
+    // or outside of it doesn't read out of buffer), and clear the rest of the window. pixelData
+    // has the given bounds and rowBytes, which may differ from renderWindow, be padded, or be
+    // negative.
     // GenericReader's clipToFile() does both (copied is empty if the window is not in the
     // image), and tells render() that only copied comes from the file: call it once per decode(),
     // with decode()'s renderWindow (see GenericReader.h)
     OfxRectI copied;
-    clipToFile(renderWindow, image, pixelData, bounds, pixelComponentCount, OFX::eBitDepthFloat, rowBytes, &copied);
-    for (int y = copied.y1; y < copied.y2; y++) {
-        size_t offset = ((size_t)y * width + copied.x1) * pixelComponentCount;
-        float* dst = PackedImage::pixelAddress(pixelData, bounds, rowBytes, pixelComponentCount, copied.x1, y);
-        for (int x = copied.x1; x < copied.x2; x++) {
-            dst[0] = pixels[offset + 0] * (1.f / 255);
-            dst[1] = pixels[offset + 1] * (1.f / 255);
-            dst[2] = pixels[offset + 2] * (1.f / 255);
-            dst[3] = pixels[offset + 3] * (1.f / 255);
-            dst += pixelComponentCount;
-            offset += pixelComponentCount;
-        }
+    if (clipToFile(renderWindow, image, pixelData, bounds, pixelComponentCount, OFX::eBitDepthFloat, rowBytes, &copied)) {
+        // GenericReader's conversion reads the top-down buffer directly (no transposed copy), with the
+        // formula of the copy that it replaces (x * (1.f / 255)), so the output is the same
+        convertDepthAndComponents(buffer, copied, renderScale, image, OFX::ePixelComponentRGBA, OFX::eBitDepthUByte, width * 4,
+                                  pixelData, bounds, pixelComponents, rowBytes);
     }
 
     free(buffer); // allocated by lodepng with malloc; was leaked on every render
     buffer = NULL;
-    delete[] pixels;
 }
 
 bool ReadKritaPlugin::getFrameBounds(const std::string& filename,
