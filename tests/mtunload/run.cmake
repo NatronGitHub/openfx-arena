@@ -72,6 +72,10 @@ set(ENV{KMP_BLOCKTIME} infinite)  # libomp (macOS)
 
 set(_ok 0)
 set(_failed "")
+# the minimum number of threads in the process after the render (mt_unload --min-threads): 2 for
+# the plug-ins that leave OpenMP pool threads behind, so that the test fails instead of silently
+# testing nothing if ImageMagick has no OpenMP, or a parameter stops enabling it
+set(_min 1)
 # check(<identifier> <major> <context> [name=value...]); @SAMPLES@ in a value is SAMPLES
 macro(check _id _major _ctx)
   native(_ns "${SAMPLES}")
@@ -82,7 +86,7 @@ macro(check _id _major _ctx)
   endforeach()
   foreach(_i RANGE 1 ${REPEAT})
     execute_process(
-      COMMAND "${MT_UNLOAD}" --threads ${THREADS} ${_id} ${_major} ${_ctx} ${_args}
+      COMMAND "${MT_UNLOAD}" --threads ${THREADS} --min-threads ${_min} ${_id} ${_major} ${_ctx} ${_args}
       WORKING_DIRECTORY "${WORK}"
       RESULT_VARIABLE _r OUTPUT_VARIABLE _log ERROR_VARIABLE _log
       TIMEOUT 300)
@@ -100,6 +104,7 @@ macro(check _id _major _ctx)
 endmacro()
 
 # the Magick plug-ins with OpenMP: MagickPluginHelper (Morphology, Swirl) and their own render()
+set(_min 2)
 check(net.fxarena.openfx.Charcoal 3 filter openmp=1)
 check(net.fxarena.openfx.Sketch 3 filter openmp=1)
 check(net.fxarena.openfx.Morphology 2 filter openmp=1)
@@ -107,7 +112,10 @@ check(net.fxarena.openfx.Swirl 3 filter openmp=1)
 check(net.fxarena.openfx.Implode 3 filter openmp=1)
 check(net.fxarena.openfx.Arc 5 filter openmp=1)
 check(net.fxarena.openfx.Polar 5 filter openmp=1)
-# infinite RoD with the default size: give them a size (as tests/hostdemo/arena.txt)
+set(_min 1)
+# infinite RoD with the default size: give them a size (as tests/hostdemo/arena.txt). They have
+# openmp=1, but leave no pool thread behind (1 thread after the render on macOS), so no thread
+# check
 check(net.fxarena.openfx.Texture 3 general width=320 height=240 openmp=1)
 check(net.fxarena.openfx.Text 5 general width=320 height=240 openmp=1)
 # TextOFX (pango, cairo, fontconfig), and the readers that use glib-based libraries or

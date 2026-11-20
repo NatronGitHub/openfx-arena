@@ -1,7 +1,8 @@
 /*
  * mt_unload: render a plug-in with several threads, then unload its binary, and exit.
  *
- *   mt_unload [--threads N] [--frames N] [--wait ms] <identifier> <major> <filter|general> [name=value...]
+ *   mt_unload [--threads N] [--frames N] [--wait ms] [--min-threads N] <identifier> <major> <filter|general>
+ *             [name=value...]
  *
  * Checks that the plug-ins survive a host that unloads the binary after a multi-threaded render,
  * as openfx's hostDemo does at exit (PluginCache::clearPluginCache(), openfx #174). openfx-gmic
@@ -26,6 +27,9 @@
  * 500 ms: an idle OpenMP thread spins, or wakes up, in the runtime's code, which is gone if the
  * runtime was unloaded with the binary), prints which images are still loaded, and returns from
  * main(), so that the static destructors and atexit handlers run with the binary unloaded.
+ * --min-threads N fails the test if the process has fewer than N threads after the render (default:
+ * 1, no check): with 2, a plug-in that should leave OpenMP pool threads behind must do so, so that an
+ * ImageMagick without OpenMP, or a parameter change, doesn't silently make the test a no-op.
  * The default input is hostDemo's (PAL SD, byte). Exit status: 0 if everything succeeds; a crash
  * at any point, including at exit, is a failure of the test.
  */
@@ -509,6 +513,7 @@ main(int argc, char** argv)
 {
     int nFrames = 2;
     int waitMs = 500;
+    int minThreads = 1;
     int i = 1;
     for (; i < argc && std::strncmp(argv[i], "--", 2) == 0; ++i) {
         const std::string arg = argv[i];
@@ -519,6 +524,8 @@ main(int argc, char** argv)
             nFrames = v;
         } else if (arg == "--wait" && i + 1 < argc && parseInt(argv[i + 1], &v) && v >= 0) {
             waitMs = v;
+        } else if (arg == "--min-threads" && i + 1 < argc && parseInt(argv[i + 1], &v) && v >= 1) {
+            minThreads = v;
         } else {
             argc = 0; // usage
             break;
@@ -526,7 +533,7 @@ main(int argc, char** argv)
         ++i;
     }
     if (argc - i < 3) {
-        std::fprintf(stderr, "Usage: %s [--threads N] [--frames N] [--wait ms] <identifier> <major> <filter|general> [name=value...]\n", argv[0]);
+        std::fprintf(stderr, "Usage: %s [--threads N] [--frames N] [--wait ms] [--min-threads N] <identifier> <major> <filter|general> [name=value...]\n", argv[0]);
         return 2;
     }
     const std::string pluginId = argv[i];
@@ -591,6 +598,12 @@ main(int argc, char** argv)
             }
         }
         threadsAfterRender = threadCount();
+        if (threadsAfterRender < minThreads) {
+            std::fprintf(stderr, "Error: %d thread(s) in the process after the render, expected at least %d: "
+                         "the render didn't leave the threads that this test is about (no OpenMP?)\n",
+                         threadsAfterRender, minThreads);
+            ret = 1;
+        }
         // unload every binary, as hostDemo's exit does (the plug-ins get kOfxActionUnload)
         OFX::Host::PluginCache::clearPluginCache();
     }
