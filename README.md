@@ -112,7 +112,7 @@ sudo cp -a */*-release/*.ofx.bundle /usr/OFX/Plugins/
 
 ### CMake
 
-This builds the same *Arena.ofx* bundle as ``make -C Bundle`` (the plug-ins of the official Natron bundle), with CMake 3.16 or later, out of tree. It is assembled in ``build/Plugins``, and installed into ``PLUGIN_INSTALLDIR``: ``OFX/Plugins`` by default, e.g. ``/usr/OFX/Plugins/Arena.ofx.bundle`` with the prefix ``/usr``. A relative ``-DPLUGIN_INSTALLDIR`` is relative to ``CMAKE_INSTALL_PREFIX``; ``-DPLUGIN_INSTALLDIR=.`` gives the previous layout, with the bundle directly in ``CMAKE_INSTALL_PREFIX`` (e.g. ``-DCMAKE_INSTALL_PREFIX=/usr/OFX/Plugins``).
+This builds the same *Arena.ofx* bundle as ``make -C Bundle`` (the plug-ins of the official Natron bundle), with CMake 3.21 or later, out of tree. It is assembled in ``build/Plugins``, and installed into ``PLUGIN_INSTALLDIR``: ``OFX/Plugins`` by default, e.g. ``/usr/OFX/Plugins/Arena.ofx.bundle`` with the prefix ``/usr``. A relative ``-DPLUGIN_INSTALLDIR`` is relative to ``CMAKE_INSTALL_PREFIX``; ``-DPLUGIN_INSTALLDIR=.`` gives the previous layout, with the bundle directly in ``CMAKE_INSTALL_PREFIX`` (e.g. ``-DCMAKE_INSTALL_PREFIX=/usr/OFX/Plugins``).
 
 ```
 cmake -S . -B build -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_PREFIX=/usr

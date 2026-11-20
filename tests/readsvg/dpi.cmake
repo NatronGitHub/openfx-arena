@@ -10,7 +10,7 @@
 # librsvg, ReadSVG 4 takes the size in physical units from librsvg at the DPI, in whole pixels: it
 # is allowed to be 1 pixel off, for librsvg's own rounding, at any DPI (multiplying the size
 # rounded at 90 DPI by dpi / 90 would be up to dpi / 180 pixels off, e.g. 4 at 1200 DPI).
-cmake_minimum_required(VERSION 3.19) # string(JSON)
+cmake_minimum_required(VERSION 3.21...3.31) # as CMakeLists.txt (string(JSON) needs 3.19)
 foreach(_v HOSTDEMO PLUGIN_PATH SRC OCIO WORK)
   if(NOT DEFINED ${_v})
     message(FATAL_ERROR "dpi.cmake: ${_v} is not set")

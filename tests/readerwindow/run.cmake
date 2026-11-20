@@ -13,7 +13,7 @@
 # that both paths of GenericReader::render() are tested: decode() straight into the output image
 # (its bounds are the RoD, the render window is a part of it), and decode() into a temporary
 # image that covers just the render window (when the colours must be premultiplied).
-cmake_minimum_required(VERSION 3.16)
+cmake_minimum_required(VERSION 3.21...3.31) # as CMakeLists.txt
 foreach(_v READER_WINDOW PLUGIN_PATH SAMPLES OCIO WORK)
   if(NOT DEFINED ${_v})
     message(FATAL_ERROR "run.cmake: ${_v} is not set")

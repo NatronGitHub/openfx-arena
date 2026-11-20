@@ -53,6 +53,7 @@
  * Crash and robustness fixes: ``Texture`` renders correctly into a render window smaller than the RoD (#79); image bounds and row bytes are honoured on hosts with padded or negative rows (#56); ``ReadPSD`` and ``Tile`` crashes, and the OpenMP toggle, are fixed (#32); ``ReadKrita`` and ``OpenRaster`` no longer leak or crash on bad files (#33); ``RichText`` no longer sets ``FONTCONFIG_PATH`` for the whole process (#65); ``ReadPDF`` builds with recent poppler (#23); the OpenCL plug-ins build again, no longer need double-precision (fp64) GPU support, so they run on Apple Silicon and many integrated GPUs, and no longer crash with a saved device index past the devices present, or without any OpenCL device.
  * ``Twirl`` (OpenCL) 1.0 and 2.0: with a Scale (radius) of 0, the pixel at the Center is no longer NaN; the image is left untwirled, as the other pixels already were.
  * ``Bulge`` (OpenCL) 1.0 and 2.0: the pixel at the Center is no longer computed from NaN coordinates when Strength is 0 or negative (it showed the bottom-left pixel of the image, or whatever the device makes of a NaN); it keeps its own colour. Other pixels are unchanged.
+ * The CMake build needs CMake 3.21 or later (it needed 3.16), as openfx's ``cmake/OpenFX.cmake``. The Makefiles are unchanged.
 
 ## Natron-2.3.15
 

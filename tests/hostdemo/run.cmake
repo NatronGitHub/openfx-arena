@@ -24,7 +24,7 @@
 # "<identifier> <major> <context> [hostDemo arguments]", or "skip <identifier> <major> <reason>";
 # "#" starts a comment; the arguments are split as a shell would, then @SAMPLES@ is replaced
 # in each, so SAMPLES may contain spaces.
-cmake_minimum_required(VERSION 3.16)
+cmake_minimum_required(VERSION 3.21...3.31) # as CMakeLists.txt
 foreach(_v HOSTDEMO VERIFY BINARY LIST SAMPLES WORK)
   if(NOT DEFINED ${_v})
     message(FATAL_ERROR "run.cmake: ${_v} is not set")
