@@ -220,6 +220,13 @@ main(int argc, char** argv)
     int failures = 0;
     {
         OFX::Host::auto_ptr<OFX::Host::ImageEffect::Instance> instance(plugin->createInstance(kOfxImageEffectContextGeneral, NULL));
+        // send kOfxActionDestroyInstance while the instance is still whole, before it is deleted
+        // (the guard is destroyed before the auto_ptr), as hostDemo does (openfx#190): the
+        // HostSupport destructor only sends it as a safety net, once the overridden virtuals are gone
+        struct DestroyInstanceGuard {
+            OFX::Host::ImageEffect::Instance* instance;
+            ~DestroyInstanceGuard() { if (instance) { instance->destroyInstanceAction(); } }
+        } destroyInstanceGuard = { instance.get() };
         MyHost::MyEffectInstance* myInstance = dynamic_cast<MyHost::MyEffectInstance*>(instance.get());
         if (!myInstance) {
             std::fprintf(stderr, "Error: could not create an instance of %s\n", what.c_str());
