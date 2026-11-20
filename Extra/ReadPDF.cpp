@@ -333,7 +333,7 @@ ReadPDFPlugin::decodePlane(const std::string& filename, OfxTime time, int /*view
     PDFResources r; // released on every path, including the throws below
     cairo_status_t status;
     double dpi, imageWidth, imageHeight, scaleWidth, scaleHeight;
-    int width, height, renderWidth, renderHeight;
+    int width, height;
     _dpi->getValueAtTime(time, dpi);
 
     int layer = 0;
@@ -367,16 +367,22 @@ ReadPDFPlugin::decodePlane(const std::string& filename, OfxTime time, int /*view
 
     poppler_page_get_size(r.fpage, &imageWidth, &imageHeight);
 
-    renderWidth= renderWindow.x2 - renderWindow.x1;
-    renderHeight= renderWindow.y2 - renderWindow.y1;
-
     width = dpi * imageWidth / kPluginDPI;
     height = dpi * imageHeight / kPluginDPI;
 
-    if (width != renderWidth || height != renderHeight) {
-        setPersistentMessage(OFX::Message::eMessageError, "", "Image don't match RenderWindow");
+    // The whole page is rendered, at (0,0,width,height) as in getFrameBounds(), and only the part
+    // of renderWindow that it covers is copied: a host may ask for a render window smaller than
+    // the image, even without tiles (#105). This used to fail unless renderWindow was the page.
+    // (an empty page used to fail as "Image don't match RenderWindow")
+    if (width <= 0 || height <= 0) {
+        setPersistentMessage(OFX::Message::eMessageError, "", "Render failed");
         OFX::throwSuiteStatusException(kOfxStatErrFormat);
     }
+    OfxRectI image;
+    image.x1 = 0;
+    image.y1 = 0;
+    image.x2 = width;
+    image.y2 = height;
 
     r.surface = cairo_image_surface_create(CAIRO_FORMAT_ARGB32, width, height);
     r.cr = cairo_create(r.surface);
@@ -411,12 +417,16 @@ ReadPDFPlugin::decodePlane(const std::string& filename, OfxTime time, int /*view
         }
     }
 
-    // pixels is packed, bottom-up, and covers renderWindow. pixelData has the given
-    // bounds and rowBytes, which may differ from renderWindow, be padded, or be negative.
-    int offset = 0;
-    for (int y = 0; y < height; y++) {
-        float* dst = PackedImage::pixelAddress(pixelData, bounds, rowBytes, pixelComponentCount, renderWindow.x1, renderWindow.y1 + y);
-        for (int x = 0; x < width; x++) {
+    // pixels is packed, bottom-up, and covers image. Copy the part of renderWindow inside the
+    // image (clamped, so that a window larger than the image or outside of it doesn't read out of
+    // pixels), and clear the rest of the window. pixelData has the given bounds and rowBytes,
+    // which may differ from renderWindow, be padded, or be negative.
+    const OfxRectI copied = PackedImage::intersection(renderWindow, image);
+    PackedImage::clearOutside(pixelData, bounds, rowBytes, pixelComponentCount, renderWindow, copied);
+    for (int y = copied.y1; y < copied.y2; y++) {
+        size_t offset = ((size_t)y * width + copied.x1) * pixelComponentCount;
+        float* dst = PackedImage::pixelAddress(pixelData, bounds, rowBytes, pixelComponentCount, copied.x1, y);
+        for (int x = copied.x1; x < copied.x2; x++) {
             dst[0] = pixels[offset + 2] * (1.f / 255);
             dst[1] = pixels[offset + 1] * (1.f / 255);
             dst[2] = pixels[offset + 0] * (1.f / 255);

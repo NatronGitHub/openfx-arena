@@ -1,0 +1,93 @@
+# Render the readers with render windows smaller than the image (#105), with reader_window
+# (reader_window.cpp): each window must give the same pixels as the same region of a full render,
+# and the reader must write only the window.
+#
+#   cmake -DREADER_WINDOW=<reader_window> -DPLUGIN_PATH=<dir with Arena.ofx.bundle>
+#         -DSAMPLES=<dir> -DOCIO=<config.ocio> -DWORK=<dir> -P run.cmake
+#
+# SAMPLES has the files of tests/hostdemo (make_samples.cpp, sample.svg), including the sample_xy
+# files. There is no CorelDRAW sample (see tests/hostdemo/arena.txt), so ReadCDR is not tested
+# here.
+#
+# Each reader is rendered twice: with its default parameters, and with another filePremult, so
+# that both paths of GenericReader::render() are tested: decode() straight into the output image
+# (its bounds are the RoD, the render window is a part of it), and decode() into a temporary
+# image that covers just the render window (when the colours must be premultiplied).
+cmake_minimum_required(VERSION 3.16)
+foreach(_v READER_WINDOW PLUGIN_PATH SAMPLES OCIO WORK)
+  if(NOT DEFINED ${_v})
+    message(FATAL_ERROR "run.cmake: ${_v} is not set")
+  endif()
+  get_filename_component(${_v} "${${_v}}" ABSOLUTE)
+endforeach()
+
+macro(native _out _path)
+  if(CMAKE_HOST_WIN32)
+    file(TO_NATIVE_PATH "${_path}" ${_out})
+  else()
+    set(${_out} "${_path}")
+  endif()
+endmacro()
+
+file(REMOVE_RECURSE "${WORK}")
+file(MAKE_DIRECTORY "${WORK}")
+native(_n "${PLUGIN_PATH}")
+set(ENV{OFX_PLUGIN_PATH} "${_n}")
+native(_n "${OCIO}")
+set(ENV{OCIO} "${_n}")
+native(_n "${WORK}")
+set(ENV{HOME} "${_n}")
+set(ENV{USERPROFILE} "${_n}")
+set(ENV{XDG_CACHE_HOME} "${_n}")
+
+set(_ok 0)
+set(_failed "")
+# check(<identifier> <major> <sample> [name=value...])
+macro(check _id _major _sample)
+  native(_file "${SAMPLES}/${_sample}")
+  execute_process(
+    COMMAND "${READER_WINDOW}" ${_id} ${_major} "filename=${_file}" ${ARGN}
+    WORKING_DIRECTORY "${WORK}"
+    RESULT_VARIABLE _r OUTPUT_VARIABLE _log ERROR_VARIABLE _log
+    TIMEOUT 300)
+  string(REPLACE ";" " " _args "${ARGN}")
+  if("${_r}" STREQUAL "0")
+    message("ok   ${_id} v${_major} ${_sample} ${_args}")
+    math(EXPR _ok "${_ok} + 1")
+  else()
+    message("FAIL ${_id} v${_major} ${_sample} ${_args}: ${_r}\n${_log}")
+    list(APPEND _failed "${_id}v${_major}")
+  endif()
+endmacro()
+
+# filePremult: 1 premultiplied, 2 unpremultiplied (the readers are RGBA only, so the menu is
+# Opaque, PreMultiplied, UnPreMultiplied). The default of ReadSVG is premultiplied (decode()
+# into the output image), the others' is unpremultiplied (decode() into a temporary image).
+check(net.fxarena.openfx.ReadSVG 4 sample.svg)
+check(net.fxarena.openfx.ReadSVG 4 sample.svg filePremult=2)
+check(net.fxarena.openfx.ReadSVG 4 sample.svg dpi=150)
+# the transform: the whole transformed canvas is rendered, whatever the window
+check(net.fxarena.openfx.ReadSVG 4 sample.svg transformRotate=20)
+check(net.fxarena.openfx.ReadSVG 3 sample.svg)
+check(net.fxarena.openfx.ReadSVG 3 sample.svg filePremult=2)
+check(net.fxarena.openfx.ReadSVG 3 sample.svg dpi=150)
+# the sample_xy files differ along x and y (the other samples are a vertical gradient)
+check(fr.inria.openfx.ReadPDF 1 sample.pdf)
+check(fr.inria.openfx.ReadPDF 1 sample_xy.pdf)
+check(fr.inria.openfx.ReadPDF 1 sample_xy.pdf filePremult=1)
+check(fr.inria.openfx.ReadPDF 1 sample_xy.pdf dpi=100)
+check(fr.inria.openfx.ReadKrita 2 sample.kra)
+check(fr.inria.openfx.ReadKrita 2 sample_xy.kra)
+check(fr.inria.openfx.ReadKrita 2 sample_xy.kra filePremult=1)
+check(fr.inria.openfx.OpenRaster 2 sample.ora)
+check(fr.inria.openfx.OpenRaster 2 sample_xy.ora)
+check(fr.inria.openfx.OpenRaster 2 sample_xy.ora filePremult=1)
+# ReadPSD and ReadMisc already copied just the window
+check(net.fxarena.openfx.ReadPSD 2 sample.psd)
+check(fr.inria.openfx.ReadMisc 1 sample.bmp)
+
+list(LENGTH _failed _nf)
+message("${_ok} passed, ${_nf} failed")
+if(_failed)
+  message(FATAL_ERROR "reader window test failed: ${_failed}")
+endif()

@@ -68,6 +68,46 @@ pixelAddress(void* data, const OfxRectI& bounds, int rowBytes, int nComps, int x
            + (std::ptrdiff_t)(x - bounds.x1) * nComps;
 }
 
+/// The intersection of a and b; empty (x1 >= x2 or y1 >= y2) if they don't intersect.
+inline OfxRectI
+intersection(const OfxRectI& a, const OfxRectI& b)
+{
+    OfxRectI r;
+    r.x1 = a.x1 > b.x1 ? a.x1 : b.x1;
+    r.y1 = a.y1 > b.y1 ? a.y1 : b.y1;
+    r.x2 = a.x2 < b.x2 ? a.x2 : b.x2;
+    r.y2 = a.y2 < b.y2 ? a.y2 : b.y2;
+    return r;
+}
+
+/// Set the pixels of window that are inside bounds but outside inside to 0 (transparent black).
+/// For the readers that decode the whole image, then copy only the part of the render window
+/// that the image covers (inside): GenericReader doesn't initialize the render window, so the
+/// rest of it must be written too. Nothing is written if window is within inside.
+inline void
+clearOutside(void* data, const OfxRectI& bounds, int rowBytes, int nComps, const OfxRectI& window, const OfxRectI& inside)
+{
+    const OfxRectI w = intersection(window, bounds);
+    if (!data || w.x1 >= w.x2 || w.y1 >= w.y2) {
+        return;
+    }
+    const OfxRectI in = intersection(w, inside);
+    const bool empty = in.x1 >= in.x2 || in.y1 >= in.y2;
+    for (int y = w.y1; y < w.y2; ++y) {
+        float* row = pixelAddress(data, bounds, rowBytes, nComps, w.x1, y); // the pixel (w.x1, y)
+        if (empty || y < in.y1 || y >= in.y2) {
+            std::memset(row, 0, (std::size_t)(w.x2 - w.x1) * nComps * sizeof(float));
+            continue;
+        }
+        if (w.x1 < in.x1) {
+            std::memset(row, 0, (std::size_t)(in.x1 - w.x1) * nComps * sizeof(float));
+        }
+        if (in.x2 < w.x2) {
+            std::memset(row + (std::size_t)(in.x2 - w.x1) * nComps, 0, (std::size_t)(w.x2 - in.x2) * nComps * sizeof(float));
+        }
+    }
+}
+
 /// True if the image buffer is exactly a packed buffer for window.
 inline bool
 isPacked(const OfxRectI& bounds, int rowBytes, int nComps, const OfxRectI& window)
