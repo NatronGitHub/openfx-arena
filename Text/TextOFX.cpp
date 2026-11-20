@@ -60,7 +60,7 @@
 // 7.0: the Center is in canonical coordinates (the pixel aspect ratio and the RoD origin are
 // applied), so the text is where the overlay shows it, and the text is drawn in canonical
 // units, so that it isn't squeezed or sheared on a PAR-corrected viewer. The Canvas size is in
-// pixels. 6.x is kept, unchanged and deprecated, for old projects (issue #70).
+// pixels. 6.x is kept, unchanged and obsolete, for old projects (issue #70).
 #define kPluginVersionMajor 7
 #define kPluginVersionMinor 0
 // 6.17: the param set of 6.14 (Natron 2.5.0), with the bug fixes made since. The params added in
@@ -2292,7 +2292,7 @@ TextFXPluginFactory<majorVersion>::describe(OFX::ImageEffectDescriptor &desc)
 {
     if (majorVersion < kPluginVersionMajor) {
         // hidden from the hosts' menus (e.g. Natron), still loaded by old projects
-        desc.setIsDeprecated(true);
+        desc.setIsObsolete(true);
     }
     // basic labels
     desc.setLabel(kPluginName);

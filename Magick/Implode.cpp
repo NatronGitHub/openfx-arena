@@ -248,7 +248,7 @@ template<unsigned int majorVersion>
 void ImplodePluginFactory<majorVersion>::describe(OFX::ImageEffectDescriptor &desc)
 {
     if (majorVersion < kPluginVersionMajor) {
-        desc.setIsDeprecated(true);
+        desc.setIsObsolete(true);
     }
     // basic labels
     desc.setLabel(kPluginName);

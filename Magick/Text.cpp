@@ -691,7 +691,9 @@ void TextPluginFactory::describe(OFX::ImageEffectDescriptor &desc)
     // V2 (OFX 1.5 DrawSuite) on hosts with the DrawSuite, else V1 (OpenGL), as before
     ofxsSetOverlayInteractDescriptorV2(desc, new PositionOverlayDescriptorV2<PositionInteractParam>);
 
-    desc.setIsDeprecated(true);
+    // superseded by TextOFX, versions 6 and later of the same identifier: hidden from the
+    // hosts' menus, still loaded by old projects
+    desc.setIsObsolete(true);
 }
 
 /** @brief The describe in context function, passed a plugin descriptor and a context */

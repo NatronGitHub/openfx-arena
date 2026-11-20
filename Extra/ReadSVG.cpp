@@ -49,7 +49,7 @@
 // history:
 // 3.3 the cairo buffer given by rsvg is actually premultiplied (Natron 2.5.0)
 // 3.4 transform (translate, rotate, scale, skew), with an overlay (unreleased, now 4.0 only)
-// 3.5 deprecated: 3.3 (no transform, no overlay, the DPI applied twice to physical units) with the
+// 3.5 obsolete: 3.3 (no transform, no overlay, the DPI applied twice to physical units) with the
 //     bug fixes made since: bounds and row bytes, no assert at render scales below 1, the NaN
 //     guards and the empty canvas error. 3.5 rather than 3.4, which had the transform.
 // 4.0 the DPI is applied once to documents in physical units (mm, in, pt...), see getCanvasSize();
@@ -981,7 +981,7 @@ ReadSVGPluginFactory<majorVersion>::describe(OFX::ImageEffectDescriptor &desc)
     desc.setLabel(kPluginName);
     if (majorVersion < kPluginVersionMajor) {
         // hidden from the hosts' menus (e.g. Natron), still loaded by old projects
-        desc.setIsDeprecated(true);
+        desc.setIsObsolete(true);
         desc.setPluginDescription("Fast SVG (Scalable Vector Graphics) reader using librsvg and Cairo.");
         return;
     }

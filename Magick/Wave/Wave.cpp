@@ -95,7 +95,7 @@ template<unsigned int majorVersion>
 void WavePluginFactory<majorVersion>::describe(ImageEffectDescriptor &desc)
 {
     if (majorVersion < kPluginVersionMajor) {
-        desc.setIsDeprecated(true);
+        desc.setIsObsolete(true);
     }
     desc.setLabel(kPluginName);
     desc.setPluginGrouping(kPluginGrouping);

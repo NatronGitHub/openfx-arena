@@ -69,7 +69,7 @@ template<unsigned int majorVersion>
 void SwirlPluginFactory<majorVersion>::describe(ImageEffectDescriptor &desc)
 {
     if (majorVersion < kPluginVersionMajor) {
-        desc.setIsDeprecated(true);
+        desc.setIsObsolete(true);
     }
     desc.setLabel(kPluginName);
     desc.setPluginGrouping(kPluginGrouping);
