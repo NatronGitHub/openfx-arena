@@ -192,13 +192,23 @@ list(APPEND ARENA_LIBRARIES PkgConfig::OCIO)
 # its OpenMP runtime (-lomp, -lgomp) in the link, which a static ImageMagick needs:
 # ofx_target_openmp() puts libomp's directory on the link path (or see after
 # ofx_target_openmp(Arena) below).
+# ARENA_MAGICK_OPENMP: whether this ImageMagick was built with OpenMP (-fopenmp, or its
+# runtime, in its .pc), for the thread check of tests/mtunload (e.g. MacPorts' default
+# ImageMagick variant is built with --disable-openmp, its +natron variant with OpenMP)
+set(ARENA_MAGICK_OPENMP OFF)
 foreach(_prop INTERFACE_COMPILE_OPTIONS INTERFACE_LINK_LIBRARIES)
   get_target_property(_flags PkgConfig::MAGICK ${_prop})
   if(_flags)
+    foreach(_f IN LISTS _flags)
+      if(_f STREQUAL "-fopenmp" OR _f MATCHES "(^-l|/lib)(gomp|omp|iomp5)([.-]|$)")
+        set(ARENA_MAGICK_OPENMP ON)
+      endif()
+    endforeach()
     list(REMOVE_ITEM _flags -fopenmp)
     set_property(TARGET PkgConfig::MAGICK PROPERTY ${_prop} "${_flags}")
   endif()
 endforeach()
+message(STATUS "ImageMagick with OpenMP: ${ARENA_MAGICK_OPENMP}")
 if(MINGW)
   # as Makefile.master's MINGW=1 (and IM=7)
   set_property(TARGET PkgConfig::MAGICK APPEND PROPERTY INTERFACE_LINK_LIBRARIES gdi32 freetype expat z ws2_32)
@@ -606,6 +616,28 @@ endif()
                 -DSAMPLES=${_samples} -DOCIO=${CMAKE_CURRENT_SOURCE_DIR}/tests/hostdemo/config.ocio
                 -DWORK=${CMAKE_CURRENT_BINARY_DIR}/reader-window
                 -P "${CMAKE_CURRENT_SOURCE_DIR}/tests/readerwindow/run.cmake")
+
+            # a few plug-ins rendered with several threads (the OFX multi-thread suite and
+            # ImageMagick's OpenMP), then the binary unloaded before exit (tests/mtunload): no
+            # crash, even at exit. mt_unload is hostDemo's host with a real multi-thread suite,
+            # since hostDemo's runs everything on one thread
+            add_executable(mt_unload tests/mtunload/mt_unload.cpp
+                "${_hd}/hostDemoClipInstance.cpp" "${_hd}/hostDemoEffectInstance.cpp"
+                "${_hd}/hostDemoHostDescriptor.cpp" "${_hd}/hostDemoParamInstance.cpp")
+            target_include_directories(mt_unload PRIVATE "${_hd}")
+            find_package(Threads REQUIRED)
+            target_link_libraries(mt_unload PRIVATE OfxHost Threads::Threads ${CMAKE_DL_LIBS})
+            set(_readpdf OFF)
+            if(OFX_LICENSE STREQUAL "GPL")
+                set(_readpdf ON)
+            endif()
+            add_test(NAME render_Arena_mt_unload COMMAND "${CMAKE_COMMAND}"
+                -DMT_UNLOAD=$<TARGET_FILE:mt_unload> -DPLUGIN_PATH=${OFX_PLUGIN_BUILD_DIR} -DREADPDF=${_readpdf}
+                -DMAGICK_OPENMP=${ARENA_MAGICK_OPENMP}
+                -DSAMPLES=${_samples} -DOCIO=${CMAKE_CURRENT_SOURCE_DIR}/tests/hostdemo/config.ocio
+                -DWORK=${CMAKE_CURRENT_BINARY_DIR}/mt-unload
+                -DCACHE=${CMAKE_CURRENT_BINARY_DIR}/hostdemo-cache
+                -P "${CMAKE_CURRENT_SOURCE_DIR}/tests/mtunload/run.cmake")
         endif()
 
         # ReadPSD's layer menu (tests/readpsd, also "make -C tests check"): needs Python 3 with
