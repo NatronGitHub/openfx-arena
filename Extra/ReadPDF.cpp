@@ -421,8 +421,11 @@ ReadPDFPlugin::decodePlane(const std::string& filename, OfxTime time, int /*view
     // image (clamped, so that a window larger than the image or outside of it doesn't read out of
     // pixels), and clear the rest of the window. pixelData has the given bounds and rowBytes,
     // which may differ from renderWindow, be padded, or be negative.
-    const OfxRectI copied = PackedImage::intersection(renderWindow, image);
-    PackedImage::clearOutside(pixelData, bounds, rowBytes, pixelComponentCount, renderWindow, copied);
+    // GenericReader's clipToFile() does both (copied is empty if the window is not in the
+    // image), and tells render() that only copied comes from the file: call it once per decode(),
+    // with decode()'s renderWindow (see GenericReader.h)
+    OfxRectI copied;
+    clipToFile(renderWindow, image, pixelData, bounds, pixelComponentCount, OFX::eBitDepthFloat, rowBytes, &copied);
     for (int y = copied.y1; y < copied.y2; y++) {
         size_t offset = ((size_t)y * width + copied.x1) * pixelComponentCount;
         float* dst = PackedImage::pixelAddress(pixelData, bounds, rowBytes, pixelComponentCount, copied.x1, y);
