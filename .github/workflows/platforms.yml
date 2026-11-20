@@ -4,8 +4,9 @@ name: Platform builds
 # Xcode clang and MacPorts), called by ci.yml (per push/PR, C++17) and
 # extended.yml (nightly/on demand, C++20, plus a nightly macOS C++17 build and a
 # nightly Linux build with the Makefiles). They build with CMake (BUILD_TESTING: ctest
-# loads the bundle), or with the Makefiles (build-system: make), which Natron's
-# build-plugins.sh still uses.
+# loads the bundle), or with the Makefiles (build-system: make), which are the
+# manual fallback of Natron's build-plugins.sh (PLUGINS_BUILD_SYSTEM=make; its
+# default is CMake).
 
 on:
   workflow_call:
