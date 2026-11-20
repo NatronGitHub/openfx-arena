@@ -27,6 +27,7 @@
 
 #include "ofxsImageEffect.h"
 #include "ofxsMacros.h"
+#include "ofxsOverlayDraw.h"
 
 #define kParamTransformTranslate "transformTranslate"
 #define kParamTransformTranslateLabel "Translate"
@@ -164,6 +165,10 @@ public:
     virtual void loseFocus(const FocusArgs &args) OVERRIDE;
 
 private:
+    /// The drawing of draw(), once d.canDraw() is true: everything goes through d, so that
+    /// V1 draws use OpenGL only and V2 draws the DrawSuite only, with no shadow.
+    void drawOverlay(OFX::OverlayDraw &d, const OFX::DrawArgs &args);
+
     // NON-GENERIC
     OFX::Double2DParam* _translate;
     OFX::DoubleParam* _rotate;
@@ -173,12 +178,22 @@ private:
     OFX::BooleanParam* _invert;
     OFX::BooleanParam* _interactOpen;
     OFX::BooleanParam* _interactive;
+    OFX::OverlayDrawModeEnum _drawMode; // set by the descriptor that created the interact, see ofxsOverlayDraw.h
 };
 
 typedef OverlayInteractFromHelper<TransformInteractCustomHelper> TransformInteractCustom;
 
 class TransformOverlayDescriptor
     : public DefaultEffectOverlayDescriptor<TransformOverlayDescriptor, TransformInteractCustom>
+{
+};
+
+/// Draws with the DrawSuite when the host provides it; register with
+/// ofxsSetOverlayInteractDescriptorV2(desc, new TransformCustomOverlayDescriptorV2).
+/// Not named TransformOverlayDescriptorV2, which SupportExt's ofxsTransformInteract.h
+/// defines in the same namespace for another interact (ODR if both are linked together).
+class TransformCustomOverlayDescriptorV2
+    : public DefaultEffectOverlayDescriptorV2<TransformCustomOverlayDescriptorV2, TransformInteractCustom>
 {
 };
 
@@ -195,6 +210,13 @@ typedef OverlayInteractFromHelper<TransformInteractCustomHelperOldParams> Transf
 
 class TransformOverlayDescriptorOldParams
     : public DefaultEffectOverlayDescriptor<TransformOverlayDescriptorOldParams, TransformInteractCustomOldParams>
+{
+};
+
+/// Draws with the DrawSuite when the host provides it; register with
+/// ofxsSetOverlayInteractDescriptorV2(desc, new TransformCustomOverlayDescriptorOldParamsV2)
+class TransformCustomOverlayDescriptorOldParamsV2
+    : public DefaultEffectOverlayDescriptorV2<TransformCustomOverlayDescriptorOldParamsV2, TransformInteractCustomOldParams>
 {
 };
 } // namespace OFX
