@@ -3,8 +3,10 @@ name: Extended builds
 # Nightly, only if master had a commit in the last 25 hours, and on demand:
 # - the builds of ci.yml with C++20 (Natron Qt6 builds and RB-2.7);
 # - the per-PR (C++17) macOS build, which isn't required for merging;
-# - a Linux build with the Makefiles, which ci.yml no longer uses (CMake), but which
-#   Natron's build-plugins.sh still does: it keeps them from rotting.
+# - a Linux build with the Makefiles, which ci.yml no longer uses (CMake). Natron's
+#   build-plugins.sh builds Arena with CMake by default (PLUGINS_BUILD_SYSTEM=cmake);
+#   the Makefiles are its manual fallback (PLUGINS_BUILD_SYSTEM=make). This job tests
+#   that fallback and the Makefiles' -z defs link, not the default installer build.
 
 on:
   workflow_dispatch:
