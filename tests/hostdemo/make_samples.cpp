@@ -150,9 +150,11 @@ int main(int argc, char** argv)
         "<?xml version='1.0' encoding='UTF-8'?>\n<image version=\"0.0.3\" " + size.str() +
         "><stack><layer name=\"background\" src=\"data/layer0.png\" x=\"0\" y=\"0\" opacity=\"1.0\"/></stack></image>\n"));
     std::vector<std::pair<std::string, std::string> > oraXY = ora;
-    // the _big samples (tests/readerwindow, #108): the XML gives a larger image than the PNG, as
-    // in a file rewritten between getFrameBounds() and decode(); the PNG is copied from the
-    // origin, and the rest of the RoD is black
+    // the _big samples (tests/readerwindow, #108): the XML gives a larger image (80x60) than the
+    // PNG (sample_xy's 64x48); the PNG is anchored at the top-left corner of the image, and the
+    // rest of the RoD is black. sample_offset.ora: an 80x60 canvas with one layer, sample_xy's
+    // PNG, at x=10, y=5 from the top-left corner, and no merged image (so that the layer is
+    // read), as GIMP and MyPaint save cropped layers
     std::ostringstream bigSize;
     bigSize << "w=\"" << kWidth + 16 << "\" h=\"" << kHeight + 12 << "\"";
     std::vector<std::pair<std::string, std::string> > oraBig;
@@ -162,6 +164,12 @@ int main(int argc, char** argv)
         "><stack><layer name=\"background\" src=\"data/layer0.png\" x=\"0\" y=\"0\" opacity=\"1.0\"/></stack></image>\n"));
     oraBig.push_back(std::make_pair(std::string("data/layer0.png"), pngXY));
     oraBig.push_back(std::make_pair(std::string("mergedimage.png"), pngXY));
+    std::vector<std::pair<std::string, std::string> > oraOffset;
+    oraOffset.push_back(ora[0]);
+    oraOffset.push_back(std::make_pair(std::string("stack.xml"),
+        "<?xml version='1.0' encoding='UTF-8'?>\n<image version=\"0.0.3\" " + bigSize.str() +
+        "><stack><layer name=\"background\" src=\"data/layer0.png\" x=\"10\" y=\"5\" opacity=\"1.0\"/></stack></image>\n"));
+    oraOffset.push_back(std::make_pair(std::string("data/layer0.png"), pngXY));
     ora.push_back(std::make_pair(std::string("data/layer0.png"), png));
     ora.push_back(std::make_pair(std::string("mergedimage.png"), png));
     oraXY.push_back(std::make_pair(std::string("data/layer0.png"), pngXY));
@@ -198,7 +206,8 @@ int main(int argc, char** argv)
     }
     if (!writeZip(dir + "/sample.ora", ora) || !writeZip(dir + "/sample.kra", kra) || !writePDF(dir + "/sample.pdf", content.str()) ||
         !writeZip(dir + "/sample_xy.ora", oraXY) || !writeZip(dir + "/sample_xy.kra", kraXY) || !writePDF(dir + "/sample_xy.pdf", contentXY.str()) ||
-        !writeZip(dir + "/sample_big.ora", oraBig) || !writeZip(dir + "/sample_big.kra", kraBig)) {
+        !writeZip(dir + "/sample_big.ora", oraBig) || !writeZip(dir + "/sample_big.kra", kraBig) ||
+        !writeZip(dir + "/sample_offset.ora", oraOffset)) {
         std::cerr << "could not write the samples in " << dir << std::endl;
         return 1;
     }

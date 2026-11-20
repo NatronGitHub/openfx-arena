@@ -3,6 +3,7 @@
  * or entirely outside of it (#108).
  *
  *   reader_window <identifier> <major> [name=value...] [--scale s] [--window x1,y1,x2,y2]...
+ *                 [--placement file dx dy]
  *
  * A small OFX host built on openfx's HostSupport and hostDemo's host classes (hostDemo itself
  * can't do this: its --window renders the whole RoD for a plug-in without tiles, as the readers
@@ -28,6 +29,10 @@
  * The output image covers the RoD and the window (a host must give an output image that covers
  * the render window). --scale renders everything at that render scale (default: 1), e.g. 0.5 as
  * a 50% viewer or proxy mode would: the RoD and the windows are then in pixels at that scale.
+ * --placement checks where the image lands in the RoD (#108): after the windows, the filename
+ * parameter is set to file, which must give the same image as the reference shifted by (-dx,-dy)
+ * pixels: each pixel (x,y) of the reference must be the pixel (x-dx,y-dy) of file's full render,
+ * or transparent black (0) where that is outside of file's RoD. At scale 1 only.
  * The output depth is float. OFX_PLUGIN_PATH must contain the bundle (no standard paths, no
  * plug-in cache) and OCIO must be set, as for hostDemo. Exit status: 0 if every check passes.
  */
@@ -186,6 +191,59 @@ render(MyHost::MyEffectInstance* instance, MyHost::MyClipInstance* outputClip, c
     return image;
 }
 
+OfxStatus
+beginRender(OFX::Host::ImageEffect::Instance* instance, const OfxPointD& renderScale)
+{
+    return instance->beginRenderAction(0., 0., 1., false, renderScale, false, /*interactive=*/false,
+#ifdef OFX_SUPPORTS_OPENGLRENDER
+                                       /*openGLRender=*/false,
+#  ifdef OFX_EXTENSIONS_NATRON
+                                       /*contextData=*/NULL,
+#  endif
+#endif
+                                       /*draftRender=*/false
+#ifdef OFX_EXTENSIONS_NUKE
+                                       , 0 /* view*/
+#endif
+                                       );
+}
+
+void
+endRender(OFX::Host::ImageEffect::Instance* instance, const OfxPointD& renderScale)
+{
+    instance->endRenderAction(0., 0., 1., false, renderScale, false, /*interactive=*/false,
+#ifdef OFX_SUPPORTS_OPENGLRENDER
+                              /*openGLRender=*/false,
+#  ifdef OFX_EXTENSIONS_NATRON
+                              /*contextData=*/NULL,
+#  endif
+#endif
+                              /*draftRender=*/false
+#ifdef OFX_EXTENSIONS_NUKE
+                              , 0 /* view*/
+#endif
+                              );
+}
+
+// the RoD at t=0, in pixels at renderScale
+bool
+getRoD(OFX::Host::ImageEffect::Instance* instance, const OfxPointD& renderScale, OfxRectI* rod)
+{
+    OfxRectD rodD;
+    rodD.x1 = rodD.y1 = rodD.x2 = rodD.y2 = 0.;
+    const OfxStatus stat = instance->getRegionOfDefinitionAction(0., renderScale,
+#ifdef OFX_EXTENSIONS_NUKE
+                                                                 0,
+#endif
+                                                                 rodD);
+    if (stat != kOfxStatOK && stat != kOfxStatReplyDefault) {
+        std::fprintf(stderr, "Error: get region of definition action failed (status %d)\n", (int)stat);
+        return false;
+    }
+    *rod = MyHost::canonicalToPixelEnclosing(rodD, renderScale, instance->getProjectPixelAspectRatio());
+    return true;
+}
+
 bool
 isSentinel(const unsigned char* p)
 {
@@ -206,7 +264,7 @@ int
 main(int argc, char** argv)
 {
     if (argc < 3) {
-        std::fprintf(stderr, "Usage: %s <identifier> <major> [name=value...] [--scale s] [--window x1,y1,x2,y2]...\n", argv[0]);
+        std::fprintf(stderr, "Usage: %s <identifier> <major> [name=value...] [--scale s] [--window x1,y1,x2,y2]... [--placement file dx dy]\n", argv[0]);
         return 2;
     }
     const std::string pluginId = argv[1];
@@ -215,9 +273,22 @@ main(int argc, char** argv)
     std::vector<OfxRectI> windows;
     OfxPointD renderScale;
     renderScale.x = renderScale.y = 1.;
+    std::string placementFile;
+    int placementDx = 0;
+    int placementDy = 0;
     for (int i = 3; i < argc; ++i) {
         const std::string arg = argv[i];
-        if (arg == "--scale" && i + 1 < argc) {
+        if (arg == "--placement" && i + 3 < argc) {
+            placementFile = argv[++i];
+            std::vector<int> d;
+            if (!parseInts(std::string(argv[i + 1]) + "," + argv[i + 2], d) || d.size() != 2) {
+                std::fprintf(stderr, "Error: --placement file dx dy\n");
+                return 2;
+            }
+            placementDx = d[0];
+            placementDy = d[1];
+            i += 2;
+        } else if (arg == "--scale" && i + 1 < argc) {
             char* end = NULL;
             const double s = std::strtod(argv[++i], &end);
             if (*end != '\0' || !(s > 0. && s <= 1.)) {
@@ -240,6 +311,10 @@ main(int argc, char** argv)
         } else {
             assignments.push_back(arg);
         }
+    }
+    if (!placementFile.empty() && renderScale.x != 1.) {
+        std::fprintf(stderr, "Error: --placement is at scale 1 only\n");
+        return 2;
     }
     std::string what = pluginId + " v" + argv[2];
     if (renderScale.x != 1.) {
@@ -304,19 +379,10 @@ main(int argc, char** argv)
             return 1;
         }
         instance->timeLineGotoTime(0.);
-        OfxRectD rodD;
-        rodD.x1 = rodD.y1 = rodD.x2 = rodD.y2 = 0.;
-        stat = instance->getRegionOfDefinitionAction(0., renderScale,
-#ifdef OFX_EXTENSIONS_NUKE
-                                                     0,
-#endif
-                                                     rodD);
-        if (stat != kOfxStatOK && stat != kOfxStatReplyDefault) {
-            std::fprintf(stderr, "Error: get region of definition action failed (status %d)\n", (int)stat);
+        OfxRectI rod;
+        if (!getRoD(instance.get(), renderScale, &rod)) {
             return 1;
         }
-        const double par = instance->getProjectPixelAspectRatio();
-        const OfxRectI rod = MyHost::canonicalToPixelEnclosing(rodD, renderScale, par);
         const int w = rod.x2 - rod.x1;
         const int h = rod.y2 - rod.y1;
         if (w < 4 || h < 4) {
@@ -351,18 +417,7 @@ main(int argc, char** argv)
             }
         }
 
-        stat = instance->beginRenderAction(0., 0., 1., false, renderScale, false, /*interactive=*/false,
-#ifdef OFX_SUPPORTS_OPENGLRENDER
-                                           /*openGLRender=*/false,
-#  ifdef OFX_EXTENSIONS_NATRON
-                                           /*contextData=*/NULL,
-#  endif
-#endif
-                                           /*draftRender=*/false
-#ifdef OFX_EXTENSIONS_NUKE
-                                           , 0 /* view*/
-#endif
-                                           );
+        stat = beginRender(instance.get(), renderScale);
         if (stat != kOfxStatOK && stat != kOfxStatReplyDefault) {
             std::fprintf(stderr, "Error: begin render action failed (status %d)\n", (int)stat);
             return 1;
@@ -433,18 +488,61 @@ main(int argc, char** argv)
             }
         }
         outputClip->releaseOutputImage();
-        instance->endRenderAction(0., 0., 1., false, renderScale, false, /*interactive=*/false,
-#ifdef OFX_SUPPORTS_OPENGLRENDER
-                                  /*openGLRender=*/false,
-#  ifdef OFX_EXTENSIONS_NATRON
-                                  /*contextData=*/NULL,
-#  endif
-#endif
-                                  /*draftRender=*/false
-#ifdef OFX_EXTENSIONS_NUKE
-                                  , 0 /* view*/
-#endif
-                                  );
+        endRender(instance.get(), renderScale);
+
+        if (full && !placementFile.empty()) {
+            // the same image, from another file, shifted by (-dx,-dy): render it whole, and
+            // compare it with the reference
+            OfxRectI rod2;
+            MyHost::MyImage* other = NULL;
+            if (setParam(instance.get(), "filename=" + placementFile) &&
+                (!instance->areClipPrefsDirty() || instance->getClipPreferences()) &&
+                getRoD(instance.get(), renderScale, &rod2)) {
+                stat = beginRender(instance.get(), renderScale);
+                if (stat == kOfxStatOK || stat == kOfxStatReplyDefault) {
+                    other = render(myInstance, outputClip, renderScale, rod2, rod2);
+                }
+            }
+            if (!other) {
+                std::printf("FAIL %s placement: could not render %s\n", what.c_str(), placementFile.c_str());
+                ++failures;
+            } else {
+                long differ = 0;
+                long notBlack = 0;
+                long matched = 0;
+                for (int y = rod.y1; y < rod.y2; ++y) {
+                    for (int x = rod.x1; x < rod.x2; ++x) {
+                        const int x2 = x - placementDx;
+                        const int y2 = y - placementDy;
+                        const bool inOther = x2 >= rod2.x1 && x2 < rod2.x2 && y2 >= rod2.y1 && y2 < rod2.y2;
+                        const unsigned char* p2 = inOther ? other->getPixelData(x2, y2) : NULL;
+                        for (int c = 0; c < nComps; ++c) {
+                            const unsigned char* pc = &ref[((size_t)(y - rod.y1) * w + (x - rod.x1)) * pixelBytes + c * sizeof(float)];
+                            if (!inOther) {
+                                notBlack += !isZero(pc);
+                            } else if (std::memcmp(pc, p2 + c * sizeof(float), sizeof(float)) != 0) {
+                                ++differ;
+                            } else {
+                                ++matched;
+                            }
+                        }
+                    }
+                }
+                // the whole other image must be in the reference
+                const bool contained = rod2.x1 + placementDx >= rod.x1 && rod2.x2 + placementDx <= rod.x2 &&
+                                       rod2.y1 + placementDy >= rod.y1 && rod2.y2 + placementDy <= rod.y2;
+                const bool ok = !differ && !notBlack && contained && matched > 0;
+                std::printf("%s %s placement of %s (%d,%d,%d,%d) at (%d,%d) in (%d,%d,%d,%d): %ld components differ, %ld not black around it%s\n",
+                            ok ? "ok  " : "FAIL", what.c_str(), placementFile.c_str(), rod2.x1, rod2.y1, rod2.x2, rod2.y2,
+                            placementDx, placementDy, rod.x1, rod.y1, rod.x2, rod.y2, differ, notBlack,
+                            contained ? "" : ", not inside of the reference");
+                if (!ok) {
+                    ++failures;
+                }
+                outputClip->releaseOutputImage();
+                endRender(instance.get(), renderScale);
+            }
+        }
     }
     std::printf("%s: %s\n", what.c_str(), failures ? "FAILED" : "all windows OK");
     return failures ? 1 : 0;
