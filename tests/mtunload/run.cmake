@@ -61,6 +61,14 @@ endif()
 # hostDemo's default load mode, whatever the caller's environment says
 unset(ENV{OFX_HOSTDEMO_KEEP_LOADED})
 set(ENV{OMP_NUM_THREADS} "${THREADS}")
+# keep the idle OpenMP pool threads spinning inside the runtime after the render, instead of
+# blocking in a kernel wait after a short spin (libgomp's default spin count, libomp's 200 ms
+# KMP_BLOCKTIME): a blocked thread is killed at exit without running any more code, so the test
+# would pass even if the runtime were unmapped under it. A spinning thread crashes, during
+# mt_unload's wait, every time the unload takes its runtime with it.
+set(ENV{OMP_WAIT_POLICY} ACTIVE)
+set(ENV{GOMP_SPINCOUNT} INFINITY) # libgomp (Linux, MinGW)
+set(ENV{KMP_BLOCKTIME} infinite)  # libomp (macOS)
 
 set(_ok 0)
 set(_failed "")
