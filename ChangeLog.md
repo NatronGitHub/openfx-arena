@@ -4,6 +4,7 @@
 
  * ``ReadSVG`` (3 and 4), ``ReadPDF``, ``ReadCDR``, ``ReadKrita`` and ``OpenRaster`` render a render window smaller than the image: they failed with "Image don't match RenderWindow" or "Unable to read image" when a host asked for one (#105). Full-frame renders are unchanged.
  * Overlays of ``ReadSVG`` 4, ``Text`` (Magick) and ``Text`` (TextOFX) 6 and 7: on hosts with the OFX 1.5 DrawSuite, they are registered as OverlayInteractV2 and draw with the DrawSuite (without the one-pixel shadow, which is the host's job there), plus a V1 entry that draws with OpenGL. On other hosts they draw with OpenGL as before. Renders are unchanged.
+ * Overlays of the OpenCL plug-ins ``Bulge`` and ``Twirl`` (1 and 2, in OCL.ofx, which is not part of Arena.ofx): the same, with their own transform overlay. Renders are unchanged.
  * ``Text`` (TextOFX) 7.0 (#70):
    * The Center is in canonical coordinates, as the overlay shows it: the text is drawn at the Center when the pixel aspect ratio isn't 1 or the RoD doesn't start at (0,0) (e.g. an offset Source).
    * The text is drawn in canonical units, so it isn't stretched on a PAR-corrected viewer: the glyphs, rotation, skew, scale, circle, arc and stroke are right at any pixel aspect ratio. Auto size fits the text at any pixel aspect ratio. Canvas size is in pixels.
