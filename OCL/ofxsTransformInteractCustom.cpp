@@ -561,8 +561,12 @@ TransformInteractCustomHelper::drawOverlay(OverlayDraw &d,
     GLint viewport[4];
     d.glGetIntegerv(GL_VIEWPORT, viewport);
     OfxPointD shadow; // how much to translate GL_PROJECTION to get exactly one pixel on screen
-    shadow.x = 2. / (projection[0] * viewport[2]);
-    shadow.y = 2. / (projection[5] * viewport[3]);
+    // a degenerate projection or viewport (0) would give an infinite or NaN shadow offset: no
+    // offset then (as SupportExt's TransformInteractHelper)
+    const double denx = projection[0] * viewport[2];
+    const double deny = projection[5] * viewport[3];
+    shadow.x = (denx != 0.) ? 2. / denx : 0.;
+    shadow.y = (deny != 0.) ? 2. / deny : 0.;
 
     OfxPointD center = { 0., 0. };
     OfxPointD translate = { 0., 0. };

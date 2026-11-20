@@ -445,7 +445,7 @@ if(OCL)
     supportext_add_sources(OCL COMPONENTS TRANSFORM3X3)
     target_include_directories(OCL PRIVATE "${CMAKE_CURRENT_SOURCE_DIR}/OCL")
     target_link_libraries(OCL PRIVATE openfx::Support OpenCL::OpenCL)
-    # ofxsTransformInteractCustom.cpp draws with OpenGL
+    # ofxsTransformInteractCustom.cpp draws with OpenGL through the V1 overlay entry (OverlayDraw)
     find_package(OpenGL REQUIRED)
     target_link_libraries(OCL PRIVATE OpenGL::GL)
     ofx_plugin_resources(OCL ${_ocl_resources})
