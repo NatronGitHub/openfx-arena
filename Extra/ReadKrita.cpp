@@ -205,16 +205,13 @@ ReadKritaPlugin::decode(const std::string& filename,
         zip_close(imageOpen);
     }
 
-    // The whole merged image is decoded, and only the part of renderWindow that it covers is copied:
-    // a host may ask for a render window smaller than the image, even without tiles (#105). This
-    // used to fail unless renderWindow was the image. It must still have the size of the frame
-    // bounds (getFrameBounds()), as it had to before: a merged image of another size is an error.
-    int frameWidth = 0;
-    int frameHeight = 0;
-    if (buffer != NULL) {
-        getImageSize(&frameWidth, &frameHeight, filename);
-    }
-    if (buffer==NULL || width<=0 || height<=0 || width!=frameWidth || height!=frameHeight) {
+    // The whole merged image is decoded, and only the part of renderWindow that it covers is
+    // copied: a host may ask for a render window smaller than the image, even without tiles
+    // (#105). Its size is not checked against the one in maindoc.xml (getFrameBounds()): that
+    // opened the zip again at every render, and could read another file than the one decoded
+    // here if the file changed in between (#108). An image of another size is copied from the
+    // origin, clamped, and the rest of the render window is black.
+    if (buffer==NULL || width<=0 || height<=0) {
         free(buffer); // allocated by lodepng with malloc
         setPersistentMessage(OFX::Message::eMessageError, "", "Unable to read image");
         OFX::throwSuiteStatusException(kOfxStatErrFormat);
