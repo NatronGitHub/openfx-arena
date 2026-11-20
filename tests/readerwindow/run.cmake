@@ -1,6 +1,7 @@
-# Render the readers with render windows smaller than the image (#105), with reader_window
-# (reader_window.cpp): each window must give the same pixels as the same region of a full render,
-# and the reader must write only the window.
+# Render the readers with render windows smaller than the image (#105), or partly or entirely
+# outside of it (#108), with reader_window (reader_window.cpp), at scale 1 and 0.5: each window
+# must give the same pixels as the same region of a full render, black outside of the RoD, and
+# the reader must write only the window.
 #
 #   cmake -DREADER_WINDOW=<reader_window> -DPLUGIN_PATH=<dir with Arena.ofx.bundle>
 #         -DSAMPLES=<dir> -DOCIO=<config.ocio> -DWORK=<dir> -P run.cmake
@@ -85,6 +86,19 @@ check(fr.inria.openfx.OpenRaster 2 sample_xy.ora filePremult=1)
 # ReadPSD and ReadMisc already copied just the window
 check(net.fxarena.openfx.ReadPSD 2 sample.psd)
 check(fr.inria.openfx.ReadMisc 1 sample.bmp)
+# at half scale (a 50% viewer, proxy mode): decode() gets a render scale of 1 and the window at
+# full resolution, and GenericReader downscales it (#108); both paths of render(), as above
+check(net.fxarena.openfx.ReadSVG 4 sample.svg --scale 0.5)
+check(net.fxarena.openfx.ReadSVG 4 sample.svg filePremult=2 --scale 0.5)
+check(net.fxarena.openfx.ReadSVG 3 sample.svg --scale 0.5)
+check(fr.inria.openfx.ReadPDF 1 sample_xy.pdf --scale 0.5)
+check(fr.inria.openfx.ReadPDF 1 sample_xy.pdf filePremult=1 --scale 0.5)
+check(fr.inria.openfx.ReadKrita 2 sample_xy.kra --scale 0.5)
+check(fr.inria.openfx.ReadKrita 2 sample_xy.kra filePremult=1 --scale 0.5)
+check(fr.inria.openfx.OpenRaster 2 sample_xy.ora --scale 0.5)
+check(fr.inria.openfx.OpenRaster 2 sample_xy.ora filePremult=1 --scale 0.5)
+check(net.fxarena.openfx.ReadPSD 2 sample.psd --scale 0.5)
+check(fr.inria.openfx.ReadMisc 1 sample.bmp --scale 0.5)
 
 list(LENGTH _failed _nf)
 message("${_ok} passed, ${_nf} failed")

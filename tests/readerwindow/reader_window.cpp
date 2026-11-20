@@ -1,7 +1,8 @@
 /*
- * reader_window: render a reader with render windows smaller than its image (#105).
+ * reader_window: render a reader with render windows smaller than its image (#105), or partly
+ * or entirely outside of it (#108).
  *
- *   reader_window <identifier> <major> [name=value...] [--window x1,y1,x2,y2]...
+ *   reader_window <identifier> <major> [name=value...] [--scale s] [--window x1,y1,x2,y2]...
  *
  * A small OFX host built on openfx's HostSupport and hostDemo's host classes (hostDemo itself
  * can't do this: its --window renders the whole RoD for a plug-in without tiles, as the readers
@@ -13,12 +14,20 @@
  *
  * It creates the plug-in in the general context, sets the parameters (string, integer, choice
  * index, double, boolean), renders t=0 with the whole RoD as the render window (the reference),
- * then renders each window (by default: the middle quarter of the image and a few windows at its
- * edges, offset from the origin) into a new image, and checks that
+ * then renders each window (by default: the middle quarter of the image, a few windows at its
+ * edges, offset from the origin, and a few windows partly or entirely outside of the RoD) into a
+ * new image, and checks that
  *   - the render succeeds,
- *   - the pixels of the window are bit-identical to the same pixels of the reference,
+ *   - the pixels of the window that are in the RoD are bit-identical to the same pixels of the
+ *     reference,
+ *   - the pixels of the window that are outside of the RoD are transparent black (0): the OFX
+ *     spec says "If an effect is asked to render outside of its region of definition, it should
+ *     fill those pixels in with black transparent pixels" (ofxRendering.rst),
  *   - the pixels outside of the window still hold hostDemo's sentinel (NaN): the reader wrote
  *     only the render window.
+ * The output image covers the RoD and the window (a host must give an output image that covers
+ * the render window). --scale renders everything at that render scale (default: 1), e.g. 0.5 as
+ * a 50% viewer or proxy mode would: the RoD and the windows are then in pixels at that scale.
  * The output depth is float. OFX_PLUGIN_PATH must contain the bundle (no standard paths, no
  * plug-in cache) and OCIO must be set, as for hostDemo. Exit status: 0 if every check passes.
  */
@@ -119,17 +128,29 @@ setParam(OFX::Host::ImageEffect::Instance* instance, const std::string& assignme
     return true;
 }
 
-// render t=0 (view 0) with the given render window, into a new output image that covers the
-// RoD. Returns the output image (owned by the clip until the next render), or NULL.
-MyHost::MyImage*
-render(MyHost::MyEffectInstance* instance, MyHost::MyClipInstance* outputClip, const OfxRectI& rod, const OfxRectI& window)
+// the smallest rectangle that contains a and b
+OfxRectI
+unionRect(const OfxRectI& a, const OfxRectI& b)
 {
-    OfxPointD renderScale;
-    renderScale.x = renderScale.y = 1.;
+    OfxRectI r;
+    r.x1 = a.x1 < b.x1 ? a.x1 : b.x1;
+    r.y1 = a.y1 < b.y1 ? a.y1 : b.y1;
+    r.x2 = a.x2 > b.x2 ? a.x2 : b.x2;
+    r.y2 = a.y2 > b.y2 ? a.y2 : b.y2;
+    return r;
+}
+
+// render t=0 (view 0) at renderScale with the given render window, into a new output image that
+// covers the RoD and the window. Returns the output image (owned by the clip until the next
+// render), or NULL.
+MyHost::MyImage*
+render(MyHost::MyEffectInstance* instance, MyHost::MyClipInstance* outputClip, const OfxPointD& renderScale, const OfxRectI& rod, const OfxRectI& window)
+{
     // the output image covers the render state's window: the RoD (a full RoD image, as for a
-    // plug-in without tiles), whatever the render window passed to the render action
+    // plug-in without tiles), and the render window if it goes out of the RoD, whatever the
+    // render window passed to the render action
     std::map<OFX::Host::ImageEffect::ClipInstance*, OfxRectD> rois;
-    instance->setRenderState(renderScale, rod, rois);
+    instance->setRenderState(renderScale, unionRect(rod, window), rois);
     outputClip->releaseOutputImage();
     const int imageErrors = MyHost::gImageErrors;
 #ifdef OFX_EXTENSIONS_NUKE
@@ -172,22 +193,39 @@ isSentinel(const unsigned char* p)
     return std::memcmp(p, &quietNaNBits, sizeof(float)) == 0;
 }
 
+bool
+isZero(const unsigned char* p)
+{
+    const float zero = 0.f;
+    return std::memcmp(p, &zero, sizeof(float)) == 0;
+}
+
 } // namespace
 
 int
 main(int argc, char** argv)
 {
     if (argc < 3) {
-        std::fprintf(stderr, "Usage: %s <identifier> <major> [name=value...] [--window x1,y1,x2,y2]...\n", argv[0]);
+        std::fprintf(stderr, "Usage: %s <identifier> <major> [name=value...] [--scale s] [--window x1,y1,x2,y2]...\n", argv[0]);
         return 2;
     }
     const std::string pluginId = argv[1];
     const int pluginMajor = std::atoi(argv[2]);
     std::vector<std::string> assignments;
     std::vector<OfxRectI> windows;
+    OfxPointD renderScale;
+    renderScale.x = renderScale.y = 1.;
     for (int i = 3; i < argc; ++i) {
         const std::string arg = argv[i];
-        if (arg == "--window" && i + 1 < argc) {
+        if (arg == "--scale" && i + 1 < argc) {
+            char* end = NULL;
+            const double s = std::strtod(argv[++i], &end);
+            if (*end != '\0' || !(s > 0. && s <= 1.)) {
+                std::fprintf(stderr, "Error: --scale s, with 0 < s <= 1\n");
+                return 2;
+            }
+            renderScale.x = renderScale.y = s;
+        } else if (arg == "--window" && i + 1 < argc) {
             std::vector<int> v;
             if (!parseInts(argv[++i], v) || v.size() != 4) {
                 std::fprintf(stderr, "Error: --window x1,y1,x2,y2\n");
@@ -203,7 +241,12 @@ main(int argc, char** argv)
             assignments.push_back(arg);
         }
     }
-    const std::string what = pluginId + " v" + argv[2];
+    std::string what = pluginId + " v" + argv[2];
+    if (renderScale.x != 1.) {
+        std::ostringstream ss;
+        ss << what << " at scale " << renderScale.x;
+        what = ss.str();
+    }
 
     OFX::Host::PluginCache::useStdOFXPluginsLocation(false);
     OFX::Host::PluginCache::getPluginCache()->setCacheVersion("readerWindowV1");
@@ -260,8 +303,6 @@ main(int argc, char** argv)
             std::fprintf(stderr, "Error: the output depth is %s, not float\n", outputClip->getPixelDepth().c_str());
             return 1;
         }
-        OfxPointD renderScale;
-        renderScale.x = renderScale.y = 1.;
         instance->timeLineGotoTime(0.);
         OfxRectD rodD;
         rodD.x1 = rodD.y1 = rodD.x2 = rodD.y2 = 0.;
@@ -283,7 +324,9 @@ main(int argc, char** argv)
             return 1;
         }
         if (windows.empty()) {
-            // the middle quarter, and windows at the edges of the image, none at the origin
+            // the middle quarter, and windows at the edges of the image, none at the origin; then
+            // windows partly or entirely outside of the RoD, which GenericReader clears and clips
+            // to the RoD before decode() (#108)
             const int def[][4] = {
                 { w / 4, h / 4, 3 * w / 4, 3 * h / 4 }, // the middle quarter
                 { w / 3, h / 2 + 1, w, h },             // the top right part (odd offsets)
@@ -291,6 +334,12 @@ main(int argc, char** argv)
                 { 0, h / 2, w, h / 2 + 1 },             // one row
                 { w - 1, 1, w, h - 1 },                 // one column, at the right edge
                 { w / 2, h / 2, w / 2 + 1, h / 2 + 1 }, // one pixel
+                { -3, -2, w / 4, h / 4 },               // across the bottom left corner
+                { 3 * w / 4, h / 2, w + 5, h + 3 },     // across the top right corner
+                { -2, h / 3, w + 2, h / 3 + 2 },        // two rows, wider than the RoD
+                { -4, -3, w + 4, h + 3 },               // the RoD and a border around it
+                { w + 1, 1, w + 4, h / 2 },             // right of the RoD
+                { -6, -5, -1, -1 },                     // below and left of the RoD
             };
             for (size_t k = 0; k < sizeof(def) / sizeof(def[0]); ++k) {
                 OfxRectI r;
@@ -320,7 +369,7 @@ main(int argc, char** argv)
         }
 
         // the reference: the whole RoD
-        MyHost::MyImage* full = render(myInstance, outputClip, rod, rod);
+        MyHost::MyImage* full = render(myInstance, outputClip, renderScale, rod, rod);
         std::vector<unsigned char> ref;
         int nComps = 0;
         size_t pixelBytes = 0;
@@ -342,7 +391,7 @@ main(int argc, char** argv)
 
         for (size_t k = 0; full && k < windows.size(); ++k) {
             const OfxRectI& win = windows[k];
-            MyHost::MyImage* img = render(myInstance, outputClip, rod, win);
+            MyHost::MyImage* img = render(myInstance, outputClip, renderScale, rod, win);
             if (!img) {
                 std::printf("FAIL %s window (%d,%d,%d,%d): render failed\n", what.c_str(), win.x1, win.y1, win.x2, win.y2);
                 ++failures;
@@ -351,15 +400,21 @@ main(int argc, char** argv)
             long differ = 0;
             long unwritten = 0;
             long outsideWritten = 0;
-            for (int y = rod.y1; y < rod.y2; ++y) {
-                for (int x = rod.x1; x < rod.x2; ++x) {
+            long notBlack = 0;
+            // the whole output image: the RoD and the window
+            const OfxRectI all = unionRect(rod, win);
+            for (int y = all.y1; y < all.y2; ++y) {
+                for (int x = all.x1; x < all.x2; ++x) {
                     const unsigned char* p = img->getPixelData(x, y);
                     const bool inside = x >= win.x1 && x < win.x2 && y >= win.y1 && y < win.y2;
+                    const bool inRoD = x >= rod.x1 && x < rod.x2 && y >= rod.y1 && y < rod.y2;
                     for (int c = 0; c < nComps; ++c) {
                         const unsigned char* pc = p + c * sizeof(float);
                         if (inside) {
                             if (isSentinel(pc)) {
                                 ++unwritten;
+                            } else if (!inRoD) {
+                                notBlack += !isZero(pc);
                             } else if (std::memcmp(pc, &ref[((size_t)(y - rod.y1) * w + (x - rod.x1)) * pixelBytes + c * sizeof(float)], sizeof(float)) != 0) {
                                 ++differ;
                             }
@@ -369,10 +424,10 @@ main(int argc, char** argv)
                     }
                 }
             }
-            const bool ok = !differ && !unwritten && !outsideWritten;
-            std::printf("%s %s window (%d,%d,%d,%d) of (%d,%d,%d,%d): %ld components differ from the full render, %ld unwritten, %ld written outside\n",
+            const bool ok = !differ && !unwritten && !outsideWritten && !notBlack;
+            std::printf("%s %s window (%d,%d,%d,%d) of (%d,%d,%d,%d): %ld components differ from the full render, %ld unwritten, %ld written outside, %ld not black outside of the RoD\n",
                         ok ? "ok  " : "FAIL", what.c_str(), win.x1, win.y1, win.x2, win.y2, rod.x1, rod.y1, rod.x2, rod.y2,
-                        differ, unwritten, outsideWritten);
+                        differ, unwritten, outsideWritten, notBlack);
             if (!ok) {
                 ++failures;
             }
