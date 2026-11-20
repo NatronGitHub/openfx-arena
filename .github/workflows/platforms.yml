@@ -106,7 +106,7 @@ jobs:
         run: |
           # RTLD_NOW instead of RTLD_LAZY, so that missing symbols make loading fail
           sed -e 's/RTLD_LAZY/RTLD_NOW/g' OpenFX/HostSupport/src/ofxhBinary.cpp > ofxhBinaryStrict.cpp
-          g++ -o verify_plugin_loads OpenFX-IO/.github/workflows/verify_plugin_loads.cpp ofxhBinaryStrict.cpp \
+          g++ -o verify_plugin_loads OpenFX-IO/tests/verify_plugin_loads.cpp ofxhBinaryStrict.cpp \
             -I OpenFX/HostSupport/include/ -I OpenFX/include/
           ./verify_plugin_loads "$BUNDLE/Contents/Linux-x86-64/Arena.ofx" | tee load.txt
           grep -q "^Num_plugins: 43$" load.txt
@@ -181,7 +181,7 @@ jobs:
       - name: Verify that the plugins load
         run: |
           set -eo pipefail
-          g++ -o verify_plugin_loads OpenFX-IO/.github/workflows/verify_plugin_loads.cpp OpenFX/HostSupport/src/ofxhBinary.cpp \
+          g++ -o verify_plugin_loads OpenFX-IO/tests/verify_plugin_loads.cpp OpenFX/HostSupport/src/ofxhBinary.cpp \
             OpenFX/HostSupport/src/ofxhUtilities.cpp -I OpenFX/HostSupport/include/ -I OpenFX/include/
           ./verify_plugin_loads "$BUNDLE/Contents/Win64/Arena.ofx" | tee load.txt
           grep -q "^Num_plugins: 43.\?$" load.txt
@@ -292,7 +292,7 @@ jobs:
           BUNDLE: ${{ inputs.build-system == 'make' && 'Bundle/Darwin-64-release/Arena.ofx.bundle' || env.CMAKE_BUNDLE }}
         run: |
           sed -e 's/RTLD_LAZY/RTLD_NOW/g' OpenFX/HostSupport/src/ofxhBinary.cpp > ofxhBinaryStrict.cpp
-          c++ -std=c++11 -o verify_plugin_loads OpenFX-IO/.github/workflows/verify_plugin_loads.cpp ofxhBinaryStrict.cpp \
+          c++ -std=c++11 -o verify_plugin_loads OpenFX-IO/tests/verify_plugin_loads.cpp ofxhBinaryStrict.cpp \
             -I OpenFX/HostSupport/include/ -I OpenFX/include/
           # the installed (deployed) bundle, with its own copies of the MacPorts libraries
           ./verify_plugin_loads "$BUNDLE/Contents/MacOS/Arena.ofx" | tee load.txt

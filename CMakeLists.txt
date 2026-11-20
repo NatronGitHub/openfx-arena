@@ -482,7 +482,7 @@ if(BUILD_TESTING)
     string(REPLACE "RTLD_LAZY" "RTLD_NOW" _binary "${_binary}")
     file(WRITE "${CMAKE_CURRENT_BINARY_DIR}/ofxhBinaryStrict.cpp" "${_binary}")
     add_executable(verify_plugin_loads
-        OpenFX-IO/.github/workflows/verify_plugin_loads.cpp
+        OpenFX-IO/tests/verify_plugin_loads.cpp
         "${CMAKE_CURRENT_BINARY_DIR}/ofxhBinaryStrict.cpp")
     if(WIN32)
         target_sources(verify_plugin_loads PRIVATE OpenFX/HostSupport/src/ofxhUtilities.cpp)
