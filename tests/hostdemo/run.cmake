@@ -113,7 +113,8 @@ foreach(_p IN LISTS _plugins)
   list(GET _idv 0 _id)
   list(GET _idv 1 _major)
   # every line of the plug-in is rendered (e.g. the defaults, then edge-case values): the
-  # first one to <name><major>, the next ones to <name><major>_<n>
+  # first one to <name><major>, the next ones to <name><major>_<n> (a skip line skips only
+  # itself); the counts below are per line
   set(_matched "")
   string(REGEX REPLACE "([][+.*()^$?|\\\\{}])" "\\\\\\1" _rid "${_id}")
   foreach(_e IN LISTS _entries)
@@ -204,7 +205,7 @@ if(KEEP_LOADED)
 else()
   string(APPEND _mode " (unloaded after the scan)")
 endif()
-message("${_n} plug-ins${_mode}: ${_ok} rendered, ${_skipped} skipped, ${_nf} failed (${_t} s)")
+message("${_n} plug-ins${_mode}, renders: ${_ok} ok, ${_skipped} skipped, ${_nf} failed (${_t} s)")
 if(_n EQUAL 0 OR _failed)
   message(FATAL_ERROR "render test failed: ${_failed}")
 endif()

@@ -22,6 +22,7 @@
 #include "ofxsMacros.h"
 #include "ofxsMultiThread.h"
 #include "ofxsImageEffect.h"
+#include <algorithm>
 #include <iostream>
 
 #define kPluginName "TileOFX"
@@ -187,9 +188,10 @@ void TilePlugin::render(const OFX::RenderArguments &args)
     matte_->getValueAtTime(args.time, matte);
     enableOpenMP_->getValueAtTime(args.time, enableOpenMP);
     // the OFX spec doesn't make the host clamp to the params' range (1..100): a script or a
-    // project may still give 0 or less, and the divisions below would then crash (SIGFPE)
-    rows = std::max(rows, 1);
-    cols = std::max(cols, 1);
+    // project may still give 0 or less, and the divisions below would then crash (SIGFPE), or a
+    // huge value, which would overflow rows*cols
+    rows = std::min(std::max(rows, 1), 100);
+    cols = std::min(std::max(cols, 1), 100);
 
     // setup
     int srcWidth = srcRod.x2-srcRod.x1;
