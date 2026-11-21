@@ -91,6 +91,8 @@ check(fr.inria.openfx.ReadKrita 2 sample_big.kra --placement "${SAMPLES}/sample_
 check(fr.inria.openfx.OpenRaster 2 sample_big.ora --placement "${SAMPLES}/sample_xy.ora" 0 12)
 check(fr.inria.openfx.OpenRaster 2 sample_offset.ora --placement "${SAMPLES}/sample_xy.ora" 10 7)
 check(fr.inria.openfx.OpenRaster 2 sample_offset.ora filePremult=1 --placement "${SAMPLES}/sample_xy.ora" 10 7)
+# a layer without x and y (optional in stack.xml, 0 by default, #119): at the top-left corner
+check(fr.inria.openfx.OpenRaster 2 sample_noxy.ora --placement "${SAMPLES}/sample_xy.ora" 0 12)
 # ReadPSD and ReadMisc already copied just the window
 check(net.fxarena.openfx.ReadPSD 2 sample.psd)
 check(fr.inria.openfx.ReadMisc 1 sample.bmp)
