@@ -154,7 +154,8 @@ int main(int argc, char** argv)
     // PNG (sample_xy's 64x48); the PNG is anchored at the top-left corner of the image, and the
     // rest of the RoD is black. sample_offset.ora: an 80x60 canvas with one layer, sample_xy's
     // PNG, at x=10, y=5 from the top-left corner, and no merged image (so that the layer is
-    // read), as GIMP and MyPaint save cropped layers
+    // read), as GIMP and MyPaint save cropped layers. sample_noxy.ora: the same, but the layer
+    // has neither x nor y, which are optional in stack.xml and default to 0 (#119)
     std::ostringstream bigSize;
     bigSize << "w=\"" << kWidth + 16 << "\" h=\"" << kHeight + 12 << "\"";
     std::vector<std::pair<std::string, std::string> > oraBig;
@@ -170,6 +171,12 @@ int main(int argc, char** argv)
         "<?xml version='1.0' encoding='UTF-8'?>\n<image version=\"0.0.3\" " + bigSize.str() +
         "><stack><layer name=\"background\" src=\"data/layer0.png\" x=\"10\" y=\"5\" opacity=\"1.0\"/></stack></image>\n"));
     oraOffset.push_back(std::make_pair(std::string("data/layer0.png"), pngXY));
+    std::vector<std::pair<std::string, std::string> > oraNoXY;
+    oraNoXY.push_back(ora[0]);
+    oraNoXY.push_back(std::make_pair(std::string("stack.xml"),
+        "<?xml version='1.0' encoding='UTF-8'?>\n<image version=\"0.0.3\" " + bigSize.str() +
+        "><stack><layer name=\"background\" src=\"data/layer0.png\" opacity=\"1.0\"/></stack></image>\n"));
+    oraNoXY.push_back(std::make_pair(std::string("data/layer0.png"), pngXY));
     ora.push_back(std::make_pair(std::string("data/layer0.png"), png));
     ora.push_back(std::make_pair(std::string("mergedimage.png"), png));
     oraXY.push_back(std::make_pair(std::string("data/layer0.png"), pngXY));
@@ -207,7 +214,7 @@ int main(int argc, char** argv)
     if (!writeZip(dir + "/sample.ora", ora) || !writeZip(dir + "/sample.kra", kra) || !writePDF(dir + "/sample.pdf", content.str()) ||
         !writeZip(dir + "/sample_xy.ora", oraXY) || !writeZip(dir + "/sample_xy.kra", kraXY) || !writePDF(dir + "/sample_xy.pdf", contentXY.str()) ||
         !writeZip(dir + "/sample_big.ora", oraBig) || !writeZip(dir + "/sample_big.kra", kraBig) ||
-        !writeZip(dir + "/sample_offset.ora", oraOffset)) {
+        !writeZip(dir + "/sample_offset.ora", oraOffset) || !writeZip(dir + "/sample_noxy.ora", oraNoXY)) {
         std::cerr << "could not write the samples in " << dir << std::endl;
         return 1;
     }

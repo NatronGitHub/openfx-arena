@@ -544,7 +544,7 @@ endif()
         target_link_libraries(make_samples PRIVATE PkgConfig::MAGICK PkgConfig::ZIP)
         ofx_target_openmp(make_samples)
         set(_sample_files sample.png sample.psd sample.bmp sample.ora sample.kra sample.pdf sample.svg sample_hald.png
-            sample_xy.png sample_xy.ora sample_xy.kra sample_xy.pdf sample_big.ora sample_big.kra sample_offset.ora)
+            sample_xy.png sample_xy.ora sample_xy.kra sample_xy.pdf sample_big.ora sample_big.kra sample_offset.ora sample_noxy.ora)
         list(TRANSFORM _sample_files PREPEND "${_samples}/")
         add_custom_command(OUTPUT ${_sample_files}
             COMMAND "${CMAKE_COMMAND}" -E make_directory "${_samples}"
@@ -563,18 +563,17 @@ endif()
                     -DSAMPLES=${_samples} -DWORK=${CMAKE_CURRENT_BINARY_DIR}/hostdemo-${_t}
                     -DCACHE=${CMAKE_CURRENT_BINARY_DIR}/hostdemo-cache
                     -P "${CMAKE_CURRENT_SOURCE_DIR}/tests/hostdemo/run.cmake")
+                # the same, with hostDemo as an OFX 1.4 host (--ofx14): every plug-in must also
+                # work in a host that has neither OFX 1.5 nor the extensions
+                add_test(NAME render_${_t}_ofx14 COMMAND "${CMAKE_COMMAND}"
+                    -DHOSTDEMO=$<TARGET_FILE:hostDemo> -DVERIFY=$<TARGET_FILE:verify_plugin_loads>
+                    -DBINARY=$<TARGET_FILE:${_t}> -DLIST=${CMAKE_CURRENT_SOURCE_DIR}/tests/hostdemo/${_list}.txt
+                    -DSAMPLES=${_samples} -DWORK=${CMAKE_CURRENT_BINARY_DIR}/hostdemo-${_t}-ofx14
+                    -DCACHE=${CMAKE_CURRENT_BINARY_DIR}/hostdemo-cache -DOFX14=ON
+                    -P "${CMAKE_CURRENT_SOURCE_DIR}/tests/hostdemo/run.cmake")
             endif()
         endforeach()
-        # the same, with hostDemo as an OFX 1.4 host (--ofx14): every plug-in must also work
-        # in a host that has neither OFX 1.5 nor the extensions (HaldCLUT and OCL, which the
-        # CI doesn't build, only get the default pass)
         if(TARGET Arena)
-            add_test(NAME render_Arena_ofx14 COMMAND "${CMAKE_COMMAND}"
-                -DHOSTDEMO=$<TARGET_FILE:hostDemo> -DVERIFY=$<TARGET_FILE:verify_plugin_loads>
-                -DBINARY=$<TARGET_FILE:Arena> -DLIST=${CMAKE_CURRENT_SOURCE_DIR}/tests/hostdemo/arena.txt
-                -DSAMPLES=${_samples} -DWORK=${CMAKE_CURRENT_BINARY_DIR}/hostdemo-Arena-ofx14
-                -DCACHE=${CMAKE_CURRENT_BINARY_DIR}/hostdemo-cache -DOFX14=ON
-                -P "${CMAKE_CURRENT_SOURCE_DIR}/tests/hostdemo/run.cmake")
             # render_Arena runs hostDemo in its default mode, which unloads the binary after the
             # scan and loads it again at the first use (two load cycles per run, openfx #174);
             # this pass keeps it loaded (OFX_HOSTDEMO_KEEP_LOADED=1), as Natron 2.6 will
