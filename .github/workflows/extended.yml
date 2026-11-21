@@ -1,12 +1,15 @@
 name: Extended builds
 
-# Nightly, only if master had a commit in the last 25 hours, and on demand:
+# Weekly (Saturday 03:17 UTC), and on demand:
 # - the builds of ci.yml with C++20 (Natron Qt6 builds and RB-2.7);
 # - the per-PR (C++17) macOS build, which isn't required for merging;
 # - a Linux build with the Makefiles, which ci.yml no longer uses (CMake). Natron's
 #   build-plugins.sh builds Arena with CMake by default (PLUGINS_BUILD_SYSTEM=cmake);
 #   the Makefiles are its manual fallback (PLUGINS_BUILD_SYSTEM=make). This job tests
 #   that fallback and the Makefiles' -z defs link, not the default installer build.
+# The weekly run is never skipped, even if master didn't change: every job builds against
+# rolling system packages (MSYS2 with update: true, MacPorts, Ubuntu's updates), so a week
+# without a commit can still break the build (e.g. a new poppler).
 
 on:
   workflow_dispatch:
@@ -17,48 +20,24 @@ on:
         options: [c++20, c++17]
         default: c++20
   schedule:
-    - cron: '17 3 * * *'
+    - cron: '17 3 * * 6' # Saturday 03:17 UTC (the plug-in repos' slot; Natron runs on Sunday)
 
 permissions:
   contents: read
 
 concurrency:
-  # event_name keeps a manual dispatch and the nightly run from cancelling each other
+  # event_name keeps a manual dispatch and the weekly run from cancelling each other
   group: ${{ github.workflow }}-${{ github.event_name }}-${{ github.ref }}
   cancel-in-progress: true
 
 jobs:
-  # skip the nightly run if master had no commit in the last 25 hours
-  changes:
-    runs-on: ubuntu-24.04
-    timeout-minutes: 5
-    outputs:
-      run: ${{ steps.check.outputs.run }}
-    steps:
-      - uses: actions/checkout@v4
-        with:
-          fetch-depth: 50
-          persist-credentials: false
-      - id: check
-        shell: bash -eo pipefail {0}
-        run: |
-          if [ "${{ github.event_name }}" != schedule ] || [ -n "$(git log --since='25 hours ago' --format=%h -1)" ]; then
-            echo "run=true" >> "$GITHUB_OUTPUT"
-          else
-            echo "run=false" >> "$GITHUB_OUTPUT"; echo "No commits in the last 25 hours: skipping."
-          fi
-
   build:
-    needs: changes
-    if: needs.changes.outputs.run == 'true'
     uses: ./.github/workflows/platforms.yml
     with:
       cxxstd: ${{ (github.event_name == 'workflow_dispatch' && inputs.cxxstd) || 'c++20' }}
       artifacts: false
 
   macos-cxx17:
-    needs: changes
-    if: needs.changes.outputs.run == 'true'
     uses: ./.github/workflows/platforms.yml
     with:
       cxxstd: c++17
@@ -66,8 +45,6 @@ jobs:
       macos-only: true
 
   make-linux:
-    needs: changes
-    if: needs.changes.outputs.run == 'true'
     uses: ./.github/workflows/platforms.yml
     with:
       cxxstd: c++17
