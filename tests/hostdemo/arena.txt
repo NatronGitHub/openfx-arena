@@ -3,6 +3,7 @@
 # Every plug-in of the bundle, each major version, must have a line (the test fails otherwise):
 #   <identifier> <major version> <context> [hostDemo arguments]
 #   skip <identifier> <major version> <reason>
+# A plug-in may have more lines (each one is rendered too), e.g. with edge-case values.
 # @SAMPLES@ is the directory of the generated sample files (make_samples.cpp, sample.svg).
 # hostDemo has filter and general contexts only: readers are rendered in the general context.
 net.fxarena.openfx.Text 7 filter
@@ -24,6 +25,10 @@ net.fxarena.openfx.Edges 2 filter
 net.fxarena.openfx.Texture 3 general width=320 height=240
 net.fxarena.openfx.Tile 4 filter
 net.fxarena.openfx.Tile 3 filter
+# out of the params' range (1..100), which the host doesn't have to enforce (#117)
+net.fxarena.openfx.Tile 4 filter -s rows=0 -s cols=0
+# a grid larger than the image: tiles of less than a pixel (#117)
+net.fxarena.openfx.Tile 4 filter -s rows=100 -s cols=100 -i Source=rod:0,0,64,48
 net.fxarena.openfx.Reflection 4 filter
 net.fxarena.openfx.Reflection 3 filter
 net.fxarena.openfx.Arc 5 filter

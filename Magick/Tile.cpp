@@ -186,12 +186,18 @@ void TilePlugin::render(const OFX::RenderArguments &args)
     firstFrame_->getValueAtTime(args.time, firstFrame);
     matte_->getValueAtTime(args.time, matte);
     enableOpenMP_->getValueAtTime(args.time, enableOpenMP);
+    // the OFX spec doesn't make the host clamp to the params' range (1..100): a script or a
+    // project may still give 0 or less, and the divisions below would then crash (SIGFPE)
+    rows = std::max(rows, 1);
+    cols = std::max(cols, 1);
 
     // setup
     int srcWidth = srcRod.x2-srcRod.x1;
     int srcHeight = srcRod.y2-srcRod.y1;
-    int tileWidth = srcWidth/rows;
-    int tileHeight = srcHeight/cols;
+    // at least 1 pixel: ImageMagick reads a 0 width or height in the thumbnail geometry as
+    // "keep the original size"
+    int tileWidth = std::max(srcWidth/rows, 1);
+    int tileHeight = std::max(srcHeight/cols, 1);
     int thumbs = rows*cols;
     std::string thumb;
     std::ostringstream makeThumb;
