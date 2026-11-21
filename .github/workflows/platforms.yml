@@ -2,8 +2,8 @@ name: Platform builds
 
 # Reusable workflow: the three builds (Linux, Windows UCRT64, macOS 15 arm64 with
 # Xcode clang and MacPorts), called by ci.yml (per push/PR, C++17) and
-# extended.yml (nightly/on demand, C++20, plus a nightly macOS C++17 build and a
-# nightly Linux build with the Makefiles). They build with CMake (BUILD_TESTING: ctest
+# extended.yml (weekly/on demand, C++20, plus a weekly macOS C++17 build and a
+# weekly Linux build with the Makefiles). They build with CMake (BUILD_TESTING: ctest
 # loads the bundle), or with the Makefiles (build-system: make), which are the
 # manual fallback of Natron's build-plugins.sh (PLUGINS_BUILD_SYSTEM=make; its
 # default is CMake).
@@ -18,11 +18,11 @@ on:
         type: boolean
         default: false
       macos-only:
-        description: Build only on macOS (nightly C++17 macOS build)
+        description: Build only on macOS (weekly C++17 macOS build)
         type: boolean
         default: false
       linux-only:
-        description: Build only on Linux (nightly Make build)
+        description: Build only on Linux (weekly Make build)
         type: boolean
         default: false
       build-system:
@@ -219,7 +219,7 @@ jobs:
 
   macos:
     # macOS arm64 runners are scarce: start only once Linux and Windows have passed. Merging
-    # only requires Linux and Windows; macOS is also built nightly (extended.yml).
+    # only requires Linux and Windows; macOS is also built weekly (extended.yml).
     needs: [linux, windows]
     if: ${{ !cancelled() && !inputs.linux-only && (inputs.macos-only || (needs.linux.result == 'success' && needs.windows.result == 'success')) }}
     # System (Xcode) clang with MacPorts libraries, as for Natron's macOS SDK.
