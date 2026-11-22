@@ -27,6 +27,7 @@
 #include "ofxsMacros.h"
 #include "ofxsImageEffect.h"
 #include "lodepng.h"
+#include "ReadZip.h"
 
 #define kPluginName "ReadKrita"
 #define kPluginGrouping "Image/Readers"
@@ -51,30 +52,6 @@ namespace OCIO = OCIO_NAMESPACE;
 
 OFXS_NAMESPACE_ANONYMOUS_ENTER
 
-// The entry name of an open zip archive, or "" if it can't be read.
-static std::string
-readZipEntry(zip* archive, const char* name)
-{
-    std::string output;
-    struct zip_stat st;
-    zip_stat_init(&st);
-    if (!archive || zip_stat(archive, name, 0, &st) == -1 || st.size == 0) {
-        return output;
-    }
-    zip_file* file = zip_fopen(archive, name, 0);
-    if (!file) {
-        return output;
-    }
-    std::string data((size_t)st.size, '\0');
-    const zip_int64_t nread = zip_fread(file, &data[0], st.size);
-    zip_fclose(file);
-    if (nread == (zip_int64_t)st.size) {
-        output.swap(data);
-    }
-    return output;
-}
-
-
 class ReadKritaPlugin : public GenericReaderPlugin
 {
 public:
@@ -85,7 +62,6 @@ private:
     virtual void decode(const std::string& filename, OfxTime time, int view, const OfxRectI& renderWindow, const OfxPointD& renderScale, float *pixelData, const OfxRectI& bounds, OFX::PixelComponentEnum pixelComponents, int pixelComponentCount, int rowBytes) OVERRIDE FINAL;
     virtual bool getFrameBounds(const std::string& filename, OfxTime time, int view, OfxRectI *bounds, OfxRectI* format, double *par, std::string *error, int *tile_width, int *tile_height) OVERRIDE FINAL;
     virtual bool guessParamsFromFilename(const std::string& filename, std::string *colorspace, OFX::PreMultiplicationEnum *filePremult, OFX::PixelComponentEnum *components, int *componentCount) OVERRIDE FINAL;
-    std::string extractXML(std::string kritaFile);
     void parseXML(xmlNode *node,int *width, int *height);
     void getImageSize(int *width, int *height, std::string filename);
     // the image size in maindoc.xml, from a parsed copy of it
@@ -99,31 +75,6 @@ ReadKritaPlugin::ReadKritaPlugin(OfxImageEffectHandle handle, const std::vector<
 
 ReadKritaPlugin::~ReadKritaPlugin()
 {
-}
-
-std::string
-ReadKritaPlugin::extractXML(std::string kritaFile)
-{
-    std::string output;
-    int err = 0;
-    zip *kritaOpen = zip_open(kritaFile.c_str(), 0, &err);
-    const char *xmlName = "maindoc.xml";
-    struct zip_stat xmlSt;
-    zip_stat_init(&xmlSt);
-    err=zip_stat(kritaOpen,xmlName,0,&xmlSt);
-    if (err!=-1) {
-        char *xml = new char[xmlSt.size+1];
-        zip_file *xmlFile = zip_fopen(kritaOpen,xmlName,0);
-        err=zip_fread(xmlFile,xml,xmlSt.size);
-        if (err!=-1) {
-            zip_fclose(xmlFile);
-            xml[xmlSt.size] = '\0';
-            output=xml;
-        }
-        delete[] xml;
-    }
-    zip_close(kritaOpen);
-    return output;
 }
 
 void
@@ -160,7 +111,7 @@ ReadKritaPlugin::parseXML(xmlNode *node,int *width, int *height)
 void
 ReadKritaPlugin::getImageSize(int *width, int *height, std::string filename)
 {
-    getImageSizeFromXML(extractXML(filename), width, height);
+    getImageSizeFromXML(ArenaZip::readEntry(filename, "maindoc.xml", ArenaZip::kMaxXMLSize), width, height);
 }
 
 void
@@ -209,37 +160,27 @@ ReadKritaPlugin::decode(const std::string& filename,
     unsigned char* buffer = NULL;
 
     int err = 0;
-    // zip_open/zip_fopen return NULL on failure (missing or corrupt file)
-    zip *imageOpen = zip_open(filename.c_str(),0,&err);
+    // zip_open returns NULL on failure (missing or corrupt file)
+    zip *imageOpen = zip_open(filename.c_str(), ZIP_RDONLY, &err);
     if (imageOpen) {
-        struct zip_stat imageSt;
-        zip_stat_init(&imageSt);
-        err=zip_stat(imageOpen,"mergedimage.png",0,&imageSt);
-        if (err!=-1 && imageSt.size>0) {
-            zip_file *imageFile = zip_fopen(imageOpen,"mergedimage.png",0);
-            if (imageFile) {
-                char *imageData = new char[imageSt.size];
-                zip_int64_t nread = zip_fread(imageFile,imageData,imageSt.size);
-                zip_fclose(imageFile);
-                if (nread == (zip_int64_t)imageSt.size) {
-                    unsigned w = 0, h = 0;
-                    unsigned pngErr = lodepng_decode32(&buffer,&w,&h,(unsigned char *)imageData,(size_t)imageSt.size);
-                    if (pngErr) {
-                        // lodepng may allocate the output even on error
-                        free(buffer);
-                        buffer = NULL;
-                    } else {
-                        width = (int)w;
-                        height = (int)h;
-                    }
-                }
-                delete[] imageData;
+        // the size in the archive is checked and capped (#128)
+        const std::string imageData = ArenaZip::readEntry(imageOpen, "mergedimage.png", ArenaZip::kMaxImageSize);
+        if (!imageData.empty()) {
+            unsigned w = 0, h = 0;
+            unsigned pngErr = lodepng_decode32(&buffer, &w, &h, reinterpret_cast<const unsigned char*>(imageData.data()), imageData.size());
+            if (pngErr) {
+                // lodepng may allocate the output even on error
+                free(buffer);
+                buffer = NULL;
+            } else {
+                width = (int)w;
+                height = (int)h;
             }
         }
         if (buffer != NULL) {
-            getImageSizeFromXML(readZipEntry(imageOpen, "maindoc.xml"), &docWidth, &docHeight);
+            getImageSizeFromXML(ArenaZip::readEntry(imageOpen, "maindoc.xml", ArenaZip::kMaxXMLSize), &docWidth, &docHeight);
         }
-        zip_close(imageOpen);
+        zip_discard(imageOpen); // read-only: nothing to write back
     }
 
     // The whole merged image is decoded, and only the part of renderWindow that it covers is
