@@ -16,7 +16,8 @@
  * along with openfx-arena.  If not, see <http://www.gnu.org/licenses/gpl-2.0.html>
 */
 
-const sampler_t sampler = CLK_NORMALIZED_COORDS_FALSE;
+// CLAMP_TO_EDGE: the bicubic stencil reads up to two pixels outside the image
+const sampler_t sampler = CLK_NORMALIZED_COORDS_FALSE | CLK_ADDRESS_CLAMP_TO_EDGE;
 
 float clampRGB( float x ) {
     return x > 1.f ? 1.f
@@ -28,8 +29,8 @@ kernel void filter (read_only image2d_t in, write_only image2d_t out, float cent
 
     int2 d = get_image_dim(in);
     int2 pos = (int2)(get_global_id(0),get_global_id(1));
-    int x = pos.x - centerW;
-    int y = pos.y - centerH;
+    float x = pos.x - centerW;
+    float y = pos.y - centerH;
 
     // a radius of 0 twirls nothing: -(x*x+y*y) / 0 gave NaN at the center (0 / 0) and
     // exp(-inf) = 0 elsewhere
@@ -41,21 +42,21 @@ kernel void filter (read_only image2d_t in, write_only image2d_t out, float cent
     u += centerW;
     v += centerH;
 
-    float4 fp = read_imagef(in,sampler,(int2)((int)u,(int)v));
-
     // Interpolation
     int2 p11 = (int2)(floor(u),floor(v));
     float dx = u-(float)p11.x;
     float dy = v-(float)p11.y;
 
-    float4 C[5];
+    float4 C[4];
     float4 d0,d2,d3,a0,a1,a2,a3;
 
+    // rows and columns p11-1..p11+2 around p11 = floor(u, v)
     for (int i = 0; i < 4; i++) {
-        d0 = read_imagef(in,sampler,(int2)((int)u-1,(int)v+i)) - read_imagef(in,sampler,(int2)((int)u,(int)v+i));
-        d2 = read_imagef(in,sampler,(int2)((int)u+1,(int)v+i)) - read_imagef(in,sampler,(int2)((int)u,(int)v+i));
-        d3 = read_imagef(in,sampler,(int2)((int)u+2,(int)v+i)) - read_imagef(in,sampler,(int2)((int)u,(int)v+i));
-        a0 = read_imagef(in,sampler,(int2)((int)u,  (int)v+i));
+        int row = p11.y-1+i;
+        d0 = read_imagef(in,sampler,(int2)(p11.x-1,row)) - read_imagef(in,sampler,(int2)(p11.x,row));
+        d2 = read_imagef(in,sampler,(int2)(p11.x+1,row)) - read_imagef(in,sampler,(int2)(p11.x,row));
+        d3 = read_imagef(in,sampler,(int2)(p11.x+2,row)) - read_imagef(in,sampler,(int2)(p11.x,row));
+        a0 = read_imagef(in,sampler,(int2)(p11.x,  row));
         a1 =  -1.0f/3.f*d0 + d2 - 1.0f/6.f*d3;
         a2 = 1.0f/2.f*d0 + 1.0f/2.f*d2;
         a3 = -1.0f/6.f*d0 - 1.0f/2.f*d2 + 1.0f/6.f*d3;
@@ -70,7 +71,7 @@ kernel void filter (read_only image2d_t in, write_only image2d_t out, float cent
     a1 = -1.0f/3.f*d0 + d2 -1.0f/6.f*d3;
     a2 = 1.0f/2.f*d0 + 1.0f/2.f*d2;
     a3 = -1.0f/6.f*d0 - 1.0f/2.f*d2 + 1.0f/6.f*d3;
-    fp = (float4)(a0 + a1*dy + a2*dy*dy + a3*dy*dy*dy);
+    float4 fp = (float4)(a0 + a1*dy + a2*dy*dy + a3*dy*dy*dy);
     fp.x = clampRGB(fp.x);
     fp.y = clampRGB(fp.y);
     fp.z = clampRGB(fp.z);
