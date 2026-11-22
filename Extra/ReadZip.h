@@ -28,6 +28,8 @@
 #include <string>
 #include <zip.h>
 
+#include "ReadHandles.h"
+
 namespace ArenaZip {
 
 // the largest entries read: the XML documents (maindoc.xml, stack.xml) and the PNG images
@@ -60,31 +62,32 @@ readEntry(zip* archive, const char* name, zip_uint64_t maxSize)
     if (size == 0 || size > maxSize) {
         return output;
     }
-    zip_file* file = zip_fopen(archive, name, 0);
+    Arena::ZipFilePtr file(zip_fopen(archive, name, 0));
     if (!file) {
         return output;
     }
     std::string data(static_cast<size_t>(size), '\0');
-    const zip_int64_t nread = zip_fread(file, &data[0], size);
-    zip_fclose(file); // also when zip_fread() fails
+    const zip_int64_t nread = zip_fread(file.get(), &data[0], size);
     if (nread >= 0 && static_cast<zip_uint64_t>(nread) == size) {
         output.swap(data);
     }
     return output;
 }
 
+// The archive file filename, opened read-only: NULL if it is missing or corrupt.
+inline Arena::ZipPtr
+openArchive(const std::string& filename)
+{
+    int err = 0;
+    return Arena::ZipPtr(zip_open(filename.c_str(), ZIP_RDONLY, &err));
+}
+
 // The entry name of the archive file filename, as readEntry().
 inline std::string
 readEntry(const std::string& filename, const char* name, zip_uint64_t maxSize)
 {
-    int err = 0;
-    zip* archive = zip_open(filename.c_str(), ZIP_RDONLY, &err);
-    if (!archive) { // a missing or corrupt file
-        return std::string();
-    }
-    std::string output = readEntry(archive, name, maxSize);
-    zip_discard(archive); // read-only: nothing to write back
-    return output;
+    const Arena::ZipPtr archive = openArchive(filename);
+    return readEntry(archive.get(), name, maxSize); // readEntry(NULL, ...) is ""
 }
 
 } // namespace ArenaZip

@@ -39,6 +39,7 @@
 #include "ofxsMatrix2D.h"
 #include "ofxsTransformInteract.h"
 #include "ofxsMultiThread.h"
+#include "ReadHandles.h"
 #ifndef OFX_USE_MULTITHREAD_MUTEX
 #include "fast_mutex.h"
 #endif
@@ -648,23 +649,22 @@ ReadSVGPlugin::decodePlane(const std::string& filename, OfxTime time, int /*view
         }
     }
 
-    GError *error = NULL;
-    RsvgHandle *handle;
-    cairo_surface_t *surface;
-    cairo_t *cr;
+    // the handles are released on every path, including the throws below and those of the param
+    // and clip getters (#132)
     cairo_status_t status;
     int dpi, width, height;
     _dpi->getValueAtTime(time, dpi);
 
-    handle = rsvg_handle_new_from_file(filename.c_str(), &error);
-
-    if (error != NULL) {
+    GError* e = NULL;
+    const Arena::GObjectPtr<RsvgHandle> handle(rsvg_handle_new_from_file(filename.c_str(), &e));
+    const Arena::GErrorPtr error(e);
+    if (error || !handle) {
         setPersistentMessage(OFX::Message::eMessageError, "", "Failed to read SVG");
         OFX::throwSuiteStatusException(kOfxStatErrFormat);
     }
 
     SVGCanvas canvas;
-    getCanvasSize(handle, dpi, &canvas);
+    getCanvasSize(handle.get(), dpi, &canvas);
     width = canvas.width;
     height = canvas.height;
     // The whole canvas is rendered, at (0,0,width,height) as in getFrameBounds(), and only the part
@@ -680,13 +680,14 @@ ReadSVGPlugin::decodePlane(const std::string& filename, OfxTime time, int /*view
     // cairo's check of the matrix turned into the "Cairo Render failed" error: fail here instead.
     // (width or height 0 used to fail as "Image don't match RenderWindow")
     if (canvas.imageWidth <= 0. || canvas.imageHeight <= 0. || width <= 0 || height <= 0) {
-        g_object_unref(handle);
         setPersistentMessage(OFX::Message::eMessageError, "", "Cairo Render failed");
         OFX::throwSuiteStatusException(kOfxStatErrFormat);
     }
 
-    surface=cairo_image_surface_create(CAIRO_FORMAT_ARGB32, width, height);
-    cr=cairo_create(surface);
+    const Arena::CairoSurfacePtr surfacePtr(cairo_image_surface_create(CAIRO_FORMAT_ARGB32, width, height));
+    const Arena::CairoPtr crPtr(cairo_create(surfacePtr.get()));
+    cairo_surface_t* const surface = surfacePtr.get();
+    cairo_t* const cr = crPtr.get();
 
     // the transform params animate: evaluate them at the render time, not at the time in the file
     // sequence (`time`), which is constant for a still image
@@ -726,23 +727,21 @@ ReadSVGPlugin::decodePlane(const std::string& filename, OfxTime time, int /*view
         viewport.y = 0.;
         viewport.width = canvas.imageWidth;
         viewport.height = canvas.imageHeight;
-        GError *renderError = NULL;
+        GError* re = NULL;
         // as rsvg_handle_render_cairo(), the result is ignored: an error leaves the image empty
         if (layerSub.empty()) {
-            rsvg_handle_render_document(handle, cr, &viewport, &renderError);
+            rsvg_handle_render_document(handle.get(), cr, &viewport, &re);
         } else {
-            rsvg_handle_render_layer(handle, cr, layerSub.c_str(), &viewport, &renderError);
+            rsvg_handle_render_layer(handle.get(), cr, layerSub.c_str(), &viewport, &re);
         }
-        if (renderError) {
-            g_error_free(renderError);
-        }
+        const Arena::GErrorPtr renderError(re);
     } else
 #endif
     if (layerSub.empty()) {
-        rsvg_handle_render_cairo(handle, cr);
+        rsvg_handle_render_cairo(handle.get(), cr);
     }
     else {
-        rsvg_handle_render_cairo_sub(handle, cr, layerSub.c_str());
+        rsvg_handle_render_cairo_sub(handle.get(), cr, layerSub.c_str());
     }
 
     status = cairo_status(cr);
@@ -785,12 +784,6 @@ ReadSVGPlugin::decodePlane(const std::string& filename, OfxTime time, int /*view
             cdataOffset += 4;
         }
     }
-
-    g_object_unref(handle);
-    cairo_destroy(cr);
-    cairo_surface_destroy(surface);
-    cdata = NULL;
-    error = NULL;
 }
 
 bool ReadSVGPlugin::getFrameBounds(const std::string& filename,
@@ -823,23 +816,18 @@ bool ReadSVGPlugin::getFrameBounds(const std::string& filename,
         }
     }
     if (!cached) {
-        GError *error = NULL;
-        RsvgHandle *handle;
-
-        handle = rsvg_handle_new_from_file(filename.c_str(), &error);
-
-        if (error != NULL) {
+        GError* e = NULL;
+        const Arena::GObjectPtr<RsvgHandle> handle(rsvg_handle_new_from_file(filename.c_str(), &e));
+        const Arena::GErrorPtr error(e); // was leaked (#132)
+        if (error || !handle) {
             setPersistentMessage(OFX::Message::eMessageError, "", "Failed to read SVG");
             OFX::throwSuiteStatusException(kOfxStatErrFormat);
         }
 
         SVGCanvas canvas;
-        getCanvasSize(handle, dpi, &canvas);
+        getCanvasSize(handle.get(), dpi, &canvas);
         width = canvas.width;
         height = canvas.height;
-
-        g_object_unref(handle);
-        error = NULL;
 
         if (statOK) {
             AutoMutex lock(_canvasSizeMutex);
@@ -902,18 +890,13 @@ bool ReadSVGPlugin::guessParamsFromFilename(const std::string& /*newFile*/,
     getLayers(root_element,&imageLayers);
     xmlFreeDoc(doc);
 
-    GError *error = NULL;
-    RsvgHandle *handle;
-
-    handle=rsvg_handle_new_from_file(filename.c_str(), &error);
-
-    if (error != NULL) {
+    GError* e = NULL;
+    const Arena::GObjectPtr<RsvgHandle> handle(rsvg_handle_new_from_file(filename.c_str(), &e));
+    const Arena::GErrorPtr error(e); // was leaked (#132)
+    if (error || !handle) {
         setPersistentMessage(OFX::Message::eMessageError, "", "Failed to read SVG");
         OFX::throwSuiteStatusException(kOfxStatErrFormat);
     }
-
-    g_object_unref(handle);
-    error = NULL;
 
     *components = OFX::ePixelComponentRGBA;
     // the output of rsvg is premultiplied, see premulttest.svg check above

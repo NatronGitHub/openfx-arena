@@ -31,6 +31,7 @@
 #include "ofxsMultiPlane.h"
 #include "lodepng.h"
 #include "ReadZip.h"
+#include "ReadHandles.h"
 
 #define kPluginName "OpenRaster"
 #define kPluginGrouping "Image/Readers"
@@ -288,15 +289,13 @@ readLayers(const std::string& filename)
     if (filename.empty()) {
         return layers;
     }
-    int err = 0;
-    zip* archive = zip_open(filename.c_str(), ZIP_RDONLY, &err);
+    const Arena::ZipPtr archive = ArenaZip::openArchive(filename);
     if (!archive) { // a missing or corrupt file
         return layers;
     }
-    const std::string xml = ArenaZip::readEntry(archive, "stack.xml", ArenaZip::kMaxXMLSize);
+    const std::string xml = ArenaZip::readEntry(archive.get(), "stack.xml", ArenaZip::kMaxXMLSize);
     // the merged image is only listed, not read: its size in the archive is enough (#128)
-    const bool hasMergedImage = ArenaZip::entrySize(archive, "mergedimage.png") > 0;
-    zip_discard(archive); // read-only: nothing to write back
+    const bool hasMergedImage = ArenaZip::entrySize(archive.get(), "mergedimage.png") > 0;
     if (xml.empty()) {
         return layers;
     }
@@ -391,36 +390,35 @@ OpenRasterPlugin::decodePlane(const std::string& filename, OfxTime /*time*/, int
     int canvasHeight = 0;
     int offsetX = 0;
     int offsetY = 0;
-    unsigned char* buffer = NULL;
+    // lodepng's output, allocated with malloc; freed on every path, including the throws below and
+    // in convertDepthAndComponents() (#132)
+    Arena::MallocPtr<unsigned char> buffer;
 
-    int err = 0;
-    // zip_open returns NULL on failure (missing or corrupt file)
-    zip *layerOpen = zip_open(filename.c_str(), ZIP_RDONLY, &err);
-    if (layerOpen) {
+    // NULL on failure (missing or corrupt file)
+    const Arena::ZipPtr archive = ArenaZip::openArchive(filename);
+    if (archive) {
         // the size in the archive is checked and capped (#128)
-        const std::string layerData = ArenaZip::readEntry(layerOpen, imageLayers[layer][1].c_str(), ArenaZip::kMaxImageSize);
+        const std::string layerData = ArenaZip::readEntry(archive.get(), imageLayers[layer][1].c_str(), ArenaZip::kMaxImageSize);
         if (!layerData.empty()) {
             unsigned w = 0, h = 0;
-            unsigned pngErr = lodepng_decode32(&buffer, &w, &h, reinterpret_cast<const unsigned char*>(layerData.data()), layerData.size());
+            unsigned char* out = NULL;
+            const unsigned pngErr = lodepng_decode32(&out, &w, &h, reinterpret_cast<const unsigned char*>(layerData.data()), layerData.size());
+            buffer.reset(out); // lodepng may allocate the output even on error
             if (pngErr) {
-                // lodepng may allocate the output even on error
-                free(buffer);
-                buffer = NULL;
+                buffer.reset();
             } else {
                 width = (int)w;
                 height = (int)h;
             }
         }
-        if (buffer != NULL) {
-            getLayerGeometry(ArenaZip::readEntry(layerOpen, "stack.xml", ArenaZip::kMaxXMLSize), imageLayers[layer][1], &canvasWidth, &canvasHeight, &offsetX, &offsetY);
+        if (buffer) {
+            getLayerGeometry(ArenaZip::readEntry(archive.get(), "stack.xml", ArenaZip::kMaxXMLSize), imageLayers[layer][1], &canvasWidth, &canvasHeight, &offsetX, &offsetY);
         }
-        zip_discard(layerOpen); // read-only: nothing to write back
     }
 
     // The whole layer is decoded, and only the part of renderWindow that it covers is copied: a
     // host may ask for a render window smaller than the image, even without tiles (#105).
-    if (buffer==NULL || width<=0 || height<=0) {
-        free(buffer); // allocated by lodepng with malloc
+    if (!buffer || width<=0 || height<=0) {
         setPersistentMessage(OFX::Message::eMessageError, "", "Unable to read image");
         OFX::throwSuiteStatusException(kOfxStatErrFormat);
     }
@@ -452,12 +450,9 @@ OpenRasterPlugin::decodePlane(const std::string& filename, OfxTime /*time*/, int
     if (clipToFile(renderWindow, image, pixelData, bounds, pixelComponentCount, OFX::eBitDepthFloat, rowBytes, &copied)) {
         // GenericReader's conversion reads the top-down buffer directly (no transposed copy), with the
         // formula of the copy that it replaces (x * (1.f / 255)), so the output is the same
-        convertDepthAndComponents(buffer, copied, renderScale, image, OFX::ePixelComponentRGBA, OFX::eBitDepthUByte, width * 4,
+        convertDepthAndComponents(buffer.get(), copied, renderScale, image, OFX::ePixelComponentRGBA, OFX::eBitDepthUByte, width * 4,
                                   pixelData, bounds, remappedComponents, rowBytes);
     }
-
-    free(buffer); // allocated by lodepng with malloc; was leaked on every render
-    buffer = NULL;
 }
 
 bool OpenRasterPlugin::getFrameBounds(const std::string& filename,
