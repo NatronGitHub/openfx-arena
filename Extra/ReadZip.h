@@ -31,8 +31,8 @@
 namespace ArenaZip {
 
 // the largest entries read: the XML documents (maindoc.xml, stack.xml) and the PNG images
-static const zip_uint64_t kMaxXMLSize = zip_uint64_t(64) << 20; // 64 MiB
-static const zip_uint64_t kMaxImageSize = zip_uint64_t(1) << 30; // 1 GiB
+constexpr zip_uint64_t kMaxXMLSize = zip_uint64_t(64) << 20; // 64 MiB
+constexpr zip_uint64_t kMaxImageSize = zip_uint64_t(1) << 30; // 1 GiB
 
 // The size of the entry name of an open archive, or 0 if it is missing, empty, or its size is
 // unknown.
@@ -60,11 +60,12 @@ readEntry(zip* archive, const char* name, zip_uint64_t maxSize)
     if (size == 0 || size > maxSize) {
         return output;
     }
+    // allocated before the entry is opened, so that a bad_alloc can't leak it
+    std::string data(static_cast<size_t>(size), '\0');
     zip_file* file = zip_fopen(archive, name, 0);
     if (!file) {
         return output;
     }
-    std::string data(static_cast<size_t>(size), '\0');
     const zip_int64_t nread = zip_fread(file, &data[0], size);
     zip_fclose(file); // also when zip_fread() fails
     if (nread >= 0 && static_cast<zip_uint64_t>(nread) == size) {
@@ -82,7 +83,13 @@ readEntry(const std::string& filename, const char* name, zip_uint64_t maxSize)
     if (!archive) { // a missing or corrupt file
         return std::string();
     }
-    std::string output = readEntry(archive, name, maxSize);
+    std::string output;
+    try {
+        output = readEntry(archive, name, maxSize);
+    } catch (...) { // bad_alloc: don't leak the archive
+        zip_discard(archive);
+        throw;
+    }
     zip_discard(archive); // read-only: nothing to write back
     return output;
 }
