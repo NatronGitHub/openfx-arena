@@ -28,6 +28,7 @@
 #include "ofxsImageEffect.h"
 #include "lodepng.h"
 #include "ReadZip.h"
+#include "ReadHandles.h"
 
 #define kPluginName "ReadKrita"
 #define kPluginGrouping "Image/Readers"
@@ -157,37 +158,36 @@ ReadKritaPlugin::decode(const std::string& filename,
     // the image size in maindoc.xml, read from the archive that the merged image is decoded from
     int docWidth = 0;
     int docHeight = 0;
-    unsigned char* buffer = NULL;
+    // lodepng's output, allocated with malloc; freed on every path, including the throws below and
+    // in convertDepthAndComponents() (#132)
+    Arena::MallocPtr<unsigned char> buffer;
 
-    int err = 0;
-    // zip_open returns NULL on failure (missing or corrupt file)
-    zip *imageOpen = zip_open(filename.c_str(), ZIP_RDONLY, &err);
-    if (imageOpen) {
+    // NULL on failure (missing or corrupt file)
+    const Arena::ZipPtr archive = ArenaZip::openArchive(filename);
+    if (archive) {
         // the size in the archive is checked and capped (#128)
-        const std::string imageData = ArenaZip::readEntry(imageOpen, "mergedimage.png", ArenaZip::kMaxImageSize);
+        const std::string imageData = ArenaZip::readEntry(archive.get(), "mergedimage.png", ArenaZip::kMaxImageSize);
         if (!imageData.empty()) {
             unsigned w = 0, h = 0;
-            unsigned pngErr = lodepng_decode32(&buffer, &w, &h, reinterpret_cast<const unsigned char*>(imageData.data()), imageData.size());
+            unsigned char* out = NULL;
+            const unsigned pngErr = lodepng_decode32(&out, &w, &h, reinterpret_cast<const unsigned char*>(imageData.data()), imageData.size());
+            buffer.reset(out); // lodepng may allocate the output even on error
             if (pngErr) {
-                // lodepng may allocate the output even on error
-                free(buffer);
-                buffer = NULL;
+                buffer.reset();
             } else {
                 width = (int)w;
                 height = (int)h;
             }
         }
-        if (buffer != NULL) {
-            getImageSizeFromXML(ArenaZip::readEntry(imageOpen, "maindoc.xml", ArenaZip::kMaxXMLSize), &docWidth, &docHeight);
+        if (buffer) {
+            getImageSizeFromXML(ArenaZip::readEntry(archive.get(), "maindoc.xml", ArenaZip::kMaxXMLSize), &docWidth, &docHeight);
         }
-        zip_discard(imageOpen); // read-only: nothing to write back
     }
 
     // The whole merged image is decoded, and only the part of renderWindow that it covers is
     // copied: a host may ask for a render window smaller than the image, even without tiles
     // (#105).
-    if (buffer==NULL || width<=0 || height<=0) {
-        free(buffer); // allocated by lodepng with malloc
+    if (!buffer || width<=0 || height<=0) {
         setPersistentMessage(OFX::Message::eMessageError, "", "Unable to read image");
         OFX::throwSuiteStatusException(kOfxStatErrFormat);
     }
@@ -217,12 +217,9 @@ ReadKritaPlugin::decode(const std::string& filename,
     if (clipToFile(renderWindow, image, pixelData, bounds, pixelComponentCount, OFX::eBitDepthFloat, rowBytes, &copied)) {
         // GenericReader's conversion reads the top-down buffer directly (no transposed copy), with the
         // formula of the copy that it replaces (x * (1.f / 255)), so the output is the same
-        convertDepthAndComponents(buffer, copied, renderScale, image, OFX::ePixelComponentRGBA, OFX::eBitDepthUByte, width * 4,
+        convertDepthAndComponents(buffer.get(), copied, renderScale, image, OFX::ePixelComponentRGBA, OFX::eBitDepthUByte, width * 4,
                                   pixelData, bounds, pixelComponents, rowBytes);
     }
-
-    free(buffer); // allocated by lodepng with malloc; was leaked on every render
-    buffer = NULL;
 }
 
 bool ReadKritaPlugin::getFrameBounds(const std::string& filename,

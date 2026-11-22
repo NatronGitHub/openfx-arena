@@ -181,7 +181,11 @@ private:
     virtual bool guessParamsFromFilename(const std::string& filename, std::string *colorspace, OFX::PreMultiplicationEnum *filePremult, OFX::PixelComponentEnum *components, int *componentCount) OVERRIDE FINAL;
     virtual void changedFilename(const OFX::InstanceChangedArgs &args) OVERRIDE FINAL;
     std::string getResourcesPath();
-    std::vector<std::string> imageLayers;
+    void setImageLayers(PopplerDocument* document);
+    // The page names of the file: set on the main thread, read by getClipComponents(), which the
+    // host may call from any thread, so only accessed with the mutex held (#130)
+    std::mutex _imageLayersMutex;
+    std::vector<std::string> _imageLayers;
     OFX::DoubleParam *_dpi;
 };
 
@@ -244,7 +248,7 @@ void ReadPDFPlugin::restoreStateFromParams()
         if (document == NULL) {
             setPersistentMessage(OFX::Message::eMessageError, "", "Failed to read PDF");
         }
-        imageLayers = pageNames(document);
+        setImageLayers(document);
         if (document) {
             g_object_unref(document);
         }
@@ -313,11 +317,25 @@ ReadPDFPlugin::getResourcesPath() {
     return result;
 }
 
+// _imageLayers: the page names of document (none if it is NULL)
+void
+ReadPDFPlugin::setImageLayers(PopplerDocument* document)
+{
+    std::vector<std::string> layers = pageNames(document);
+    std::lock_guard<std::mutex> lock(_imageLayersMutex);
+    _imageLayers.swap(layers);
+}
+
 OfxStatus
 ReadPDFPlugin::getClipComponents(const OFX::ClipComponentsArguments& args, OFX::ClipComponentsSetter& clipComponents)
 {
     assert(isMultiPlanar());
     clipComponents.setPassThroughClip(NULL, args.time, args.view);
+    std::vector<std::string> imageLayers; // a copy, which the main thread can't change
+    {
+        std::lock_guard<std::mutex> lock(_imageLayersMutex);
+        imageLayers = _imageLayers;
+    }
     if (imageLayers.size()>0 && gHostIsNatron) {
         for (int i = 0; i < (int)imageLayers.size(); i++) {
             std::string layerName;
@@ -545,7 +563,7 @@ bool ReadPDFPlugin::guessParamsFromFilename(const std::string& /*newFile*/,
     if (document == NULL) {
         setPersistentMessage(OFX::Message::eMessageError, "", "Failed to read PDF");
     }
-    imageLayers = pageNames(document);
+    setImageLayers(document);
     if (document) {
         g_object_unref(document);
     }
@@ -572,7 +590,7 @@ void ReadPDFPlugin::changedFilename(const OFX::InstanceChangedArgs &args)
     if (document == NULL) {
         setPersistentMessage(OFX::Message::eMessageError, "", "Failed to read PDF");
     }
-    imageLayers = pageNames(document);
+    setImageLayers(document);
     if (document) {
         g_object_unref(document);
     }

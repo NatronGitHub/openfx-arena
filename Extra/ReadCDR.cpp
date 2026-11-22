@@ -17,6 +17,7 @@
 */
 
 #include <iostream>
+#include <vector>
 
 #include <librsvg/rsvg.h>
 
@@ -33,6 +34,7 @@
 #include "GenericOCIO.h"
 #include "PackedImage.h"
 #include "ofxsImageEffect.h"
+#include "ReadHandles.h"
 
 #define kPluginName "ReadCDR"
 #define kPluginGrouping "Image/Readers"
@@ -73,6 +75,7 @@ private:
     virtual bool getFrameBounds(const std::string& filename, OfxTime time, int view, OfxRectI *bounds, OfxRectI* format, double *par, std::string *error,int *tile_width, int *tile_height) OVERRIDE FINAL;
     virtual bool guessParamsFromFilename(const std::string& filename, std::string *colorspace, OFX::PreMultiplicationEnum *filePremult, OFX::PixelComponentEnum *components, int *componentCount) OVERRIDE FINAL;
     std::string readSVG(const std::string& filename);
+    Arena::GObjectPtr<RsvgHandle> openSVG(const std::string& svg);
     OFX::IntParam *_dpi;
 };
 
@@ -118,6 +121,21 @@ ReadCDRPlugin::readSVG(const std::string& filename)
     return svg;
 }
 
+// An rsvg handle on the SVG document svg. Throws, with a persistent message, if it can't be read.
+// The GError is freed (it was leaked, #132).
+Arena::GObjectPtr<RsvgHandle>
+ReadCDRPlugin::openSVG(const std::string& svg)
+{
+    GError* e = NULL;
+    Arena::GObjectPtr<RsvgHandle> handle(rsvg_handle_new_from_data(reinterpret_cast<const guint8*>(svg.data()), svg.size(), &e));
+    const Arena::GErrorPtr error(e);
+    if (error || !handle) {
+        setPersistentMessage(OFX::Message::eMessageError, "", "Failed to read SVG");
+        OFX::throwSuiteStatusException(kOfxStatErrFormat);
+    }
+    return handle;
+}
+
 void
 ReadCDRPlugin::decode(const std::string& filename,
                       OfxTime time,
@@ -144,25 +162,17 @@ ReadCDRPlugin::decode(const std::string& filename,
 
     const std::string svg = readSVG(filename);
 
-    GError *error = NULL;
-    RsvgHandle *handle;
+    // the handles are released on every path, including the throws below (#132)
     RsvgDimensionData dimension;
-    cairo_surface_t *surface;
-    cairo_t *cr;
     cairo_status_t status;
     double imageWidth, imageHeight, scaleWidth, scaleHeight;
     int dpi, width, height;
     _dpi->getValueAtTime(time, dpi);
 
-    handle = rsvg_handle_new_from_data((const guint8 *)svg.data(), svg.size(), &error);
-    rsvg_handle_set_dpi_x_y(handle, dpi, dpi);
+    const Arena::GObjectPtr<RsvgHandle> handle = openSVG(svg);
+    rsvg_handle_set_dpi_x_y(handle.get(), dpi, dpi);
 
-    if (error != NULL) {
-        setPersistentMessage(OFX::Message::eMessageError, "", "Failed to read SVG");
-        OFX::throwSuiteStatusException(kOfxStatErrFormat);
-    }
-
-    rsvg_handle_get_dimensions(handle, &dimension);
+    rsvg_handle_get_dimensions(handle.get(), &dimension);
 
     imageWidth = dimension.width;
     imageHeight = dimension.height;
@@ -190,20 +200,21 @@ ReadCDRPlugin::decode(const std::string& filename,
     // cairo's check of the matrix turned into the "Render failed" error: fail here instead.
     // (width or height 0 used to fail as "Image don't match RenderWindow")
     if (imageWidth <= 0. || imageHeight <= 0. || width <= 0 || height <= 0) {
-        g_object_unref(handle);
         setPersistentMessage(OFX::Message::eMessageError, "", "Render failed");
         OFX::throwSuiteStatusException(kOfxStatErrFormat);
     }
 
-    surface=cairo_image_surface_create(CAIRO_FORMAT_ARGB32, width, height);
-    cr=cairo_create(surface);
+    const Arena::CairoSurfacePtr surfacePtr(cairo_image_surface_create(CAIRO_FORMAT_ARGB32, width, height));
+    const Arena::CairoPtr crPtr(cairo_create(surfacePtr.get()));
+    cairo_surface_t* const surface = surfacePtr.get();
+    cairo_t* const cr = crPtr.get();
 
     scaleWidth = width / imageWidth;
     scaleHeight = height / imageHeight;
 
     cairo_scale(cr, scaleWidth, scaleHeight);
 
-    rsvg_handle_render_cairo(handle, cr);
+    rsvg_handle_render_cairo(handle.get(), cr);
     status = cairo_status(cr);
 
     if (status) {
@@ -214,7 +225,7 @@ ReadCDRPlugin::decode(const std::string& filename,
     cairo_surface_flush(surface);
 
     unsigned char* cdata = cairo_image_surface_get_data(surface);
-    unsigned char* pixels = new unsigned char[width * height * pixelComponentCount];
+    std::vector<unsigned char> pixels((size_t)width * height * pixelComponentCount);
     for (int i = 0; i < width; ++i) {
         for (int j = 0; j < height; ++j) {
             for (int k = 0; k < pixelComponentCount; ++k)
@@ -244,12 +255,6 @@ ReadCDRPlugin::decode(const std::string& filename,
         }
     }
 
-    g_object_unref(handle);
-    cairo_destroy(cr);
-    cairo_surface_destroy(surface);
-    cdata = NULL;
-    error = NULL;
-    delete[] pixels;
 }
 
 bool ReadCDRPlugin::getFrameBounds(const std::string& filename,
@@ -270,21 +275,14 @@ bool ReadCDRPlugin::getFrameBounds(const std::string& filename,
     int dpi;
     _dpi->getValueAtTime(time, dpi);
 
-    GError *error = NULL;
-    RsvgHandle *handle;
     RsvgDimensionData dimension;
     double imageWidth, imageHeight;
     int width, height;
 
-    handle = rsvg_handle_new_from_data((const guint8 *)svg.data(), svg.size(), &error);
-    rsvg_handle_set_dpi_x_y(handle, dpi, dpi);
+    const Arena::GObjectPtr<RsvgHandle> handle = openSVG(svg);
+    rsvg_handle_set_dpi_x_y(handle.get(), dpi, dpi);
 
-    if (error != NULL) {
-        setPersistentMessage(OFX::Message::eMessageError, "", "Failed to read SVG");
-        OFX::throwSuiteStatusException(kOfxStatErrFormat);
-    }
-
-    rsvg_handle_get_dimensions(handle, &dimension);
+    rsvg_handle_get_dimensions(handle.get(), &dimension);
 
     imageWidth = dimension.width;
     imageHeight = dimension.height;
@@ -296,9 +294,6 @@ bool ReadCDRPlugin::getFrameBounds(const std::string& filename,
         width = imageWidth;
         height = imageHeight;
     }
-
-    g_object_unref(handle);
-    error = NULL;
 
     if (width <= 0 || height <= 0) {
         // an empty drawing: report it, instead of returning true with the bounds unset, from
@@ -338,18 +333,7 @@ bool ReadCDRPlugin::guessParamsFromFilename(const std::string& /*newFile*/,
 
     const std::string svg = readSVG(filename);
 
-    GError *error = NULL;
-    RsvgHandle *handle;
-
-    handle=rsvg_handle_new_from_data((const guint8 *)svg.data(), svg.size(), &error);
-
-    if (error != NULL) {
-        setPersistentMessage(OFX::Message::eMessageError, "", "Failed to read SVG");
-        OFX::throwSuiteStatusException(kOfxStatErrFormat);
-    }
-
-    g_object_unref(handle);
-    error = NULL;
+    openSVG(svg); // throws if it can't be read
 
     *components = OFX::ePixelComponentRGBA;
     *filePremult = OFX::eImagePreMultiplied;
