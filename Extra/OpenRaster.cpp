@@ -17,6 +17,7 @@
 */
 
 #include <algorithm>
+#include <mutex>
 #include <iostream>
 #include <stdint.h>
 #include <zip.h>
@@ -148,6 +149,11 @@ private:
     virtual bool guessParamsFromFilename(const std::string& filename, std::string *colorspace, OFX::PreMultiplicationEnum *filePremult, OFX::PixelComponentEnum *components, int *componentCount) OVERRIDE FINAL;
     virtual void changedFilename(const OFX::InstanceChangedArgs &args) OVERRIDE FINAL;
     void getImageSize(int *width, int *height, std::string filename);
+    void setImageLayers(const std::string& filename);
+    std::vector<std::vector<std::string> > getImageLayers();
+    // The layers of the file: set on the main thread, read by getClipComponents() and decodePlane()
+    // on any thread, so only accessed with the mutex held, through set/getImageLayers() (#130)
+    std::mutex _imageLayersMutex;
     std::vector<std::vector<std::string> > imageLayers;
 };
 
@@ -312,11 +318,29 @@ readLayers(const std::string& filename)
     return layers;
 }
 
+// imageLayers: the layers of the file filename
+void
+OpenRasterPlugin::setImageLayers(const std::string& filename)
+{
+    std::vector<std::vector<std::string> > layers = readLayers(filename);
+    std::lock_guard<std::mutex> lock(_imageLayersMutex);
+    imageLayers.swap(layers);
+}
+
+// a copy of imageLayers, which the main thread can't change
+std::vector<std::vector<std::string> >
+OpenRasterPlugin::getImageLayers()
+{
+    std::lock_guard<std::mutex> lock(_imageLayersMutex);
+    return imageLayers;
+}
+
 OfxStatus
 OpenRasterPlugin::getClipComponents(const OFX::ClipComponentsArguments& args, OFX::ClipComponentsSetter& clipComponents)
 {
     assert(isMultiPlanar());
     clipComponents.setPassThroughClip(NULL, args.time, args.view);
+    const std::vector<std::vector<std::string> > imageLayers = getImageLayers();
     if (imageLayers.size()>0 && gHostIsNatron) {
         for (int i = 0; i < (int)imageLayers.size(); i++) {
             std::string layerName;
@@ -351,6 +375,7 @@ OpenRasterPlugin::decodePlane(const std::string& filename, OfxTime /*time*/, int
         OFX::throwSuiteStatusException(kOfxStatErrFormat);
     }
 
+    const std::vector<std::vector<std::string> > imageLayers = getImageLayers();
     if (imageLayers.size() == 0) {
         setPersistentMessage(OFX::Message::eMessageError, "", "No layers");
         OFX::throwSuiteStatusException(kOfxStatErrFormat);
@@ -501,8 +526,8 @@ bool OpenRasterPlugin::guessParamsFromFilename(const std::string& /*newFile*/,
         return false;
     }
 
-    imageLayers = readLayers(filename);
-    if (imageLayers.empty()) {
+    setImageLayers(filename);
+    if (getImageLayers().empty()) {
         setPersistentMessage(OFX::Message::eMessageError, "", "Empty and/or corrupt image");
     }
 
@@ -523,7 +548,7 @@ void OpenRasterPlugin::changedFilename(const OFX::InstanceChangedArgs &args)
         setPersistentMessage(OFX::Message::eMessageError, "", "No filename");
         OFX::throwSuiteStatusException(kOfxStatErrFormat);
     }
-    imageLayers = readLayers(filename);
+    setImageLayers(filename);
 }
 
 void OpenRasterPlugin::restoreStateFromParams()
@@ -535,7 +560,7 @@ void OpenRasterPlugin::restoreStateFromParams()
     OfxStatus st = getFilenameAtTime(startingTime, &filename);
     // && (was ||): with no file set, this tried to open ""
     if ( st == kOfxStatOK && !filename.empty() ) {
-        imageLayers = readLayers(filename);
+        setImageLayers(filename);
     }
 }
 

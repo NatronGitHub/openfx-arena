@@ -199,6 +199,11 @@ private:
     OFX::ChoiceParam *_skewOrder;
     OFX::Double2DParam *_center;
     OFX::BooleanParam *_autoCenter;
+    void setImageLayers(const std::string& filename);
+    // The layers (the ids of the groups and paths) of the file: set on the main thread, read by
+    // getClipComponents(), which the host may call from any thread, so only accessed with the
+    // mutex held (#130)
+    Mutex _imageLayersMutex;
     std::vector<std::string> imageLayers;
     // The canvas size from the last getFrameBounds(), so that it doesn't parse the whole SVG each
     // time: GenericReader calls it from getClipPreferences(), which the host calls again at each
@@ -283,14 +288,9 @@ void ReadSVGPlugin::restoreStateFromParams()
     int startingTime = getStartingTime();
     std::string filename;
     OfxStatus st = getFilenameAtTime(startingTime, &filename);
-    if ( st == kOfxStatOK || !filename.empty() ) {
-        imageLayers.clear();
-        xmlDocPtr doc;
-        doc = xmlParseFile(filename.c_str());
-        xmlNode *root_element = NULL;
-        root_element = xmlDocGetRootElement(doc);
-        getLayers(root_element,&imageLayers);
-        xmlFreeDoc(doc);
+    // && (was ||): with no file set, this tried to parse ""
+    if ( st == kOfxStatOK && !filename.empty() ) {
+        setImageLayers(filename);
     }
 
     // The file may already be set at instance creation, without a later instanceChanged: on project
@@ -505,11 +505,28 @@ ReadSVGPlugin::getLayers(xmlNode *node, std::vector<std::string> *layers)
     }
 }
 
+// imageLayers: the layers of the SVG file filename
+void
+ReadSVGPlugin::setImageLayers(const std::string& filename)
+{
+    std::vector<std::string> layers;
+    xmlDocPtr doc = xmlParseFile(filename.c_str());
+    getLayers(xmlDocGetRootElement(doc), &layers);
+    xmlFreeDoc(doc);
+    AutoMutex lock(_imageLayersMutex);
+    imageLayers.swap(layers);
+}
+
 OfxStatus
 ReadSVGPlugin::getClipComponents(const OFX::ClipComponentsArguments& args, OFX::ClipComponentsSetter& clipComponents)
 {
     assert(isMultiPlanar());
     clipComponents.setPassThroughClip(NULL, args.time, args.view);
+    std::vector<std::string> imageLayers; // a copy, which the main thread can't change
+    {
+        AutoMutex lock(_imageLayersMutex);
+        imageLayers = this->imageLayers;
+    }
     if (imageLayers.size()>0 && gHostIsNatron) {
         for (int i = 0; i < (int)imageLayers.size(); i++) {
             if (!imageLayers[i].empty()) {
@@ -882,13 +899,7 @@ bool ReadSVGPlugin::guessParamsFromFilename(const std::string& /*newFile*/,
         return false;
     }
 
-    imageLayers.clear();
-    xmlDocPtr doc;
-    doc = xmlParseFile(filename.c_str());
-    xmlNode *root_element = NULL;
-    root_element = xmlDocGetRootElement(doc);
-    getLayers(root_element,&imageLayers);
-    xmlFreeDoc(doc);
+    setImageLayers(filename);
 
     GError* e = NULL;
     const Arena::GObjectPtr<RsvgHandle> handle(rsvg_handle_new_from_file(filename.c_str(), &e));
@@ -918,13 +929,7 @@ void ReadSVGPlugin::changedFilename(const OFX::InstanceChangedArgs &args)
         setPersistentMessage(OFX::Message::eMessageError, "", "No filename");
         OFX::throwSuiteStatusException(kOfxStatErrFormat);
     }
-    imageLayers.clear();
-    xmlDocPtr doc;
-    doc = xmlParseFile(filename.c_str());
-    xmlNode *root_element = NULL;
-    root_element = xmlDocGetRootElement(doc);
-    getLayers(root_element,&imageLayers);
-    xmlFreeDoc(doc);
+    setImageLayers(filename);
 
     // move the center to the center of the new canvas, unless the user moved it, and change the
     // translation so that the transformed image doesn't move (as the Transform node does when its
