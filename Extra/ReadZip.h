@@ -33,8 +33,8 @@
 namespace ArenaZip {
 
 // the largest entries read: the XML documents (maindoc.xml, stack.xml) and the PNG images
-static const zip_uint64_t kMaxXMLSize = zip_uint64_t(64) << 20; // 64 MiB
-static const zip_uint64_t kMaxImageSize = zip_uint64_t(1) << 30; // 1 GiB
+constexpr zip_uint64_t kMaxXMLSize = zip_uint64_t(64) << 20; // 64 MiB
+constexpr zip_uint64_t kMaxImageSize = zip_uint64_t(1) << 30; // 1 GiB
 
 // The size of the entry name of an open archive, or 0 if it is missing, empty, or its size is
 // unknown.

@@ -558,10 +558,9 @@ void OpenRasterPlugin::restoreStateFromParams()
     int startingTime = getStartingTime();
     std::string filename;
     OfxStatus st = getFilenameAtTime(startingTime, &filename);
-    // && (was ||): with no file set, this tried to open ""
-    if ( st == kOfxStatOK && !filename.empty() ) {
-        setImageLayers(filename);
-    }
+    // always, so that clearing the file also clears its layers: readLayers() returns no layers
+    // for "" (it used to open it)
+    setImageLayers(st == kOfxStatOK ? filename : std::string());
 }
 
 using namespace OFX;
