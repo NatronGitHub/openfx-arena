@@ -6,7 +6,7 @@ CXXFLAGS += -DOFX_EXTENSIONS_VEGAS -DOFX_EXTENSIONS_NUKE -DOFX_EXTENSIONS_TUTTLE
 # SupportExt's OFX 1.5 DrawSuite overlay backend (SupportExt/ofxsOverlayDraw.h). It must be
 # a global flag with the same value for every translation unit (ODR: it changes class layouts
 # and inline functions); MSVC checks it with #pragma detect_mismatch. Keep it in sync with
-# CMakeLists.txt and Arena.xcodeproj.
+# CMakeLists.txt.
 CXXFLAGS += -DOFXS_HAVE_DRAWSUITE=1
 VPATH += $(SRCDIR)/SupportExt
 
