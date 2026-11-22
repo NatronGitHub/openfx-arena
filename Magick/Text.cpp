@@ -17,6 +17,7 @@
 */
 
 #include "MagickCommon.h"
+#include "PackedImage.h"
 
 #include "ofxsPositionInteract.h"
 #include "ofxsMacros.h"
@@ -521,7 +522,7 @@ void TextPlugin::render(const OFX::RenderArguments &args)
             dropShadow.shadow(shadowOpacity,std::floor(shadowSigma * args.renderScale.x + 0.5),0,0);
         }
         catch(Magick::Warning &warning) {
-            dropShadow.shadow(shadowOpacity,std::floor(shadowSigma * args.renderScale.x + 0.5),0,0);
+            // Magick++ throws the warning after replacing the image with its shadow: keep it
             #ifdef DEBUG
             std::cout << warning.what() << std::endl;
             #endif
@@ -601,7 +602,13 @@ void TextPlugin::render(const OFX::RenderArguments &args)
 #else
         output.composite(image, 0, 0, Magick::CopyOpacityCompositeOp);
 #endif
-        output.write(0,0,args.renderWindow.x2 - args.renderWindow.x1,args.renderWindow.y2 - args.renderWindow.y1,"RGBA",Magick::FloatPixel,(float*)dstImg->getPixelData());
+        // output is RoD-sized: read the render window at its offset in the RoD, and write
+        // it with the destination's bounds and row bytes
+        PackedImage::PackedDst dstPixels(dstImg.get(), args.renderWindow);
+        output.write(args.renderWindow.x1 - dstRod.x1, args.renderWindow.y1 - dstRod.y1,
+                     args.renderWindow.x2 - args.renderWindow.x1, args.renderWindow.y2 - args.renderWindow.y1,
+                     "RGBA", Magick::FloatPixel, dstPixels.data());
+        dstPixels.commit();
     }
 }
 

@@ -66,7 +66,7 @@ public:
         double x,y;
         _x->getValueAtTime(args.time, x);
         _y->getValueAtTime(args.time, y);
-        image.roll(std::floor(x * args.renderScale.x + 0.5), std::floor(y * args.renderScale.x + 0.5));
+        image.roll(std::floor(x * args.renderScale.x + 0.5), std::floor(y * args.renderScale.y + 0.5));
     }
 private:
     DoubleParam *_x;
