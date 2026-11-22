@@ -10,6 +10,8 @@
 # - bad_hugexml, bad_hugepng: an XML or PNG entry whose size in the archive (2^64-1 or 2^63-1) is
 #   far larger than its contents. The readers allocated that size (new char[size + 1] wrapped
 #   around to new char[0] for 2^64-1, then zip_fread() wrote past it) (#128).
+# - bad_pngbomb.kra: a merged image whose PNG header says 65535x65535 (17 GB of RGBA) (#159).
+# - bad_huge.svg: a canvas too large for an int or for cairo (#158).
 # - bad_corrupt: not a zip file (or BMP file) at all; bad_empty.svg: an empty canvas (#129);
 #   missing.*: no such file.
 # A failure is an exit status other than 0 (a crash is reported by execute_process() as a string,
@@ -83,6 +85,7 @@ endmacro()
 fails(fr.inria.openfx.ReadKrita 2 bad_nosize.kra "Unable to read image")
 fails(fr.inria.openfx.ReadKrita 2 bad_hugexml.kra "Unable to read image")
 fails(fr.inria.openfx.ReadKrita 2 bad_hugepng.kra "Unable to read image")
+fails(fr.inria.openfx.ReadKrita 2 bad_pngbomb.kra "Unable to read image")
 fails(fr.inria.openfx.ReadKrita 2 bad_corrupt.kra "Unable to read image")
 fails(fr.inria.openfx.ReadKrita 2 missing.kra "Cannot load frame|No filename")
 fails(fr.inria.openfx.OpenRaster 2 bad_nosize.ora "Unable to read image")
@@ -90,8 +93,10 @@ fails(fr.inria.openfx.OpenRaster 2 bad_hugexml.ora "Unable to read image|Empty a
 fails(fr.inria.openfx.OpenRaster 2 bad_hugepng.ora "Unable to read image")
 fails(fr.inria.openfx.OpenRaster 2 bad_corrupt.ora "Unable to read image|Empty and/or corrupt image")
 fails(fr.inria.openfx.OpenRaster 2 missing.ora "Cannot load frame|No filename")
-fails(net.fxarena.openfx.ReadSVG 4 bad_empty.svg "Empty SVG canvas")
-fails(net.fxarena.openfx.ReadSVG 3 bad_empty.svg "Empty SVG canvas")
+fails(net.fxarena.openfx.ReadSVG 4 bad_empty.svg "Empty or too large SVG canvas")
+fails(net.fxarena.openfx.ReadSVG 3 bad_empty.svg "Empty or too large SVG canvas")
+fails(net.fxarena.openfx.ReadSVG 4 bad_huge.svg "Empty or too large SVG canvas")
+fails(net.fxarena.openfx.ReadSVG 3 bad_huge.svg "Empty or too large SVG canvas")
 fails(net.fxarena.openfx.ReadSVG 4 missing.svg "Cannot load frame|No filename")
 fails(fr.inria.openfx.ReadMisc 1 bad_corrupt.bmp ".")
 fails(fr.inria.openfx.ReadMisc 1 missing.bmp "Cannot load frame|No filename")

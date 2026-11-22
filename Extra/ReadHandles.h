@@ -17,7 +17,8 @@
 */
 
 // Owning handles for the C objects of the readers (#132, #185), so that they are released on every
-// path, including the throws of the OFX Support library. The deleters accept NULL.
+// path, including the throws of the OFX Support library. The deleters accept NULL. Also the size
+// conversion of the vector readers.
 
 #ifndef Arena_ReadHandles_h
 #define Arena_ReadHandles_h
@@ -60,6 +61,15 @@ struct ZipDeleter
 };
 using ZipPtr = std::unique_ptr<zip_t, ZipDeleter>;
 using ZipFilePtr = std::unique_ptr<zip_file_t, ZipDeleter>;
+
+// A size in pixels computed in double from the file (ReadSVG, ReadPDF, ReadCDR), as an int,
+// truncated; 0, which the readers report as an error, if it is NaN or outside [0, 32767] (cairo's
+// limit): the conversion of a double outside of the int range is undefined (#158).
+inline int
+toPixels(double v)
+{
+    return (v >= 0. && v <= 32767.) ? static_cast<int>(v) : 0;
+}
 
 } // namespace Arena
 

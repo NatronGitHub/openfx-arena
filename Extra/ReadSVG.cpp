@@ -509,7 +509,8 @@ ReadSVGPlugin::setImageLayers(const std::string& filename)
 {
     std::vector<std::string> layers;
     if (!filename.empty()) {
-        xmlDocPtr doc = xmlParseFile(filename.c_str());
+        // no network access, and no messages on stderr for a malformed file (#160)
+        xmlDocPtr doc = xmlReadFile(filename.c_str(), NULL, XML_PARSE_NONET | XML_PARSE_NOERROR | XML_PARSE_NOWARNING);
         getLayers(xmlDocGetRootElement(doc), &layers);
         xmlFreeDoc(doc);
     }
@@ -573,11 +574,11 @@ ReadSVGPlugin::getCanvasSize(RsvgHandle* handle, int dpi, SVGCanvas* canvas) con
         canvas->imageWidth = dimension.width;
         canvas->imageHeight = dimension.height;
         if (dpi != kParamDpiDefault) {
-            canvas->width = canvas->imageWidth * dpi / kParamDpiDefault;
-            canvas->height = canvas->imageHeight * dpi / kParamDpiDefault;
+            canvas->width = Arena::toPixels(canvas->imageWidth * dpi / kParamDpiDefault);
+            canvas->height = Arena::toPixels(canvas->imageHeight * dpi / kParamDpiDefault);
         } else {
-            canvas->width = canvas->imageWidth;
-            canvas->height = canvas->imageHeight;
+            canvas->width = Arena::toPixels(canvas->imageWidth);
+            canvas->height = Arena::toPixels(canvas->imageHeight);
         }
         // no scale for an empty canvas (0 / 0): decodePlane() fails on it
         canvas->scaleX = (canvas->imageWidth > 0.) ? canvas->width / canvas->imageWidth : 1.;
@@ -600,8 +601,8 @@ ReadSVGPlugin::getCanvasSize(RsvgHandle* handle, int dpi, SVGCanvas* canvas) con
     if (rsvg_handle_get_intrinsic_size_in_pixels(handle, &w, &h)) {
         canvas->imageWidth = w;
         canvas->imageHeight = h;
-        canvas->width = (int)std::floor(w * scale + 0.5);
-        canvas->height = (int)std::floor(h * scale + 0.5);
+        canvas->width = Arena::toPixels(std::floor(w * scale + 0.5));
+        canvas->height = Arena::toPixels(std::floor(h * scale + 0.5));
         canvas->scaleX = canvas->scaleY = scale;
         canvas->exactViewport = true;
         return;
@@ -620,17 +621,17 @@ ReadSVGPlugin::getCanvasSize(RsvgHandle* handle, int dpi, SVGCanvas* canvas) con
     canvas->imageWidth = at90.width;
     canvas->imageHeight = at90.height;
     if (atDpi.width != at90.width && at90.width > 0) {
-        canvas->width = atDpi.width;
+        canvas->width = Arena::toPixels(atDpi.width);
         canvas->scaleX = (double)atDpi.width / at90.width;
     } else {
-        canvas->width = (int)std::floor(at90.width * scale + 0.5);
+        canvas->width = Arena::toPixels(std::floor(at90.width * scale + 0.5));
         canvas->scaleX = scale;
     }
     if (atDpi.height != at90.height && at90.height > 0) {
-        canvas->height = atDpi.height;
+        canvas->height = Arena::toPixels(atDpi.height);
         canvas->scaleY = (double)atDpi.height / at90.height;
     } else {
-        canvas->height = (int)std::floor(at90.height * scale + 0.5);
+        canvas->height = Arena::toPixels(std::floor(at90.height * scale + 0.5));
         canvas->scaleY = scale;
     }
     canvas->exactViewport = false;
@@ -860,7 +861,7 @@ bool ReadSVGPlugin::getFrameBounds(const std::string& filename,
         // an empty canvas: report it, instead of returning true with the bounds unset, from which
         // GenericReader made a garbage RoD (#129)
         if (errorMsg) {
-            *errorMsg = "Empty SVG canvas";
+            *errorMsg = "Empty or too large SVG canvas";
         }
         return false;
     }
@@ -963,6 +964,8 @@ template<unsigned int majorVersion>
 void
 ReadSVGPluginFactory<majorVersion>::load()
 {
+    // libxml2 before 2.11 must be initialized on the main thread before it is used on others (#160)
+    xmlInitParser();
     _extensions.clear();
     _extensions.push_back("svg");
     _extensions.push_back("svgz");

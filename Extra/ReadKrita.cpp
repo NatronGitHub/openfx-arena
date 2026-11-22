@@ -93,8 +93,8 @@ ReadKritaPlugin::parseXML(xmlNode *node,int *width, int *height)
                 imgWchar = xmlGetProp(cur_node,(const xmlChar*)"width");
                 imgHchar = xmlGetProp(cur_node,(const xmlChar*)"height");
                 // xmlGetProp returns NULL if the attribute is missing
-                imgW = imgWchar ? atoi((const char*)imgWchar) : 0;
-                imgH = imgHchar ? atoi((const char*)imgHchar) : 0;
+                imgW = ArenaZip::parseInt(imgWchar);
+                imgH = ArenaZip::parseInt(imgHchar);
                 xmlFree(imgWchar);
                 xmlFree(imgHchar);
                 if (imgW>0&&imgH>0) {
@@ -122,7 +122,7 @@ ReadKritaPlugin::getImageSizeFromXML(const std::string& xml, int *width, int *he
         int imgW = 0;
         int imgH = 0;
         xmlDocPtr doc;
-        doc = xmlParseDoc((const xmlChar*)xml.c_str());
+        doc = ArenaZip::parseXML(xml);
         xmlNode *root_element = NULL;
         root_element = xmlDocGetRootElement(doc);
         parseXML(root_element,&imgW,&imgH);
@@ -169,12 +169,8 @@ ReadKritaPlugin::decode(const std::string& filename,
         const std::string imageData = ArenaZip::readEntry(archive.get(), "mergedimage.png", ArenaZip::kMaxImageSize);
         if (!imageData.empty()) {
             unsigned w = 0, h = 0;
-            unsigned char* out = NULL;
-            const unsigned pngErr = lodepng_decode32(&out, &w, &h, reinterpret_cast<const unsigned char*>(imageData.data()), imageData.size());
-            buffer.reset(out); // lodepng may allocate the output even on error
-            if (pngErr) {
-                buffer.reset();
-            } else {
+            buffer = ArenaZip::decodePNG(imageData, &w, &h); // capped (#159)
+            if (buffer) {
                 width = (int)w;
                 height = (int)h;
             }
@@ -289,6 +285,8 @@ mDeclareReaderPluginFactory(ReadKritaPluginFactory, {}, false);
 void
 ReadKritaPluginFactory::load()
 {
+    // libxml2 before 2.11 must be initialized on the main thread before it is used on others (#160)
+    xmlInitParser();
     _extensions.clear();
     _extensions.push_back("kra");
 }
