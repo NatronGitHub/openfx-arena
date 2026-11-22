@@ -267,14 +267,15 @@ const std::string RichText::convertHtmlToMarkup(const std::string &str,
             std::string getFontFamilyCSS = RichText::trimmed(RichText::extract(line, "font-family:", ";"), false /* whitespace */);
             std::string getFontWeightCSS = RichText::trimmed(RichText::extract(line, "font-weight:", ";"), false /* whitespace */);
             std::string getFontStyleCSS = RichText::trimmed(RichText::extract(line, "font-style:", ";"), false /* whitespace */);
-            std::string getFontColorCSS = RichText::trimmed(RichText::extract(line, "color:", ";"));
+            // only a color declaration of the style attribute, not background-color or border-color
+            std::string getFontColorCSS = RichText::extract(RichText::trimmed(";" + RichText::extract(line, "style=\"", "\"") + ";"), ";color:", ";");
 
             // std::cout << "FONT CSS :size: " << getFontSizeCSS << " :family: " << getFontFamilyCSS << " :weight: " << getFontWeightCSS << " :style: " << getFontStyleCSS << " :color: " << getFontColorCSS << std::endl;
 
             // get html options
             std::string getFontSizeHTML = RichText::trimmed(RichText::extract(line, "size=\"", "\""));
             std::string getFontFamilyHTML = RichText::trimmed(RichText::extract(line, "face=\"", "\""), false /* whitespace */);
-            std::string getFontColorHTML = RichText::trimmed(RichText::extract(line, "color=\"", "\""));
+            std::string getFontColorHTML = RichText::trimmed(RichText::extract(line, " color=\"", "\"")); // not bgcolor
 
             // std::cout << "FONT HTML :size: " << getFontSizeHTML << " :family: " << getFontFamilyHTML << " :color: " << getFontColorHTML << std::endl;
 
@@ -282,7 +283,7 @@ const std::string RichText::convertHtmlToMarkup(const std::string &str,
             bool hasStyle = RichText::contains(line, "style=\"");
             bool hasFontFamily = !getFontFamilyCSS.empty() || !getFontFamilyHTML.empty();
             bool hasFontSize = !getFontSizeCSS.empty() || !getFontSizeHTML.empty();
-            bool hasFontColor = !getFontSizeCSS.empty() || !getFontSizeHTML.empty();
+            bool hasFontColor = !getFontColorCSS.empty() || !getFontColorHTML.empty();
 
             std::string fontFamily = !getFontFamilyCSS.empty()?getFontFamilyCSS:getFontFamilyHTML;
             std::string fontSize = !getFontSizeCSS.empty()?getFontSizeCSS:getFontSizeHTML;
@@ -343,6 +344,7 @@ const std::string RichText::convertHtmlToMarkup(const std::string &str,
             // add font color
             if (hasFontColor && !fontColor.empty() && getFontFamilyHTML.empty()) {
                 std::string span = RichText::startsWith(line, "!_BODY")?"!_BODY":"!_SPAN";
+                RichText::replace(line, " color=\"" + RichText::extract(line, " color=\"", "\"") + "\"", ""); // no duplicate color
                 RichText::replace(line, span, span + " color=\"" + fontColor + "\" ");
             }
         }

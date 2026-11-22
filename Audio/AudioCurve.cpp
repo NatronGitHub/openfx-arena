@@ -294,12 +294,13 @@ void AudioCurvePlugin::generateCurves()
                 for (i = 0; i < nread; ++i) {
                     SOX_SAMPLE_LOCALS;
                     double sample = SOX_SAMPLE_TO_FLOAT_64BIT(buf[i],);
-                    if (i & 1) { right = zero?std::max(right, fabs(sample)):sample; }
-                    else { left = zero?std::max(left, fabs(sample)):sample; }
+                    // the block's peak: max |sample| with zero, else the signed sample of largest magnitude
+                    double& peak = (i & 1) ? right : left;
+                    if (fabs(sample) > fabs(peak)) { peak = zero ? fabs(sample) : sample; }
                 }
 
-                if (left>maxX) { maxX = left; }
-                if (right>maxY) { maxY = right; }
+                if (fabs(left)>maxX) { maxX = fabs(left); }
+                if (fabs(right)>maxY) { maxY = fabs(right); }
 
                 int frame = 0;
                 double secs = start_secs + blocks * block_period;
