@@ -185,7 +185,7 @@ private:
     // The page names of the file: set on the main thread, read by getClipComponents(), which the
     // host may call from any thread, so only accessed with the mutex held (#130)
     std::mutex _imageLayersMutex;
-    std::vector<std::string> imageLayers;
+    std::vector<std::string> _imageLayers;
     OFX::DoubleParam *_dpi;
 };
 
@@ -317,13 +317,13 @@ ReadPDFPlugin::getResourcesPath() {
     return result;
 }
 
-// imageLayers: the page names of document (none if it is NULL)
+// _imageLayers: the page names of document (none if it is NULL)
 void
 ReadPDFPlugin::setImageLayers(PopplerDocument* document)
 {
     std::vector<std::string> layers = pageNames(document);
     std::lock_guard<std::mutex> lock(_imageLayersMutex);
-    imageLayers.swap(layers);
+    _imageLayers.swap(layers);
 }
 
 OfxStatus
@@ -334,7 +334,7 @@ ReadPDFPlugin::getClipComponents(const OFX::ClipComponentsArguments& args, OFX::
     std::vector<std::string> imageLayers; // a copy, which the main thread can't change
     {
         std::lock_guard<std::mutex> lock(_imageLayersMutex);
-        imageLayers = this->imageLayers;
+        imageLayers = _imageLayers;
     }
     if (imageLayers.size()>0 && gHostIsNatron) {
         for (int i = 0; i < (int)imageLayers.size(); i++) {

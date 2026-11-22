@@ -204,7 +204,7 @@ private:
     // getClipComponents(), which the host may call from any thread, so only accessed with the
     // mutex held (#130)
     Mutex _imageLayersMutex;
-    std::vector<std::string> imageLayers;
+    std::vector<std::string> _imageLayers;
     // The canvas size from the last getFrameBounds(), so that it doesn't parse the whole SVG each
     // time: GenericReader calls it from getClipPreferences(), which the host calls again at each
     // change of a transform param (they are clip preferences slaves), e.g. while dragging the overlay.
@@ -288,10 +288,8 @@ void ReadSVGPlugin::restoreStateFromParams()
     int startingTime = getStartingTime();
     std::string filename;
     OfxStatus st = getFilenameAtTime(startingTime, &filename);
-    // && (was ||): with no file set, this tried to parse ""
-    if ( st == kOfxStatOK && !filename.empty() ) {
-        setImageLayers(filename);
-    }
+    // always, so that clearing the file also clears its layers (it used to parse "")
+    setImageLayers(st == kOfxStatOK ? filename : std::string());
 
     // The file may already be set at instance creation, without a later instanceChanged: on project
     // load, and when Natron's Read node switches to this decoder with its filename already set
@@ -505,16 +503,18 @@ ReadSVGPlugin::getLayers(xmlNode *node, std::vector<std::string> *layers)
     }
 }
 
-// imageLayers: the layers of the SVG file filename
+// _imageLayers: the layers of the SVG file filename (none for "")
 void
 ReadSVGPlugin::setImageLayers(const std::string& filename)
 {
     std::vector<std::string> layers;
-    xmlDocPtr doc = xmlParseFile(filename.c_str());
-    getLayers(xmlDocGetRootElement(doc), &layers);
-    xmlFreeDoc(doc);
+    if (!filename.empty()) {
+        xmlDocPtr doc = xmlParseFile(filename.c_str());
+        getLayers(xmlDocGetRootElement(doc), &layers);
+        xmlFreeDoc(doc);
+    }
     AutoMutex lock(_imageLayersMutex);
-    imageLayers.swap(layers);
+    _imageLayers.swap(layers);
 }
 
 OfxStatus
@@ -525,7 +525,7 @@ ReadSVGPlugin::getClipComponents(const OFX::ClipComponentsArguments& args, OFX::
     std::vector<std::string> imageLayers; // a copy, which the main thread can't change
     {
         AutoMutex lock(_imageLayersMutex);
-        imageLayers = this->imageLayers;
+        imageLayers = _imageLayers;
     }
     if (imageLayers.size()>0 && gHostIsNatron) {
         for (int i = 0; i < (int)imageLayers.size(); i++) {

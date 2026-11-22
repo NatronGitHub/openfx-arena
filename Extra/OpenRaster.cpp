@@ -149,12 +149,12 @@ private:
     virtual bool guessParamsFromFilename(const std::string& filename, std::string *colorspace, OFX::PreMultiplicationEnum *filePremult, OFX::PixelComponentEnum *components, int *componentCount) OVERRIDE FINAL;
     virtual void changedFilename(const OFX::InstanceChangedArgs &args) OVERRIDE FINAL;
     void getImageSize(int *width, int *height, std::string filename);
-    void setImageLayers(const std::string& filename);
+    bool setImageLayers(const std::string& filename);
     std::vector<std::vector<std::string> > getImageLayers();
     // The layers of the file: set on the main thread, read by getClipComponents() and decodePlane()
     // on any thread, so only accessed with the mutex held, through set/getImageLayers() (#130)
     std::mutex _imageLayersMutex;
-    std::vector<std::vector<std::string> > imageLayers;
+    std::vector<std::vector<std::string> > _imageLayers;
 };
 
 OpenRasterPlugin::OpenRasterPlugin(OfxImageEffectHandle handle, const std::vector<std::string>& extensions)
@@ -318,21 +318,23 @@ readLayers(const std::string& filename)
     return layers;
 }
 
-// imageLayers: the layers of the file filename
-void
+// _imageLayers: the layers of the file filename. False if it has none.
+bool
 OpenRasterPlugin::setImageLayers(const std::string& filename)
 {
     std::vector<std::vector<std::string> > layers = readLayers(filename);
+    const bool hasLayers = !layers.empty();
     std::lock_guard<std::mutex> lock(_imageLayersMutex);
-    imageLayers.swap(layers);
+    _imageLayers.swap(layers);
+    return hasLayers;
 }
 
-// a copy of imageLayers, which the main thread can't change
+// a copy of _imageLayers, which the main thread can't change
 std::vector<std::vector<std::string> >
 OpenRasterPlugin::getImageLayers()
 {
     std::lock_guard<std::mutex> lock(_imageLayersMutex);
-    return imageLayers;
+    return _imageLayers;
 }
 
 OfxStatus
@@ -526,8 +528,7 @@ bool OpenRasterPlugin::guessParamsFromFilename(const std::string& /*newFile*/,
         return false;
     }
 
-    setImageLayers(filename);
-    if (getImageLayers().empty()) {
+    if (!setImageLayers(filename)) {
         setPersistentMessage(OFX::Message::eMessageError, "", "Empty and/or corrupt image");
     }
 
