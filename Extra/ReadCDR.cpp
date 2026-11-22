@@ -258,7 +258,7 @@ bool ReadCDRPlugin::getFrameBounds(const std::string& filename,
                               OfxRectI *bounds,
                                    OfxRectI* format,
                               double *par,
-                              std::string* /*error*/,int *tile_width, int *tile_height)
+                              std::string* errorMsg,int *tile_width, int *tile_height)
 {
     if (filename.empty()) {
         setPersistentMessage(OFX::Message::eMessageError, "", "No filename");
@@ -300,14 +300,20 @@ bool ReadCDRPlugin::getFrameBounds(const std::string& filename,
     g_object_unref(handle);
     error = NULL;
 
-    if (width>0 && height>0) {
-        bounds->x1 = 0;
-        bounds->x2 = width;
-        bounds->y1 = 0;
-        bounds->y2 = height;
-        *format = *bounds;
-        *par = 1.0;
+    if (width <= 0 || height <= 0) {
+        // an empty drawing: report it, instead of returning true with the bounds unset, from
+        // which GenericReader made a garbage RoD (#129)
+        if (errorMsg) {
+            *errorMsg = "Empty CorelDRAW page";
+        }
+        return false;
     }
+    bounds->x1 = 0;
+    bounds->x2 = width;
+    bounds->y1 = 0;
+    bounds->y2 = height;
+    *format = *bounds;
+    *par = 1.0;
 
     *tile_width = *tile_height = 0;
     return true;

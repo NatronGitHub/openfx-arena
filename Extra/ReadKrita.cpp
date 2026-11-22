@@ -231,19 +231,25 @@ bool ReadKritaPlugin::getFrameBounds(const std::string& filename,
                                      OfxRectI *bounds,
                                      OfxRectI* format,
                                      double *par,
-                                     std::string* /*error*/,int *tile_width, int *tile_height)
+                                     std::string* error,int *tile_width, int *tile_height)
 {
     int width = 0;
     int height = 0;
     getImageSize(&width,&height,filename);
-    if (width>0 && height>0) {
-        bounds->x1 = 0;
-        bounds->x2 = width;
-        bounds->y1 = 0;
-        bounds->y2 = height;
-        *format = *bounds;
-        *par = 1.0;
+    if (width <= 0 || height <= 0) {
+        // a missing or corrupt file, or no image size in maindoc.xml: report it, instead of
+        // returning true with the bounds unset, from which GenericReader made a garbage RoD (#129)
+        if (error) {
+            *error = "Unable to read image";
+        }
+        return false;
     }
+    bounds->x1 = 0;
+    bounds->x2 = width;
+    bounds->y1 = 0;
+    bounds->y2 = height;
+    *format = *bounds;
+    *par = 1.0;
     *tile_width = *tile_height = 0;
     return true;
 }
