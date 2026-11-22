@@ -16,6 +16,7 @@
    * The Center is no longer 1 pixel too high, and the vertical scroll is scaled by the vertical render scale.
    * Circle: the words at angles near 45 degrees (e.g. the diagonal ones with 8 or 16 words) are drawn on the circle, rotated like the others (with FreeType 2.15.0, which ignores some rotations of a mirrored transform, their glyphs were drawn unrotated, at some pixel aspect ratios including 1, #86, #88).
    * New: Line spacing, and font size and position relative to the frame (Size unit, Font size (%), Relative position, #19, #63).
+   * Font families ending with a style word (e.g. "Arial Black") are drawn with their own face; style words typed into Font are part of the family name, the Style and Weight params set the style (#167).
    * Auto size fits the text as it is drawn, with the font options and the stroke (#135).
  * ``Text`` (TextOFX) 6: obsolete (hidden from the menus, still used by old projects). It is now 6.17, with the parameters of 6.14 (Natron 2.5.0) and the bug fixes made since: Stroke dash length above 3, fontconfig leaks and an uninitialized RoD read, rendering a render window smaller than the RoD, and SRT subtitles.
  * ``Text`` (TextOFX) 6 and 7: a frame that fails to render no longer leaks memory (#134).
