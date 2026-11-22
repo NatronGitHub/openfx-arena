@@ -2,6 +2,9 @@
 
 ## Unreleased
 
+ * ``ReadPSD``: clearing the file clears the layer menu (#162).
+ * ``ReadPSD``: the ICC profile scan no longer follows linked folders, which could loop forever (#176).
+ * ``ReadMisc``, ``ReadPSD``, ``Texture``: an ImageMagick warning no longer fails a read or leaves ``Texture`` half generated (#174).
  * ``Text`` (Magick) 5: the output honours the destination's bounds and row bytes (#142).
  * ``HaldCLUT``: a custom CLUT that can't be read is an error, instead of applying the previous or a black CLUT (#143).
  * ``ReadPSD``: no uninitialized read for an ICC profile without a description (#144).
