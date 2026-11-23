@@ -34,6 +34,9 @@
 #define CMS_NO_REGISTER_KEYWORD
 #include <lcms2.h>
 #include <dirent.h>
+#ifdef _WIN32
+#define lstat stat // MinGW has no lstat()
+#endif
 #include <ofxNatron.h>
 #include <cstring>
 #include <fstream>
@@ -242,7 +245,7 @@ void _getProFiles(std::vector<std::string> &files, bool desc, std::string filter
                 std::string proFile = dirp->d_name;
                 path << paths[i] << proFile;
                 struct stat sb;
-                if (stat(path.str().c_str(), &sb) == 0 && S_ISDIR(sb.st_mode)) {
+                if (lstat(path.str().c_str(), &sb) == 0 && S_ISDIR(sb.st_mode)) { // don't follow links: cycles
                     if (proFile !="." && proFile != "..")
                         paths.push_back(path.str()+"/");
                 }
@@ -418,9 +421,8 @@ void ReadPSDPlugin::restoreStateFromParams()
     int startingTime = getStartingTime();
     std::string filename;
     OfxStatus st = getFilenameAtTime(startingTime, &filename);
-    if ( st == kOfxStatOK || !filename.empty() ) {
-        readFrames(filename);
-    }
+    // always, so that clearing the file also clears its layers
+    readFrames(st == kOfxStatOK ? filename : std::string());
 }
 
 // Read all the frames of the file into _psd, and rebuild the layer menu. A layer choice past the last
@@ -429,11 +431,16 @@ void ReadPSDPlugin::readFrames(const std::string& filename)
 {
     std::vector<Magick::Image> frames;
     bool readError = false;
-    try {
-        Magick::readImages(&frames, filename);
-    }
-    catch(Magick::Exception) {
-        readError = true;
+    if (!filename.empty()) {
+        try {
+            Magick::readImages(&frames, filename);
+        }
+        catch(const Magick::Warning &) {
+            // Magick++ throws warnings after the frames were read: not a read error
+        }
+        catch(const Magick::Error &) {
+            readError = true;
+        }
     }
     const bool ok = !readError && !frames.empty() && frames[0].columns() > 0 && frames[0].rows() > 0;
     // read the XCF canvas once, with the frames, so that it matches them even if the file changes later
@@ -460,6 +467,9 @@ void ReadPSDPlugin::readFrames(const std::string& filename)
     std::vector<Magick::Image> current;
     getFrames(&current);
     genLayerMenu(current);
+    if (filename.empty()) {
+        return;
+    }
     if (!ok) {
         setPersistentMessage(OFX::Message::eMessageError, "", "Unable to read image");
         return;
@@ -601,7 +611,10 @@ void ReadPSDPlugin::decodePlane(const std::string& filename, OfxTime time, int /
         try {
             Magick::readImages(&frames, filename);
         }
-        catch(Magick::Exception) {
+        catch(const Magick::Warning &) {
+            // the frames were read
+        }
+        catch(const Magick::Error &) {
             setPersistentMessage(OFX::Message::eMessageError, "", "Unable to read image");
             OFX::throwSuiteStatusException(kOfxStatErrFormat);
         }
@@ -751,7 +764,10 @@ void ReadPSDPlugin::decodePlane(const std::string& filename, OfxTime time, int /
                     try { // catch final convert errors, like wrong profile compared to colorspace etc
                         image.profile("ICC",iccBlob);
                     }
-                    catch(Magick::Exception &error) {
+                    catch(const Magick::Warning &) {
+                        // the profile was applied
+                    }
+                    catch(const Magick::Error &error) {
                         setPersistentMessage(OFX::Message::eMessageError, "", error.what());
                         OFX::throwSuiteStatusException(kOfxStatFailed);
                     }
@@ -778,7 +794,10 @@ void ReadPSDPlugin::decodePlane(const std::string& filename, OfxTime time, int /
                         try { // catch final convert errors, like wrong profile compared to colorspace etc
                             image.profile("ICC",iccBlob);
                         }
-                        catch(Magick::Exception &error) {
+                        catch(const Magick::Warning &) {
+                            // the profile was applied
+                        }
+                        catch(const Magick::Error &error) {
                             setPersistentMessage(OFX::Message::eMessageError, "", error.what());
                             OFX::throwSuiteStatusException(kOfxStatFailed);
                         }

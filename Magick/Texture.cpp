@@ -245,6 +245,9 @@ void TexturePlugin::render(const OFX::RenderArguments &args)
 #endif
 
     // generate background
+#ifndef LEGACYIM
+    image.quiet(true); // a warning thrown between the steps below would leave them half done
+#endif
     try {
         switch (effect) {
         case 0: // Plasma

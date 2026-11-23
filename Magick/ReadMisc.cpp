@@ -100,8 +100,17 @@ ReadMiscPlugin::decode(const std::string& filename,
         #endif
         image.backgroundColor("none"); // must be set to avoid bg
     }
-    if (!filename.empty())
-        image.read(filename);
+    if (!filename.empty()) {
+        try {
+            image.read(filename);
+        }
+        catch(const Magick::Warning &warning) {
+            // Magick++ throws warnings after the image was read: keep it
+            #ifdef DEBUG
+            std::cout << warning.what() << std::endl;
+            #endif
+        }
+    }
     if (image.columns()>0 && image.rows()>0) {
         // No alpha in the file: force an opaque alpha channel. Some coders
         // (e.g. PCX in ImageMagick 6) fill the canvas with backgroundColor
