@@ -39,6 +39,8 @@
    * New: Line spacing, and font size and position relative to the frame (Size unit, Font size (%), Relative position, #19, #63).
    * Font families ending with a style word (e.g. "Arial Black") are drawn with their own face; style words typed into Font are part of the family name, the Style and Weight params set the style (#167).
    * Auto size fits the text as it is drawn, with the font options and the stroke (#135).
+   * Auto size fits italic and overhanging glyphs, and their stroke (#218).
+   * Auto size with a stroke no longer clips the stroke at render scales below 1 (#219).
  * ``Text`` (TextOFX) 6: obsolete (hidden from the menus, still used by old projects). It is now 6.17, with the parameters of 6.14 (Natron 2.5.0) and the bug fixes made since: Stroke dash length above 3, fontconfig leaks and an uninitialized RoD read, rendering a render window smaller than the RoD, and SRT subtitles.
  * ``Text`` (TextOFX) 6 and 7: a frame that fails to render no longer leaks memory (#134).
  * ``Text`` (TextOFX) 6 and 7: changing "Custom font(s)" no longer keeps the fonts of its previous values (#138).
