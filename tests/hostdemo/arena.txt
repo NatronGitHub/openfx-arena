@@ -57,4 +57,4 @@ net.fxarena.openfx.Text 5 general width=320 height=240
 net.fxarena.openfx.Morphology 2 filter
 net.fxarena.openfx.Morphology 1 filter
 # RICHTEXT=ON
-net.fxarena.openfx.RichText 0 filter
+skip net.fxarena.openfx.RichText 0 generator context only, which hostDemo doesn't have

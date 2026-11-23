@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+ * ``RichText`` (experimental): malformed HTML no longer makes the render fail with an exception (#136).
+ * ``AudioCurve``: the Frame Rate is limited to [1, 1000], and SoX is released when an error occurs (#137).
  * The old versions kept for old projects (``ReadSVG`` 3, ``Text`` (TextOFX) 6, ``Text`` (Magick) 5, and the old majors of the ImageMagick plug-ins and ``HaldCLUT``) are marked obsolete with the standard ``kOfxImageEffectPluginPropObsolete`` (next OFX release) instead of the Natron extension ``kNatronOfxImageEffectPropDeprecated`` (#111). Both mean the same thing: hidden from the menus, still loaded by old projects. Hosts that only know the Natron extension, such as Natron 2.5, now show these versions in their menus. Renders are unchanged.
  * ``ReadSVG`` (3 and 4), ``ReadPDF``, ``ReadCDR``, ``ReadKrita`` and ``OpenRaster`` render a render window smaller than the image: they failed with "Image don't match RenderWindow" or "Unable to read image" when a host asked for one (#105). Full-frame renders are unchanged.
  * Readers (``ReadSVG``, ``ReadPDF``, ``ReadCDR``, ``ReadKrita``, ``OpenRaster``, ``ReadPSD``, ``ReadMisc``), with the OpenFX-IO update (#108): the part of a render window outside of the image is transparent black (it was left unwritten, or got image pixels), and the debug builds no longer assert when rendering below full scale (proxy mode, a 50% viewer). Full-frame renders are unchanged.
