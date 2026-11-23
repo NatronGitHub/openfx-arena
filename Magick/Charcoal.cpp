@@ -159,6 +159,9 @@ void CharcoalPlugin::render(const OFX::RenderArguments &args)
     bool enableOpenMP = false;
     radius_->getValueAtTime(args.time, radius);
     sigma_->getValueAtTime(args.time, sigma);
+    // the params are in full-resolution pixels; not rounded, so scale 1 is unchanged
+    radius *= args.renderScale.x;
+    sigma *= args.renderScale.x;
     enableOpenMP_->getValueAtTime(args.time, enableOpenMP);
 
     // setup

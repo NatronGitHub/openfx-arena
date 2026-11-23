@@ -8,6 +8,9 @@
 # hostDemo has filter and general contexts only: readers are rendered in the general context.
 net.fxarena.openfx.Text 7 filter
 net.fxarena.openfx.Text 6 filter
+# Auto size with a stroke, which the version 7 RoD fits (#135)
+net.fxarena.openfx.Text 7 filter -s autoSize=1 -s strokeSize=4
+net.fxarena.openfx.Text 6 filter -s autoSize=1 -s strokeSize=4
 skip fr.inria.openfx.ReadCDR 1 no CorelDRAW sample: libcdr only reads them, and a hand-written .cdr is not simple
 net.fxarena.openfx.ReadSVG 4 general -s filename=@SAMPLES@/sample.svg
 net.fxarena.openfx.ReadSVG 3 general -s filename=@SAMPLES@/sample.svg
@@ -57,4 +60,4 @@ net.fxarena.openfx.Text 5 general width=320 height=240
 net.fxarena.openfx.Morphology 2 filter
 net.fxarena.openfx.Morphology 1 filter
 # RICHTEXT=ON
-net.fxarena.openfx.RichText 0 filter
+skip net.fxarena.openfx.RichText 0 generator context only, which hostDemo doesn't have

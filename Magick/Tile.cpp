@@ -23,6 +23,7 @@
 #include "ofxsMultiThread.h"
 #include "ofxsImageEffect.h"
 #include <algorithm>
+#include <cmath>
 #include <iostream>
 
 #define kPluginName "TileOFX"
@@ -77,6 +78,7 @@ public:
     virtual ~TilePlugin();
     virtual void render(const OFX::RenderArguments &args) OVERRIDE FINAL;
     virtual bool getRegionOfDefinition(const OFX::RegionOfDefinitionArguments &args, OfxRectD &rod) OVERRIDE FINAL;
+    virtual void getFramesNeeded(const OFX::FramesNeededArguments &args, OFX::FramesNeededSetter &frames) OVERRIDE FINAL;
 private:
     bool unpremultSrc_; // false in versions released before the premultiplication fix
     OFX::Clip *dstClip_;
@@ -113,6 +115,27 @@ TilePlugin::TilePlugin(OfxImageEffectHandle handle, bool unpremultSrc)
 
 TilePlugin::~TilePlugin()
 {
+}
+
+// With a Time Offset, render() also fetches the frames of the other tiles: declare them, since
+// without temporal clip access the host assumes that only the current frame is needed
+void TilePlugin::getFramesNeeded(const OFX::FramesNeededArguments &args, OFX::FramesNeededSetter &frames)
+{
+    OfxRangeD range;
+    range.min = range.max = args.time;
+    frames.setFramesNeeded(*srcClip_, range);
+    const int offset = offset_->getValueAtTime(args.time);
+    if (offset != 0) {
+        // as in render()
+        const int rows = std::min(std::max(rows_->getValueAtTime(args.time), 1), 100);
+        const int cols = std::min(std::max(cols_->getValueAtTime(args.time), 1), 100);
+        const int counter = firstFrame_->getValueAtTime(args.time) ? rows * cols - 1 : rows * cols;
+        if (counter > 0) {
+            range.min = std::floor(args.time) + offset;
+            range.max = range.min + (counter - 1);
+            frames.setFramesNeeded(*srcClip_, range);
+        }
+    }
 }
 
 void TilePlugin::render(const OFX::RenderArguments &args)
@@ -281,7 +304,7 @@ void TilePlugin::render(const OFX::RenderArguments &args)
         }
         else
             counter=thumbs;
-        int frame = args.time+offset;
+        double frame = std::floor(args.time) + offset; // not truncated towards zero
         for(int y = 0; y < counter; y++) {
             OFX::auto_ptr<const OFX::Image> tileImg(srcClip_->fetchImage(frame));
             if (tileImg.get()) {
@@ -365,6 +388,7 @@ void TilePluginFactory<majorVersion>::describe(OFX::ImageEffectDescriptor &desc)
     desc.setSupportsMultiResolution(kSupportsMultiResolution);
     desc.setRenderThreadSafety(kRenderThreadSafety);
     desc.setHostFrameThreading(kHostFrameThreading);
+    desc.setTemporalClipAccess(true); // with a Time Offset, see getFramesNeeded()
     desc.setHostMaskingEnabled(true);
     desc.setHostMixingEnabled(true);
 }
@@ -380,7 +404,7 @@ void TilePluginFactory<majorVersion>::describeInContext(OFX::ImageEffectDescript
     // create the mandated source clip
     ClipDescriptor *srcClip = desc.defineClip(kOfxImageEffectSimpleSourceClipName);
     srcClip->addSupportedComponent(ePixelComponentRGBA);
-    srcClip->setTemporalClipAccess(false);
+    srcClip->setTemporalClipAccess(true); // with a Time Offset, see getFramesNeeded()
     srcClip->setSupportsTiles(kSupportsTiles);
     srcClip->setIsMask(false);
 

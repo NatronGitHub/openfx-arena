@@ -32,6 +32,7 @@
 #include <cstring>
 #include <algorithm>
 #include <fstream>
+#include <memory>
 #include <mutex>
 
 #ifdef __APPLE__
@@ -80,7 +81,7 @@
 
 #define kParamFontSize "size"
 #define kParamFontSizeLabel "Font size"
-#define kParamFontSizeHint "The height of the characters to render in pixels. Should not be used for animation, see the scale param."
+#define kParamFontSizeHint "The font size, in points at 96 dpi (an em of 4/3 of it, in pixels). Should not be used for animation, see the scale param."
 #define kParamFontSizeDefault 64
 #define kParamFontSizeMin 1.
 #define kParamFontSizeMax 10000.
@@ -92,7 +93,7 @@
 #define kParamSizeUnit "sizeUnit"
 #define kParamSizeUnitLabel "Size unit"
 #define kParamSizeUnitHint "Unit of the font size. Use a size relative to the frame height so that the text scales with the format. Changing the unit converts the font size so that the text keeps its size, unless 'Font size' or 'Font size (%)' is animated. Only the font size and the position can be relative: the stroke size, the letter and line spacing, the radii and the scroll stay in pixels. " kFrameDescription
-#define kParamSizeUnitOptionPixels "Pixels", "The font size is given by 'Font size', in pixels.", "pixels"
+#define kParamSizeUnitOptionPixels "Pixels", "The font size is given by 'Font size' (in points at 96 dpi, see its hint).", "pixels"
 #define kParamSizeUnitOptionFrameHeight "% of frame height", "The font size is given by 'Font size (%)', as a percentage of the frame height.", "frameheight"
 enum SizeUnitEnum
 {
@@ -103,7 +104,7 @@ enum SizeUnitEnum
 
 #define kParamFontSizeRelative "sizeRelative"
 #define kParamFontSizeRelativeLabel "Font size (%)"
-#define kParamFontSizeRelativeHint "Font size as a percentage of the frame height, used if 'Size unit' is '% of frame height'. It is in the same unit as 'Font size': 5% of a 1080-pixel-high frame is the same as a 'Font size' of 54. The stroke size, the letter and line spacing and the radii stay in pixels. " kFrameDescription
+#define kParamFontSizeRelativeHint "Font size as a percentage of the frame height, used if 'Size unit' is '% of frame height'. It is in the same unit as 'Font size' (points at 96 dpi): 5% of a 1080-pixel-high frame is the same as a 'Font size' of 54, whose em is 72 pixels (4/3 of the size). The stroke size, the letter and line spacing and the radii stay in pixels. " kFrameDescription
 #define kParamFontSizeRelativeDefault 5.
 #define kParamFontSizeRelativeMin 0.01
 #define kParamFontSizeRelativeMax 1000.
@@ -211,7 +212,7 @@ enum SizeUnitEnum
 
 #define kParamSubpixel "subpixel"
 #define kParamSubpixelLabel "Subpixel"
-#define kParamSubpixelHint " The subpixel order specifies the order of color elements within each pixel on the dets the antialiasing mode for the fontisplay device when rendering with an antialiasing mode."
+#define kParamSubpixelHint "The subpixel order specifies the order of color elements within each pixel on the display device when rendering with an antialiasing mode of Subpixel."
 #define kParamSubpixelDefault 0
 
 #define kParamHintStyle "hintStyle"
@@ -304,6 +305,14 @@ enum SizeUnitEnum
 using namespace OFX;
 static bool gHostIsNatron = false;
 
+// Owners of the cairo and Pango handles, so that they are released when render() throws (e.g. on a
+// cairo error). Explicit deleters: MinGW rejects dllimported functions as template arguments.
+struct CairoSurfaceDeleter { void operator()(cairo_surface_t* p) const { cairo_surface_destroy(p); } };
+struct CairoDeleter { void operator()(cairo_t* p) const { cairo_destroy(p); } };
+struct CairoFontOptionsDeleter { void operator()(cairo_font_options_t* p) const { cairo_font_options_destroy(p); } };
+struct PangoLayoutDeleter { void operator()(PangoLayout* p) const { g_object_unref(p); } };
+struct PangoAttrListDeleter { void operator()(PangoAttrList* p) const { pango_attr_list_unref(p); } };
+
 static
 bool stringCompare(const std::string & l, const std::string & r) {
     return (l==r);
@@ -312,8 +321,8 @@ bool stringCompare(const std::string & l, const std::string & r) {
 static
 std::list<std::string> _genFonts(OFX::ChoiceParam *fontName, OFX::StringParam *fontOverride, bool fontOverrideDir, FcConfig *fontConfig, bool properMenu, std::string fontNameDefault, std::string fontNameAltDefault)
 {
-    int defaultFont = 0;
-    int altFont = 0;
+    int defaultFont = -1; // -1: not found
+    int altFont = -1;
     int fontIndex = 0;
 
     // if no config was given, use a temporary one and release it before returning
@@ -370,6 +379,9 @@ std::list<std::string> _genFonts(OFX::ChoiceParam *fontName, OFX::StringParam *f
     std::list<std::string>::const_iterator font;
     for(font = fonts.begin(); font != fonts.end(); ++font) {
         std::string fontNameString = *font;
+        if ( fontNameString.empty() ) {
+            continue; // not a usable font, and the descriptor's menu leaves it out too
+        }
         std::string fontItem;
         if (properMenu) {
             fontItem=fontNameString[0];
@@ -392,9 +404,9 @@ std::list<std::string> _genFonts(OFX::ChoiceParam *fontName, OFX::StringParam *f
     }
 
     if (fontName) {
-        if (defaultFont > 0) {
+        if (defaultFont >= 0) {
             fontName->setDefault(defaultFont);
-        } else if (altFont > 0) {
+        } else if (altFont >= 0) {
             fontName->setDefault(altFont);
         }
     }
@@ -422,6 +434,15 @@ setupFontmap(FcConfig *fcConfig)
     pango_fc_font_map_set_config((PangoFcFontMap*)fontmap, fcConfig);
 }
 
+// What makeLayout() makes: v7 uses one layout in render() and getRegionOfDefinition(); v6 keeps
+// its two.
+enum LayoutUseEnum
+{
+    eLayoutV7,
+    eLayoutV6Render, // without the letter spacing, which v6 render() sets after the vertical alignment
+    eLayoutV6RoD // without the hinting and antialiasing options, as the v6 RoD
+};
+
 class TextFXPlugin : public OFX::ImageEffect
 {
 public:
@@ -444,6 +465,10 @@ public:
     void loadSRT();
     void resetCenter(double time);
     void setFontDesc(int stretch, int weight, PangoFontDescription* desc);
+
+    /** @brief a new layout for cr with the text params at time, at the render scale; *markup:
+        the text is drawn as markup (autoSize: as in getRelativeFrame()) */
+    std::unique_ptr<PangoLayout, PangoLayoutDeleter> makeLayout(cairo_t* cr, double time, bool autoSize, const OfxPointD& renderScale, LayoutUseEnum use, bool* markup);
 
     /** @brief The frame that relative font sizes and positions refer to, in canonical coordinates. */
     OfxRectD getRelativeFrame(double time, bool autoSize) const;
@@ -525,7 +550,6 @@ private:
     // because render threads may be using it concurrently (see fcConfigRef()).
     FcConfig* _fcConfig;
     std::mutex _fcConfigMutex;
-    std::list<std::string> _fontOverrideFiles; // font files added to _fcConfig, in order
     OFX::DoubleParam *_scrollX;
     OFX::DoubleParam *_scrollY;
     OFX::StringParam *_srt;
@@ -662,13 +686,6 @@ TextFXPlugin::TextFXPlugin(OfxImageEffectHandle handle, bool v7)
     _fcConfig = FcInitLoadConfigAndFonts();
 
     _genFonts(_fontName, _fontOverride, false, _fcConfig, gHostIsNatron, kParamFontNameDefault, kParamFontNameAltDefault);
-    {
-        std::string fontCustom;
-        _fontOverride->getValue(fontCustom);
-        if (!fontCustom.empty()) {
-            _fontOverrideFiles.push_back(fontCustom);
-        }
-    }
 
     // Setup selected font
     std::string font, fontName;
@@ -1087,6 +1104,204 @@ void TextFXPlugin::setFontDesc(int stretch, int weight, PangoFontDescription* de
     }
 }
 
+std::unique_ptr<PangoLayout, PangoLayoutDeleter>
+TextFXPlugin::makeLayout(cairo_t* cr, double time, bool autoSize, const OfxPointD& renderScale, LayoutUseEnum use, bool* markup)
+{
+    int fontSize, style, stretch, weight, fontAA, subpixel, hintStyle, hintMetrics, letterSpace;
+    std::string text, font, txt;
+
+    _text->getValueAtTime(time, text);
+    _fontSize->getValueAtTime(time, fontSize);
+    _font->getValueAtTime(time, font);
+    if ( font.empty() ) { // always prefer font, use fontName if empty
+        int fontID;
+        _fontName->getValueAtTime(time, fontID);
+        int fontCount = _fontName->getNOptions();
+        if (fontID < fontCount) {
+            _fontName->getOption(fontID, font);
+            // cascade menu
+            if (font.length() > 2 && font[1] == '/' && gHostIsNatron) {
+                font.erase(0,2);
+            }
+       }
+    }
+    // cascade menu
+    if (font.length() > 2 && font[1] == '/' && gHostIsNatron) {
+        font.erase(0,2);
+    }
+    _markup->getValueAtTime(time, *markup);
+    _style->getValueAtTime(time, style);
+    stretch_->getValueAtTime(time, stretch);
+    weight_->getValueAtTime(time, weight);
+    fontAA_->getValueAtTime(time, fontAA);
+    subpixel_->getValueAtTime(time, subpixel);
+    _hintStyle->getValueAtTime(time, hintStyle);
+    _hintMetrics->getValueAtTime(time, hintMetrics);
+    _letterSpace->getValueAtTime(time, letterSpace);
+    double lineSpace = 0.;
+    if (_lineSpace) { // v7
+        _lineSpace->getValueAtTime(time, lineSpace);
+    }
+    _txt->getValueAtTime(time, txt);
+
+    if (!txt.empty()) {
+        std::string txt_tmp = textFromFile(txt);
+        if (!txt_tmp.empty()) {
+            text = txt_tmp;
+        }
+    }
+
+    // no fonts?
+    if ( font.empty() ) {
+        font = kParamFontNameDefault;
+    }
+
+    std::ostringstream pangoFont;
+    pangoFont << font;
+    switch(style) {
+    case 0:
+        pangoFont << " " << "normal";
+        break;
+    case 1:
+        pangoFont << " " << "bold";
+        break;
+    case 2:
+        pangoFont << " " << "italic";
+        break;
+    }
+    double size; // in points, an integer
+    if (getSizeUnit(time) == eSizeUnitPixels) {
+        // unchanged, for compatibility
+        size = std::floor(fontSize * renderScale.x + 0.5);
+    } else {
+        // Pango treats a size of 0 as unset
+        size = (std::max)(1., std::floor(getFontSize(time, autoSize) * renderScale.x + 0.5));
+    }
+    pangoFont << " " << size;
+
+    // the layout's context takes the transform and the font options of cr now
+    std::unique_ptr<PangoLayout, PangoLayoutDeleter> layoutOwner( pango_cairo_create_layout(cr) );
+    PangoLayout* const layout = layoutOwner.get();
+
+    if (use != eLayoutV6RoD) {
+        const std::unique_ptr<cairo_font_options_t, CairoFontOptionsDeleter> optionsOwner( cairo_font_options_create() );
+        cairo_font_options_t* const options = optionsOwner.get();
+
+        switch(hintStyle) {
+        case 0:
+            cairo_font_options_set_hint_style(options, CAIRO_HINT_STYLE_DEFAULT);
+            break;
+        case 1:
+            cairo_font_options_set_hint_style(options, CAIRO_HINT_STYLE_NONE);
+            break;
+        case 2:
+            cairo_font_options_set_hint_style(options, CAIRO_HINT_STYLE_SLIGHT);
+            break;
+        case 3:
+            cairo_font_options_set_hint_style(options, CAIRO_HINT_STYLE_MEDIUM);
+            break;
+        case 4:
+            cairo_font_options_set_hint_style(options, CAIRO_HINT_STYLE_FULL);
+            break;
+        }
+
+        switch(hintMetrics) {
+        case 0:
+            cairo_font_options_set_hint_metrics(options, CAIRO_HINT_METRICS_DEFAULT);
+            break;
+        case 1:
+            cairo_font_options_set_hint_metrics(options, CAIRO_HINT_METRICS_OFF);
+            break;
+        case 2:
+            cairo_font_options_set_hint_metrics(options, CAIRO_HINT_METRICS_ON);
+            break;
+        }
+
+        switch(fontAA) {
+        case 0:
+            cairo_font_options_set_antialias(options, CAIRO_ANTIALIAS_DEFAULT);
+            break;
+        case 1:
+            cairo_font_options_set_antialias(options, CAIRO_ANTIALIAS_NONE);
+            break;
+        case 2:
+            cairo_font_options_set_antialias(options, CAIRO_ANTIALIAS_GRAY);
+            break;
+        case 3:
+            cairo_font_options_set_antialias(options, CAIRO_ANTIALIAS_SUBPIXEL);
+            break;
+        }
+
+        switch(subpixel) {
+        case 0:
+            cairo_font_options_set_subpixel_order(options, CAIRO_SUBPIXEL_ORDER_DEFAULT);
+            break;
+        case 1:
+            cairo_font_options_set_subpixel_order(options, CAIRO_SUBPIXEL_ORDER_RGB);
+            break;
+        case 2:
+            cairo_font_options_set_subpixel_order(options, CAIRO_SUBPIXEL_ORDER_BGR);
+            break;
+        case 3:
+            cairo_font_options_set_subpixel_order(options, CAIRO_SUBPIXEL_ORDER_VRGB);
+            break;
+        case 4:
+            cairo_font_options_set_subpixel_order(options, CAIRO_SUBPIXEL_ORDER_VBGR);
+            break;
+        }
+
+        pango_cairo_context_set_font_options(pango_layout_get_context(layout), options); // copies options
+    }
+
+    if (*markup) {
+        if ( pango_parse_markup(text.c_str(), -1, 0, NULL, NULL, NULL, NULL) ) {
+            pango_layout_set_markup(layout, text.c_str(), -1);
+        } else {
+            *markup = false; // fallback to plain text
+        }
+    }
+    if (!*markup) {
+        pango_layout_set_text(layout, text.c_str(), -1);
+    }
+
+    PangoFontDescription* desc;
+    if (use == eLayoutV7) {
+        // v7: the family as it is: pango_font_description_from_string() would take its last
+        // words that are style words (e.g. "Black" in "Arial Black") as the style
+        desc = pango_font_description_new();
+        pango_font_description_set_family( desc, font.c_str() );
+        if (style == 1) {
+            // as "bold" in v6's string; setFontDesc() replaces it with the Weight param
+            pango_font_description_set_weight(desc, PANGO_WEIGHT_BOLD);
+        } else if (style == 2) {
+            pango_font_description_set_style(desc, PANGO_STYLE_ITALIC);
+        }
+        pango_font_description_set_size( desc, static_cast<int>(size * PANGO_SCALE) );
+    } else {
+        // v6
+        desc = pango_font_description_from_string( pangoFont.str().c_str() );
+    }
+    setFontDesc(stretch, weight, desc);
+    pango_layout_set_font_description(layout, desc);
+    pango_font_description_free(desc);
+
+    // pango_layout_set_spacing() adds space between lines, in Pango units.
+    // (pango_layout_set_line_spacing() takes a line-height factor instead.)
+    if (lineSpace != 0.) {
+        pango_layout_set_spacing(layout, (int)std::floor((lineSpace*PANGO_SCALE) * renderScale.y + 0.5));
+    }
+
+    if ( (use != eLayoutV6Render) && !*markup ) {
+        const std::unique_ptr<PangoAttrList, PangoAttrListDeleter> alist( pango_attr_list_new() );
+        if (letterSpace != 0) {
+            pango_attr_list_insert(alist.get(), pango_attr_letter_spacing_new(std::floor((letterSpace*PANGO_SCALE) * renderScale.x + 0.5)));
+        }
+        pango_layout_set_attributes( layout, alist.get() ); // takes its own reference
+    }
+
+    return layoutOwner;
+}
+
 /* Override the render */
 void TextFXPlugin::render(const OFX::RenderArguments &args)
 {
@@ -1138,8 +1353,7 @@ void TextFXPlugin::render(const OFX::RenderArguments &args)
 
     // Get params
     double x, y, r, g, b, a, s_r, s_g, s_b, s_a, strokeWidth, strokeDashX, strokeDashY, strokeDashZ, circleRadius, arcRadius, arcAngle, rotate, scaleX, scaleY, skewX, skewY, scrollX, scrollY, bg_r, bg_g, bg_b, bg_a;
-    int fontSize, cwidth, cheight, wrap, align, valign, style, stretch, weight, strokeDash, fontAA, subpixel, hintStyle, hintMetrics, circleWords, letterSpace;
-    std::string text, font, txt, fontOverride;
+    int cwidth, cheight, wrap, align, valign, strokeDash, circleWords, letterSpace;
     bool justify = false;
     bool markup = false;
     bool autoSize = false;
@@ -1147,51 +1361,20 @@ void TextFXPlugin::render(const OFX::RenderArguments &args)
     bool scaleUniform = false;
     bool centerInteract = false;
 
-    _text->getValueAtTime(args.time, text);
-    _fontSize->getValueAtTime(args.time, fontSize);
     _textColor->getValueAtTime(args.time, r, g, b, a);
     _bgColor->getValueAtTime(args.time, bg_r, bg_g, bg_b, bg_a);
-    _font->getValueAtTime(args.time, font);
-    if ( font.empty() ) { // always prefer font, use fontName if empty
-        int fontID;
-        _fontName->getValueAtTime(args.time, fontID);
-        int fontCount = _fontName->getNOptions();
-        if (fontID < fontCount) {
-            _fontName->getOption(fontID, font);
-            // cascade menu
-            if (font.length() > 2 && font[1] == '/' && gHostIsNatron) {
-                font.erase(0,2);
-            }
-       }
-    }
-    // cascade menu
-    if (font.length() > 2 && font[1] == '/' && gHostIsNatron) {
-        font.erase(0,2);
-    }
     _justify->getValueAtTime(args.time, justify);
     _wrap->getValueAtTime(args.time, wrap);
     _align->getValueAtTime(args.time, align);
     _valign->getValueAtTime(args.time, valign);
-    _markup->getValueAtTime(args.time, markup);
-    _style->getValueAtTime(args.time, style);
     auto_->getValueAtTime(args.time, autoSize);
-    stretch_->getValueAtTime(args.time, stretch);
-    weight_->getValueAtTime(args.time, weight);
     strokeColor_->getValueAtTime(args.time, s_r, s_g, s_b, s_a);
     strokeWidth_->getValueAtTime(args.time, strokeWidth);
     strokeDash_->getValueAtTime(args.time, strokeDash);
     strokeDashPattern_->getValueAtTime(args.time, strokeDashX, strokeDashY, strokeDashZ);
-    fontAA_->getValueAtTime(args.time, fontAA);
-    subpixel_->getValueAtTime(args.time, subpixel);
-    _hintStyle->getValueAtTime(args.time, hintStyle);
-    _hintMetrics->getValueAtTime(args.time, hintMetrics);
     _circleRadius->getValueAtTime(args.time, circleRadius);
     _circleWords->getValueAtTime(args.time, circleWords);
     _letterSpace->getValueAtTime(args.time, letterSpace);
-    double lineSpace = 0.;
-    if (_lineSpace) { // v7
-        _lineSpace->getValueAtTime(args.time, lineSpace);
-    }
     _canvas->getValueAtTime(args.time, cwidth, cheight);
     _arcRadius->getValueAtTime(args.time, arcRadius);
     _arcAngle->getValueAtTime(args.time, arcAngle);
@@ -1199,12 +1382,10 @@ void TextFXPlugin::render(const OFX::RenderArguments &args)
     _scale->getValueAtTime(args.time, scaleX, scaleY);
     _position->getValueAtTime(args.time, x, y);
     _move->getValueAtTime(args.time, move);
-    _txt->getValueAtTime(args.time, txt);
     _skewX->getValueAtTime(args.time, skewX);
     _skewY->getValueAtTime(args.time, skewY);
     _scaleUniform->getValueAtTime(args.time, scaleUniform);
     _centerInteract->getValueAtTime(args.time, centerInteract);
-    _fontOverride->getValueAtTime(args.time, fontOverride);
     _scrollX->getValueAtTime(args.time, scrollX);
     _scrollY->getValueAtTime(args.time, scrollY);
 
@@ -1233,41 +1414,6 @@ void TextFXPlugin::render(const OFX::RenderArguments &args)
     // there exactly, v6 put it one pixel too high.
     ytext = (dstRod.y2 - dstRod.y1 - (_v7 ? 0 : 1)) - ytext;
 
-    if (!txt.empty()) {
-        std::string txt_tmp = textFromFile(txt);
-        if (!txt_tmp.empty()) {
-            text = txt_tmp;
-        }
-    }
-
-    // no fonts?
-    if ( font.empty() ) {
-        font = kParamFontNameDefault;
-    }
-
-    std::ostringstream pangoFont;
-    pangoFont << font;
-    switch(style) {
-    case 0:
-        pangoFont << " " << "normal";
-        break;
-    case 1:
-        pangoFont << " " << "bold";
-        break;
-    case 2:
-        pangoFont << " " << "italic";
-        break;
-    }
-    double fontSizePx = fontSize;
-    if (getSizeUnit(args.time) == eSizeUnitPixels) {
-        // unchanged, for compatibility
-        pangoFont << " " << std::floor(fontSizePx * args.renderScale.x + 0.5);
-    } else {
-        fontSizePx = getFontSize(args.time, autoSize);
-        // Pango treats a size of 0 as unset
-        pangoFont << " " << (std::max)(1., std::floor(fontSizePx * args.renderScale.x + 0.5));
-    }
-
     int width = dstRod.x2-dstRod.x1;
     int height = dstRod.y2-dstRod.y1;
     // v7 draws in canonical units horizontally (times the render scale): the context below is
@@ -1278,12 +1424,7 @@ void TextFXPlugin::render(const OFX::RenderArguments &args)
     const double drawWidth = width * xScale; // the width of the RoD in drawing units
     xtext *= xScale;
 
-    cairo_t *cr;
     cairo_status_t status;
-    cairo_surface_t *surface;
-    PangoLayout *layout;
-    PangoFontDescription *desc;
-    PangoAttrList *alist;
 
     {
         FcConfig* fcConfig = fcConfigRef();
@@ -1293,11 +1434,15 @@ void TextFXPlugin::render(const OFX::RenderArguments &args)
         }
     }
 
-    surface = cairo_image_surface_create(CAIRO_FORMAT_ARGB32, width, height);
-    cr = cairo_create(surface);
+    // the owners release the handles, also when this throws; the raw pointers don't own them
+    const std::unique_ptr<cairo_surface_t, CairoSurfaceDeleter> surfaceOwner( cairo_image_surface_create(CAIRO_FORMAT_ARGB32, width, height) );
+    cairo_surface_t* const surface = surfaceOwner.get();
+    const std::unique_ptr<cairo_t, CairoDeleter> crOwner( cairo_create(surface) );
+    cairo_t* const cr = crOwner.get();
 
-    layout = pango_cairo_create_layout(cr);
-    alist = pango_attr_list_new();
+    // v7: the layout that getRegionOfDefinition() measures
+    const std::unique_ptr<PangoLayout, PangoLayoutDeleter> layoutOwner = makeLayout(cr, args.time, autoSize, args.renderScale, _v7 ? eLayoutV7 : eLayoutV6Render, &markup);
+    PangoLayout* const layout = layoutOwner.get();
     if (xScale != 1.) {
         // After the layout is created: its context keeps the identity transform, so that it is
         // measured as in getRegionOfDefinition(), and v7 never updates it to the transforms
@@ -1311,93 +1456,9 @@ void TextFXPlugin::render(const OFX::RenderArguments &args)
     cairo_scale(cr, 1.0f, -1.0f);
     cairo_translate(cr, 0.0f, -height);
 
-    cairo_font_options_t* options = cairo_font_options_create();
-
     cairo_rectangle(cr, 0, 0, drawWidth, height);
     cairo_set_source_rgba(cr, bg_r, bg_g, bg_b, bg_a);
     cairo_fill(cr);
-
-    switch(hintStyle) {
-    case 0:
-        cairo_font_options_set_hint_style(options, CAIRO_HINT_STYLE_DEFAULT);
-        break;
-    case 1:
-        cairo_font_options_set_hint_style(options, CAIRO_HINT_STYLE_NONE);
-        break;
-    case 2:
-        cairo_font_options_set_hint_style(options, CAIRO_HINT_STYLE_SLIGHT);
-        break;
-    case 3:
-        cairo_font_options_set_hint_style(options, CAIRO_HINT_STYLE_MEDIUM);
-        break;
-    case 4:
-        cairo_font_options_set_hint_style(options, CAIRO_HINT_STYLE_FULL);
-        break;
-    }
-
-    switch(hintMetrics) {
-    case 0:
-        cairo_font_options_set_hint_metrics(options, CAIRO_HINT_METRICS_DEFAULT);
-        break;
-    case 1:
-        cairo_font_options_set_hint_metrics(options, CAIRO_HINT_METRICS_OFF);
-        break;
-    case 2:
-        cairo_font_options_set_hint_metrics(options, CAIRO_HINT_METRICS_ON);
-        break;
-    }
-
-    switch(fontAA) {
-    case 0:
-        cairo_font_options_set_antialias(options, CAIRO_ANTIALIAS_DEFAULT);
-        break;
-    case 1:
-        cairo_font_options_set_antialias(options, CAIRO_ANTIALIAS_NONE);
-        break;
-    case 2:
-        cairo_font_options_set_antialias(options, CAIRO_ANTIALIAS_GRAY);
-        break;
-    case 3:
-        cairo_font_options_set_antialias(options, CAIRO_ANTIALIAS_SUBPIXEL);
-        break;
-    }
-
-    switch(subpixel) {
-    case 0:
-        cairo_font_options_set_subpixel_order(options, CAIRO_SUBPIXEL_ORDER_DEFAULT);
-        break;
-    case 1:
-        cairo_font_options_set_subpixel_order(options, CAIRO_SUBPIXEL_ORDER_RGB);
-        break;
-    case 2:
-        cairo_font_options_set_subpixel_order(options, CAIRO_SUBPIXEL_ORDER_BGR);
-        break;
-    case 3:
-        cairo_font_options_set_subpixel_order(options, CAIRO_SUBPIXEL_ORDER_VRGB);
-        break;
-    case 4:
-        cairo_font_options_set_subpixel_order(options, CAIRO_SUBPIXEL_ORDER_VBGR);
-        break;
-    }
-
-    pango_cairo_context_set_font_options(pango_layout_get_context(layout), options);
-
-    if (markup) {
-        if ( pango_parse_markup(text.c_str(), -1, 0, NULL, NULL, NULL, NULL) ) {
-            pango_layout_set_markup(layout, text.c_str(), -1);
-        } else {
-            markup = false; // fallback to plain text
-        }
-    }
-    if (!markup) {
-        pango_layout_set_text(layout, text.c_str(), -1);
-    }
-
-    desc = pango_font_description_from_string(pangoFont.str().c_str());
-    setFontDesc(stretch, weight, desc);
-
-    pango_layout_set_font_description(layout, desc);
-    pango_font_description_free(desc);
 
     if (!autoSize && !move) {
         switch(wrap) {
@@ -1417,13 +1478,6 @@ void TextFXPlugin::render(const OFX::RenderArguments &args)
             pango_layout_set_width(layout, -1);
             break;
         }
-    }
-
-    // pango_layout_set_spacing() adds space between lines, in Pango units.
-    // (pango_layout_set_line_spacing() takes a line-height factor instead.)
-    // Set it before the layout is measured for the vertical alignment below.
-    if (lineSpace != 0.) {
-        pango_layout_set_spacing(layout, (int)std::floor((lineSpace*PANGO_SCALE) * args.renderScale.y + 0.5));
     }
 
     if (_v7) {
@@ -1480,7 +1534,9 @@ void TextFXPlugin::render(const OFX::RenderArguments &args)
             break;
         }
 
-        if (valign != 0) {
+        // v7, Auto size: the RoD is fitted to the text and its stroke margin, there is nothing
+        // to align
+        if ( (valign != 0) && !(_v7 && autoSize) ) {
             int text_width, text_height;
             pango_layout_get_pixel_size(layout, &text_width, &text_height);
             switch (valign) {
@@ -1498,13 +1554,17 @@ void TextFXPlugin::render(const OFX::RenderArguments &args)
         }
     }
 
-    if (letterSpace != 0) {
-        pango_attr_list_insert(alist,pango_attr_letter_spacing_new(std::floor((letterSpace*PANGO_SCALE) * args.renderScale.x + 0.5)));
-    }
+    if (!_v7) {
+        // v6: the letter spacing is set after the vertical alignment measured the layout
+        const std::unique_ptr<PangoAttrList, PangoAttrListDeleter> alistOwner( pango_attr_list_new() );
+        PangoAttrList* const alist = alistOwner.get();
+        if (letterSpace != 0) {
+            pango_attr_list_insert(alist,pango_attr_letter_spacing_new(std::floor((letterSpace*PANGO_SCALE) * args.renderScale.x + 0.5)));
+        }
 
-
-    if (!markup) {
-        pango_layout_set_attributes(layout,alist);
+        if (!markup) {
+            pango_layout_set_attributes(layout,alist);
+        }
     }
 
     // v6 scaled the vertical scroll by the horizontal render scale
@@ -1615,14 +1675,25 @@ void TextFXPlugin::render(const OFX::RenderArguments &args)
             }
 
             if (autoSize) {
-                cairo_move_to(cr, std::floor((strokeWidth/2) * args.renderScale.x + 0.5), 0.0);
+                if (_v7) {
+                    // inside the stroke margin of getRegionOfDefinition()
+                    const double margin = std::floor(strokeWidth * args.renderScale.x + 0.5);
+                    cairo_move_to(cr, margin, margin);
+                } else {
+                    // v6
+                    cairo_move_to(cr, std::floor((strokeWidth/2) * args.renderScale.x + 0.5), 0.0);
+                }
             } else if (move) {
                 moveToLayoutOrigin();
             }
 
             pango_cairo_layout_path(cr, layout);
             cairo_set_line_width(cr, std::floor(strokeWidth * args.renderScale.x + 0.5));
-            //cairo_set_miter_limit(cr, );
+            if (_v7 && autoSize) {
+                // bevel the joins sharper than 60 degrees, so that the stroke stays within one
+                // line width of the outlines: the margin of getRegionOfDefinition()
+                cairo_set_miter_limit(cr, 2.);
+            }
             cairo_set_source_rgba(cr, s_r, s_g, s_b, s_a);
             cairo_stroke_preserve(cr);
             cairo_set_source_rgba(cr, r, g, b, a);
@@ -1759,13 +1830,6 @@ void TextFXPlugin::render(const OFX::RenderArguments &args)
             dst[3] = src[3] * (1.f / 255);
         }
     }
-
-    pango_attr_list_unref(alist);
-    cairo_font_options_destroy(options);
-    g_object_unref(layout);
-    cairo_destroy(cr);
-    cairo_surface_destroy(surface);
-    cdata = NULL;
 }
 
 void TextFXPlugin::changedParam(const OFX::InstanceChangedArgs &args, const std::string &paramName)
@@ -1811,19 +1875,11 @@ void TextFXPlugin::changedParam(const OFX::InstanceChangedArgs &args, const std:
         if ( font.empty() ) {
             font = kParamFontNameDefault;
         }
-        // Render threads may be using _fcConfig, so do not modify it: build a new config
-        // with the same font files plus the new one, and swap it in.
+        // Render threads may be using _fcConfig, so do not modify it: build a new config with
+        // only the current custom font (_genFonts() adds it), as the constructor, and swap it in.
         FcConfig* newConfig = FcInitLoadConfigAndFonts();
         if (newConfig) {
-            for (std::list<std::string>::const_iterator it = _fontOverrideFiles.begin(); it != _fontOverrideFiles.end(); ++it) {
-                FcConfigAppFontAddFile(newConfig, (const FcChar8 *)it->c_str());
-            }
             _genFonts(_fontName, _fontOverride, false, newConfig, gHostIsNatron, font, kParamFontNameAltDefault);
-            std::string fontCustom;
-            _fontOverride->getValue(fontCustom);
-            if (!fontCustom.empty()) {
-                _fontOverrideFiles.push_back(fontCustom);
-            }
             FcConfig* oldConfig;
             {
                 std::lock_guard<std::mutex> lock(_fcConfigMutex);
@@ -1882,80 +1938,8 @@ bool TextFXPlugin::getRegionOfDefinition(const OFX::RegionOfDefinitionArguments 
     auto_->getValueAtTime(args.time, autoSize);
 
     if (autoSize) {
-        int fontSize, style, stretch, weight, letterSpace;
         double strokeWidth;
-        std::string text, font, txt;
-        bool markup = false;
-
-        _text->getValueAtTime(args.time, text);
-        _fontSize->getValueAtTime(args.time, fontSize);
-        _font->getValueAtTime(args.time, font);
-        _style->getValueAtTime(args.time, style);
-        _markup->getValueAtTime(args.time, markup);
-        stretch_->getValueAtTime(args.time, stretch);
-        weight_->getValueAtTime(args.time, weight);
         strokeWidth_->getValueAtTime(args.time, strokeWidth);
-        _letterSpace->getValueAtTime(args.time, letterSpace);
-        double lineSpace = 0.;
-        if (_lineSpace) { // v7
-            _lineSpace->getValueAtTime(args.time, lineSpace);
-        }
-        _txt->getValueAtTime(args.time, txt);
-
-        if (!txt.empty()) {
-            std::string txt_tmp = textFromFile(txt);
-            if (!txt_tmp.empty()) {
-                text = txt_tmp;
-            }
-        }
-
-        if ( font.empty() ) { // always prefer font, use fontName if empty
-            int fontID;
-            _fontName->getValueAtTime(args.time, fontID);
-            int fontCount = _fontName->getNOptions();
-            if (fontID < fontCount) {
-                _fontName->getOption(fontID, font);
-                // cascade menu
-                if (font.length() > 2 && font[1] == '/' && gHostIsNatron) {
-                    font.erase(0,2);
-                }
-            }
-        }
-        // cascade menu
-        if (font.length() > 2 && font[1] == '/' && gHostIsNatron) {
-            font.erase(0,2);
-        }
-
-        // no fonts?
-        if ( font.empty() ) {
-            font = kParamFontNameDefault;
-        }
-        std::ostringstream pangoFont;
-        pangoFont << font;
-        switch(style) {
-            case 0:
-                pangoFont << " " << "normal";
-                break;
-            case 1:
-                pangoFont << " " << "bold";
-                break;
-            case 2:
-                pangoFont << " " << "italic";
-                break;
-        }
-        if (getSizeUnit(args.time) == eSizeUnitPixels) {
-            pangoFont << " " << fontSize;
-        } else {
-            // rounded as in render(), at renderScale 1
-            // Pango treats a size of 0 as unset
-            pangoFont << " " << (std::max)(1., std::floor(getFontSize(args.time, true) + 0.5));
-        }
-
-        cairo_t *cr;
-        cairo_surface_t *surface;
-        PangoLayout *layout;
-        PangoFontDescription *desc;
-        PangoAttrList *alist;
 
         {
             FcConfig* fcConfig = fcConfigRef();
@@ -1967,52 +1951,29 @@ bool TextFXPlugin::getRegionOfDefinition(const OFX::RegionOfDefinitionArguments 
 
         // This surface is only used to measure the layout, and its size does not affect
         // the measurement. (It used to be sized from the output rod, which is uninitialized here.)
-        surface = cairo_image_surface_create(CAIRO_FORMAT_ARGB32, 1, 1);
-        cr = cairo_create(surface);
+        const std::unique_ptr<cairo_surface_t, CairoSurfaceDeleter> surface( cairo_image_surface_create(CAIRO_FORMAT_ARGB32, 1, 1) );
+        const std::unique_ptr<cairo_t, CairoDeleter> cr( cairo_create( surface.get() ) );
 
-        layout = pango_cairo_create_layout(cr);
-        alist = pango_attr_list_new();
+        // at render scale 1. v7: the layout that render() draws
+        const OfxPointD renderScaleOne = {1., 1.};
+        bool markup = false;
+        const std::unique_ptr<PangoLayout, PangoLayoutDeleter> layout = makeLayout(cr.get(), args.time, true, renderScaleOne, _v7 ? eLayoutV7 : eLayoutV6RoD, &markup);
 
-        if (markup) {
-            if ( pango_parse_markup(text.c_str(), -1, 0, NULL, NULL, NULL, NULL) ) {
-                pango_layout_set_markup(layout, text.c_str(), -1);
+        pango_layout_get_pixel_size(layout.get(), &width, &height);
+
+        if (strokeWidth>0) {
+            if (_v7) {
+                // render() keeps the stroke within one line width of the outlines (miter
+                // limit 2): a margin of that on each side
+                const int margin = static_cast<int>( std::floor(strokeWidth + 0.5) );
+                width += 2 * margin;
+                height += 2 * margin;
             } else {
-                markup = false; // fallback to plain text
+                /// WIP (v6)
+                width = width+(strokeWidth*2);
+                height = height+(strokeWidth/2);
             }
         }
-        if (!markup) {
-            pango_layout_set_text(layout, text.c_str(), -1);
-        }
-
-        desc = pango_font_description_from_string(pangoFont.str().c_str());
-        setFontDesc(stretch, weight, desc);
-
-        pango_layout_set_font_description(layout, desc);
-        pango_font_description_free(desc);
-
-        if (letterSpace != 0) {
-            pango_attr_list_insert(alist,pango_attr_letter_spacing_new(letterSpace*PANGO_SCALE));
-        }
-
-        if (lineSpace != 0.) {
-            pango_layout_set_spacing(layout, (int)std::floor(lineSpace*PANGO_SCALE + 0.5));
-        }
-
-        if (!markup)
-            pango_layout_set_attributes(layout,alist);
-
-        pango_layout_get_pixel_size(layout, &width, &height);
-
-        /// WIP
-        if (strokeWidth>0) {
-            width = width+(strokeWidth*2);
-            height = height+(strokeWidth/2);
-        }
-
-        pango_attr_list_unref(alist);
-        g_object_unref(layout);
-        cairo_destroy(cr);
-        cairo_surface_destroy(surface);
     }
 
     if (width>0 && height>0) {
@@ -2542,9 +2503,9 @@ TextFXPluginFactory<majorVersion>::describeInContext(OFX::ImageEffectDescriptor 
         }
         std::list<std::string>::const_iterator font;
         std::list<std::string> fonts = _genFonts(NULL, NULL, false, NULL, false, kParamFontNameDefault, kParamFontNameAltDefault);
-        int defaultFont = 0;
-        int altFont = 0;
-        int fontIndex = 0;
+        int defaultFont = -1; // -1: not found
+        int altFont = -1;
+        int fontIndex = 0; // the index of the next option
         for(font = fonts.begin(); font != fonts.end(); ++font) {
             std::string fontName = *font;
             if (!fontName.empty()) {
@@ -2562,12 +2523,12 @@ TextFXPluginFactory<majorVersion>::describeInContext(OFX::ImageEffectDescriptor 
                 if (fontName == kParamFontNameAltDefault) {
                     altFont=fontIndex;
                 }
+                fontIndex++;
             }
-            fontIndex++;
         }
-        if (defaultFont > 0) {
+        if (defaultFont >= 0) {
             param->setDefault(defaultFont);
-        } else if (altFont > 0) {
+        } else if (altFont >= 0) {
             param->setDefault(altFont);
         }
         param->setAnimates(false); // can not animate, the param is dynamic
