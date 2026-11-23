@@ -2,6 +2,14 @@
 
 ## Unreleased
 
+ * ``Text`` (Magick) 5: the output honours the destination's bounds and row bytes (#142).
+ * ``HaldCLUT``: a custom CLUT that can't be read is an error, instead of applying the previous or a black CLUT (#143).
+ * ``ReadPSD``: no uninitialized read for an ICC profile without a description (#144).
+ * ``Text`` (Magick) 5: the drop shadow is no longer applied twice when ImageMagick warns (#145).
+ * ``Tile``: with a Time Offset, the frames it reads are declared to the host (#146).
+ * ``Texture``: concurrent renders no longer reseed each other's noise (#147).
+ * ``Charcoal``: Radius and Sigma are scaled by the render scale (#149).
+ * ``Roll``: the vertical roll is scaled by the vertical render scale (#150).
  * ``AudioCurve``: without "Curve start at 0", each key is the signed peak of its block instead of its last sample (#170).
  * ``RichText`` (experimental): a CSS or HTML ``color`` is applied without a font size (#209).
  * ``RichText`` (experimental): malformed HTML no longer makes the render fail with an exception (#136).
