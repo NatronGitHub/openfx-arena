@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+ * ``AudioCurve``: without "Curve start at 0", each key is the signed peak of its block instead of its last sample (#170).
+ * ``RichText`` (experimental): a CSS or HTML ``color`` is applied without a font size (#209).
  * ``RichText`` (experimental): malformed HTML no longer makes the render fail with an exception (#136).
  * ``AudioCurve``: the Frame Rate is limited to [1, 1000], and SoX is released when an error occurs (#137).
  * The old versions kept for old projects (``ReadSVG`` 3, ``Text`` (TextOFX) 6, ``Text`` (Magick) 5, and the old majors of the ImageMagick plug-ins and ``HaldCLUT``) are marked obsolete with the standard ``kOfxImageEffectPluginPropObsolete`` (next OFX release) instead of the Natron extension ``kNatronOfxImageEffectPropDeprecated`` (#111). Both mean the same thing: hidden from the menus, still loaded by old projects. Hosts that only know the Natron extension, such as Natron 2.5, now show these versions in their menus. Renders are unchanged.
