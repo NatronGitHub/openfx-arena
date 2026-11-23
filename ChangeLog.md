@@ -2,6 +2,7 @@
 
 ## Unreleased
 
+ * Build: the hand-maintained ``Arena.xcodeproj`` is removed; CMake generates an Xcode project (``cmake -G Xcode``) when one is needed.
  * ``Text`` (Magick) 5: the output honours the destination's bounds and row bytes (#142).
  * ``HaldCLUT``: a custom CLUT that can't be read is an error, instead of applying the previous or a black CLUT (#143).
  * ``ReadPSD``: no uninitialized read for an ICC profile without a description (#144).
