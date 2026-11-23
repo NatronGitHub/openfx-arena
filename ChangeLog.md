@@ -5,6 +5,7 @@
  * ``ReadPSD``: clearing the file clears the layer menu (#162).
  * ``ReadPSD``: the ICC profile scan no longer follows linked folders, which could loop forever (#176).
  * ``ReadMisc``, ``ReadPSD``, ``Texture``: an ImageMagick warning no longer fails a read or leaves ``Texture`` half generated (#174).
+ * Build: the hand-maintained ``Arena.xcodeproj`` is removed; CMake generates an Xcode project (``cmake -G Xcode``) when one is needed.
  * ``Text`` (Magick) 5: the output honours the destination's bounds and row bytes (#142).
  * ``HaldCLUT``: a custom CLUT that can't be read is an error, instead of applying the previous or a black CLUT (#143).
  * ``ReadPSD``: no uninitialized read for an ICC profile without a description (#144).
@@ -36,7 +37,12 @@
    * The Center is no longer 1 pixel too high, and the vertical scroll is scaled by the vertical render scale.
    * Circle: the words at angles near 45 degrees (e.g. the diagonal ones with 8 or 16 words) are drawn on the circle, rotated like the others (with FreeType 2.15.0, which ignores some rotations of a mirrored transform, their glyphs were drawn unrotated, at some pixel aspect ratios including 1, #86, #88).
    * New: Line spacing, and font size and position relative to the frame (Size unit, Font size (%), Relative position, #19, #63).
+   * Font families ending with a style word (e.g. "Arial Black") are drawn with their own face; style words typed into Font are part of the family name, the Style and Weight params set the style (#167).
+   * Auto size fits the text as it is drawn, with the font options and the stroke (#135).
  * ``Text`` (TextOFX) 6: obsolete (hidden from the menus, still used by old projects). It is now 6.17, with the parameters of 6.14 (Natron 2.5.0) and the bug fixes made since: Stroke dash length above 3, fontconfig leaks and an uninitialized RoD read, rendering a render window smaller than the RoD, and SRT subtitles.
+ * ``Text`` (TextOFX) 6 and 7: a frame that fails to render no longer leaks memory (#134).
+ * ``Text`` (TextOFX) 6 and 7: changing "Custom font(s)" no longer keeps the fonts of its previous values (#138).
+ * ``Text`` (TextOFX) 6 and 7: the default "Select font" of new nodes is the default font on systems with an empty family name (#140).
  * ``Text`` (TextOFX) 6 and 7, subtitles (#20): SRT lines starting with a number (e.g. "10 green bottles") are no longer dropped, and SRT files with CRLF line endings are parsed correctly.
  * ``Text`` (Magick) 5.9, fixed in place (version 6 of that identifier is TextOFX, so it can't get a new major): the drop shadow is at Shadow X/Y (it was 2·sigma right of and below it, #38); a Source whose bounds are offset from the output is placed at its offset instead of the output origin (#52, #66); a Source smaller than the output, or of a different width, is no longer read past its end or sheared.
  * Arena now targets ImageMagick 7 (static, Q32, HDRI, OpenMP), which Natron 2.6 will ship on every platform. ImageMagick 6 still builds and renders as before.

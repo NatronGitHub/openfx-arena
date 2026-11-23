@@ -120,6 +120,8 @@ cmake --build build
 sudo cmake --install build
 ```
 
+For an IDE, let CMake generate the project instead of maintaining one: e.g. ``cmake -S . -B build-xcode -G Xcode`` on macOS. On Windows, Arena is built with MSYS2 UCRT64 (MinGW GCC), not MSVC, so use an IDE that opens CMake projects with that toolchain.
+
 Options (the Makefile equivalents are in parentheses):
 
   * ``-DAUDIO=AUTO|ON|OFF``: ``AudioCurve``; ``AUTO``, the default, builds it if pkg-config finds sox (``AUDIO``)
