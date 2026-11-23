@@ -36,7 +36,6 @@
 
 #define SCALE_MAX 10000.
 
-#define CIRCLE_RADIUS_BASE 30.
 #define CIRCLE_RADIUS_MIN 15.
 #define CIRCLE_RADIUS_MAX 300.
 #define POINT_SIZE 7.
@@ -197,7 +196,8 @@ ofxsTransformDescribeParams(OFX::ImageEffectDescriptor &desc,
 
 TransformInteractCustomHelper::TransformInteractCustomHelper(OFX::ImageEffect* effect,
                                                  OFX::Interact* interact,
-                                                 bool oldParams)
+                                                 bool oldParams,
+                                                 double circleRadius)
     : _drawState(eInActive)
     , _mouseState(eReleased)
     , _modifierStateCtrl(0)
@@ -219,6 +219,7 @@ TransformInteractCustomHelper::TransformInteractCustomHelper(OFX::ImageEffect* e
     , _interactOpen(0)
     , _interactive(0)
     , _drawMode( ofxsOverlayDrawModeForNewInteract() )
+    , _circleRadius(circleRadius)
 {
     assert(_effect && _interact);
     _lastMousePos.x = _lastMousePos.y = 0.;
@@ -284,17 +285,19 @@ getTargetCenter(const OfxPointD &center,
 static void
 getTargetRadius(const OfxPointD& scale,
                 const OfxPointD& pixelScale,
+                double circleRadius,
                 OfxPointD* targetRadius)
 {
-    targetRadius->x = scale.x * CIRCLE_RADIUS_BASE;
-    targetRadius->y = scale.y * CIRCLE_RADIUS_BASE;
+    // the circle shows the effect's radius, circleRadius * scale in canonical coordinates (the
+    // kernel's radius), at any zoom: it was 30 * scale screen pixels. The clamp below is in screen
+    // pixels; it has no maximum, which would hide the real radius
+    double meanPixelScale = (pixelScale.x + pixelScale.y) / 2.;
+    targetRadius->x = scale.x * circleRadius / meanPixelScale;
+    targetRadius->y = scale.y * circleRadius / meanPixelScale;
     // don't draw too small. 15 pixels is the limit
     if ( (std::fabs(targetRadius->x) < CIRCLE_RADIUS_MIN) && (std::fabs(targetRadius->y) < CIRCLE_RADIUS_MIN) ) {
         targetRadius->x = targetRadius->x >= 0 ? CIRCLE_RADIUS_MIN : -CIRCLE_RADIUS_MIN;
         targetRadius->y = targetRadius->y >= 0 ? CIRCLE_RADIUS_MIN : -CIRCLE_RADIUS_MIN;
-    } else if ( (std::fabs(targetRadius->x) > CIRCLE_RADIUS_MAX) && (std::fabs(targetRadius->y) > CIRCLE_RADIUS_MAX) ) {
-        targetRadius->x = targetRadius->x >= 0 ? CIRCLE_RADIUS_MAX : -CIRCLE_RADIUS_MAX;
-        targetRadius->y = targetRadius->y >= 0 ? CIRCLE_RADIUS_MAX : -CIRCLE_RADIUS_MAX;
     } else {
         if (std::fabs(targetRadius->x) < CIRCLE_RADIUS_MIN) {
             if ( (targetRadius->x == 0.) && (targetRadius->y != 0.) ) {
@@ -304,10 +307,6 @@ getTargetRadius(const OfxPointD& scale,
             }
             targetRadius->x = targetRadius->x >= 0 ? CIRCLE_RADIUS_MIN : -CIRCLE_RADIUS_MIN;
         }
-        if (std::fabs(targetRadius->x) > CIRCLE_RADIUS_MAX) {
-            targetRadius->y *= std::fabs(CIRCLE_RADIUS_MAX / targetRadius->x);
-            targetRadius->x = targetRadius->x > 0 ? CIRCLE_RADIUS_MAX : -CIRCLE_RADIUS_MAX;
-        }
         if (std::fabs(targetRadius->y) < CIRCLE_RADIUS_MIN) {
             if ( (targetRadius->y == 0.) && (targetRadius->x != 0.) ) {
                 targetRadius->x = targetRadius->x > 0 ? CIRCLE_RADIUS_MAX : -CIRCLE_RADIUS_MAX;
@@ -316,13 +315,8 @@ getTargetRadius(const OfxPointD& scale,
             }
             targetRadius->y = targetRadius->y >= 0 ? CIRCLE_RADIUS_MIN : -CIRCLE_RADIUS_MIN;
         }
-        if (std::fabs(targetRadius->y) > CIRCLE_RADIUS_MAX) {
-            targetRadius->x *= std::fabs(CIRCLE_RADIUS_MAX / targetRadius->y);
-            targetRadius->y = targetRadius->y > 0 ? CIRCLE_RADIUS_MAX : -CIRCLE_RADIUS_MAX;
-        }
     }
     // the circle axes are not aligned with the images axes, so we cannot use the x and y scales separately
-    double meanPixelScale = (pixelScale.x + pixelScale.y) / 2.;
     targetRadius->x *= meanPixelScale;
     targetRadius->y *= meanPixelScale;
 }
@@ -610,7 +604,7 @@ TransformInteractCustomHelper::drawOverlay(OverlayDraw &d,
     ofxsTransformGetScale(scaleParam, scaleUniform, &scale);
 
     OfxPointD targetRadius;
-    getTargetRadius(scale, pscale, &targetRadius);
+    getTargetRadius(scale, pscale, _circleRadius, &targetRadius);
 
     OfxPointD left, right, bottom, top;
     getTargetPoints(targetCenter, targetRadius, &left, &bottom, &top, &right);
@@ -793,7 +787,7 @@ TransformInteractCustomHelper::penMotion(const OFX::PenArgs &args)
     ofxsTransformGetScale(scaleParam, scaleUniform, &scale);
 
     OfxPointD targetRadius;
-    getTargetRadius(scale, pscale, &targetRadius);
+    getTargetRadius(scale, pscale, _circleRadius, &targetRadius);
 
     OfxPointD left, right, bottom, top;
     getTargetPoints(targetCenter, targetRadius, &left, &bottom, &top, &right);
@@ -1123,7 +1117,7 @@ TransformInteractCustomHelper::penDown(const OFX::PenArgs &args)
     ofxsTransformGetScale(scaleParam, scaleUniform, &scale);
 
     OfxPointD targetRadius;
-    getTargetRadius(scale, pscale, &targetRadius);
+    getTargetRadius(scale, pscale, _circleRadius, &targetRadius);
 
     OfxPointD left, right, bottom, top;
     getTargetPoints(targetCenter, targetRadius, &left, &bottom, &top, &right);
