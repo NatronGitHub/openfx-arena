@@ -249,8 +249,8 @@ jobs:
           sudo sed -i '' -e 's/Zstd::Zstd/zstd/' /opt/local/lib/pkgconfig/libzip.pc
       - name: Target the runner's macOS
         # CI builds aren't shipped: target the runner's macOS, whose MacPorts libraries the
-        # bundles link. Set after the MacPorts install, so that
-        # MacPorts installs its macOS 15 binary archives as is. Release bundles target 14.0 and are built on a macOS 14 machine.
+        # bundles link. Set after the MacPorts install, so that MacPorts installs the runner's
+        # binary archives as is. Release bundles target 14.0 and are built on a macOS 14 machine.
         run: echo "MACOSX_DEPLOYMENT_TARGET=$(sw_vers -productVersion | cut -d. -f1).0" >> "$GITHUB_ENV"
       - name: Build (release, CMake)
         if: inputs.build-system == 'cmake'
