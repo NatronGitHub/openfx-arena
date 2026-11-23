@@ -317,7 +317,7 @@ getTargetRadius(const OfxPointD& scale,
             targetRadius->y = targetRadius->y >= 0 ? CIRCLE_RADIUS_MIN : -CIRCLE_RADIUS_MIN;
         }
         if (std::fabs(targetRadius->y) > CIRCLE_RADIUS_MAX) {
-            targetRadius->x *= std::fabs(CIRCLE_RADIUS_MAX / targetRadius->x);
+            targetRadius->x *= std::fabs(CIRCLE_RADIUS_MAX / targetRadius->y);
             targetRadius->y = targetRadius->y > 0 ? CIRCLE_RADIUS_MAX : -CIRCLE_RADIUS_MAX;
         }
     }

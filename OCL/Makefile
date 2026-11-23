@@ -9,9 +9,7 @@ PLUGINOBJECTS = \
     Sharpen.o \
     Twirl.o \
     OCLPlugin.o \
-    ofxsTransform3x3.o \
-    ofxsTransformInteractCustom.o \
-    ofxsShutter.o
+    ofxsTransformInteractCustom.o
 
 RESOURCES = \
     OpenCL.png \

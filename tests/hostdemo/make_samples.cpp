@@ -2,10 +2,12 @@
 // directory given as argument, with the libraries Arena links: ImageMagick (PNG, PSD for
 // ReadPSD, BMP for ReadMisc), libzip (OpenRaster and Krita documents around the PNG), and
 // a hand-written one-page PDF for ReadPDF, and an identity Hald CLUT (512x512) for
-// HaldCLUT, which would otherwise download one. The sample_xy files are for tests/readerwindow.
+// HaldCLUT, which would otherwise download one. The sample_xy files are for tests/readerwindow,
+// the bad_ files for tests/readermalformed.
 #include <Magick++.h>
 #include <zip.h>
 
+#include <cstdint>
 #include <cstdio>
 #include <fstream>
 #include <iostream>
@@ -51,6 +53,111 @@ static bool writeZip(const std::string& path, const std::vector<std::pair<std::s
         }
     }
     return zip_close(z) == 0;
+}
+
+// CRC-32 (ISO 3309), as in the zip format
+static uint32_t crc32(const std::string& data)
+{
+    uint32_t c = 0xFFFFFFFFu;
+    for (size_t i = 0; i < data.size(); ++i) {
+        c ^= static_cast<unsigned char>(data[i]);
+        for (int k = 0; k < 8; ++k) {
+            c = (c >> 1) ^ (0xEDB88320u & (0u - (c & 1u)));
+        }
+    }
+    return ~c;
+}
+
+// n bytes of v, little-endian
+static void putLE(std::string* out, uint64_t v, int n)
+{
+    for (int i = 0; i < n; ++i) {
+        *out += static_cast<char>((v >> (8 * i)) & 0xFF);
+    }
+}
+
+// A zip file with the given stored entries, written by hand, since libzip writes only consistent
+// archives: the entry hugeName says that its uncompressed size is hugeSize (with a zip64 extra
+// field in the central directory if it doesn't fit in 32 bits), which a hostile file may say, but
+// holds its real contents (tests/readermalformed, #128).
+static bool writeZipWithHugeEntry(const std::string& path, const std::vector<std::pair<std::string, std::string> >& entries,
+                                  const std::string& hugeName, uint64_t hugeSize)
+{
+    std::string out, cd;
+    for (size_t i = 0; i < entries.size(); ++i) {
+        const std::string& name = entries[i].first;
+        const std::string& data = entries[i].second;
+        const uint64_t offset = out.size();
+        const uint32_t crc = crc32(data);
+        const uint64_t size = (name == hugeName) ? hugeSize : data.size();
+        const bool zip64 = size >= 0xFFFFFFFFull;
+        std::string extra;
+        if (zip64) {
+            putLE(&extra, 0x0001, 2); // zip64 extended information
+            putLE(&extra, 8, 2);
+            putLE(&extra, size, 8); // only the uncompressed size is 0xFFFFFFFF below
+        }
+        const int version = zip64 ? 45 : 20;
+        // local file header
+        putLE(&out, 0x04034b50, 4);
+        putLE(&out, version, 2);
+        putLE(&out, 0, 2); // flags
+        putLE(&out, 0, 2); // stored
+        putLE(&out, 0, 4); // time, date
+        putLE(&out, crc, 4);
+        putLE(&out, data.size(), 4);
+        putLE(&out, zip64 ? 0xFFFFFFFFull : size, 4);
+        putLE(&out, name.size(), 2);
+        putLE(&out, extra.size(), 2);
+        out += name + extra + data;
+        // central directory header
+        putLE(&cd, 0x02014b50, 4);
+        putLE(&cd, version, 2);
+        putLE(&cd, version, 2);
+        putLE(&cd, 0, 2);
+        putLE(&cd, 0, 2);
+        putLE(&cd, 0, 4);
+        putLE(&cd, crc, 4);
+        putLE(&cd, data.size(), 4);
+        putLE(&cd, zip64 ? 0xFFFFFFFFull : size, 4);
+        putLE(&cd, name.size(), 2);
+        putLE(&cd, extra.size(), 2);
+        putLE(&cd, 0, 2); // comment
+        putLE(&cd, 0, 2); // disk
+        putLE(&cd, 0, 2); // internal attributes
+        putLE(&cd, 0, 4); // external attributes
+        putLE(&cd, offset, 4);
+        cd += name + extra;
+    }
+    const uint64_t cdOffset = out.size();
+    out += cd;
+    // end of central directory
+    putLE(&out, 0x06054b50, 4);
+    putLE(&out, 0, 2);
+    putLE(&out, 0, 2);
+    putLE(&out, entries.size(), 2);
+    putLE(&out, entries.size(), 2);
+    putLE(&out, cd.size(), 4);
+    putLE(&out, cdOffset, 4);
+    putLE(&out, 0, 2);
+    std::ofstream f(path.c_str(), std::ios::binary);
+    f << out;
+    return (bool)f;
+}
+
+// 4 bytes of v, big-endian, as in PNG
+static void putBE(std::string* out, uint32_t v)
+{
+    for (int i = 3; i >= 0; --i) {
+        *out += static_cast<char>((v >> (8 * i)) & 0xFF);
+    }
+}
+
+static bool writeFile(const std::string& path, const std::string& contents)
+{
+    std::ofstream f(path.c_str(), std::ios::binary);
+    f << contents;
+    return (bool)f;
 }
 
 // a one-page PDF with the given content stream, with a correct cross-reference table
@@ -216,6 +323,56 @@ int main(int argc, char** argv)
         !writeZip(dir + "/sample_big.ora", oraBig) || !writeZip(dir + "/sample_big.kra", kraBig) ||
         !writeZip(dir + "/sample_offset.ora", oraOffset) || !writeZip(dir + "/sample_noxy.ora", oraNoXY)) {
         std::cerr << "could not write the samples in " << dir << std::endl;
+        return 1;
+    }
+    // malformed files (tests/readermalformed), which the readers must reject cleanly:
+    // - bad_nosize: no image size in maindoc.xml or stack.xml (#129: getFrameBounds() returned
+    //   true with the bounds unset)
+    // - bad_hugexml, bad_hugepng: an entry whose size in the archive is far larger than its
+    //   contents (#128): 2^64-1 (which wrapped around to new char[0]) and 2^63-1 (an
+    //   unbounded allocation)
+    // - bad_corrupt: not a zip file at all; bad_empty.svg: an empty canvas
+    std::vector<std::pair<std::string, std::string> > kraNoSize;
+    kraNoSize.push_back(kra[0]);
+    kraNoSize.push_back(std::make_pair(std::string("maindoc.xml"),
+        std::string("<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<DOC><IMAGE name=\"sample\" colorspacename=\"RGBA\"/></DOC>\n")));
+    kraNoSize.push_back(kra[2]);
+    std::vector<std::pair<std::string, std::string> > oraNoSize;
+    oraNoSize.push_back(ora[0]);
+    oraNoSize.push_back(std::make_pair(std::string("stack.xml"),
+        std::string("<?xml version='1.0' encoding='UTF-8'?>\n<image version=\"0.0.3\"><stack><layer name=\"background\" src=\"data/layer0.png\"/></stack></image>\n")));
+    oraNoSize.push_back(ora[2]);
+    oraNoSize.push_back(ora[3]);
+    // a PNG with only an IHDR (65535x65535, 8-bit RGBA) and an IEND chunk
+    std::string bomb = "\x89PNG\r\n\x1a\n";
+    {
+        std::string ihdr = "IHDR";
+        const unsigned char header[13] = { 0, 0, 0xFF, 0xFF, 0, 0, 0xFF, 0xFF, 8, 6, 0, 0, 0 };
+        ihdr.append(reinterpret_cast<const char*>(header), sizeof(header));
+        std::string chunk;
+        putBE(&chunk, 13);
+        chunk += ihdr;
+        putBE(&chunk, crc32(ihdr));
+        bomb += chunk;
+        bomb += std::string("\0\0\0\0IEND", 8);
+        putBE(&bomb, crc32("IEND"));
+    }
+    std::vector<std::pair<std::string, std::string> > kraBomb;
+    kraBomb.push_back(kra[0]);
+    kraBomb.push_back(kra[1]);
+    kraBomb.push_back(std::make_pair(std::string("mergedimage.png"), bomb));
+    const std::string corrupt = "PK\x03\x04 this is not a zip file";
+    if (!writeZip(dir + "/bad_nosize.kra", kraNoSize) || !writeZip(dir + "/bad_nosize.ora", oraNoSize) ||
+        !writeZipWithHugeEntry(dir + "/bad_hugexml.kra", kra, "maindoc.xml", 0x7FFFFFFFFFFFFFFFull) ||
+        !writeZipWithHugeEntry(dir + "/bad_hugexml.ora", ora, "stack.xml", 0xFFFFFFFFFFFFFFFFull) ||
+        !writeZipWithHugeEntry(dir + "/bad_hugepng.kra", kra, "mergedimage.png", 0x7FFFFFFFFFFFFFFFull) ||
+        !writeZipWithHugeEntry(dir + "/bad_hugepng.ora", ora, "mergedimage.png", 0xFFFFFFFFFFFFFFFFull) ||
+        !writeFile(dir + "/bad_corrupt.kra", corrupt) || !writeFile(dir + "/bad_corrupt.ora", corrupt) ||
+        !writeFile(dir + "/bad_corrupt.bmp", "BM this is not a BMP file") ||
+        !writeFile(dir + "/bad_empty.svg", "<svg xmlns=\"http://www.w3.org/2000/svg\" width=\"0\" height=\"0\"></svg>\n") ||
+        !writeFile(dir + "/bad_huge.svg", "<svg xmlns=\"http://www.w3.org/2000/svg\" width=\"1e12\" height=\"1e12\"></svg>\n") ||
+        !writeZip(dir + "/bad_pngbomb.kra", kraBomb)) {
+        std::cerr << "could not write the malformed samples in " << dir << std::endl;
         return 1;
     }
     return 0;

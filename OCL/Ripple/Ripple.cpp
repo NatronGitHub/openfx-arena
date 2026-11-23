@@ -68,7 +68,9 @@ public:
         _waveLength->getValueAtTime(args.time, waveLength);
         // the kernel takes float args: double needs cl_khr_fp64, which many devices lack
         setKernelArg(kernel, 2, (cl_float)std::floor(waveAmp * args.renderScale.x + 0.5));
-        setKernelArg(kernel, 3, (cl_float)std::floor(waveLength * args.renderScale.x + 0.5));
+        // not scaled: the kernel applies the wave length to normalized coordinates
+        setKernelArg(kernel, 3, (cl_float)std::floor(waveLength + 0.5));
+        setKernelArg(kernel, 4, (cl_float)args.renderScale.x);
     }
 private:
     DoubleParam *_waveAmp;

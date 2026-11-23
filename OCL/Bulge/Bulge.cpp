@@ -17,7 +17,6 @@
 */
 
 #include "OCLPlugin.h"
-#include "ofxsTransform3x3.h"
 #include "ofxsTransformInteractCustom.h"
 
 using namespace OFX;
@@ -147,7 +146,13 @@ BulgeCLPluginFactory<majorVersion>::describe(ImageEffectDescriptor &desc)
     desc.setHostMaskingEnabled(kHostMasking);
     desc.setHostMixingEnabled(kHostMixing);
 
-    Transform3x3Describe(desc, true);
+    // as Transform3x3Describe(), without its byte/short depths, Paint context and tiles
+#ifdef OFX_EXTENSIONS_NATRON
+    desc.setChannelSelector(ePixelComponentNone);
+#endif
+#ifdef OFX_EXTENSIONS_NUKE
+    desc.setPassThroughForNotProcessedPlanes(ePassThroughLevelRenderAllRequestedPlanes);
+#endif
     // OFX 1.5: V2 (DrawSuite) overlay on hosts that have it, also keeping the OpenGL (V1) one;
     // overlays don't change what renders, so both major versions get it
     ofxsSetOverlayInteractDescriptorV2(desc, new TransformCustomOverlayDescriptorOldParamsV2);
