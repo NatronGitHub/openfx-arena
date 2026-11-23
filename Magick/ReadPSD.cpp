@@ -261,14 +261,16 @@ void _getProFiles(std::vector<std::string> &files, bool desc, std::string filter
                 std::string proFile = dirp->d_name;
                 std::ostringstream profileDesc;
                     cmsHPROFILE lcmsProfile;
-                    char buffer[500];
+                    char buffer[500] = {};
                     std::ostringstream path;
                     int iccColorspace = 0;
                     path << paths[i] << proFile;
                     lcmsProfile = cmsOpenProfileFromFile(path.str().c_str(), "r");
                     if (lcmsProfile) {
-                        cmsGetProfileInfoASCII(lcmsProfile, cmsInfoDescription, "en", "US", buffer, 500);
-                        profileDesc << buffer;
+                        // 0: no description, and buffer was not written
+                        if (cmsGetProfileInfoASCII(lcmsProfile, cmsInfoDescription, "en", "US", buffer, sizeof(buffer)) > 0) {
+                            profileDesc << buffer;
+                        }
                         if(cmsGetColorSpace(lcmsProfile) == cmsSigRgbData)
                             iccColorspace = 1;
                         if(cmsGetColorSpace(lcmsProfile) == cmsSigCmykData)

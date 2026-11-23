@@ -270,7 +270,9 @@ void PolarPlugin::render(const OFX::RenderArguments &args)
     }
 
     // setup
-    double distortArgs[0];
+    // no distortion arguments (0 of them are passed): a zero-length array is
+    // ill-formed in ISO C++
+    const double distortArgs[1] = {0.};
     image.backgroundColor(Magick::Color("rgba(0,0,0,0)"));
 
     // merge alpha if requested

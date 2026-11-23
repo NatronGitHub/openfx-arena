@@ -2,12 +2,29 @@
 
 ## Unreleased
 
+ * ``Text`` (Magick) 5: the output honours the destination's bounds and row bytes (#142).
+ * ``HaldCLUT``: a custom CLUT that can't be read is an error, instead of applying the previous or a black CLUT (#143).
+ * ``ReadPSD``: no uninitialized read for an ICC profile without a description (#144).
+ * ``Text`` (Magick) 5: the drop shadow is no longer applied twice when ImageMagick warns (#145).
+ * ``Tile``: with a Time Offset, the frames it reads are declared to the host (#146).
+ * ``Texture``: concurrent renders no longer reseed each other's noise (#147).
+ * ``Charcoal``: Radius and Sigma are scaled by the render scale (#149).
+ * ``Roll``: the vertical roll is scaled by the vertical render scale (#150).
+ * ``AudioCurve``: without "Curve start at 0", each key is the signed peak of its block instead of its last sample (#170).
+ * ``RichText`` (experimental): a CSS or HTML ``color`` is applied without a font size (#209).
+ * ``RichText`` (experimental): malformed HTML no longer makes the render fail with an exception (#136).
+ * ``AudioCurve``: the Frame Rate is limited to [1, 1000], and SoX is released when an error occurs (#137).
  * The old versions kept for old projects (``ReadSVG`` 3, ``Text`` (TextOFX) 6, ``Text`` (Magick) 5, and the old majors of the ImageMagick plug-ins and ``HaldCLUT``) are marked obsolete with the standard ``kOfxImageEffectPluginPropObsolete`` (next OFX release) instead of the Natron extension ``kNatronOfxImageEffectPropDeprecated`` (#111). Both mean the same thing: hidden from the menus, still loaded by old projects. Hosts that only know the Natron extension, such as Natron 2.5, now show these versions in their menus. Renders are unchanged.
  * ``ReadSVG`` (3 and 4), ``ReadPDF``, ``ReadCDR``, ``ReadKrita`` and ``OpenRaster`` render a render window smaller than the image: they failed with "Image don't match RenderWindow" or "Unable to read image" when a host asked for one (#105). Full-frame renders are unchanged.
  * Readers (``ReadSVG``, ``ReadPDF``, ``ReadCDR``, ``ReadKrita``, ``OpenRaster``, ``ReadPSD``, ``ReadMisc``), with the OpenFX-IO update (#108): the part of a render window outside of the image is transparent black (it was left unwritten, or got image pixels), and the debug builds no longer assert when rendering below full scale (proxy mode, a 50% viewer). Full-frame renders are unchanged.
+ * Readers on malformed files: ``ReadKrita`` and ``OpenRaster`` check the entry sizes of the archive and cap them (64 MiB for the XML, 1 GiB for a PNG), instead of allocating what the file says (a size of 2^64-1 overflowed the buffer, #128). ``ReadSVG``, ``ReadCDR``, ``ReadKrita``, ``OpenRaster`` and ``ReadMisc`` fail with an error on a file without an image size (e.g. an empty SVG canvas, or no size in ``maindoc.xml`` or ``stack.xml``), instead of a region of definition made of uninitialized values (#129). ``ReadPDF`` no longer reads past the executable path when looking for poppler's data (#131). Valid files render as before.
+ * Readers: ``ReadSVG``, ``ReadCDR``, ``ReadKrita`` and ``OpenRaster`` no longer leak their cairo, librsvg, zip and image buffers when reading fails (#132), and the layer lists of ``ReadSVG``, ``ReadPDF`` and ``OpenRaster`` are no longer read by render threads while the file changes, which could crash (#130). Renders are unchanged.
+ * Readers: ``ReadSVG``, ``ReadPDF`` and ``ReadCDR`` reject canvases over 32767 pixels, ``ReadKrita`` and ``OpenRaster`` reject PNGs over 4 GiB decoded and stay quiet on malformed XML (#158, #159, #160), and ``ReadPDF`` drops the previous file's pages when the file is cleared (#210).
+ * ``ReadCDR``: files with more than one page render their first page; they always failed with "Failed to read SVG" (#133).
  * ``ReadKrita``, ``OpenRaster``: a PNG of another size than the image in ``maindoc.xml`` or ``stack.xml`` is placed at its XML geometry, anchored at the top-left corner, with transparent black around it, instead of failing with "Unable to read image". For OpenRaster, this includes layers cropped smaller than the canvas, which are placed at their ``x``/``y`` offsets (as GIMP and MyPaint save them). decode() reads the XML from the archive it decodes the PNG from, instead of opening the file again at each render (#108). Files whose PNG has the XML size render as before.
  * Overlays of ``ReadSVG`` 4, ``Text`` (Magick) and ``Text`` (TextOFX) 6 and 7: on hosts with the OFX 1.5 DrawSuite, they are registered as OverlayInteractV2 and draw with the DrawSuite (without the one-pixel shadow, which is the host's job there), plus a V1 entry that draws with OpenGL. On other hosts they draw with OpenGL as before. Renders are unchanged.
  * Overlays of the OpenCL plug-ins ``Bulge`` and ``Twirl`` (1 and 2, in OCL.ofx, which is not part of Arena.ofx): the same, with their own transform overlay. Renders are unchanged.
+ * OpenCL plug-ins (OCL.ofx, not shipped): kernel fixes in ``Twirl``, ``Cartoon``, ``Ripple`` (proxy renders now approximately match full resolution) and ``Duotone``; ``CLFilter``'s kernel source no longer animates; ``Bulge`` and ``Twirl`` declare only float images, no tiles and no Paint context, and their overlay keeps its aspect ratio (#151 to #157).
  * ``Text`` (TextOFX) 7.0 (#70):
    * The Center is in canonical coordinates, as the overlay shows it: the text is drawn at the Center when the pixel aspect ratio isn't 1 or the RoD doesn't start at (0,0) (e.g. an offset Source).
    * The text is drawn in canonical units, so it isn't stretched on a PAR-corrected viewer: the glyphs, rotation, skew, scale, circle, arc and stroke are right at any pixel aspect ratio. Auto size fits the text at any pixel aspect ratio. Canvas size is in pixels.

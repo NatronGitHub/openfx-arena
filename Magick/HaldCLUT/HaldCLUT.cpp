@@ -337,7 +337,9 @@ public:
             if (_lut.comment() != presetFile) {
                 try {
                     _lut.read(presetFile.c_str());
-                } catch(Magick::Exception &exp) {
+                } catch(const Magick::Warning &) {
+                    // Magick++ throws warnings after the image was read: not a failure
+                } catch(const Magick::Error &) {
                     if (custom.empty()) {
                         _lut.comment("N/A");
                         if (!getFile(url, clut, false)) {
@@ -348,12 +350,19 @@ public:
                             // exception escaped render without an error message.
                             try {
                                 _lut.read(presetFile.c_str());
-                            } catch(Magick::Exception &) {
+                            } catch(const Magick::Warning &) {
+                            } catch(const Magick::Error &) {
                                 _lut.comment("N/A");
                                 setPersistentMessage(OFX::Message::eMessageError, "", "Unable to read CLUT");
                                 OFX::throwSuiteStatusException(kOfxStatFailed);
                             }
                         }
+                    } else {
+                        // don't tag and apply the stale _lut (the previous CLUT, or the black
+                        // initial image) as the custom file
+                        _lut.comment("N/A");
+                        setPersistentMessage(OFX::Message::eMessageError, "", "Unable to read CLUT");
+                        OFX::throwSuiteStatusException(kOfxStatFailed);
                     }
                 }
                 if (!_srgbTransfer) {

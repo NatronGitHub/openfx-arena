@@ -80,7 +80,7 @@ void CLFilterCLPlugin::changedParam(const OFX::InstanceChangedArgs &args, const 
     }
 
     std::string source;
-    _kSource->getValueAtTime(args.time, source);
+    _kSource->getValue(source);
 
     // clear first: setupContext() may set a new error message
     clearPersistentMessage();
@@ -118,7 +118,8 @@ void CLFilterCLPluginFactory::describeInContext(ImageEffectDescriptor &desc, Con
         param->setLabel(kParamKernelLabel);
         param->setHint(kParamKernelHint);
         param->setStringType(eStringTypeMultiLine);
-        param->setAnimates(true);
+        // the program is built in changedParam(), not per render, so the source can't animate
+        param->setAnimates(false);
         param->setDefault(kParamKernelDefault);
         page->addChild(*param);
     }

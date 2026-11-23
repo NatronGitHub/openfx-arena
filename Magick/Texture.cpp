@@ -25,6 +25,7 @@
 #include "ofxNatron.h"
 #include <iostream>
 #include <cstring>
+#include <mutex>
 
 #define kPluginName "TextureOFX"
 #define kPluginGrouping "Extra/Draw"
@@ -78,6 +79,12 @@
 using namespace OFX;
 static bool gHostIsNatron = false;
 static bool _hasOpenMP = false;
+
+#ifndef NOMAGICKSEED
+// Magick::SetRandomSeed() is process-global and the plug-in is eRenderFullySafe:
+// serialise seeding and generation, so concurrent renders don't reseed each other
+static std::mutex gRandomSeedMutex;
+#endif
 
 static unsigned int hash(unsigned int a)
 {
@@ -232,6 +239,8 @@ void TexturePlugin::render(const OFX::RenderArguments &args)
 
     // Set seed
 #ifndef NOMAGICKSEED
+    // held until the end of render (the output copy is cheap next to the generation)
+    std::lock_guard<std::mutex> randomSeedLock(gRandomSeedMutex);
     Magick::SetRandomSeed(hash((unsigned)(args.time)^seed));
 #endif
 

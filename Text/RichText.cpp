@@ -26,6 +26,8 @@
 #include <cstdlib>
 #include <cerrno>
 #include <cstring>
+#include <memory>
+#include <stdexcept>
 #include <sys/stat.h>
 #include <sys/types.h>
 
@@ -217,9 +219,8 @@ const std::string RichText::convertHtmlToMarkup(const std::string &str,
         std::string startTag = "<" + tags[i];
         if (RichText::contains(result, startTag)) {
             if (startTag == "<body") { // body is used for START and END line
-                result.replace(result.find(startTag), startTag.length(), "<!_BODY");
-                std::string endTag = "/" + tags[i];
-                result.replace(result.find(endTag), endTag.length(), "/!_BODY");
+                RichText::replace(result, startTag, "<!_BODY");
+                RichText::replace(result, "/" + tags[i], "/!_BODY"); // may be missing
                 continue;
             }
             while (result.find(startTag) != std::string::npos) {
@@ -266,14 +267,15 @@ const std::string RichText::convertHtmlToMarkup(const std::string &str,
             std::string getFontFamilyCSS = RichText::trimmed(RichText::extract(line, "font-family:", ";"), false /* whitespace */);
             std::string getFontWeightCSS = RichText::trimmed(RichText::extract(line, "font-weight:", ";"), false /* whitespace */);
             std::string getFontStyleCSS = RichText::trimmed(RichText::extract(line, "font-style:", ";"), false /* whitespace */);
-            std::string getFontColorCSS = RichText::trimmed(RichText::extract(line, "color:", ";"));
+            // only a color declaration of the style attribute, not background-color or border-color
+            std::string getFontColorCSS = RichText::extract(RichText::trimmed(";" + RichText::extract(line, "style=\"", "\"") + ";"), ";color:", ";");
 
             // std::cout << "FONT CSS :size: " << getFontSizeCSS << " :family: " << getFontFamilyCSS << " :weight: " << getFontWeightCSS << " :style: " << getFontStyleCSS << " :color: " << getFontColorCSS << std::endl;
 
             // get html options
             std::string getFontSizeHTML = RichText::trimmed(RichText::extract(line, "size=\"", "\""));
             std::string getFontFamilyHTML = RichText::trimmed(RichText::extract(line, "face=\"", "\""), false /* whitespace */);
-            std::string getFontColorHTML = RichText::trimmed(RichText::extract(line, "color=\"", "\""));
+            std::string getFontColorHTML = RichText::trimmed(RichText::extract(line, " color=\"", "\"")); // not bgcolor
 
             // std::cout << "FONT HTML :size: " << getFontSizeHTML << " :family: " << getFontFamilyHTML << " :color: " << getFontColorHTML << std::endl;
 
@@ -281,7 +283,7 @@ const std::string RichText::convertHtmlToMarkup(const std::string &str,
             bool hasStyle = RichText::contains(line, "style=\"");
             bool hasFontFamily = !getFontFamilyCSS.empty() || !getFontFamilyHTML.empty();
             bool hasFontSize = !getFontSizeCSS.empty() || !getFontSizeHTML.empty();
-            bool hasFontColor = !getFontSizeCSS.empty() || !getFontSizeHTML.empty();
+            bool hasFontColor = !getFontColorCSS.empty() || !getFontColorHTML.empty();
 
             std::string fontFamily = !getFontFamilyCSS.empty()?getFontFamilyCSS:getFontFamilyHTML;
             std::string fontSize = !getFontSizeCSS.empty()?getFontSizeCSS:getFontSizeHTML;
@@ -294,7 +296,8 @@ const std::string RichText::convertHtmlToMarkup(const std::string &str,
 
             // add render scale
             if (!fontSize.empty() && renderScale>0) {
-                int fs = std::stoi(fontSize);
+                int fs = 0;
+                try { fs = std::stoi(fontSize); } catch (const std::logic_error&) {} // e.g. "x-large": left unscaled
                 if (fs>0) {
                     fs = fs * renderScale + 0.5;
                     fontSize = std::to_string(fs);
@@ -306,19 +309,16 @@ const std::string RichText::convertHtmlToMarkup(const std::string &str,
                 std::string opt = RichText::extract(line, "style=\"", "\"");
                 if (!opt.empty()) {
                     //// std::cout << "STYLE? " << opt << std::endl;
-                    std::string style = "style=\"" + opt + "\"";
-                    line.replace(line.find(style), style.length() /*+ 2*/, "");
+                    RichText::replace(line, "style=\"" + opt + "\"", "");
                 }
             }
             // remove size opt if found
             if (!getFontSizeHTML.empty()) {
-                std::string opt = "size=\"" + getFontSizeHTML;
-                line.replace(line.find(opt), opt.length() + 1, "");
+                RichText::replace(line, "size=\"" + getFontSizeHTML + "\"", "");
             }
             // remove face opt if found
-            if (!getFontSizeHTML.empty()) {
-                std::string opt = "face=\"" + getFontFamilyHTML;
-                line.replace(line.find(opt), opt.length() + 1, "");
+            if (!getFontFamilyHTML.empty()) {
+                RichText::replace(line, "face=\"" + getFontFamilyHTML + "\"", "");
             }
 
 #ifdef DEBUG
@@ -331,7 +331,7 @@ const std::string RichText::convertHtmlToMarkup(const std::string &str,
                 std::string fontDesc = span + " font_desc=\"" + fontFamily;
                 if (hasFontSize) { fontDesc += " " + fontSize; }
                 fontDesc += "\" ";
-                line.replace(line.find(span), span.length(), fontDesc);
+                RichText::replace(line, span, fontDesc);
             }
 
             // add font size (if we don't have family)
@@ -344,8 +344,8 @@ const std::string RichText::convertHtmlToMarkup(const std::string &str,
             // add font color
             if (hasFontColor && !fontColor.empty() && getFontFamilyHTML.empty()) {
                 std::string span = RichText::startsWith(line, "!_BODY")?"!_BODY":"!_SPAN";
-                std::string opt = span + " color=\"" + fontColor + "\" ";
-                line.replace(line.find(span), span.length(), opt);
+                RichText::replace(line, " color=\"" + RichText::extract(line, " color=\"", "\"") + "\"", ""); // no duplicate color
+                RichText::replace(line, span, span + " color=\"" + fontColor + "\" ");
             }
         }
         // fix tag TODO!
@@ -644,14 +644,14 @@ RichText::RichTextRenderResult RichText::renderRichText(int width,
     PangoFontMap *map = pango_cairo_font_map_get_default();
     RichText::setupFontmap(fc, map);
 
-    // setup surface and layout
-    cairo_t *cr;
+    // setup surface and layout, released even if an exception is thrown
+    const std::unique_ptr<cairo_surface_t, decltype(&cairo_surface_destroy)> surfaceOwner(cairo_image_surface_create(CAIRO_FORMAT_ARGB32, width, height), &cairo_surface_destroy);
+    const std::unique_ptr<cairo_t, decltype(&cairo_destroy)> crOwner(cairo_create(surfaceOwner.get()), &cairo_destroy);
+    const std::unique_ptr<PangoLayout, decltype(&g_object_unref)> layoutOwner(pango_cairo_create_layout(crOwner.get()), &g_object_unref);
+    cairo_surface_t *surface = surfaceOwner.get();
+    cairo_t *cr = crOwner.get();
+    PangoLayout *layout = layoutOwner.get();
     cairo_status_t status;
-    cairo_surface_t *surface;
-    PangoLayout *layout;
-    surface = cairo_image_surface_create(CAIRO_FORMAT_ARGB32, width, height);
-    cr = cairo_create(surface);
-    layout = pango_cairo_create_layout(cr);
 
     // flip
     if (flip) {
@@ -716,10 +716,6 @@ RichText::RichTextRenderResult RichText::renderRichText(int width,
         }
         buffer = nullptr;
     }
-
-    g_object_unref(layout);
-    cairo_destroy(cr);
-    cairo_surface_destroy(surface);
 
     return  result;
 }
