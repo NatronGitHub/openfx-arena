@@ -17,6 +17,7 @@ net.fxarena.openfx.ReadSVG 3 general -s filename=@SAMPLES@/sample.svg
 fr.inria.openfx.ReadKrita 2 general -s filename=@SAMPLES@/sample.kra
 fr.inria.openfx.OpenRaster 2 general -s filename=@SAMPLES@/sample.ora
 skip net.fxarena.openfx.AudioCurve 1 generator context only, which hostDemo doesn't have
+fr.inria.openfx.ReadPDF 2 general -s filename=@SAMPLES@/sample.pdf
 fr.inria.openfx.ReadPDF 1 general -s filename=@SAMPLES@/sample.pdf
 net.fxarena.openfx.Sketch 3 filter
 net.fxarena.openfx.Sketch 2 filter
