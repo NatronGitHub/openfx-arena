@@ -81,7 +81,7 @@
 
 #define kParamFontSize "size"
 #define kParamFontSizeLabel "Font size"
-#define kParamFontSizeHint "The height of the characters to render in pixels. Should not be used for animation, see the scale param."
+#define kParamFontSizeHint "The font size, in points at 96 dpi (an em of 4/3 of it, in pixels). Should not be used for animation, see the scale param."
 #define kParamFontSizeDefault 64
 #define kParamFontSizeMin 1.
 #define kParamFontSizeMax 10000.
@@ -93,7 +93,7 @@
 #define kParamSizeUnit "sizeUnit"
 #define kParamSizeUnitLabel "Size unit"
 #define kParamSizeUnitHint "Unit of the font size. Use a size relative to the frame height so that the text scales with the format. Changing the unit converts the font size so that the text keeps its size, unless 'Font size' or 'Font size (%)' is animated. Only the font size and the position can be relative: the stroke size, the letter and line spacing, the radii and the scroll stay in pixels. " kFrameDescription
-#define kParamSizeUnitOptionPixels "Pixels", "The font size is given by 'Font size', in pixels.", "pixels"
+#define kParamSizeUnitOptionPixels "Pixels", "The font size is given by 'Font size' (in points at 96 dpi, see its hint).", "pixels"
 #define kParamSizeUnitOptionFrameHeight "% of frame height", "The font size is given by 'Font size (%)', as a percentage of the frame height.", "frameheight"
 enum SizeUnitEnum
 {
@@ -104,7 +104,7 @@ enum SizeUnitEnum
 
 #define kParamFontSizeRelative "sizeRelative"
 #define kParamFontSizeRelativeLabel "Font size (%)"
-#define kParamFontSizeRelativeHint "Font size as a percentage of the frame height, used if 'Size unit' is '% of frame height'. It is in the same unit as 'Font size': 5% of a 1080-pixel-high frame is the same as a 'Font size' of 54. The stroke size, the letter and line spacing and the radii stay in pixels. " kFrameDescription
+#define kParamFontSizeRelativeHint "Font size as a percentage of the frame height, used if 'Size unit' is '% of frame height'. It is in the same unit as 'Font size' (points at 96 dpi): 5% of a 1080-pixel-high frame is the same as a 'Font size' of 54, whose em is 72 pixels (4/3 of the size). The stroke size, the letter and line spacing and the radii stay in pixels. " kFrameDescription
 #define kParamFontSizeRelativeDefault 5.
 #define kParamFontSizeRelativeMin 0.01
 #define kParamFontSizeRelativeMax 1000.
@@ -212,7 +212,7 @@ enum SizeUnitEnum
 
 #define kParamSubpixel "subpixel"
 #define kParamSubpixelLabel "Subpixel"
-#define kParamSubpixelHint " The subpixel order specifies the order of color elements within each pixel on the dets the antialiasing mode for the fontisplay device when rendering with an antialiasing mode."
+#define kParamSubpixelHint "The subpixel order specifies the order of color elements within each pixel on the display device when rendering with an antialiasing mode of Subpixel."
 #define kParamSubpixelDefault 0
 
 #define kParamHintStyle "hintStyle"
@@ -1169,13 +1169,15 @@ TextFXPlugin::makeLayout(cairo_t* cr, double time, bool autoSize, const OfxPoint
         pangoFont << " " << "italic";
         break;
     }
+    double size; // in points, an integer
     if (getSizeUnit(time) == eSizeUnitPixels) {
         // unchanged, for compatibility
-        pangoFont << " " << std::floor(fontSize * renderScale.x + 0.5);
+        size = std::floor(fontSize * renderScale.x + 0.5);
     } else {
         // Pango treats a size of 0 as unset
-        pangoFont << " " << (std::max)(1., std::floor(getFontSize(time, autoSize) * renderScale.x + 0.5));
+        size = (std::max)(1., std::floor(getFontSize(time, autoSize) * renderScale.x + 0.5));
     }
+    pangoFont << " " << size;
 
     // the layout's context takes the transform and the font options of cr now
     std::unique_ptr<PangoLayout, PangoLayoutDeleter> layoutOwner( pango_cairo_create_layout(cr) );
@@ -1262,7 +1264,23 @@ TextFXPlugin::makeLayout(cairo_t* cr, double time, bool autoSize, const OfxPoint
         pango_layout_set_text(layout, text.c_str(), -1);
     }
 
-    PangoFontDescription* desc = pango_font_description_from_string(pangoFont.str().c_str());
+    PangoFontDescription* desc;
+    if (use == eLayoutV7) {
+        // v7: the family as it is: pango_font_description_from_string() would take its last
+        // words that are style words (e.g. "Black" in "Arial Black") as the style
+        desc = pango_font_description_new();
+        pango_font_description_set_family( desc, font.c_str() );
+        if (style == 1) {
+            // as "bold" in v6's string; setFontDesc() replaces it with the Weight param
+            pango_font_description_set_weight(desc, PANGO_WEIGHT_BOLD);
+        } else if (style == 2) {
+            pango_font_description_set_style(desc, PANGO_STYLE_ITALIC);
+        }
+        pango_font_description_set_size( desc, static_cast<int>(size * PANGO_SCALE) );
+    } else {
+        // v6
+        desc = pango_font_description_from_string( pangoFont.str().c_str() );
+    }
     setFontDesc(stretch, weight, desc);
     pango_layout_set_font_description(layout, desc);
     pango_font_description_free(desc);
