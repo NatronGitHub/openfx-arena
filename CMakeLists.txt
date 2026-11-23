@@ -458,7 +458,9 @@ if(OCL)
             OCL/${_p}/net.fxarena.opencl.${_p}.cl)
     endforeach()
     add_ofx_plugin(OCL INFO_PLIST OCL/Info.plist SOURCES ${_ocl_sources})
-    supportext_add_sources(OCL COMPONENTS TRANSFORM3X3)
+    # SupportExt's include directories only: the plug-ins use the kParamTransform3x3Invert
+    # macro of ofxsTransform3x3.h, not its code (as OCL/Makefile)
+    supportext_add_sources(OCL)
     target_include_directories(OCL PRIVATE "${CMAKE_CURRENT_SOURCE_DIR}/OCL")
     target_link_libraries(OCL PRIVATE openfx::Support OpenCL::OpenCL)
     # ofxsTransformInteractCustom.cpp draws with OpenGL through the V1 overlay entry (OverlayDraw)
@@ -544,7 +546,9 @@ endif()
         target_link_libraries(make_samples PRIVATE PkgConfig::MAGICK PkgConfig::ZIP)
         ofx_target_openmp(make_samples)
         set(_sample_files sample.png sample.psd sample.bmp sample.ora sample.kra sample.pdf sample.svg sample_hald.png
-            sample_xy.png sample_xy.ora sample_xy.kra sample_xy.pdf sample_big.ora sample_big.kra sample_offset.ora sample_noxy.ora)
+            sample_xy.png sample_xy.ora sample_xy.kra sample_xy.pdf sample_big.ora sample_big.kra sample_offset.ora sample_noxy.ora
+            bad_nosize.kra bad_nosize.ora bad_hugexml.kra bad_hugexml.ora bad_hugepng.kra bad_hugepng.ora
+            bad_corrupt.kra bad_corrupt.ora bad_corrupt.bmp bad_empty.svg)
         list(TRANSFORM _sample_files PREPEND "${_samples}/")
         add_custom_command(OUTPUT ${_sample_files}
             COMMAND "${CMAKE_COMMAND}" -E make_directory "${_samples}"
@@ -616,6 +620,18 @@ endif()
                 -DWORK=${CMAKE_CURRENT_BINARY_DIR}/reader-window
                 -P "${CMAKE_CURRENT_SOURCE_DIR}/tests/readerwindow/run.cmake")
 
+            # the readers on malformed and missing files (tests/readermalformed, #128, #129): each
+            # must fail cleanly, with an error and its message, without crashing
+            set(_readpdf OFF)
+            if(OFX_LICENSE STREQUAL "GPL")
+                set(_readpdf ON)
+            endif()
+            add_test(NAME reader_malformed COMMAND "${CMAKE_COMMAND}"
+                -DHOSTDEMO=$<TARGET_FILE:hostDemo> -DPLUGIN_PATH=${OFX_PLUGIN_BUILD_DIR} -DREADPDF=${_readpdf}
+                -DSAMPLES=${_samples} -DOCIO=${CMAKE_CURRENT_SOURCE_DIR}/tests/hostdemo/config.ocio
+                -DWORK=${CMAKE_CURRENT_BINARY_DIR}/reader-malformed
+                -P "${CMAKE_CURRENT_SOURCE_DIR}/tests/readermalformed/run.cmake")
+
             # a few plug-ins rendered with several threads (the OFX multi-thread suite and
             # ImageMagick's OpenMP), then the binary unloaded before exit (tests/mtunload): no
             # crash, even at exit. mt_unload is hostDemo's host with a real multi-thread suite,
@@ -626,10 +642,6 @@ endif()
             target_include_directories(mt_unload PRIVATE "${_hd}")
             find_package(Threads REQUIRED)
             target_link_libraries(mt_unload PRIVATE OfxHost Threads::Threads ${CMAKE_DL_LIBS})
-            set(_readpdf OFF)
-            if(OFX_LICENSE STREQUAL "GPL")
-                set(_readpdf ON)
-            endif()
             add_test(NAME render_Arena_mt_unload COMMAND "${CMAKE_COMMAND}"
                 -DMT_UNLOAD=$<TARGET_FILE:mt_unload> -DPLUGIN_PATH=${OFX_PLUGIN_BUILD_DIR} -DREADPDF=${_readpdf}
                 -DMAGICK_OPENMP=${ARENA_MAGICK_OPENMP}

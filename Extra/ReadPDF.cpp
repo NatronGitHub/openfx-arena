@@ -31,16 +31,12 @@
 #include <sys/stat.h>
 
 #ifdef __linux__
+#include <climits> // PATH_MAX
 #include <unistd.h>
-#include <libgen.h>
-#include <cstring>
 #elif __APPLE__
 #include <mach-o/dyld.h>
-#include <libgen.h>
-#include <cstring>
 #elif _WIN32
 #include <windows.h>
-#include <Shlwapi.h>
 #endif
 
 #if defined(POPPLER_MAJOR_VERSION) && defined(POPPLER_MINOR_VERSION)
@@ -185,7 +181,11 @@ private:
     virtual bool guessParamsFromFilename(const std::string& filename, std::string *colorspace, OFX::PreMultiplicationEnum *filePremult, OFX::PixelComponentEnum *components, int *componentCount) OVERRIDE FINAL;
     virtual void changedFilename(const OFX::InstanceChangedArgs &args) OVERRIDE FINAL;
     std::string getResourcesPath();
-    std::vector<std::string> imageLayers;
+    void setImageLayers(PopplerDocument* document);
+    // The page names of the file: set on the main thread, read by getClipComponents(), which the
+    // host may call from any thread, so only accessed with the mutex held (#130)
+    std::mutex _imageLayersMutex;
+    std::vector<std::string> _imageLayers;
     OFX::DoubleParam *_dpi;
 };
 
@@ -248,46 +248,82 @@ void ReadPDFPlugin::restoreStateFromParams()
         if (document == NULL) {
             setPersistentMessage(OFX::Message::eMessageError, "", "Failed to read PDF");
         }
-        imageLayers = pageNames(document);
+        setImageLayers(document);
         if (document) {
             g_object_unref(document);
         }
     }
 }
 
+// The poppler data directory of a deployed plug-in, <directory of the host executable>/../Resources/poppler,
+// or "" if the executable path can't be read. (#131: readlink() doesn't NUL-terminate its result,
+// the path was used uninitialized when it failed, and the result of _NSGetExecutablePath() was not
+// checked, a path longer than the buffer being left unwritten.)
 std::string
 ReadPDFPlugin::getResourcesPath() {
-    std::string result;
-    char path[PATH_MAX];
-
+    std::string exe; // the path of the host executable
 #ifdef __linux__
-    char tmp[PATH_MAX];
-    if (readlink("/proc/self/exe", tmp, sizeof(tmp)) != -1) {
-        strcpy(path,dirname(tmp));
+    std::vector<char> buf(PATH_MAX);
+    for (;;) {
+        const ssize_t n = readlink("/proc/self/exe", buf.data(), buf.size());
+        if (n < 0) {
+            break;
+        }
+        if (static_cast<size_t>(n) < buf.size()) { // else it may be truncated: try a larger buffer
+            exe.assign(buf.data(), static_cast<size_t>(n));
+            break;
+        }
+        buf.resize(buf.size() * 2);
     }
 #elif __APPLE__
-    char tmp[PATH_MAX];
-    uint32_t size = sizeof(tmp);
-    _NSGetExecutablePath(tmp, &size);
-    strcpy(path,dirname(tmp));
+    uint32_t size = 0;
+    _NSGetExecutablePath(NULL, &size); // fails, and sets size to the size needed
+    if (size > 0) {
+        std::vector<char> buf(size);
+        if (_NSGetExecutablePath(buf.data(), &size) == 0) {
+            exe = buf.data(); // NUL-terminated on success
+        }
+    }
 #elif _WIN32
-    HMODULE hModule = GetModuleHandle(NULL);
-    if (hModule != NULL) {
-        GetModuleFileName(hModule,path, (sizeof(path)));
-        PathRemoveFileSpec(path);
+    std::vector<char> buf(MAX_PATH);
+    for (;;) {
+        const DWORD n = GetModuleFileNameA(NULL, buf.data(), static_cast<DWORD>(buf.size()));
+        if (n == 0) {
+            break;
+        }
+        if (n < buf.size()) { // n == buf.size(): truncated, try a larger buffer
+            exe.assign(buf.data(), n);
+            break;
+        }
+        buf.resize(buf.size() * 2);
     }
 #endif
 
-    result = path;
-    if (!result.empty()) {
 #ifdef _WIN32
-        result += "\\..\\Resources\\poppler";
+    const std::string::size_type slash = exe.find_last_of("\\/");
 #else
-        result += "/../Resources/poppler";
+    const std::string::size_type slash = exe.find_last_of('/');
 #endif
+    if (slash == std::string::npos) {
+        return std::string();
     }
-
+    // the directory of the executable (dirname())
+    std::string result = exe.substr(0, slash == 0 ? 1 : slash);
+#ifdef _WIN32
+    result += "\\..\\Resources\\poppler";
+#else
+    result += "/../Resources/poppler";
+#endif
     return result;
+}
+
+// _imageLayers: the page names of document (none if it is NULL)
+void
+ReadPDFPlugin::setImageLayers(PopplerDocument* document)
+{
+    std::vector<std::string> layers = pageNames(document);
+    std::lock_guard<std::mutex> lock(_imageLayersMutex);
+    _imageLayers.swap(layers);
 }
 
 OfxStatus
@@ -295,6 +331,11 @@ ReadPDFPlugin::getClipComponents(const OFX::ClipComponentsArguments& args, OFX::
 {
     assert(isMultiPlanar());
     clipComponents.setPassThroughClip(NULL, args.time, args.view);
+    std::vector<std::string> imageLayers; // a copy, which the main thread can't change
+    {
+        std::lock_guard<std::mutex> lock(_imageLayersMutex);
+        imageLayers = _imageLayers;
+    }
     if (imageLayers.size()>0 && gHostIsNatron) {
         for (int i = 0; i < (int)imageLayers.size(); i++) {
             std::string layerName;
@@ -522,7 +563,7 @@ bool ReadPDFPlugin::guessParamsFromFilename(const std::string& /*newFile*/,
     if (document == NULL) {
         setPersistentMessage(OFX::Message::eMessageError, "", "Failed to read PDF");
     }
-    imageLayers = pageNames(document);
+    setImageLayers(document);
     if (document) {
         g_object_unref(document);
     }
@@ -549,7 +590,7 @@ void ReadPDFPlugin::changedFilename(const OFX::InstanceChangedArgs &args)
     if (document == NULL) {
         setPersistentMessage(OFX::Message::eMessageError, "", "Failed to read PDF");
     }
-    imageLayers = pageNames(document);
+    setImageLayers(document);
     if (document) {
         g_object_unref(document);
     }

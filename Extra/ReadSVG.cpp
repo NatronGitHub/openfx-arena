@@ -39,6 +39,7 @@
 #include "ofxsMatrix2D.h"
 #include "ofxsTransformInteract.h"
 #include "ofxsMultiThread.h"
+#include "ReadHandles.h"
 #ifndef OFX_USE_MULTITHREAD_MUTEX
 #include "fast_mutex.h"
 #endif
@@ -198,7 +199,12 @@ private:
     OFX::ChoiceParam *_skewOrder;
     OFX::Double2DParam *_center;
     OFX::BooleanParam *_autoCenter;
-    std::vector<std::string> imageLayers;
+    void setImageLayers(const std::string& filename);
+    // The layers (the ids of the groups and paths) of the file: set on the main thread, read by
+    // getClipComponents(), which the host may call from any thread, so only accessed with the
+    // mutex held (#130)
+    Mutex _imageLayersMutex;
+    std::vector<std::string> _imageLayers;
     // The canvas size from the last getFrameBounds(), so that it doesn't parse the whole SVG each
     // time: GenericReader calls it from getClipPreferences(), which the host calls again at each
     // change of a transform param (they are clip preferences slaves), e.g. while dragging the overlay.
@@ -282,15 +288,8 @@ void ReadSVGPlugin::restoreStateFromParams()
     int startingTime = getStartingTime();
     std::string filename;
     OfxStatus st = getFilenameAtTime(startingTime, &filename);
-    if ( st == kOfxStatOK || !filename.empty() ) {
-        imageLayers.clear();
-        xmlDocPtr doc;
-        doc = xmlParseFile(filename.c_str());
-        xmlNode *root_element = NULL;
-        root_element = xmlDocGetRootElement(doc);
-        getLayers(root_element,&imageLayers);
-        xmlFreeDoc(doc);
-    }
+    // always, so that clearing the file also clears its layers (it used to parse "")
+    setImageLayers(st == kOfxStatOK ? filename : std::string());
 
     // The file may already be set at instance creation, without a later instanceChanged: on project
     // load, and when Natron's Read node switches to this decoder with its filename already set
@@ -504,11 +503,30 @@ ReadSVGPlugin::getLayers(xmlNode *node, std::vector<std::string> *layers)
     }
 }
 
+// _imageLayers: the layers of the SVG file filename (none for "")
+void
+ReadSVGPlugin::setImageLayers(const std::string& filename)
+{
+    std::vector<std::string> layers;
+    if (!filename.empty()) {
+        xmlDocPtr doc = xmlParseFile(filename.c_str());
+        getLayers(xmlDocGetRootElement(doc), &layers);
+        xmlFreeDoc(doc);
+    }
+    AutoMutex lock(_imageLayersMutex);
+    _imageLayers.swap(layers);
+}
+
 OfxStatus
 ReadSVGPlugin::getClipComponents(const OFX::ClipComponentsArguments& args, OFX::ClipComponentsSetter& clipComponents)
 {
     assert(isMultiPlanar());
     clipComponents.setPassThroughClip(NULL, args.time, args.view);
+    std::vector<std::string> imageLayers; // a copy, which the main thread can't change
+    {
+        AutoMutex lock(_imageLayersMutex);
+        imageLayers = _imageLayers;
+    }
     if (imageLayers.size()>0 && gHostIsNatron) {
         for (int i = 0; i < (int)imageLayers.size(); i++) {
             if (!imageLayers[i].empty()) {
@@ -648,23 +666,22 @@ ReadSVGPlugin::decodePlane(const std::string& filename, OfxTime time, int /*view
         }
     }
 
-    GError *error = NULL;
-    RsvgHandle *handle;
-    cairo_surface_t *surface;
-    cairo_t *cr;
+    // the handles are released on every path, including the throws below and those of the param
+    // and clip getters (#132)
     cairo_status_t status;
     int dpi, width, height;
     _dpi->getValueAtTime(time, dpi);
 
-    handle = rsvg_handle_new_from_file(filename.c_str(), &error);
-
-    if (error != NULL) {
+    GError* e = NULL;
+    const Arena::GObjectPtr<RsvgHandle> handle(rsvg_handle_new_from_file(filename.c_str(), &e));
+    const Arena::GErrorPtr error(e);
+    if (error || !handle) {
         setPersistentMessage(OFX::Message::eMessageError, "", "Failed to read SVG");
         OFX::throwSuiteStatusException(kOfxStatErrFormat);
     }
 
     SVGCanvas canvas;
-    getCanvasSize(handle, dpi, &canvas);
+    getCanvasSize(handle.get(), dpi, &canvas);
     width = canvas.width;
     height = canvas.height;
     // The whole canvas is rendered, at (0,0,width,height) as in getFrameBounds(), and only the part
@@ -680,13 +697,14 @@ ReadSVGPlugin::decodePlane(const std::string& filename, OfxTime time, int /*view
     // cairo's check of the matrix turned into the "Cairo Render failed" error: fail here instead.
     // (width or height 0 used to fail as "Image don't match RenderWindow")
     if (canvas.imageWidth <= 0. || canvas.imageHeight <= 0. || width <= 0 || height <= 0) {
-        g_object_unref(handle);
         setPersistentMessage(OFX::Message::eMessageError, "", "Cairo Render failed");
         OFX::throwSuiteStatusException(kOfxStatErrFormat);
     }
 
-    surface=cairo_image_surface_create(CAIRO_FORMAT_ARGB32, width, height);
-    cr=cairo_create(surface);
+    const Arena::CairoSurfacePtr surfacePtr(cairo_image_surface_create(CAIRO_FORMAT_ARGB32, width, height));
+    const Arena::CairoPtr crPtr(cairo_create(surfacePtr.get()));
+    cairo_surface_t* const surface = surfacePtr.get();
+    cairo_t* const cr = crPtr.get();
 
     // the transform params animate: evaluate them at the render time, not at the time in the file
     // sequence (`time`), which is constant for a still image
@@ -726,23 +744,21 @@ ReadSVGPlugin::decodePlane(const std::string& filename, OfxTime time, int /*view
         viewport.y = 0.;
         viewport.width = canvas.imageWidth;
         viewport.height = canvas.imageHeight;
-        GError *renderError = NULL;
+        GError* re = NULL;
         // as rsvg_handle_render_cairo(), the result is ignored: an error leaves the image empty
         if (layerSub.empty()) {
-            rsvg_handle_render_document(handle, cr, &viewport, &renderError);
+            rsvg_handle_render_document(handle.get(), cr, &viewport, &re);
         } else {
-            rsvg_handle_render_layer(handle, cr, layerSub.c_str(), &viewport, &renderError);
+            rsvg_handle_render_layer(handle.get(), cr, layerSub.c_str(), &viewport, &re);
         }
-        if (renderError) {
-            g_error_free(renderError);
-        }
+        const Arena::GErrorPtr renderError(re);
     } else
 #endif
     if (layerSub.empty()) {
-        rsvg_handle_render_cairo(handle, cr);
+        rsvg_handle_render_cairo(handle.get(), cr);
     }
     else {
-        rsvg_handle_render_cairo_sub(handle, cr, layerSub.c_str());
+        rsvg_handle_render_cairo_sub(handle.get(), cr, layerSub.c_str());
     }
 
     status = cairo_status(cr);
@@ -785,12 +801,6 @@ ReadSVGPlugin::decodePlane(const std::string& filename, OfxTime time, int /*view
             cdataOffset += 4;
         }
     }
-
-    g_object_unref(handle);
-    cairo_destroy(cr);
-    cairo_surface_destroy(surface);
-    cdata = NULL;
-    error = NULL;
 }
 
 bool ReadSVGPlugin::getFrameBounds(const std::string& filename,
@@ -799,7 +809,7 @@ bool ReadSVGPlugin::getFrameBounds(const std::string& filename,
                               OfxRectI *bounds,
                                    OfxRectI* format,
                               double *par,
-                              std::string* /*error*/,int *tile_width, int *tile_height)
+                              std::string* errorMsg,int *tile_width, int *tile_height)
 {
     if (filename.empty()) {
         setPersistentMessage(OFX::Message::eMessageError, "", "No filename");
@@ -823,23 +833,18 @@ bool ReadSVGPlugin::getFrameBounds(const std::string& filename,
         }
     }
     if (!cached) {
-        GError *error = NULL;
-        RsvgHandle *handle;
-
-        handle = rsvg_handle_new_from_file(filename.c_str(), &error);
-
-        if (error != NULL) {
+        GError* e = NULL;
+        const Arena::GObjectPtr<RsvgHandle> handle(rsvg_handle_new_from_file(filename.c_str(), &e));
+        const Arena::GErrorPtr error(e); // was leaked (#132)
+        if (error || !handle) {
             setPersistentMessage(OFX::Message::eMessageError, "", "Failed to read SVG");
             OFX::throwSuiteStatusException(kOfxStatErrFormat);
         }
 
         SVGCanvas canvas;
-        getCanvasSize(handle, dpi, &canvas);
+        getCanvasSize(handle.get(), dpi, &canvas);
         width = canvas.width;
         height = canvas.height;
-
-        g_object_unref(handle);
-        error = NULL;
 
         if (statOK) {
             AutoMutex lock(_canvasSizeMutex);
@@ -851,14 +856,20 @@ bool ReadSVGPlugin::getFrameBounds(const std::string& filename,
         }
     }
 
-    if (width > 0 && height > 0) {
-        bounds->x1 = 0;
-        bounds->x2 = width;
-        bounds->y1 = 0;
-        bounds->y2 = height;
-        *format = *bounds;
-        *par = 1.0;
+    if (width <= 0 || height <= 0) {
+        // an empty canvas: report it, instead of returning true with the bounds unset, from which
+        // GenericReader made a garbage RoD (#129)
+        if (errorMsg) {
+            *errorMsg = "Empty SVG canvas";
+        }
+        return false;
     }
+    bounds->x1 = 0;
+    bounds->x2 = width;
+    bounds->y1 = 0;
+    bounds->y2 = height;
+    *format = *bounds;
+    *par = 1.0;
 
     *tile_width = *tile_height = 0;
     return true;
@@ -888,26 +899,15 @@ bool ReadSVGPlugin::guessParamsFromFilename(const std::string& /*newFile*/,
         return false;
     }
 
-    imageLayers.clear();
-    xmlDocPtr doc;
-    doc = xmlParseFile(filename.c_str());
-    xmlNode *root_element = NULL;
-    root_element = xmlDocGetRootElement(doc);
-    getLayers(root_element,&imageLayers);
-    xmlFreeDoc(doc);
+    setImageLayers(filename);
 
-    GError *error = NULL;
-    RsvgHandle *handle;
-
-    handle=rsvg_handle_new_from_file(filename.c_str(), &error);
-
-    if (error != NULL) {
+    GError* e = NULL;
+    const Arena::GObjectPtr<RsvgHandle> handle(rsvg_handle_new_from_file(filename.c_str(), &e));
+    const Arena::GErrorPtr error(e); // was leaked (#132)
+    if (error || !handle) {
         setPersistentMessage(OFX::Message::eMessageError, "", "Failed to read SVG");
         OFX::throwSuiteStatusException(kOfxStatErrFormat);
     }
-
-    g_object_unref(handle);
-    error = NULL;
 
     *components = OFX::ePixelComponentRGBA;
     // the output of rsvg is premultiplied, see premulttest.svg check above
@@ -929,13 +929,7 @@ void ReadSVGPlugin::changedFilename(const OFX::InstanceChangedArgs &args)
         setPersistentMessage(OFX::Message::eMessageError, "", "No filename");
         OFX::throwSuiteStatusException(kOfxStatErrFormat);
     }
-    imageLayers.clear();
-    xmlDocPtr doc;
-    doc = xmlParseFile(filename.c_str());
-    xmlNode *root_element = NULL;
-    root_element = xmlDocGetRootElement(doc);
-    getLayers(root_element,&imageLayers);
-    xmlFreeDoc(doc);
+    setImageLayers(filename);
 
     // move the center to the center of the new canvas, unless the user moved it, and change the
     // translation so that the transformed image doesn't move (as the Transform node does when its

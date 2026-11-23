@@ -16,6 +16,8 @@
  * along with openfx-arena.  If not, see <http://www.gnu.org/licenses/gpl-2.0.html>
 */
 
+#include <algorithm>
+#include <mutex>
 #include <iostream>
 #include <stdint.h>
 #include <zip.h>
@@ -29,6 +31,8 @@
 #include "ofxsImageEffect.h"
 #include "ofxsMultiPlane.h"
 #include "lodepng.h"
+#include "ReadZip.h"
+#include "ReadHandles.h"
 
 #define kPluginName "OpenRaster"
 #define kPluginGrouping "Image/Readers"
@@ -52,29 +56,6 @@ namespace OCIO = OCIO_NAMESPACE;
 #endif
 
 OFXS_NAMESPACE_ANONYMOUS_ENTER
-
-// The entry name of an open zip archive, or "" if it can't be read.
-static std::string
-readZipEntry(zip* archive, const char* name)
-{
-    std::string output;
-    struct zip_stat st;
-    zip_stat_init(&st);
-    if (!archive || zip_stat(archive, name, 0, &st) == -1 || st.size == 0) {
-        return output;
-    }
-    zip_file* file = zip_fopen(archive, name, 0);
-    if (!file) {
-        return output;
-    }
-    std::string data((size_t)st.size, '\0');
-    const zip_int64_t nread = zip_fread(file, &data[0], st.size);
-    zip_fclose(file);
-    if (nread == (zip_int64_t)st.size) {
-        output.swap(data);
-    }
-    return output;
-}
 
 // The canvas size (the image element's w and h) of a parsed copy of stack.xml, and the x,y offset
 // (from the top-left corner of the canvas) of the layer whose src is layerFile (0,0 if there is
@@ -167,11 +148,13 @@ private:
     virtual bool getFrameBounds(const std::string& filename, OfxTime time, int view, OfxRectI *bounds, OfxRectI* format, double *par, std::string *error, int *tile_width, int *tile_height) OVERRIDE FINAL;
     virtual bool guessParamsFromFilename(const std::string& filename, std::string *colorspace, OFX::PreMultiplicationEnum *filePremult, OFX::PixelComponentEnum *components, int *componentCount) OVERRIDE FINAL;
     virtual void changedFilename(const OFX::InstanceChangedArgs &args) OVERRIDE FINAL;
-    std::string extractXML(std::string filename);
     void getImageSize(int *width, int *height, std::string filename);
-    bool hasMergedImage(std::string filename);
-    void getLayersInfo(xmlNode *node, std::vector<std::vector<std::string> > *layers);
-    std::vector<std::vector<std::string> > imageLayers;
+    bool setImageLayers(const std::string& filename);
+    std::vector<std::vector<std::string> > getImageLayers();
+    // The layers of the file: set on the main thread, read by getClipComponents() and decodePlane()
+    // on any thread, so only accessed with the mutex held, through set/getImageLayers() (#130)
+    std::mutex _imageLayersMutex;
+    std::vector<std::vector<std::string> > _imageLayers;
 };
 
 OpenRasterPlugin::OpenRasterPlugin(OfxImageEffectHandle handle, const std::vector<std::string>& extensions)
@@ -189,34 +172,10 @@ OpenRasterPlugin::~OpenRasterPlugin()
 {
 }
 
-std::string
-OpenRasterPlugin::extractXML(std::string filename)
-{
-    std::string output;
-    int err = 0;
-    zip *fileOpen = zip_open(filename.c_str(), 0, &err);
-    struct zip_stat xmlSt;
-    zip_stat_init(&xmlSt);
-    err=zip_stat(fileOpen,"stack.xml",0,&xmlSt);
-    if (err!=-1) {
-        char *xml = new char[xmlSt.size+1];
-        zip_file *xmlFile = zip_fopen(fileOpen,"stack.xml",0);
-        err=zip_fread(xmlFile,xml,xmlSt.size);
-        if (err!=-1) {
-            zip_fclose(xmlFile);
-            xml[xmlSt.size] = '\0';
-            output=xml;
-        }
-        delete[] xml;
-    }
-    zip_close(fileOpen);
-    return output;
-}
-
 void
 OpenRasterPlugin::getImageSize(int *width, int *height, std::string filename)
 {
-    std::string xml = extractXML(filename);
+    const std::string xml = ArenaZip::readEntry(filename, "stack.xml", ArenaZip::kMaxXMLSize);
     if (!xml.empty()) {
         int imgW = 0;
         int imgH = 0;
@@ -248,8 +207,8 @@ OpenRasterPlugin::getImageSize(int *width, int *height, std::string filename)
     }
 }
 
-void
-OpenRasterPlugin::getLayersInfo(xmlNode *node, std::vector<std::vector<std::string> > *layers)
+static void
+getLayersInfo(xmlNode *node, std::vector<std::vector<std::string> > *layers)
 {
     xmlNode *cur_node = NULL;
     for (cur_node = node; cur_node; cur_node = cur_node->next) {
@@ -327,31 +286,55 @@ OpenRasterPlugin::getLayersInfo(xmlNode *node, std::vector<std::vector<std::stri
     }
 }
 
-bool
-OpenRasterPlugin::hasMergedImage(std::string filename)
+// The layers of the archive file filename: those of stack.xml, and the merged image if there is
+// one, the merged image first. Empty if the file is missing or corrupt, or has no stack.xml.
+static std::vector<std::vector<std::string> >
+readLayers(const std::string& filename)
 {
-    bool status = false;
-    if (!filename.empty()) {
-        int err = 0;
-        zip *layerOpen = zip_open(filename.c_str(),0,&err);
-        struct zip_stat layerSt;
-        zip_stat_init(&layerSt);
-        err=zip_stat(layerOpen,"mergedimage.png",0,&layerSt);
-        if (err!=-1) {
-            char *layerData = new char[layerSt.size];
-            zip_file *layerFile = zip_fopen(layerOpen,"mergedimage.png",0);
-            err=zip_fread(layerFile,layerData,layerSt.size);
-            if (err!=-1) {
-                zip_fclose(layerFile);
-                if ((layerData!=NULL)&&(layerSt.size>0)) {
-                    status = true;
-                }
-            }
-            delete[] layerData;
-        }
-        zip_close(layerOpen);
+    std::vector<std::vector<std::string> > layers;
+    if (filename.empty()) {
+        return layers;
     }
-    return status;
+    const Arena::ZipPtr archive = ArenaZip::openArchive(filename);
+    if (!archive) { // a missing or corrupt file
+        return layers;
+    }
+    const std::string xml = ArenaZip::readEntry(archive.get(), "stack.xml", ArenaZip::kMaxXMLSize);
+    // the merged image is only listed, not read: its size in the archive is enough (#128)
+    const bool hasMergedImage = ArenaZip::entrySize(archive.get(), "mergedimage.png") > 0;
+    if (xml.empty()) {
+        return layers;
+    }
+    xmlDocPtr doc = xmlParseDoc(reinterpret_cast<const xmlChar*>(xml.c_str()));
+    getLayersInfo(xmlDocGetRootElement(doc), &layers); // xmlDocGetRootElement(NULL) is NULL
+    xmlFreeDoc(doc);
+    if (hasMergedImage) {
+        std::vector<std::string> layerInfo;
+        layerInfo.push_back(kFnOfxImagePlaneColour);
+        layerInfo.push_back("mergedimage.png");
+        layers.push_back(layerInfo);
+    }
+    std::reverse(layers.begin(), layers.end());
+    return layers;
+}
+
+// _imageLayers: the layers of the file filename. False if it has none.
+bool
+OpenRasterPlugin::setImageLayers(const std::string& filename)
+{
+    std::vector<std::vector<std::string> > layers = readLayers(filename);
+    const bool hasLayers = !layers.empty();
+    std::lock_guard<std::mutex> lock(_imageLayersMutex);
+    _imageLayers.swap(layers);
+    return hasLayers;
+}
+
+// a copy of _imageLayers, which the main thread can't change
+std::vector<std::vector<std::string> >
+OpenRasterPlugin::getImageLayers()
+{
+    std::lock_guard<std::mutex> lock(_imageLayersMutex);
+    return _imageLayers;
 }
 
 OfxStatus
@@ -359,6 +342,7 @@ OpenRasterPlugin::getClipComponents(const OFX::ClipComponentsArguments& args, OF
 {
     assert(isMultiPlanar());
     clipComponents.setPassThroughClip(NULL, args.time, args.view);
+    const std::vector<std::vector<std::string> > imageLayers = getImageLayers();
     if (imageLayers.size()>0 && gHostIsNatron) {
         for (int i = 0; i < (int)imageLayers.size(); i++) {
             std::string layerName;
@@ -393,6 +377,7 @@ OpenRasterPlugin::decodePlane(const std::string& filename, OfxTime /*time*/, int
         OFX::throwSuiteStatusException(kOfxStatErrFormat);
     }
 
+    const std::vector<std::vector<std::string> > imageLayers = getImageLayers();
     if (imageLayers.size() == 0) {
         setPersistentMessage(OFX::Message::eMessageError, "", "No layers");
         OFX::throwSuiteStatusException(kOfxStatErrFormat);
@@ -432,46 +417,35 @@ OpenRasterPlugin::decodePlane(const std::string& filename, OfxTime /*time*/, int
     int canvasHeight = 0;
     int offsetX = 0;
     int offsetY = 0;
-    unsigned char* buffer = NULL;
+    // lodepng's output, allocated with malloc; freed on every path, including the throws below and
+    // in convertDepthAndComponents() (#132)
+    Arena::MallocPtr<unsigned char> buffer;
 
-    int err = 0;
-    // zip_open/zip_fopen return NULL on failure (missing or corrupt file)
-    zip *layerOpen = zip_open(filename.c_str(),0,&err);
-    if (layerOpen) {
-        struct zip_stat layerSt;
-        zip_stat_init(&layerSt);
-        err=zip_stat(layerOpen,imageLayers[layer][1].c_str(),0,&layerSt);
-        if (err!=-1 && layerSt.size>0) {
-            zip_file *layerFile = zip_fopen(layerOpen,imageLayers[layer][1].c_str(),0);
-            if (layerFile) {
-                char *layerData = new char[layerSt.size];
-                zip_int64_t nread = zip_fread(layerFile,layerData,layerSt.size);
-                zip_fclose(layerFile);
-                if (nread == (zip_int64_t)layerSt.size) {
-                    unsigned w = 0, h = 0;
-                    unsigned pngErr = lodepng_decode32(&buffer,&w,&h,(unsigned char *)layerData,(size_t)layerSt.size);
-                    if (pngErr) {
-                        // lodepng may allocate the output even on error
-                        free(buffer);
-                        buffer = NULL;
-                    } else {
-                        width = (int)w;
-                        height = (int)h;
-                    }
-                }
-                delete[] layerData;
+    // NULL on failure (missing or corrupt file)
+    const Arena::ZipPtr archive = ArenaZip::openArchive(filename);
+    if (archive) {
+        // the size in the archive is checked and capped (#128)
+        const std::string layerData = ArenaZip::readEntry(archive.get(), imageLayers[layer][1].c_str(), ArenaZip::kMaxImageSize);
+        if (!layerData.empty()) {
+            unsigned w = 0, h = 0;
+            unsigned char* out = NULL;
+            const unsigned pngErr = lodepng_decode32(&out, &w, &h, reinterpret_cast<const unsigned char*>(layerData.data()), layerData.size());
+            buffer.reset(out); // lodepng may allocate the output even on error
+            if (pngErr) {
+                buffer.reset();
+            } else {
+                width = (int)w;
+                height = (int)h;
             }
         }
-        if (buffer != NULL) {
-            getLayerGeometry(readZipEntry(layerOpen, "stack.xml"), imageLayers[layer][1], &canvasWidth, &canvasHeight, &offsetX, &offsetY);
+        if (buffer) {
+            getLayerGeometry(ArenaZip::readEntry(archive.get(), "stack.xml", ArenaZip::kMaxXMLSize), imageLayers[layer][1], &canvasWidth, &canvasHeight, &offsetX, &offsetY);
         }
-        zip_close(layerOpen);
     }
 
     // The whole layer is decoded, and only the part of renderWindow that it covers is copied: a
     // host may ask for a render window smaller than the image, even without tiles (#105).
-    if (buffer==NULL || width<=0 || height<=0) {
-        free(buffer); // allocated by lodepng with malloc
+    if (!buffer || width<=0 || height<=0) {
         setPersistentMessage(OFX::Message::eMessageError, "", "Unable to read image");
         OFX::throwSuiteStatusException(kOfxStatErrFormat);
     }
@@ -503,12 +477,9 @@ OpenRasterPlugin::decodePlane(const std::string& filename, OfxTime /*time*/, int
     if (clipToFile(renderWindow, image, pixelData, bounds, pixelComponentCount, OFX::eBitDepthFloat, rowBytes, &copied)) {
         // GenericReader's conversion reads the top-down buffer directly (no transposed copy), with the
         // formula of the copy that it replaces (x * (1.f / 255)), so the output is the same
-        convertDepthAndComponents(buffer, copied, renderScale, image, OFX::ePixelComponentRGBA, OFX::eBitDepthUByte, width * 4,
+        convertDepthAndComponents(buffer.get(), copied, renderScale, image, OFX::ePixelComponentRGBA, OFX::eBitDepthUByte, width * 4,
                                   pixelData, bounds, remappedComponents, rowBytes);
     }
-
-    free(buffer); // allocated by lodepng with malloc; was leaked on every render
-    buffer = NULL;
 }
 
 bool OpenRasterPlugin::getFrameBounds(const std::string& filename,
@@ -517,19 +488,25 @@ bool OpenRasterPlugin::getFrameBounds(const std::string& filename,
                               OfxRectI *bounds,
                                       OfxRectI* format,
                               double *par,
-                              std::string* /*error*/,int *tile_width, int *tile_height)
+                              std::string* error,int *tile_width, int *tile_height)
 {
     int width = 0;
     int height = 0;
     getImageSize(&width,&height,filename);
-    if (width>0 && height>0) {
-        bounds->x1 = 0;
-        bounds->x2 = width;
-        bounds->y1 = 0;
-        bounds->y2 = height;
-        *format = *bounds;
-        *par = 1.0;
+    if (width <= 0 || height <= 0) {
+        // a missing or corrupt file, or no canvas size in stack.xml: report it, instead of
+        // returning true with the bounds unset, from which GenericReader made a garbage RoD (#129)
+        if (error) {
+            *error = "Unable to read image";
+        }
+        return false;
     }
+    bounds->x1 = 0;
+    bounds->x2 = width;
+    bounds->y1 = 0;
+    bounds->y2 = height;
+    *format = *bounds;
+    *par = 1.0;
     *tile_width = *tile_height = 0;
     return true;
 }
@@ -551,24 +528,7 @@ bool OpenRasterPlugin::guessParamsFromFilename(const std::string& /*newFile*/,
         return false;
     }
 
-    imageLayers.clear();
-    std::string xml = extractXML(filename);
-    if (!xml.empty()) {
-        xmlDocPtr doc;
-        doc = xmlParseDoc((const xmlChar *)xml.c_str());
-        xmlNode *root_element = NULL;
-        root_element = xmlDocGetRootElement(doc);
-        getLayersInfo(root_element,&imageLayers);
-        xmlFreeDoc(doc);
-        if (hasMergedImage(filename)) {
-            std::vector<std::string> layerInfo;
-            layerInfo.push_back(kFnOfxImagePlaneColour);
-            layerInfo.push_back("mergedimage.png");
-            imageLayers.push_back(layerInfo);
-        }
-        std::reverse(imageLayers.begin(),imageLayers.end());
-    }
-    if (imageLayers.empty()) {
+    if (!setImageLayers(filename)) {
         setPersistentMessage(OFX::Message::eMessageError, "", "Empty and/or corrupt image");
     }
 
@@ -589,23 +549,7 @@ void OpenRasterPlugin::changedFilename(const OFX::InstanceChangedArgs &args)
         setPersistentMessage(OFX::Message::eMessageError, "", "No filename");
         OFX::throwSuiteStatusException(kOfxStatErrFormat);
     }
-    imageLayers.clear();
-    std::string xml = extractXML(filename);
-    if (!xml.empty()) {
-        xmlDocPtr doc;
-        doc = xmlParseDoc((const xmlChar *)xml.c_str());
-        xmlNode *root_element = NULL;
-        root_element = xmlDocGetRootElement(doc);
-        getLayersInfo(root_element,&imageLayers);
-        xmlFreeDoc(doc);
-        if (hasMergedImage(filename)) {
-            std::vector<std::string> layerInfo;
-            layerInfo.push_back(kFnOfxImagePlaneColour);
-            layerInfo.push_back("mergedimage.png");
-            imageLayers.push_back(layerInfo);
-        }
-        std::reverse(imageLayers.begin(),imageLayers.end());
-    }
+    setImageLayers(filename);
 }
 
 void OpenRasterPlugin::restoreStateFromParams()
@@ -615,25 +559,9 @@ void OpenRasterPlugin::restoreStateFromParams()
     int startingTime = getStartingTime();
     std::string filename;
     OfxStatus st = getFilenameAtTime(startingTime, &filename);
-    if ( st == kOfxStatOK || !filename.empty() ) {
-        imageLayers.clear();
-        std::string xml = extractXML(filename);
-        if (!xml.empty()) {
-            xmlDocPtr doc;
-            doc = xmlParseDoc((const xmlChar *)xml.c_str());
-            xmlNode *root_element = NULL;
-            root_element = xmlDocGetRootElement(doc);
-            getLayersInfo(root_element,&imageLayers);
-            xmlFreeDoc(doc);
-            if (hasMergedImage(filename)) {
-                std::vector<std::string> layerInfo;
-                layerInfo.push_back(kFnOfxImagePlaneColour);
-                layerInfo.push_back("mergedimage.png");
-                imageLayers.push_back(layerInfo);
-            }
-            std::reverse(imageLayers.begin(),imageLayers.end());
-        }
-    }
+    // always, so that clearing the file also clears its layers: readLayers() returns no layers
+    // for "" (it used to open it)
+    setImageLayers(st == kOfxStatOK ? filename : std::string());
 }
 
 using namespace OFX;
