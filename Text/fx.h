@@ -266,7 +266,7 @@ static inline parametrization_t* parametrize_path(cairo_path_t* path) {
 
 		case CAIRO_PATH_CURVE_TO:
 			parametrization[i] = curve_length(
-				current_point.point.x, current_point.point.x,
+				current_point.point.x, current_point.point.y,
 				data[1].point.x, data[1].point.y,
 				data[2].point.x, data[2].point.y,
 				data[3].point.x, data[3].point.y
@@ -492,7 +492,7 @@ inline static void point_on_path(parametrized_path_t* param, double* x, double* 
 	}
 }
 
-inline cairo_bool_t map_path_onto(cairo_t* cr, cairo_path_t* path) {
+static inline cairo_bool_t map_path_onto(cairo_t* cr, cairo_path_t* path) {
 	cairo_path_t* cur_path = 0;
 
 	parametrized_path_t param;
