@@ -52,6 +52,7 @@
 #include "ofxsMacros.h"
 #include "ofxsMultiPlane.h"
 #include "ofxsImageEffect.h"
+#include "ReadHandles.h"
 
 #define kPluginName "ReadPDF"
 #define kPluginGrouping "Image/Readers"
@@ -252,6 +253,8 @@ void ReadPDFPlugin::restoreStateFromParams()
         if (document) {
             g_object_unref(document);
         }
+    } else {
+        setImageLayers(NULL); // no file: no pages (#210)
     }
 }
 
@@ -408,8 +411,8 @@ ReadPDFPlugin::decodePlane(const std::string& filename, OfxTime time, int /*view
 
     poppler_page_get_size(r.fpage, &imageWidth, &imageHeight);
 
-    width = dpi * imageWidth / kPluginDPI;
-    height = dpi * imageHeight / kPluginDPI;
+    width = Arena::toPixels(dpi * imageWidth / kPluginDPI);
+    height = Arena::toPixels(dpi * imageHeight / kPluginDPI);
 
     // The whole page is rendered, at (0,0,width,height) as in getFrameBounds(), and only the part
     // of renderWindow that it covers is copied: a host may ask for a render window smaller than
@@ -450,11 +453,12 @@ ReadPDFPlugin::decodePlane(const std::string& filename, OfxTime time, int /*view
     cairo_surface_flush(r.surface);
 
     unsigned char* cdata = cairo_image_surface_get_data(r.surface);
-    std::vector<unsigned char> pixels(width * height * pixelComponentCount);
+    std::vector<unsigned char> pixels((size_t)width * height * pixelComponentCount);
+    // size_t: width * height * 4 may not fit in an int (#158)
     for (int i = 0; i < width; ++i) {
         for (int j = 0; j < height; ++j) {
             for (int k = 0; k < pixelComponentCount; ++k)
-                pixels[(i + j * width) * pixelComponentCount + k] = cdata[(i + (height - 1 - j) * width) * pixelComponentCount + k];
+                pixels[((size_t)i + (size_t)j * width) * pixelComponentCount + k] = cdata[((size_t)i + (size_t)(height - 1 - j) * width) * pixelComponentCount + k];
         }
     }
 
@@ -516,8 +520,8 @@ bool ReadPDFPlugin::getFrameBounds(const std::string& filename,
     }
     if (page != NULL) {
         poppler_page_get_size(page, &imageWidth, &imageHeight);
-        width = dpi * imageWidth / kPluginDPI;
-        height = dpi * imageHeight / kPluginDPI;
+        width = Arena::toPixels(dpi * imageWidth / kPluginDPI);
+        height = Arena::toPixels(dpi * imageHeight / kPluginDPI);
         g_object_unref(page);
     }
 
@@ -527,7 +531,7 @@ bool ReadPDFPlugin::getFrameBounds(const std::string& filename,
         // bounds and format were not set: report failure instead of returning garbage
         // bounds to GenericReader
         if (errorMsg) {
-            *errorMsg = page == NULL ? "Failed to read page" : "Empty page";
+            *errorMsg = page == NULL ? "Failed to read page" : "Empty or too large page";
         }
         return false;
     }

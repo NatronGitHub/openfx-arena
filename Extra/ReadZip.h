@@ -16,7 +16,8 @@
  * along with openfx-arena.  If not, see <http://www.gnu.org/licenses/gpl-2.0.html>
 */
 
-// Reading the entries of the zip archives of ReadKrita (.kra) and OpenRaster (.ora).
+// Reading the entries of the zip archives of ReadKrita (.kra) and OpenRaster (.ora), and their
+// XML and PNG contents.
 //
 // The entry sizes come from the archive, i.e. from the file, which may be malformed or hostile
 // (#128): a size is used only if libzip says it is valid, and only up to a cap, so that it can't
@@ -25,9 +26,15 @@
 #ifndef Arena_ReadZip_h
 #define Arena_ReadZip_h
 
+#include <algorithm>
+#include <climits>
+#include <cstdint>
+#include <cstdlib>
 #include <string>
+#include <libxml/parser.h>
 #include <zip.h>
 
+#include "lodepng.h"
 #include "ReadHandles.h"
 
 namespace ArenaZip {
@@ -88,6 +95,58 @@ readEntry(const std::string& filename, const char* name, zip_uint64_t maxSize)
 {
     const Arena::ZipPtr archive = openArchive(filename);
     return readEntry(archive.get(), name, maxSize); // readEntry(NULL, ...) is ""
+}
+
+// An XML entry, parsed: NULL if it is malformed. No network access, and no messages on stderr
+// for a malformed file (#160). xml comes from readEntry(), so its size fits in an int.
+inline xmlDocPtr
+parseXML(const std::string& xml)
+{
+    return xmlReadMemory(xml.data(), static_cast<int>(xml.size()), NULL, NULL,
+                         XML_PARSE_NONET | XML_PARSE_NOERROR | XML_PARSE_NOWARNING);
+}
+
+// An integer attribute (a size or an offset), 0 if s is NULL, clamped to +/-2^28 so that the
+// sums of sizes and offsets can't overflow an int (#158).
+inline int
+parseInt(const xmlChar* s)
+{
+    if (!s) {
+        return 0;
+    }
+    const long kMax = 1L << 28;
+    const long v = std::strtol(reinterpret_cast<const char*>(s), NULL, 10); // LONG_MIN/MAX on overflow
+    return static_cast<int>(std::max(-kMax, std::min(v, kMax)));
+}
+
+// the largest decoded image, in bytes of 8-bit RGBA (#159)
+constexpr std::uint64_t kMaxDecodedSize = std::uint64_t(1) << 32; // 4 GiB
+
+// A PNG entry, decoded to 8-bit RGBA as lodepng_decode32() does: NULL if it can't be decoded, or
+// if its header size is over kMaxDecodedSize (a small PNG may ask for 17 GB, #159). The row bytes
+// (w * 4) fit in an int.
+inline Arena::MallocPtr<unsigned char>
+decodePNG(const std::string& png, unsigned* w, unsigned* h)
+{
+    Arena::MallocPtr<unsigned char> image;
+    const unsigned char* in = reinterpret_cast<const unsigned char*>(png.data());
+    LodePNGState state;
+    lodepng_state_init(&state); // the output is 8-bit RGBA by default
+    unsigned err = lodepng_inspect(w, h, &state, in, png.size());
+    if (!err && *w <= INT_MAX / 4 && std::uint64_t(*w) * *h * 4 <= kMaxDecodedSize) {
+        // the zlib stream may still decode to more than the header says: at most twice the image
+        // (16-bit RGBA), plus a filter byte per row
+        state.decoder.zlibsettings.max_output_size =
+            static_cast<size_t>(std::min<std::uint64_t>(2 * kMaxDecodedSize + *h, SIZE_MAX));
+        unsigned char* out = NULL;
+        err = lodepng_decode(&out, w, h, &state, in, png.size());
+        image.reset(out); // lodepng may allocate the output even on error
+        if (err) {
+            image.reset();
+        }
+    }
+    lodepng_state_cleanup(&state);
+    return image;
 }
 
 } // namespace ArenaZip

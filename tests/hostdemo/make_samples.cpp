@@ -145,6 +145,14 @@ static bool writeZipWithHugeEntry(const std::string& path, const std::vector<std
     return (bool)f;
 }
 
+// 4 bytes of v, big-endian, as in PNG
+static void putBE(std::string* out, uint32_t v)
+{
+    for (int i = 3; i >= 0; --i) {
+        *out += static_cast<char>((v >> (8 * i)) & 0xFF);
+    }
+}
+
 static bool writeFile(const std::string& path, const std::string& contents)
 {
     std::ofstream f(path.c_str(), std::ios::binary);
@@ -335,6 +343,24 @@ int main(int argc, char** argv)
         std::string("<?xml version='1.0' encoding='UTF-8'?>\n<image version=\"0.0.3\"><stack><layer name=\"background\" src=\"data/layer0.png\"/></stack></image>\n")));
     oraNoSize.push_back(ora[2]);
     oraNoSize.push_back(ora[3]);
+    // a PNG with only an IHDR (65535x65535, 8-bit RGBA) and an IEND chunk
+    std::string bomb = "\x89PNG\r\n\x1a\n";
+    {
+        std::string ihdr = "IHDR";
+        const unsigned char header[13] = { 0, 0, 0xFF, 0xFF, 0, 0, 0xFF, 0xFF, 8, 6, 0, 0, 0 };
+        ihdr.append(reinterpret_cast<const char*>(header), sizeof(header));
+        std::string chunk;
+        putBE(&chunk, 13);
+        chunk += ihdr;
+        putBE(&chunk, crc32(ihdr));
+        bomb += chunk;
+        bomb += std::string("\0\0\0\0IEND", 8);
+        putBE(&bomb, crc32("IEND"));
+    }
+    std::vector<std::pair<std::string, std::string> > kraBomb;
+    kraBomb.push_back(kra[0]);
+    kraBomb.push_back(kra[1]);
+    kraBomb.push_back(std::make_pair(std::string("mergedimage.png"), bomb));
     const std::string corrupt = "PK\x03\x04 this is not a zip file";
     if (!writeZip(dir + "/bad_nosize.kra", kraNoSize) || !writeZip(dir + "/bad_nosize.ora", oraNoSize) ||
         !writeZipWithHugeEntry(dir + "/bad_hugexml.kra", kra, "maindoc.xml", 0x7FFFFFFFFFFFFFFFull) ||
@@ -343,7 +369,9 @@ int main(int argc, char** argv)
         !writeZipWithHugeEntry(dir + "/bad_hugepng.ora", ora, "mergedimage.png", 0xFFFFFFFFFFFFFFFFull) ||
         !writeFile(dir + "/bad_corrupt.kra", corrupt) || !writeFile(dir + "/bad_corrupt.ora", corrupt) ||
         !writeFile(dir + "/bad_corrupt.bmp", "BM this is not a BMP file") ||
-        !writeFile(dir + "/bad_empty.svg", "<svg xmlns=\"http://www.w3.org/2000/svg\" width=\"0\" height=\"0\"></svg>\n")) {
+        !writeFile(dir + "/bad_empty.svg", "<svg xmlns=\"http://www.w3.org/2000/svg\" width=\"0\" height=\"0\"></svg>\n") ||
+        !writeFile(dir + "/bad_huge.svg", "<svg xmlns=\"http://www.w3.org/2000/svg\" width=\"1e12\" height=\"1e12\"></svg>\n") ||
+        !writeZip(dir + "/bad_pngbomb.kra", kraBomb)) {
         std::cerr << "could not write the malformed samples in " << dir << std::endl;
         return 1;
     }

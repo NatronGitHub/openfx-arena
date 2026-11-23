@@ -178,12 +178,12 @@ ReadCDRPlugin::decode(const std::string& filename,
     imageHeight = dimension.height;
 
     if (dpi != kParamDpiDefault) {
-        width = imageWidth * dpi / kParamDpiDefault;
-        height = imageHeight * dpi / kParamDpiDefault;
+        width = Arena::toPixels(imageWidth * dpi / kParamDpiDefault);
+        height = Arena::toPixels(imageHeight * dpi / kParamDpiDefault);
     }
     else {
-        width = imageWidth;
-        height = imageHeight;
+        width = Arena::toPixels(imageWidth);
+        height = Arena::toPixels(imageHeight);
     }
 
     // The whole drawing is rendered, at (0,0,width,height) as in getFrameBounds(), and only the
@@ -226,10 +226,11 @@ ReadCDRPlugin::decode(const std::string& filename,
 
     unsigned char* cdata = cairo_image_surface_get_data(surface);
     std::vector<unsigned char> pixels((size_t)width * height * pixelComponentCount);
+    // size_t: width * height * 4 may not fit in an int (#158)
     for (int i = 0; i < width; ++i) {
         for (int j = 0; j < height; ++j) {
             for (int k = 0; k < pixelComponentCount; ++k)
-                pixels[(i + j * width) * pixelComponentCount + k] = cdata[(i + (height - 1 - j) * width) * pixelComponentCount + k];
+                pixels[((size_t)i + (size_t)j * width) * pixelComponentCount + k] = cdata[((size_t)i + (size_t)(height - 1 - j) * width) * pixelComponentCount + k];
         }
     }
 
@@ -288,18 +289,18 @@ bool ReadCDRPlugin::getFrameBounds(const std::string& filename,
     imageHeight = dimension.height;
 
     if (dpi != kParamDpiDefault) {
-        width = imageWidth * dpi / kParamDpiDefault;
-        height = imageHeight * dpi / kParamDpiDefault;
+        width = Arena::toPixels(imageWidth * dpi / kParamDpiDefault);
+        height = Arena::toPixels(imageHeight * dpi / kParamDpiDefault);
     } else {
-        width = imageWidth;
-        height = imageHeight;
+        width = Arena::toPixels(imageWidth);
+        height = Arena::toPixels(imageHeight);
     }
 
     if (width <= 0 || height <= 0) {
         // an empty drawing: report it, instead of returning true with the bounds unset, from
         // which GenericReader made a garbage RoD (#129)
         if (errorMsg) {
-            *errorMsg = "Empty CorelDRAW page";
+            *errorMsg = "Empty or too large CorelDRAW page";
         }
         return false;
     }
