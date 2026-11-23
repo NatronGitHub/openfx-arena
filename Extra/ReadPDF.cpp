@@ -58,10 +58,8 @@
 #define kPluginName "ReadPDF"
 #define kPluginGrouping "Image/Readers"
 #define kPluginIdentifier "fr.inria.openfx.ReadPDF"
-#define kPluginVersionMajor 2
-#define kPluginVersionMinor 0
-#define kPluginVersionMajorV1 1
-#define kPluginVersionMinorV1 4
+#define kPluginVersionMajor 1
+#define kPluginVersionMinor 5
 #define kPluginEvaluation 50
 #define kPluginDPI 72.0
 
@@ -120,17 +118,15 @@ struct PDFResources
 {
     PopplerDocument *document;
     PopplerPage *page;
-    PopplerPage *fpage;
     cairo_surface_t *surface;
     cairo_t *cr;
 
-    PDFResources() : document(NULL), page(NULL), fpage(NULL), surface(NULL), cr(NULL) {}
+    PDFResources() : document(NULL), page(NULL), surface(NULL), cr(NULL) {}
     ~PDFResources()
     {
         if (cr) { cairo_destroy(cr); }
         if (surface) { cairo_surface_destroy(surface); }
         if (page) { g_object_unref(page); }
-        if (fpage) { g_object_unref(fpage); }
         if (document) { g_object_unref(document); }
     }
 private:
@@ -155,7 +151,7 @@ pageNames(PopplerDocument* document)
 class ReadPDFPlugin : public GenericReaderPlugin
 {
 public:
-    ReadPDFPlugin(OfxImageEffectHandle handle, const std::vector<std::string>& extensions, unsigned int majorVersion);
+    ReadPDFPlugin(OfxImageEffectHandle handle, const std::vector<std::string>& extensions);
     virtual ~ReadPDFPlugin();
     virtual void restoreStateFromParams() OVERRIDE FINAL;
 private:
@@ -191,10 +187,9 @@ private:
     std::mutex _imageLayersMutex;
     std::vector<std::string> _imageLayers;
     OFX::DoubleParam *_dpi;
-    const bool _v2; // version 2: each page has its own size (version 1 has page 0's size, #193)
 };
 
-ReadPDFPlugin::ReadPDFPlugin(OfxImageEffectHandle handle, const std::vector<std::string>& extensions, unsigned int majorVersion)
+ReadPDFPlugin::ReadPDFPlugin(OfxImageEffectHandle handle, const std::vector<std::string>& extensions)
 : GenericReaderPlugin(handle, extensions, kSupportsRGBA, kSupportsRGB, kSupportsXY, kSupportsAlpha, kSupportsTiles,
 #ifdef OFX_EXTENSIONS_NUKE
 (OFX::getImageEffectHostDescription() && OFX::getImageEffectHostDescription()->isMultiPlanar) ? kIsMultiPlanar : false
@@ -203,7 +198,6 @@ false
 #endif
 )
 ,_dpi(NULL)
-,_v2(majorVersion >= 2)
 {
     _dpi = fetchDoubleParam(kParamDpi);
     assert(_dpi);
@@ -406,16 +400,13 @@ ReadPDFPlugin::decodePlane(const std::string& filename, OfxTime time, int /*view
     if (layer >= 0 && layer < nPages) {
         r.page = poppler_document_get_page(r.document, layer);
     }
-    if (nPages > 0) {
-        r.fpage = poppler_document_get_page(r.document, 0);
-    }
-    if (r.page == NULL || r.fpage == NULL) {
+    if (r.page == NULL) {
         setPersistentMessage(OFX::Message::eMessageError, "", "Failed to read page");
         OFX::throwSuiteStatusException(kOfxStatErrFormat);
     }
 
-    // version 1 renders every page at the size of page 0, which crops larger pages (#193)
-    poppler_page_get_size(_v2 ? r.page : r.fpage, &imageWidth, &imageHeight);
+    // the size of this page, not of page 0, which cropped larger pages (#193)
+    poppler_page_get_size(r.page, &imageWidth, &imageHeight);
 
     width = Arena::toPixels(dpi * imageWidth / kPluginDPI);
     height = Arena::toPixels(dpi * imageHeight / kPluginDPI);
@@ -512,6 +503,8 @@ bool ReadPDFPlugin::getFrameBounds(const std::string& filename,
     double imageWidth, imageHeight;
     int width = 0;
     int height = 0;
+    int boundsWidth = 0;
+    int boundsHeight = 0;
 
     PopplerDocument *document = openDocument(filename);
     if (document == NULL) {
@@ -523,18 +516,25 @@ bool ReadPDFPlugin::getFrameBounds(const std::string& filename,
     // asking for it, which poppler reports as a critical error)
     const int nPages = poppler_document_get_n_pages(document);
     // Natron gets each page as a plane (decodePlane()), and all the planes of a clip share one RoD
-    // (the RoD action has no plane argument): in version 2 it covers every page, each at (0,0)
-    // (#193). Other hosts only get page 0, and version 1 has the size of page 0.
-    const int sizedPages = (_v2 && gHostIsNatron) ? nPages : std::min(nPages, 1);
+    // (the RoD action has no plane argument): the bounds cover every page, each at (0,0), and the
+    // format stays page 0's (#193). Other hosts only get page 0.
+    const int sizedPages = gHostIsNatron ? nPages : std::min(nPages, 1);
     for (int i = 0; i < sizedPages; ++i) {
         PopplerPage *page = poppler_document_get_page(document, i);
-        if (page != NULL) {
-            hasPage = true;
-            poppler_page_get_size(page, &imageWidth, &imageHeight);
-            width = std::max(width, Arena::toPixels(dpi * imageWidth / kPluginDPI));
-            height = std::max(height, Arena::toPixels(dpi * imageHeight / kPluginDPI));
-            g_object_unref(page);
+        if (page == NULL) {
+            continue;
         }
+        poppler_page_get_size(page, &imageWidth, &imageHeight);
+        g_object_unref(page);
+        const int w = Arena::toPixels(dpi * imageWidth / kPluginDPI);
+        const int h = Arena::toPixels(dpi * imageHeight / kPluginDPI);
+        if (i == 0) {
+            hasPage = true;
+            width = w;
+            height = h;
+        }
+        boundsWidth = std::max(boundsWidth, w);
+        boundsHeight = std::max(boundsHeight, h);
     }
 
     g_object_unref(document);
@@ -547,11 +547,14 @@ bool ReadPDFPlugin::getFrameBounds(const std::string& filename,
         }
         return false;
     }
+    format->x1 = 0;
+    format->x2 = width;
+    format->y1 = 0;
+    format->y2 = height;
     bounds->x1 = 0;
-    bounds->x2 = width;
+    bounds->x2 = boundsWidth;
     bounds->y1 = 0;
-    bounds->y2 = height;
-    *format = *bounds;
+    bounds->y2 = boundsHeight;
     *par = 1.0;
 
     *tile_width = *tile_height = 0;
@@ -614,29 +617,10 @@ void ReadPDFPlugin::changedFilename(const OFX::InstanceChangedArgs &args)
 
 using namespace OFX;
 
-// mDeclareReaderPluginFactory, with the major version as a template parameter: each major version
-// must be a distinct factory class (see mDeclarePluginFactoryVersioned in ofxsImageEffect.h)
-template<unsigned int majorVersion>
-class ReadPDFPluginFactory
-    : public OFX::PluginFactoryHelper<ReadPDFPluginFactory<majorVersion> >
-{
-public:
-    ReadPDFPluginFactory(const std::string& id, unsigned int verMin)
-        : OFX::PluginFactoryHelper<ReadPDFPluginFactory<majorVersion> >(id, majorVersion, verMin)
-    {
-    }
-    virtual void load() OVERRIDE FINAL;
-    virtual void unload() OVERRIDE FINAL {}
-    virtual OFX::ImageEffect* createInstance(OfxImageEffectHandle handle, OFX::ContextEnum context) OVERRIDE FINAL;
-    bool isVideoStreamPlugin() const { return false; }
-    virtual void describe(OFX::ImageEffectDescriptor& desc) OVERRIDE FINAL;
-    virtual void describeInContext(OFX::ImageEffectDescriptor& desc, OFX::ContextEnum context) OVERRIDE FINAL;
-    std::vector<std::string> _extensions;
-};
+mDeclareReaderPluginFactory(ReadPDFPluginFactory, {}, false);
 
-template<unsigned int majorVersion>
 void
-ReadPDFPluginFactory<majorVersion>::load()
+ReadPDFPluginFactory::load()
 {
     _extensions.clear();
     _extensions.push_back("pdf");
@@ -644,23 +628,15 @@ ReadPDFPluginFactory<majorVersion>::load()
 
 
 /** @brief The basic describe function, passed a plugin descriptor */
-template<unsigned int majorVersion>
-void
-ReadPDFPluginFactory<majorVersion>::describe(OFX::ImageEffectDescriptor &desc)
+void ReadPDFPluginFactory::describe(OFX::ImageEffectDescriptor &desc)
 {
     GenericReaderDescribe(desc, _extensions, kPluginEvaluation, kSupportsTiles, kIsMultiPlanar);
     desc.setLabel(kPluginName);
-    if (majorVersion < kPluginVersionMajor) {
-        // hidden from the hosts' menus (e.g. Natron), still loaded by old projects
-        desc.setIsObsolete(true);
-    }
     desc.setPluginDescription("Read PDF documents using poppler.");
 }
 
 /** @brief The describe in context function, passed a plugin descriptor and a context */
-template<unsigned int majorVersion>
-void
-ReadPDFPluginFactory<majorVersion>::describeInContext(OFX::ImageEffectDescriptor &desc, ContextEnum context)
+void ReadPDFPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, ContextEnum context)
 {
     gHostIsNatron = (OFX::getImageEffectHostDescription()->isNatron);
 
@@ -680,19 +656,15 @@ ReadPDFPluginFactory<majorVersion>::describeInContext(OFX::ImageEffectDescriptor
 }
 
 /** @brief The create instance function, the plugin must return an object derived from the \ref OFX::ImageEffect class */
-template<unsigned int majorVersion>
-ImageEffect*
-ReadPDFPluginFactory<majorVersion>::createInstance(OfxImageEffectHandle handle,
-                                                   ContextEnum /*context*/)
+ImageEffect* ReadPDFPluginFactory::createInstance(OfxImageEffectHandle handle,
+                                     ContextEnum /*context*/)
 {
-    ReadPDFPlugin* ret =  new ReadPDFPlugin(handle, _extensions, majorVersion);
+    ReadPDFPlugin* ret =  new ReadPDFPlugin(handle, _extensions);
     ret->restoreStateFromParams();
     return ret;
 }
 
-static ReadPDFPluginFactory<kPluginVersionMajor> p(kPluginIdentifier, kPluginVersionMinor);
-static ReadPDFPluginFactory<kPluginVersionMajorV1> p1(kPluginIdentifier, kPluginVersionMinorV1);
+static ReadPDFPluginFactory p(kPluginIdentifier, kPluginVersionMajor, kPluginVersionMinor);
 mRegisterPluginFactoryInstance(p)
-mRegisterPluginFactoryInstance(p1)
 
 OFXS_NAMESPACE_ANONYMOUS_EXIT
