@@ -15,7 +15,8 @@
  * along with openfx-arena.  If not, see <http://www.gnu.org/licenses/gpl-2.0.html>
 */
 
-const sampler_t sampler = CLK_NORMALIZED_COORDS_FALSE | CLK_FILTER_LINEAR | CLK_ADDRESS_CLAMP_TO_EDGE;
+// NEAREST: the kernel interpolates bilinearly itself, from pixels at integer coordinates
+const sampler_t sampler = CLK_NORMALIZED_COORDS_FALSE | CLK_FILTER_NEAREST | CLK_ADDRESS_CLAMP_TO_EDGE;
 
 float2 effect(float x, float y, float a, float w) {
         float m = sqrt(x*x + y*y);
@@ -25,22 +26,23 @@ float2 effect(float x, float y, float a, float w) {
         return (float2)(x1, y1);
 }
 
-float2 displacement(int xi, int yi, int width, int height, float waveAmp, float waveLength) {
+// scale: the render scale, for the fixed third wave (waveAmp is already scaled)
+float2 displacement(int xi, int yi, int width, int height, float waveAmp, float waveLength, float scale) {
         float aspect = ((float) height) / ((float) width);
         float x = ((float) xi) / ((float) width), y = ((float) yi) / ((float) height);
         return effect(x - 0.5f, aspect*(y - 0.5f + 0.35f), waveAmp, waveLength)
              - effect(x - 0.5f, aspect*(y - 0.5f - 0.35f), waveAmp, waveLength)
-             + effect(x - 0.5f, aspect*(y), 2.f, 5000.f);
+             + effect(x - 0.5f, aspect*(y), 2.f*scale, 5000.f);
 }
 
-kernel void filter(read_only image2d_t inputImage, write_only image2d_t outputImage, float waveAmp, float waveLength) {
+kernel void filter(read_only image2d_t inputImage, write_only image2d_t outputImage, float waveAmp, float waveLength, float scale) {
    int2 dimensions = get_image_dim(inputImage);
    int width = dimensions.x, height = dimensions.y;
    int channelDataType = get_image_channel_data_type(inputImage);
    int channelOrder = get_image_channel_order(inputImage);
    int x = get_global_id(0), y = get_global_id(1);
    int2 coordinates = (int2)(x, y);
-   float2 disp = displacement(x, y, width, height, waveAmp, waveLength);
+   float2 disp = displacement(x, y, width, height, waveAmp, waveLength, scale);
    float fx = (float)coordinates.x;
    float fy = (float)coordinates.y;
    float2 fromCoordinates = (float2)(fx,fy) + disp;

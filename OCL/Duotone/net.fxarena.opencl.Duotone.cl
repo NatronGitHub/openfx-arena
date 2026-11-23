@@ -23,8 +23,8 @@ kernel void filter(__read_only image2d_t input, __write_only image2d_t output, f
 
    float3 dark_color = (float3)(dr,dg,db);
    float3 light_color = (float3)(lr,lg,lb);
-   float gray = dot(color.xyz, (float3)(0.2126f, 0.7152f, 0.0722f));
-   float luminance = dot(color.xyz,gray);
+   // mix by the Rec. 709 luminance
+   float luminance = dot(color.xyz, (float3)(0.2126f, 0.7152f, 0.0722f));
 
    color.xyz = clamp(mix(dark_color,light_color,luminance),0.0f,1.0f);
    write_imagef(output,coord,color);

@@ -26,6 +26,7 @@
 #include <cstdlib>
 #include <cmath>
 #include <algorithm>
+#include <climits>
 #include <sys/stat.h>
 #include <sys/types.h>
 #include <vector>
@@ -50,6 +51,8 @@
 #define kParamFPSLabel "Frame Rate"
 #define kParamFPSHint "The frame rate of the project."
 #define kParamFPSDefault 24.0
+#define kParamFPSMin 1.
+#define kParamFPSMax 1000.
 
 #define kParamFrames "frames"
 #define kParamFramesLabel "Frame Range"
@@ -76,6 +79,15 @@
 
 using namespace OFX;
 
+namespace {
+// closes the file (if any) and calls sox_quit() on every exit, including exceptions
+struct SoxGuard
+{
+    sox_format_t* audio;
+    ~SoxGuard() { if (audio) { sox_close(audio); } sox_quit(); }
+};
+} // namespace
+
 class AudioCurvePlugin : public ImageEffect
 {
 public:
@@ -92,6 +104,7 @@ public:
     void generateCurves();
     void setCurveLength();
     bool fileExists(const std::string &str);
+    static bool fpsIsValid(double fps) { return fps >= kParamFPSMin && fps <= kParamFPSMax; }
 
 private:
     Clip *_dstClip;
@@ -224,7 +237,7 @@ void AudioCurvePlugin::generateCurves()
     _srcFps->getValue(fps);
     _srcFile->getValue(filename);
 
-    if (!fileExists(filename) || endFrame == 0 || startFrame == 0 || fps == 0.0) {
+    if (!fileExists(filename) || endFrame == 0 || startFrame == 0 || !fpsIsValid(fps)) {
         setPersistentMessage(Message::eMessageWarning, "", "Bad input");
         _srcCurve->deleteAllKeys();
         _srcCurve->setValue(0.0, 0.0);
@@ -240,6 +253,7 @@ void AudioCurvePlugin::generateCurves()
                                         nullptr,
                                         nullptr,
                                         nullptr);
+    const SoxGuard guard = { audio };
     if (audio) {
         size_t blocks;
         size_t block_size;
@@ -251,7 +265,7 @@ void AudioCurvePlugin::generateCurves()
         // check the channel count (only stereo is supported) and rate before
         // using them: seek % channels would divide by zero if channels == 0
         bool seekOk = false;
-        if (audio->signal.channels == 2 && audio->signal.rate > 0) {
+        if (audio->signal.channels == 2 && audio->signal.rate >= 1 && audio->signal.rate <= 1e6) { // keeps seek and block_size in range
             seek = start_secs * audio->signal.rate * audio->signal.channels + .5;
             seek -= seek % audio->signal.channels;
             seekOk = sox_seek(audio,
@@ -261,7 +275,7 @@ void AudioCurvePlugin::generateCurves()
         if (seekOk) {
             block_size = block_period * audio->signal.rate * audio->signal.channels + .5;
             block_size -= block_size % audio->signal.channels;
-            sox_sample_t *buf = (sox_sample_t*)malloc(sizeof(sox_sample_t) * block_size);
+            std::vector<sox_sample_t> buf(block_size);
             int lastFrame = -1;
 
             // period is the absolute end time, while blocks are counted from
@@ -269,7 +283,7 @@ void AudioCurvePlugin::generateCurves()
             // start (#51). A short read (end of file) is still processed.
             for (blocks = 0; start_secs + blocks * block_period < period; ++blocks)
             {
-                size_t nread = sox_read(audio, buf, block_size);
+                size_t nread = sox_read(audio, buf.data(), block_size);
                 nread -= nread % audio->signal.channels; // whole sample frames only
                 if (nread == 0) {
                     break;
@@ -280,12 +294,13 @@ void AudioCurvePlugin::generateCurves()
                 for (i = 0; i < nread; ++i) {
                     SOX_SAMPLE_LOCALS;
                     double sample = SOX_SAMPLE_TO_FLOAT_64BIT(buf[i],);
-                    if (i & 1) { right = zero?std::max(right, fabs(sample)):sample; }
-                    else { left = zero?std::max(left, fabs(sample)):sample; }
+                    // the block's peak: max |sample| with zero, else the signed sample of largest magnitude
+                    double& peak = (i & 1) ? right : left;
+                    if (fabs(sample) > fabs(peak)) { peak = zero ? fabs(sample) : sample; }
                 }
 
-                if (left>maxX) { maxX = left; }
-                if (right>maxY) { maxY = right; }
+                if (fabs(left)>maxX) { maxX = fabs(left); }
+                if (fabs(right)>maxY) { maxY = fabs(right); }
 
                 int frame = 0;
                 double secs = start_secs + blocks * block_period;
@@ -300,12 +315,8 @@ void AudioCurvePlugin::generateCurves()
                     break; // end of file
                 }
             }
-            free(buf);
         }
-        sox_close(audio);
     }
-
-    sox_quit();
 
     if (!success) {
         setPersistentMessage(Message::eMessageWarning, "", "Failed to read the file");
@@ -326,7 +337,6 @@ void AudioCurvePlugin::setCurveLength()
 {
     std::string filename;
     double fps = 0.0;
-    int dur = 0;
     int startFrame = 0;
     int endFrame = 0;
 
@@ -336,6 +346,10 @@ void AudioCurvePlugin::setCurveLength()
 
     if (!fileExists(filename)) {
         setPersistentMessage(Message::eMessageWarning, "", "File does not exist");
+        return;
+    }
+    if (!fpsIsValid(fps)) {
+        setPersistentMessage(Message::eMessageWarning, "", "Bad frame rate");
         return;
     }
 
@@ -348,21 +362,20 @@ void AudioCurvePlugin::setCurveLength()
                                         nullptr,
                                         nullptr,
                                         nullptr);
+    const SoxGuard guard = { audio };
     if (audio) {
         // channels == 0 would divide by zero, and the length may be unknown (e.g. streams)
-        if (audio->signal.channels == 0 || audio->signal.rate <= 0 ||
+        if (audio->signal.channels == 0 || !(audio->signal.rate >= 1 && audio->signal.rate <= 1e6) ||
             audio->signal.length == SOX_UNKNOWN_LEN) {
             setPersistentMessage(Message::eMessageWarning, "", "Unknown audio length");
         } else {
             uint64_t ws = audio->signal.length/audio->signal.channels;
-            dur = audio->signal.length?(double)ws/audio->signal.rate:0;
-            _srcFrames->setValue(startFrame, dur*fps);
+            // ws and rate come from the file header: clamp to int
+            _srcFrames->setValue(startFrame, static_cast<int>(std::min(std::floor((double)ws/audio->signal.rate) * fps, double(INT_MAX))));
         }
-        sox_close(audio);
     } else {
         setPersistentMessage(Message::eMessageWarning, "", "Failed to read the file");
     }
-    sox_quit();
 }
 
 bool AudioCurvePlugin::fileExists(const std::string &str)
@@ -423,6 +436,8 @@ void AudioCurvePluginFactory::describeInContext(ImageEffectDescriptor &desc,
         param->setLabel(kParamFPSLabel);
         param->setHint(kParamFPSHint);
         param->setDefault(kParamFPSDefault);
+        param->setRange(kParamFPSMin, kParamFPSMax); // a negative fps gave a negative seek position
+        param->setDisplayRange(kParamFPSMin, 120.); // setRange() also resets the display range
         param->setAnimates(false);
         param->setLayoutHint(eLayoutHintNoNewLine, 1);
         if (page) {

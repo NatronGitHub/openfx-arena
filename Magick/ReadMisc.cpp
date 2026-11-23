@@ -145,7 +145,7 @@ bool ReadMiscPlugin::getFrameBounds(const std::string& filename,
                                     OfxRectI *bounds,
                                     OfxRectI* format,
                                     double *par,
-                                    std::string* /*error*/,int *tile_width, int *tile_height)
+                                    std::string* error,int *tile_width, int *tile_height)
 {
 #ifdef DEBUG
     std::cout << "getFrameBounds ..." << std::endl;
@@ -154,14 +154,20 @@ bool ReadMiscPlugin::getFrameBounds(const std::string& filename,
     Magick::Image image;
     if (!filename.empty())
         image.ping(filename);
-    if (image.columns()>0 && image.rows()>0) {
-        bounds->x1 = 0;
-        bounds->x2 = image.columns();
-        bounds->y1 = 0;
-        bounds->y2 = image.rows();
-        *format = *bounds;
-        *par = 1.0;
+    if (image.columns() == 0 || image.rows() == 0) {
+        // no file, or an empty image: report it, instead of returning true with the bounds
+        // unset, from which GenericReader made a garbage RoD (#129)
+        if (error) {
+            *error = "Unable to read image";
+        }
+        return false;
     }
+    bounds->x1 = 0;
+    bounds->x2 = image.columns();
+    bounds->y1 = 0;
+    bounds->y2 = image.rows();
+    *format = *bounds;
+    *par = 1.0;
     *tile_width = *tile_height = 0;
     return true;
 }
