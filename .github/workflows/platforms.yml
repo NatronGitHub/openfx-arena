@@ -239,10 +239,6 @@ jobs:
         with:
           submodules: recursive
           persist-credentials: false
-      - name: Target the runner's macOS
-        # CI builds aren't shipped: target the runner's macOS, whose MacPorts libraries the
-        # bundles link. Release bundles target 14.0 and are built on a macOS 14 machine.
-        run: echo "MACOSX_DEPLOYMENT_TARGET=$(sw_vers -productVersion | cut -d. -f1).0" >> "$GITHUB_ENV"
       - name: Install MacPorts
         uses: melusina-org/setup-macports@v1
       - name: Install MacPorts packages
@@ -251,6 +247,11 @@ jobs:
           sudo port select --set python3 python313
           # same fix as in Natron's INSTALL_MACOS.md
           sudo sed -i '' -e 's/Zstd::Zstd/zstd/' /opt/local/lib/pkgconfig/libzip.pc
+      - name: Target the runner's macOS
+        # CI builds aren't shipped: target the runner's macOS, whose MacPorts libraries the
+        # bundles link. Set after the MacPorts install, so that
+        # MacPorts installs its macOS 15 binary archives as is. Release bundles target 14.0 and are built on a macOS 14 machine.
+        run: echo "MACOSX_DEPLOYMENT_TARGET=$(sw_vers -productVersion | cut -d. -f1).0" >> "$GITHUB_ENV"
       - name: Build (release, CMake)
         if: inputs.build-system == 'cmake'
         run: |
