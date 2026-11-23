@@ -196,7 +196,8 @@ OpenRasterPlugin::getImageSize(int *width, int *height, std::string filename)
                     imgH = ArenaZip::parseInt(imgHchar);
                     xmlFree(imgWchar);
                     xmlFree(imgHchar);
-                    if (imgW>0 && imgH>0) {
+                    // no larger canvas than decodePNG() decodes: the host would allocate it (#214)
+                    if (imgW>0 && imgH>0 && std::uint64_t(imgW) * imgH * 4 <= ArenaZip::kMaxDecodedSize) {
                         (*width)=imgW;
                         (*height)=imgH;
                     }

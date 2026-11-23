@@ -547,7 +547,7 @@ endif()
         ofx_target_openmp(make_samples)
         set(_sample_files sample.png sample.psd sample.bmp sample.ora sample.kra sample.pdf sample.svg sample_hald.png
             sample_xy.png sample_xy.ora sample_xy.kra sample_xy.pdf sample_big.ora sample_big.kra sample_offset.ora sample_noxy.ora
-            bad_nosize.kra bad_nosize.ora bad_hugexml.kra bad_hugexml.ora bad_hugepng.kra bad_hugepng.ora
+            bad_nosize.kra bad_nosize.ora bad_hugecanvas.ora bad_hugexml.kra bad_hugexml.ora bad_hugepng.kra bad_hugepng.ora
             bad_corrupt.kra bad_corrupt.ora bad_corrupt.bmp bad_empty.svg bad_pngbomb.kra bad_huge.svg)
         list(TRANSFORM _sample_files PREPEND "${_samples}/")
         add_custom_command(OUTPUT ${_sample_files}
