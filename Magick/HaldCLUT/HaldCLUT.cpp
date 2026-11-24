@@ -469,7 +469,7 @@ public:
         }
         if (!ok) {
             remove(tmp.c_str());
-            // e.g. "Operation timed out after 30001 milliseconds with 0 bytes received"
+            // e.g. "Connection timed out after 30001 milliseconds"
             // or "The requested URL returned error: 404"
             setPersistentMessage(OFX::Message::eMessageError, "", failed
                                  + (res != CURLE_OK ? (errbuf[0] ? errbuf : curl_easy_strerror(res))
