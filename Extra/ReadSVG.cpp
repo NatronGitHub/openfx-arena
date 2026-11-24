@@ -40,9 +40,7 @@
 #include "ofxsTransformInteract.h"
 #include "ofxsMultiThread.h"
 #include "ReadHandles.h"
-#ifndef OFX_USE_MULTITHREAD_MUTEX
-#include "fast_mutex.h"
-#endif
+#include <mutex>
 
 #define kPluginName "ReadSVG"
 #define kPluginGrouping "Image/Readers"
@@ -125,14 +123,8 @@ statCtimeNsec(const struct stat& st)
 #endif
 }
 
-// as in GenericOCIO.h
-#ifdef OFX_USE_MULTITHREAD_MUTEX
-typedef OFX::MultiThread::Mutex Mutex;
-typedef OFX::MultiThread::AutoMutex AutoMutex;
-#else
-typedef tthread::fast_mutex Mutex;
-typedef OFX::MultiThread::AutoMutexT<tthread::fast_mutex> AutoMutex;
-#endif
+typedef std::mutex Mutex;
+typedef std::lock_guard<std::mutex> AutoMutex;
 
 // The size of the SVG canvas, and how to render it into an output image of width x height pixels
 struct SVGCanvas {
