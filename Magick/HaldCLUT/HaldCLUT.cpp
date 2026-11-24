@@ -317,7 +317,6 @@ public:
             }
             if (!existsFile(clut)) {
                 if (!getFile(url, clut, true)) {
-                    setPersistentMessage(OFX::Message::eMessageError, "", "Unable to download LUT");
                     OFX::throwSuiteStatusException(kOfxStatFailed);
                 }
             }
@@ -342,8 +341,10 @@ public:
                 } catch(const Magick::Error &) {
                     if (custom.empty()) {
                         _lut.comment("N/A");
+                        // This download runs with _lutMutex held: the other render
+                        // threads of this instance need this LUT and would wait for
+                        // it anyway, and the timeouts in getFile() bound the wait.
                         if (!getFile(url, clut, false)) {
-                            setPersistentMessage(OFX::Message::eMessageError, "", "Unable to download LUT");
                             OFX::throwSuiteStatusException(kOfxStatFailed);
                         } else {
                             // This read used to be outside the try block, so its
@@ -404,7 +405,7 @@ public:
     virtual void changedParam(const OFX::InstanceChangedArgs &args, const std::string &paramName) OVERRIDE FINAL;
     // Download location to destination. If onlyIfMissing is true and destination
     // already exists (e.g. another render thread just downloaded it), nothing is
-    // done.
+    // done. On failure, sets the error message and returns false.
     bool getFile(const std::string &location, const std::string &destination, bool onlyIfMissing)
     {
         // Serialise downloads: concurrent render threads (or instances) would
@@ -423,15 +424,19 @@ public:
         tmpss << destination << ".part." << currentProcessId();
         const std::string tmp = tmpss.str();
 
+        const std::string failed = "Unable to download LUT from " + location + ": ";
         CURL *curl = curl_easy_init();
         if (!curl) {
+            setPersistentMessage(OFX::Message::eMessageError, "", failed + "curl_easy_init() failed");
             return false;
         }
         FILE *fp = fopen(tmp.c_str(), "wb");
         if (!fp) {
             curl_easy_cleanup(curl);
+            setPersistentMessage(OFX::Message::eMessageError, "", failed + "cannot write " + tmp);
             return false;
         }
+        char errbuf[CURL_ERROR_SIZE] = "";
         curl_easy_setopt(curl, CURLOPT_URL, location.c_str());
         curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, curlWriteData);
         curl_easy_setopt(curl, CURLOPT_WRITEDATA, fp);
@@ -441,6 +446,17 @@ public:
         // Treat HTTP errors (e.g. 404) as failures, instead of saving the error
         // page as the preset file.
         curl_easy_setopt(curl, CURLOPT_FAILONERROR, 1L);
+        // The download runs in render() with gDownloadMutex (and maybe _lutMutex)
+        // held, so it must not hang on a stalled server (libcurl has no transfer
+        // timeout by default). A preset is under 500 kB: allow 30 s to connect,
+        // abort if under 1 kB/s for 30 s, and stop after 120 s in any case.
+        // NOSIGNAL: libcurl's timeouts must not use signals in a multithreaded host.
+        curl_easy_setopt(curl, CURLOPT_NOSIGNAL, 1L);
+        curl_easy_setopt(curl, CURLOPT_CONNECTTIMEOUT, 30L);
+        curl_easy_setopt(curl, CURLOPT_LOW_SPEED_LIMIT, 1024L);
+        curl_easy_setopt(curl, CURLOPT_LOW_SPEED_TIME, 30L);
+        curl_easy_setopt(curl, CURLOPT_TIMEOUT, 120L);
+        curl_easy_setopt(curl, CURLOPT_ERRORBUFFER, errbuf);
         CURLcode res = curl_easy_perform(curl);
         curl_easy_cleanup(curl);
         bool ok = (fclose(fp) == 0) && (res == CURLE_OK);
@@ -453,8 +469,14 @@ public:
         }
         if (!ok) {
             remove(tmp.c_str());
+            // e.g. "Connection timed out after 30001 milliseconds"
+            // or "The requested URL returned error: 404"
+            setPersistentMessage(OFX::Message::eMessageError, "", failed
+                                 + (res != CURLE_OK ? (errbuf[0] ? errbuf : curl_easy_strerror(res))
+                                                    : "cannot write " + destination));
+            return false;
         }
-        return ok && existsFile(destination);
+        return true;
     }
     std::string presetPath(std::string altpath)
     {
