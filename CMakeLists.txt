@@ -457,6 +457,9 @@ if(OCL)
             OCL/${_p}/net.fxarena.opencl.${_p}.svg
             OCL/${_p}/net.fxarena.opencl.${_p}.cl)
     endforeach()
+    # CLFilter compiles the kernel source of its param: it has an icon, but no .svg nor .cl
+    list(APPEND _ocl_sources OCL/CLFilter/CLFilter.cpp)
+    list(APPEND _ocl_resources OCL/CLFilter/net.fxarena.opencl.CLFilter.png)
     add_ofx_plugin(OCL INFO_PLIST OCL/Info.plist SOURCES ${_ocl_sources})
     # SupportExt's include directories only: the plug-ins use the kParamTransform3x3Invert
     # macro of ofxsTransform3x3.h, not its code (as OCL/Makefile)
@@ -518,7 +521,7 @@ if(BUILD_TESTING)
         math(EXPR _n_Arena "${_n_Arena} + 1")
     endif()
     set(_n_HaldCLUT 2)
-    set(_n_OCL 9)
+    set(_n_OCL 10)
     # fail on a non-zero exit status, and unless the count is printed
     file(WRITE "${CMAKE_CURRENT_BINARY_DIR}/verify_plugin_loads.cmake" [=[
 execute_process(COMMAND "${VERIFY}" "${PLUGIN}" RESULT_VARIABLE _r OUTPUT_VARIABLE _out ERROR_VARIABLE _err)

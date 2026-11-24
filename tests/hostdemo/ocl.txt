@@ -10,3 +10,4 @@ net.fxarena.opencl.Ripple 1 filter -d float
 net.fxarena.opencl.Sharpen 1 filter -d float
 net.fxarena.opencl.Twirl 2 filter -d float
 net.fxarena.opencl.Twirl 1 filter -d float
+net.fxarena.opencl.CLFilter 1 filter -d float
