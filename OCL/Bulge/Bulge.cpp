@@ -158,8 +158,9 @@ BulgeCLPluginFactory<majorVersion>::describe(ImageEffectDescriptor &desc)
     desc.setPassThroughForNotProcessedPlanes(ePassThroughLevelRenderAllRequestedPlanes);
 #endif
     // OFX 1.5: V2 (DrawSuite) overlay on hosts that have it, also keeping the OpenGL (V1) one;
-    // overlays don't change what renders, so both major versions get it
-    ofxsSetOverlayInteractDescriptorV2(desc, new TransformCustomOverlayDescriptorOldParamsV2);
+    // overlays don't change what renders, so both major versions get it.
+    // The circle is the kernel radius, r / 2 = 50 * scale (render() passes r = scale * 100)
+    ofxsSetOverlayInteractDescriptorV2(desc, new TransformCustomOverlayDescriptorOldParamsV2<50>);
 }
 
 template<unsigned int majorVersion>
