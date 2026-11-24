@@ -113,6 +113,10 @@ endif()
 file(GLOB _logs "${WORK}/*ofxTestLog.txt")
 foreach(_l IN LISTS _logs)
   file(STRINGS "${_l}" _errors REGEX "ERROR : ")
+  # every run here fails on purpose, and Support's mainEntry logs the exception that makes the
+  # action fail as "ERROR : Caught ..." (an OFX::Exception::Suite, or ImageMagick's exception
+  # for ReadMisc); the other ERROR lines are still checked
+  list(FILTER _errors EXCLUDE REGEX "ERROR : Caught ")
   if(_errors)
     list(JOIN _errors "\n" _errors)
     message("FAIL ${_l}:\n${_errors}")
