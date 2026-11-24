@@ -3,6 +3,7 @@
 ## Unreleased
 
  * ``ReadKrita``, ``OpenRaster``: a canvas over 4 GiB of RGBA in ``maindoc.xml`` or ``stack.xml`` is an error (#214).
+ * ``ReadPDF``: in Natron, pages of another size than the first page are no longer cropped; the format covers the largest page (#193).
  * ``ReadPSD``: clearing the file clears the layer menu (#162).
  * ``ReadPSD``: the ICC profile scan no longer follows linked folders, which could loop forever (#176).
  * ``ReadMisc``, ``ReadPSD``, ``Texture``: an ImageMagick warning no longer fails a read or leaves ``Texture`` half generated (#174).
