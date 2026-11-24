@@ -19,6 +19,7 @@
 #include <poppler.h>
 #include <GlobalParams.h>
 #include <cairo.h>
+#include <algorithm>
 #include <string>
 #include <vector>
 #include <sstream>
@@ -58,7 +59,7 @@
 #define kPluginGrouping "Image/Readers"
 #define kPluginIdentifier "fr.inria.openfx.ReadPDF"
 #define kPluginVersionMajor 1
-#define kPluginVersionMinor 4
+#define kPluginVersionMinor 5
 #define kPluginEvaluation 50
 #define kPluginDPI 72.0
 
@@ -117,17 +118,15 @@ struct PDFResources
 {
     PopplerDocument *document;
     PopplerPage *page;
-    PopplerPage *fpage;
     cairo_surface_t *surface;
     cairo_t *cr;
 
-    PDFResources() : document(NULL), page(NULL), fpage(NULL), surface(NULL), cr(NULL) {}
+    PDFResources() : document(NULL), page(NULL), surface(NULL), cr(NULL) {}
     ~PDFResources()
     {
         if (cr) { cairo_destroy(cr); }
         if (surface) { cairo_surface_destroy(surface); }
         if (page) { g_object_unref(page); }
-        if (fpage) { g_object_unref(fpage); }
         if (document) { g_object_unref(document); }
     }
 private:
@@ -401,15 +400,13 @@ ReadPDFPlugin::decodePlane(const std::string& filename, OfxTime time, int /*view
     if (layer >= 0 && layer < nPages) {
         r.page = poppler_document_get_page(r.document, layer);
     }
-    if (nPages > 0) {
-        r.fpage = poppler_document_get_page(r.document, 0);
-    }
-    if (r.page == NULL || r.fpage == NULL) {
+    if (r.page == NULL) {
         setPersistentMessage(OFX::Message::eMessageError, "", "Failed to read page");
         OFX::throwSuiteStatusException(kOfxStatErrFormat);
     }
 
-    poppler_page_get_size(r.fpage, &imageWidth, &imageHeight);
+    // the size of this page, not of page 0, which cropped larger pages (#193)
+    poppler_page_get_size(r.page, &imageWidth, &imageHeight);
 
     width = Arena::toPixels(dpi * imageWidth / kPluginDPI);
     height = Arena::toPixels(dpi * imageHeight / kPluginDPI);
@@ -502,7 +499,7 @@ bool ReadPDFPlugin::getFrameBounds(const std::string& filename,
     double dpi;
     _dpi->getValueAtTime(time, dpi);
 
-    PopplerPage *page = NULL;
+    bool hasPage = false;
     double imageWidth, imageHeight;
     int width = 0;
     int height = 0;
@@ -515,14 +512,31 @@ bool ReadPDFPlugin::getFrameBounds(const std::string& filename,
 
     // a document without pages has no page 0: check it before reading its size (and before
     // asking for it, which poppler reports as a critical error)
-    if (poppler_document_get_n_pages(document) > 0) {
-        page = poppler_document_get_page(document, 0);
-    }
-    if (page != NULL) {
+    const int nPages = poppler_document_get_n_pages(document);
+    // Natron gets each page as a plane (decodePlane()), and all the planes of a clip share one RoD
+    // (the RoD action has no plane argument): the bounds and the format cover every page, each at
+    // (0,0) (#193). Other hosts only get page 0.
+    const int sizedPages = gHostIsNatron ? nPages : std::min(nPages, 1);
+    for (int i = 0; i < sizedPages; ++i) {
+        PopplerPage *page = poppler_document_get_page(document, i);
+        if (page == NULL) {
+            if (i == 0) {
+                break; // no page 0 fails, as before
+            }
+            continue;
+        }
         poppler_page_get_size(page, &imageWidth, &imageHeight);
-        width = Arena::toPixels(dpi * imageWidth / kPluginDPI);
-        height = Arena::toPixels(dpi * imageHeight / kPluginDPI);
         g_object_unref(page);
+        const int w = Arena::toPixels(dpi * imageWidth / kPluginDPI);
+        const int h = Arena::toPixels(dpi * imageHeight / kPluginDPI);
+        if (i == 0) {
+            hasPage = true;
+            if (w <= 0 || h <= 0) {
+                break; // an empty or too large page 0 fails, as before
+            }
+        }
+        width = std::max(width, w);
+        height = std::max(height, h);
     }
 
     g_object_unref(document);
@@ -531,7 +545,7 @@ bool ReadPDFPlugin::getFrameBounds(const std::string& filename,
         // bounds and format were not set: report failure instead of returning garbage
         // bounds to GenericReader
         if (errorMsg) {
-            *errorMsg = page == NULL ? "Failed to read page" : "Empty or too large page";
+            *errorMsg = !hasPage ? "Failed to read page" : "Empty or too large page";
         }
         return false;
     }

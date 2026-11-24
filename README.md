@@ -135,7 +135,7 @@ Options (the Makefile equivalents are in parentheses):
   * ``-DCMAKE_OSX_DEPLOYMENT_TARGET=XX``: the minimum macOS of the bundles; 14.0 by default, unless the ``MACOSX_DEPLOYMENT_TARGET`` environment variable or a toolchain file sets it (``MACOSX_DEPLOYMENT_TARGET``)
   * ``-DOFX_DEPLOY_BUNDLES=ON``: on macOS, copy the non-system libraries into the installed bundle (Release builds), as the Makefile does
   * ``-DMINGW_STATIC=ON``: link MinGW bundles statically, for hosts other than Natron (``LDFLAGS_ADD=-static``)
-  * ``-DHALDCLUT=ON``, ``-DOCL=ON``: also build ``HaldCLUT.ofx.bundle`` and ``OCL.ofx.bundle`` (``make -C Magick/HaldCLUT``, ``make -C OCL``)
+  * ``-DHALDCLUT=ON``, ``-DOCL=ON``: also build ``HaldCLUT.ofx.bundle`` and ``OCL.ofx.bundle`` (``make -C Magick/HaldCLUT``, ``make -C OCL``), assembled in ``build/Plugins-HaldCLUT`` and ``build/Plugins-OCL``
   * ``-DBUNDLE_FONTS_CONF=ON``: Bundle fonts.conf *(If not using Natron and on Windows/macOS)*
   * ``-DOLD_POPPLER=ON``: poppler < 0.83
   * ``-DBUILD_TESTING=ON``: ``ctest`` loads the bundles

@@ -42,6 +42,8 @@ macro(render _major _file _dpi)
   set(_prefix "${WORK}/${_file}-v${_major}-${_dpi}")
   native(_nprefix "${_prefix}")
   native(_nfile "${SRC}/${_file}.svg")
+  # each run its own debug log: the default ofxTestLog.txt is opened with "w" by each run
+  set(ENV{OFX_PLUGIN_LOGFILE} "${_nprefix}.ofxTestLog.txt")
   execute_process(
     COMMAND "${HOSTDEMO}" --quiet --no-std-paths --no-cache -p net.fxarena.openfx.ReadSVG -m ${_major}
             -c general --frames 0 -o "${_nprefix}" --report "${_nprefix}.json"
@@ -129,6 +131,17 @@ if(EXACT)
     message("ok   ReadSVG 4 at 180 DPI: mm.svg and mm_units.svg are the same image")
   endif()
 endif()
+# a debug build's property validation (Support's ofxsLog.cpp) writes an "ERROR : " line in the
+# log of each run for a host property that is missing or wrong
+file(GLOB _logs "${WORK}/*ofxTestLog.txt")
+foreach(_l IN LISTS _logs)
+  file(STRINGS "${_l}" _errors REGEX "ERROR : ")
+  if(_errors)
+    list(JOIN _errors "\n" _errors)
+    message("FAIL ${_l}:\n${_errors}")
+    math(EXPR _failed "${_failed} + 1")
+  endif()
+endforeach()
 if(_failed GREATER 0)
   message(FATAL_ERROR "ReadSVG DPI test: ${_failed} failed")
 endif()

@@ -412,8 +412,12 @@ ofx_deploy_bundle(Arena)
 
 # HaldCLUT.ofx.bundle, as Magick/HaldCLUT/Makefile (with Magick/Makefile.Magick)
 if(HALDCLUT)
+    # in a directory of its own, so that a test host loads only the bundle it tests: each
+    # bundle's debug Support library would open the same log file (OFX_PLUGIN_LOGFILE)
+    set(OFX_PLUGIN_BUILD_DIR "${OFX_PLUGIN_BUILD_DIR}-HaldCLUT")
     add_ofx_plugin(HaldCLUT INFO_PLIST Magick/HaldCLUT/Info.plist
         SOURCES Magick/HaldCLUT/HaldCLUT.cpp Magick/MagickPlugin.cpp)
+    unset(OFX_PLUGIN_BUILD_DIR) # back to the cache variable
     supportext_add_sources(HaldCLUT)
     target_include_directories(HaldCLUT PRIVATE "${CMAKE_CURRENT_SOURCE_DIR}/Magick")
     target_link_libraries(HaldCLUT PRIVATE openfx::Support PkgConfig::MAGICK PkgConfig::CURL PkgConfig::XML)
@@ -457,7 +461,13 @@ if(OCL)
             OCL/${_p}/net.fxarena.opencl.${_p}.svg
             OCL/${_p}/net.fxarena.opencl.${_p}.cl)
     endforeach()
+    # CLFilter compiles the kernel source of its param: it has an icon, but no .svg nor .cl
+    list(APPEND _ocl_sources OCL/CLFilter/CLFilter.cpp)
+    list(APPEND _ocl_resources OCL/CLFilter/net.fxarena.opencl.CLFilter.png)
+    # in a directory of its own, as HaldCLUT
+    set(OFX_PLUGIN_BUILD_DIR "${OFX_PLUGIN_BUILD_DIR}-OCL")
     add_ofx_plugin(OCL INFO_PLIST OCL/Info.plist SOURCES ${_ocl_sources})
+    unset(OFX_PLUGIN_BUILD_DIR) # back to the cache variable
     # SupportExt's include directories only: the plug-ins use the kParamTransform3x3Invert
     # macro of ofxsTransform3x3.h, not its code (as OCL/Makefile)
     supportext_add_sources(OCL)
@@ -518,7 +528,7 @@ if(BUILD_TESTING)
         math(EXPR _n_Arena "${_n_Arena} + 1")
     endif()
     set(_n_HaldCLUT 2)
-    set(_n_OCL 9)
+    set(_n_OCL 10)
     # fail on a non-zero exit status, and unless the count is printed
     file(WRITE "${CMAKE_CURRENT_BINARY_DIR}/verify_plugin_loads.cmake" [=[
 execute_process(COMMAND "${VERIFY}" "${PLUGIN}" RESULT_VARIABLE _r OUTPUT_VARIABLE _out ERROR_VARIABLE _err)

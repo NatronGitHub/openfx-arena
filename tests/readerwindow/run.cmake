@@ -43,9 +43,14 @@ set(ENV{XDG_CACHE_HOME} "${_n}")
 
 set(_ok 0)
 set(_failed "")
+set(_n_run 0)
 # check(<identifier> <major> <sample> [name=value...])
 macro(check _id _major _sample)
   native(_file "${SAMPLES}/${_sample}")
+  # each run its own debug log: the default ofxTestLog.txt is opened with "w" by each run
+  math(EXPR _n_run "${_n_run} + 1")
+  native(_nlog "${WORK}/run${_n_run}.ofxTestLog.txt")
+  set(ENV{OFX_PLUGIN_LOGFILE} "${_nlog}")
   execute_process(
     COMMAND "${READER_WINDOW}" ${_id} ${_major} "filename=${_file}" ${ARGN}
     WORKING_DIRECTORY "${WORK}"
@@ -110,6 +115,17 @@ check(fr.inria.openfx.OpenRaster 2 sample_xy.ora filePremult=1 --scale 0.5)
 check(net.fxarena.openfx.ReadPSD 2 sample.psd --scale 0.5)
 check(fr.inria.openfx.ReadMisc 1 sample.bmp --scale 0.5)
 
+# a debug build's property validation (Support's ofxsLog.cpp) writes an "ERROR : " line in the
+# log of each run for a host property that is missing or wrong
+file(GLOB _logs "${WORK}/*ofxTestLog.txt")
+foreach(_l IN LISTS _logs)
+  file(STRINGS "${_l}" _errors REGEX "ERROR : ")
+  if(_errors)
+    list(JOIN _errors "\n" _errors)
+    message("FAIL ${_l}:\n${_errors}")
+    list(APPEND _failed "${_l}")
+  endif()
+endforeach()
 list(LENGTH _failed _nf)
 message("${_ok} passed, ${_nf} failed")
 if(_failed)
