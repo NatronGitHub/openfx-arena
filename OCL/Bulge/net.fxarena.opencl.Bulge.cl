@@ -16,14 +16,15 @@
 */
 
 const sampler_t sampler = CLK_FILTER_NEAREST | CLK_NORMALIZED_COORDS_FALSE | CLK_ADDRESS_CLAMP_TO_EDGE;
-kernel void filter(__read_only image2d_t input, __write_only image2d_t output, float centerX, float centerY, float r, float effect) {
+kernel void filter(__read_only image2d_t input, __write_only image2d_t output, float centerX, float centerY, float r, float effect, float par) {
    const int2 size = get_image_dim(input);
    int2 coord = (int2)(get_global_id(0),get_global_id(1));
    int2 center = (int2)((int)centerX,(int)centerY);
    float2 coord_center = convert_float2(coord - center);
    float radius = r / 2.0f;
    float strength = effect;
-   float dist = length(convert_float2(coord_center));
+   // the distance in canonical units (times the render scale): a pixel is par wide
+   float dist = length((float2)(coord_center.x * par, coord_center.y));
 
    // the center pixel (dist == 0) stays where it is: radius / dist below is inf there, and
    // pow(0, e) * inf or 0 * inf gave NaN coordinates (strength < 0)

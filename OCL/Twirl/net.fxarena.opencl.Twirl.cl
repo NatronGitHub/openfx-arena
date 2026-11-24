@@ -25,11 +25,12 @@ float clampRGB( float x ) {
          : x;
 }
 
-kernel void filter (read_only image2d_t in, write_only image2d_t out, float centerW, float centerH, float amount, float radius) {
+kernel void filter (read_only image2d_t in, write_only image2d_t out, float centerW, float centerH, float amount, float radius, float par) {
 
     int2 d = get_image_dim(in);
     int2 pos = (int2)(get_global_id(0),get_global_id(1));
-    float x = pos.x - centerW;
+    // rotate in canonical units (times the render scale): a pixel is par wide
+    float x = (pos.x - centerW) * par;
     float y = pos.y - centerH;
 
     // a radius of 0 twirls nothing: -(x*x+y*y) / 0 gave NaN at the center (0 / 0) and
@@ -39,7 +40,7 @@ kernel void filter (read_only image2d_t in, write_only image2d_t out, float cent
     float u = (cos(a)*x + sin(a)*y);
     float v = (-sin(a)*x + cos(a)*y);
 
-    u += centerW;
+    u = u / par + centerW;
     v += centerH;
 
     // Interpolation
