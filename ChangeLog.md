@@ -2,7 +2,7 @@
 
 ## Unreleased
 
- * ``ReadPDF``: in Natron, pages of another size than page 1 render whole, instead of cropped or padded with white (the region of definition covers the largest page; the format stays page 1's) (#193).
+ * ``ReadPDF``: in Natron, pages of another size than the first page are no longer cropped; the format covers the largest page (#193).
  * ``ReadPSD``: clearing the file clears the layer menu (#162).
  * ``ReadPSD``: the ICC profile scan no longer follows linked folders, which could loop forever (#176).
  * ``ReadMisc``, ``ReadPSD``, ``Texture``: an ImageMagick warning no longer fails a read or leaves ``Texture`` half generated (#174).

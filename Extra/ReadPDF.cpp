@@ -503,8 +503,6 @@ bool ReadPDFPlugin::getFrameBounds(const std::string& filename,
     double imageWidth, imageHeight;
     int width = 0;
     int height = 0;
-    int boundsWidth = 0;
-    int boundsHeight = 0;
 
     PopplerDocument *document = openDocument(filename);
     if (document == NULL) {
@@ -516,12 +514,15 @@ bool ReadPDFPlugin::getFrameBounds(const std::string& filename,
     // asking for it, which poppler reports as a critical error)
     const int nPages = poppler_document_get_n_pages(document);
     // Natron gets each page as a plane (decodePlane()), and all the planes of a clip share one RoD
-    // (the RoD action has no plane argument): the bounds cover every page, each at (0,0), and the
-    // format stays page 0's (#193). Other hosts only get page 0.
+    // (the RoD action has no plane argument): the bounds and the format cover every page, each at
+    // (0,0) (#193). Other hosts only get page 0.
     const int sizedPages = gHostIsNatron ? nPages : std::min(nPages, 1);
     for (int i = 0; i < sizedPages; ++i) {
         PopplerPage *page = poppler_document_get_page(document, i);
         if (page == NULL) {
+            if (i == 0) {
+                break; // no page 0 fails, as before
+            }
             continue;
         }
         poppler_page_get_size(page, &imageWidth, &imageHeight);
@@ -530,11 +531,12 @@ bool ReadPDFPlugin::getFrameBounds(const std::string& filename,
         const int h = Arena::toPixels(dpi * imageHeight / kPluginDPI);
         if (i == 0) {
             hasPage = true;
-            width = w;
-            height = h;
+            if (w <= 0 || h <= 0) {
+                break; // an empty or too large page 0 fails, as before
+            }
         }
-        boundsWidth = std::max(boundsWidth, w);
-        boundsHeight = std::max(boundsHeight, h);
+        width = std::max(width, w);
+        height = std::max(height, h);
     }
 
     g_object_unref(document);
@@ -547,14 +549,11 @@ bool ReadPDFPlugin::getFrameBounds(const std::string& filename,
         }
         return false;
     }
-    format->x1 = 0;
-    format->x2 = width;
-    format->y1 = 0;
-    format->y2 = height;
     bounds->x1 = 0;
-    bounds->x2 = boundsWidth;
+    bounds->x2 = width;
     bounds->y1 = 0;
-    bounds->y2 = boundsHeight;
+    bounds->y2 = height;
+    *format = *bounds;
     *par = 1.0;
 
     *tile_width = *tile_height = 0;
