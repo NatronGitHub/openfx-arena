@@ -143,7 +143,8 @@ protected:
     bool _interactiveDrag;
 
 public:
-    TransformInteractCustomHelper(OFX::ImageEffect* effect, OFX::Interact* interact, bool oldParams = false);
+    /// circleRadius: the effect's radius at scale 1, in canonical coordinates
+    TransformInteractCustomHelper(OFX::ImageEffect* effect, OFX::Interact* interact, bool oldParams = false, double circleRadius = 30.);
 
     /** @brief virtual destructor */
     virtual ~TransformInteractCustomHelper()
@@ -179,6 +180,7 @@ private:
     OFX::BooleanParam* _interactOpen;
     OFX::BooleanParam* _interactive;
     OFX::OverlayDrawModeEnum _drawMode; // set by the descriptor that created the interact, see ofxsOverlayDraw.h
+    double _circleRadius;
 };
 
 typedef OverlayInteractFromHelper<TransformInteractCustomHelper> TransformInteractCustom;
@@ -197,26 +199,28 @@ class TransformCustomOverlayDescriptorV2
 {
 };
 
+/// kCircleRadius: the effect's radius at scale 1 (canonical coordinates), drawn as the circle
+template<int kCircleRadius>
 class TransformInteractCustomHelperOldParams
     : public TransformInteractCustomHelper
 {
 public:
     TransformInteractCustomHelperOldParams(OFX::ImageEffect* effect,
                                      OFX::Interact* interact)
-        : TransformInteractCustomHelper(effect, interact, true) {}
+        : TransformInteractCustomHelper(effect, interact, true, kCircleRadius) {}
 };
 
-typedef OverlayInteractFromHelper<TransformInteractCustomHelperOldParams> TransformInteractCustomOldParams;
-
+template<int kCircleRadius>
 class TransformOverlayDescriptorOldParams
-    : public DefaultEffectOverlayDescriptor<TransformOverlayDescriptorOldParams, TransformInteractCustomOldParams>
+    : public DefaultEffectOverlayDescriptor<TransformOverlayDescriptorOldParams<kCircleRadius>, OverlayInteractFromHelper<TransformInteractCustomHelperOldParams<kCircleRadius> > >
 {
 };
 
 /// Draws with the DrawSuite when the host provides it; register with
-/// ofxsSetOverlayInteractDescriptorV2(desc, new TransformCustomOverlayDescriptorOldParamsV2)
+/// ofxsSetOverlayInteractDescriptorV2(desc, new TransformCustomOverlayDescriptorOldParamsV2<kCircleRadius>)
+template<int kCircleRadius>
 class TransformCustomOverlayDescriptorOldParamsV2
-    : public DefaultEffectOverlayDescriptorV2<TransformCustomOverlayDescriptorOldParamsV2, TransformInteractCustomOldParams>
+    : public DefaultEffectOverlayDescriptorV2<TransformCustomOverlayDescriptorOldParamsV2<kCircleRadius>, OverlayInteractFromHelper<TransformInteractCustomHelperOldParams<kCircleRadius> > >
 {
 };
 } // namespace OFX
