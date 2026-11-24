@@ -461,6 +461,9 @@ if(OCL)
             OCL/${_p}/net.fxarena.opencl.${_p}.svg
             OCL/${_p}/net.fxarena.opencl.${_p}.cl)
     endforeach()
+    # CLFilter compiles the kernel source of its param: it has an icon, but no .svg nor .cl
+    list(APPEND _ocl_sources OCL/CLFilter/CLFilter.cpp)
+    list(APPEND _ocl_resources OCL/CLFilter/net.fxarena.opencl.CLFilter.png)
     # in a directory of its own, as HaldCLUT
     set(OFX_PLUGIN_BUILD_DIR "${OFX_PLUGIN_BUILD_DIR}-OCL")
     add_ofx_plugin(OCL INFO_PLIST OCL/Info.plist SOURCES ${_ocl_sources})
@@ -525,7 +528,7 @@ if(BUILD_TESTING)
         math(EXPR _n_Arena "${_n_Arena} + 1")
     endif()
     set(_n_HaldCLUT 2)
-    set(_n_OCL 9)
+    set(_n_OCL 10)
     # fail on a non-zero exit status, and unless the count is printed
     file(WRITE "${CMAKE_CURRENT_BINARY_DIR}/verify_plugin_loads.cmake" [=[
 execute_process(COMMAND "${VERIFY}" "${PLUGIN}" RESULT_VARIABLE _r OUTPUT_VARIABLE _out ERROR_VARIABLE _err)
@@ -554,7 +557,7 @@ endif()
         ofx_target_openmp(make_samples)
         set(_sample_files sample.png sample.psd sample.bmp sample.ora sample.kra sample.pdf sample.svg sample_hald.png
             sample_xy.png sample_xy.ora sample_xy.kra sample_xy.pdf sample_big.ora sample_big.kra sample_offset.ora sample_noxy.ora
-            bad_nosize.kra bad_nosize.ora bad_hugexml.kra bad_hugexml.ora bad_hugepng.kra bad_hugepng.ora
+            bad_nosize.kra bad_nosize.ora bad_hugecanvas.ora bad_hugexml.kra bad_hugexml.ora bad_hugepng.kra bad_hugepng.ora
             bad_corrupt.kra bad_corrupt.ora bad_corrupt.bmp bad_empty.svg bad_pngbomb.kra bad_huge.svg)
         list(TRANSFORM _sample_files PREPEND "${_samples}/")
         add_custom_command(OUTPUT ${_sample_files}

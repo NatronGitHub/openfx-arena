@@ -2,11 +2,14 @@
 
 ## Unreleased
 
+ * ``ReadKrita``, ``OpenRaster``: a canvas over 4 GiB of RGBA in ``maindoc.xml`` or ``stack.xml`` is an error (#214).
+ * ``ReadPDF``: in Natron, pages of another size than the first page are no longer cropped; the format covers the largest page (#193).
  * ``ReadPSD``: clearing the file clears the layer menu (#162).
  * ``ReadPSD``: the ICC profile scan no longer follows linked folders, which could loop forever (#176).
  * ``ReadMisc``, ``ReadPSD``, ``Texture``: an ImageMagick warning no longer fails a read or leaves ``Texture`` half generated (#174).
  * Build: the hand-maintained ``Arena.xcodeproj`` is removed; CMake generates an Xcode project (``cmake -G Xcode``) when one is needed.
  * ``Text`` (Magick) 5: the output honours the destination's bounds and row bytes (#142).
+ * ``HaldCLUT``: a preset download that stalls gives up after at most 2 minutes per download, with an error that says why, instead of hanging every render (#175).
  * ``HaldCLUT``: a custom CLUT that can't be read is an error, instead of applying the previous or a black CLUT (#143).
  * ``ReadPSD``: no uninitialized read for an ICC profile without a description (#144).
  * ``Text`` (Magick) 5: the drop shadow is no longer applied twice when ImageMagick warns (#145).
@@ -28,6 +31,7 @@
  * ``ReadKrita``, ``OpenRaster``: a PNG of another size than the image in ``maindoc.xml`` or ``stack.xml`` is placed at its XML geometry, anchored at the top-left corner, with transparent black around it, instead of failing with "Unable to read image". For OpenRaster, this includes layers cropped smaller than the canvas, which are placed at their ``x``/``y`` offsets (as GIMP and MyPaint save them). decode() reads the XML from the archive it decodes the PNG from, instead of opening the file again at each render (#108). Files whose PNG has the XML size render as before.
  * Overlays of ``ReadSVG`` 4, ``Text`` (Magick) and ``Text`` (TextOFX) 6 and 7: on hosts with the OFX 1.5 DrawSuite, they are registered as OverlayInteractV2 and draw with the DrawSuite (without the one-pixel shadow, which is the host's job there), plus a V1 entry that draws with OpenGL. On other hosts they draw with OpenGL as before. Renders are unchanged.
  * Overlays of the OpenCL plug-ins ``Bulge`` and ``Twirl`` (1 and 2, in OCL.ofx, which is not part of Arena.ofx): the same, with their own transform overlay. Renders are unchanged.
+ * ``CLFilter`` (OpenCL) is built into OCL.ofx, as the README lists it, instead of being left out of both builds (#201).
  * OpenCL plug-ins (OCL.ofx, not shipped): kernel fixes in ``Twirl``, ``Cartoon``, ``Ripple`` (proxy renders now approximately match full resolution) and ``Duotone``; ``CLFilter``'s kernel source no longer animates; ``Bulge`` and ``Twirl`` declare only float images, no tiles and no Paint context, and their overlay keeps its aspect ratio (#151 to #157).
  * ``Text`` (TextOFX) 7.0 (#70):
    * The Center is in canonical coordinates, as the overlay shows it: the text is drawn at the Center when the pixel aspect ratio isn't 1 or the RoD doesn't start at (0,0) (e.g. an offset Source).
@@ -39,6 +43,8 @@
    * New: Line spacing, and font size and position relative to the frame (Size unit, Font size (%), Relative position, #19, #63).
    * Font families ending with a style word (e.g. "Arial Black") are drawn with their own face; style words typed into Font are part of the family name, the Style and Weight params set the style (#167).
    * Auto size fits the text as it is drawn, with the font options and the stroke (#135).
+   * Auto size fits italic and overhanging glyphs, and their stroke (#218).
+   * Auto size with a stroke no longer clips the stroke at render scales below 1 (#219).
  * ``Text`` (TextOFX) 6: obsolete (hidden from the menus, still used by old projects). It is now 6.17, with the parameters of 6.14 (Natron 2.5.0) and the bug fixes made since: Stroke dash length above 3, fontconfig leaks and an uninitialized RoD read, rendering a render window smaller than the RoD, and SRT subtitles.
  * ``Text`` (TextOFX) 6 and 7: a frame that fails to render no longer leaks memory (#134).
  * ``Text`` (TextOFX) 6 and 7: changing "Custom font(s)" no longer keeps the fonts of its previous values (#138).
@@ -82,6 +88,8 @@
  * ``ReadPDF``: a relative filename no longer crashes (it fails with "Failed to read PDF"), and files that can't be read, or have no pages, no longer leak or log GLib errors (#93, #94).
  * Crash and robustness fixes: ``Texture`` renders correctly into a render window smaller than the RoD (#79); image bounds and row bytes are honoured on hosts with padded or negative rows (#56); ``ReadPSD`` and ``Tile`` crashes, and the OpenMP toggle, are fixed (#32); ``ReadKrita`` and ``OpenRaster`` no longer leak or crash on bad files (#33); ``RichText`` no longer sets ``FONTCONFIG_PATH`` for the whole process (#65); ``ReadPDF`` builds with recent poppler (#23); the OpenCL plug-ins build again, no longer need double-precision (fp64) GPU support, so they run on Apple Silicon and many integrated GPUs, and no longer crash with a saved device index past the devices present, or without any OpenCL device.
  * ``Twirl`` (OpenCL) 1.0 and 2.0: with a Scale (radius) of 0, the pixel at the Center is no longer NaN; the image is left untwirled, as the other pixels already were.
+ * ``Bulge`` and ``Twirl`` (OpenCL) overlays: the circle shows the effect's radius in the image (50 and 100 × Scale) at any zoom, instead of 30 × Scale screen pixels (#200). Renders are unchanged.
+ * ``Bulge`` and ``Twirl`` (OpenCL) 1.0 and 2.0: with a pixel aspect ratio other than 1 (anamorphic, PAL/NTSC), the effect is centred at the Center and round in the viewer; it was offset horizontally and stretched (#180). Other renders are unchanged.
  * ``Bulge`` (OpenCL) 1.0 and 2.0: the pixel at the Center is no longer computed from NaN coordinates when Strength is 0 or negative (it showed the bottom-left pixel of the image, or whatever the device makes of a NaN); it keeps its own colour. Other pixels are unchanged.
  * The CMake build needs CMake 3.21 or later (it needed 3.16), as openfx's ``cmake/OpenFX.cmake``. The Makefiles are unchanged.
 

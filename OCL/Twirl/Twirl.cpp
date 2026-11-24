@@ -67,8 +67,11 @@ public:
         _position->getValueAtTime(args.time, x, y);
         _radius->getValueAtTime(args.time, rX, rY);
         _strength->getValueAtTime(args.time, s);
+        // canonical to pixel coordinates (OFX spec: X' = X * SX / PAR); with the PAR (arg 6),
+        // the kernel makes the effect round in canonical coordinates
+        const double par = _dstClip->getPixelAspectRatio();
         double ypos = y*args.renderScale.y;
-        double xpos = x*args.renderScale.x;
+        double xpos = x*args.renderScale.x / par;
         if (_centerFromRenderWindow) {
             // the kernel works in coordinates relative to the render window origin
             // (v1 ignored it, which is wrong when the RoD does not start at (0,0))
@@ -84,6 +87,7 @@ public:
         setKernelArg(kernel, 3, (cl_float)ypos);
         setKernelArg(kernel, 4, (cl_float)s);
         setKernelArg(kernel, 5, (cl_float)r);
+        setKernelArg(kernel, 6, (cl_float)par);
     }
     virtual void changedParam(const OFX::InstanceChangedArgs &args, const std::string &paramName) OVERRIDE FINAL;
     void resetCenter(double time);
@@ -155,8 +159,9 @@ TwirlCLPluginFactory<majorVersion>::describe(ImageEffectDescriptor &desc)
     desc.setPassThroughForNotProcessedPlanes(ePassThroughLevelRenderAllRequestedPlanes);
 #endif
     // OFX 1.5: V2 (DrawSuite) overlay on hosts that have it, also keeping the OpenGL (V1) one;
-    // overlays don't change what renders, so both major versions get it
-    ofxsSetOverlayInteractDescriptorV2(desc, new TransformCustomOverlayDescriptorOldParamsV2);
+    // overlays don't change what renders, so both major versions get it.
+    // The circle is the kernel radius, 100 * scale (render() passes it): the twirl angle is 1/e of its maximum there
+    ofxsSetOverlayInteractDescriptorV2(desc, new TransformCustomOverlayDescriptorOldParamsV2<100>);
 }
 
 template<unsigned int majorVersion>
