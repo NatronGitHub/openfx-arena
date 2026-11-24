@@ -92,7 +92,7 @@ macro(check _id _major _ctx)
     list(APPEND _args "${_a}")
   endforeach()
   foreach(_i RANGE 1 ${REPEAT})
-    # each run its own debug log: the default ofxTestLog.txt is opened with "w" by each run
+    # each run its own debug log, so that an ERROR line points at the run that wrote it
     math(EXPR _n_run "${_n_run} + 1")
     native(_nlog "${WORK}/run${_n_run}.ofxTestLog.txt")
     set(ENV{OFX_PLUGIN_LOGFILE} "${_nlog}")

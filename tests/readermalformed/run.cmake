@@ -53,7 +53,7 @@ macro(fails _id _major _file _regex)
   set(_prefix "${WORK}/run${_n_run}")
   native(_nfile "${SAMPLES}/${_file}")
   native(_nprefix "${_prefix}")
-  # each run its own debug log: the default ofxTestLog.txt is opened with "w" by each run
+  # each run its own debug log, so that an ERROR line points at the run that wrote it
   set(ENV{OFX_PLUGIN_LOGFILE} "${_nprefix}.ofxTestLog.txt")
   execute_process(
     COMMAND "${HOSTDEMO}" --quiet --no-std-paths --no-cache -p ${_id} -m ${_major} -c general
