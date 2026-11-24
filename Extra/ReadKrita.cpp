@@ -127,7 +127,8 @@ ReadKritaPlugin::getImageSizeFromXML(const std::string& xml, int *width, int *he
         root_element = xmlDocGetRootElement(doc);
         parseXML(root_element,&imgW,&imgH);
         xmlFreeDoc(doc);
-        if (imgW>0 && imgH>0) {
+        // no larger canvas than decodePNG() decodes: the host would allocate it (#214)
+        if (imgW>0 && imgH>0 && std::uint64_t(imgW) * imgH * 4 <= ArenaZip::kMaxDecodedSize) {
             (*width)=imgW;
             (*height)=imgH;
         }

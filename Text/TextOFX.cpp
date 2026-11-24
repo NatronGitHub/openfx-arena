@@ -1600,6 +1600,17 @@ void TextFXPlugin::render(const OFX::RenderArguments &args)
         moveToLayoutOrigin();
     }
 
+    // v7, Auto size: where getRegionOfDefinition() puts the layout: its ink and logical rectangles
+    // inside the stroke margin (in canonical units, scaled here on each axis)
+    const double autoSizeMargin = (strokeWidth > 0) ? std::floor(strokeWidth + 0.5) : 0.;
+    double autoSizeX = 0., autoSizeY = 0.;
+    if (_v7 && autoSize) {
+        PangoRectangle ink, logical;
+        pango_layout_get_pixel_extents(layout, &ink, &logical);
+        autoSizeX = autoSizeMargin * args.renderScale.x - (std::min)(ink.x, logical.x);
+        autoSizeY = autoSizeMargin * args.renderScale.y - (std::min)(ink.y, logical.y);
+    }
+
     if (!_v7) {
         // v6, unchanged
         if (scaleX!=1.0||scaleY!=1.0) {
@@ -1676,9 +1687,7 @@ void TextFXPlugin::render(const OFX::RenderArguments &args)
 
             if (autoSize) {
                 if (_v7) {
-                    // inside the stroke margin of getRegionOfDefinition()
-                    const double margin = std::floor(strokeWidth * args.renderScale.x + 0.5);
-                    cairo_move_to(cr, margin, margin);
+                    cairo_move_to(cr, autoSizeX, autoSizeY);
                 } else {
                     // v6
                     cairo_move_to(cr, std::floor((strokeWidth/2) * args.renderScale.x + 0.5), 0.0);
@@ -1688,7 +1697,12 @@ void TextFXPlugin::render(const OFX::RenderArguments &args)
             }
 
             pango_cairo_layout_path(cr, layout);
-            cairo_set_line_width(cr, std::floor(strokeWidth * args.renderScale.x + 0.5));
+            if (_v7 && autoSize) {
+                // within the margin, at any render scale
+                cairo_set_line_width( cr, autoSizeMargin * (std::min)(args.renderScale.x, args.renderScale.y) );
+            } else {
+                cairo_set_line_width(cr, std::floor(strokeWidth * args.renderScale.x + 0.5));
+            }
             if (_v7 && autoSize) {
                 // bevel the joins sharper than 60 degrees, so that the stroke stays within one
                 // line width of the outlines: the margin of getRegionOfDefinition()
@@ -1723,6 +1737,8 @@ void TextFXPlugin::render(const OFX::RenderArguments &args)
             else {
                 if (!autoSize && move) {
                     moveToLayoutOrigin();
+                } else if (_v7 && autoSize) {
+                    cairo_move_to(cr, autoSizeX, autoSizeY);
                 }
                 cairo_set_source_rgba(cr, r, g, b, a);
                 if (!_v7) {
@@ -1959,7 +1975,15 @@ bool TextFXPlugin::getRegionOfDefinition(const OFX::RegionOfDefinitionArguments 
         bool markup = false;
         const std::unique_ptr<PangoLayout, PangoLayoutDeleter> layout = makeLayout(cr.get(), args.time, true, renderScaleOne, _v7 ? eLayoutV7 : eLayoutV6RoD, &markup);
 
-        pango_layout_get_pixel_size(layout.get(), &width, &height);
+        if (_v7) {
+            // the ink and logical rectangles: italic or overhanging glyphs go beyond the latter
+            PangoRectangle ink, logical;
+            pango_layout_get_pixel_extents(layout.get(), &ink, &logical);
+            width = (std::max)(ink.x + ink.width, logical.x + logical.width) - (std::min)(ink.x, logical.x);
+            height = (std::max)(ink.y + ink.height, logical.y + logical.height) - (std::min)(ink.y, logical.y);
+        } else {
+            pango_layout_get_pixel_size(layout.get(), &width, &height);
+        }
 
         if (strokeWidth>0) {
             if (_v7) {

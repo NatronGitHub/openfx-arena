@@ -2,12 +2,14 @@
 
 ## Unreleased
 
+ * ``ReadKrita``, ``OpenRaster``: a canvas over 4 GiB of RGBA in ``maindoc.xml`` or ``stack.xml`` is an error (#214).
  * ``ReadPDF``: in Natron, pages of another size than the first page are no longer cropped; the format covers the largest page (#193).
  * ``ReadPSD``: clearing the file clears the layer menu (#162).
  * ``ReadPSD``: the ICC profile scan no longer follows linked folders, which could loop forever (#176).
  * ``ReadMisc``, ``ReadPSD``, ``Texture``: an ImageMagick warning no longer fails a read or leaves ``Texture`` half generated (#174).
  * Build: the hand-maintained ``Arena.xcodeproj`` is removed; CMake generates an Xcode project (``cmake -G Xcode``) when one is needed.
  * ``Text`` (Magick) 5: the output honours the destination's bounds and row bytes (#142).
+ * ``HaldCLUT``: a preset download that stalls gives up after at most 2 minutes per download, with an error that says why, instead of hanging every render (#175).
  * ``HaldCLUT``: a custom CLUT that can't be read is an error, instead of applying the previous or a black CLUT (#143).
  * ``ReadPSD``: no uninitialized read for an ICC profile without a description (#144).
  * ``Text`` (Magick) 5: the drop shadow is no longer applied twice when ImageMagick warns (#145).
@@ -40,6 +42,8 @@
    * New: Line spacing, and font size and position relative to the frame (Size unit, Font size (%), Relative position, #19, #63).
    * Font families ending with a style word (e.g. "Arial Black") are drawn with their own face; style words typed into Font are part of the family name, the Style and Weight params set the style (#167).
    * Auto size fits the text as it is drawn, with the font options and the stroke (#135).
+   * Auto size fits italic and overhanging glyphs, and their stroke (#218).
+   * Auto size with a stroke no longer clips the stroke at render scales below 1 (#219).
  * ``Text`` (TextOFX) 6: obsolete (hidden from the menus, still used by old projects). It is now 6.17, with the parameters of 6.14 (Natron 2.5.0) and the bug fixes made since: Stroke dash length above 3, fontconfig leaks and an uninitialized RoD read, rendering a render window smaller than the RoD, and SRT subtitles.
  * ``Text`` (TextOFX) 6 and 7: a frame that fails to render no longer leaks memory (#134).
  * ``Text`` (TextOFX) 6 and 7: changing "Custom font(s)" no longer keeps the fonts of its previous values (#138).

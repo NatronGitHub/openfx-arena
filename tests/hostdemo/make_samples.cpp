@@ -343,6 +343,8 @@ int main(int argc, char** argv)
         std::string("<?xml version='1.0' encoding='UTF-8'?>\n<image version=\"0.0.3\"><stack><layer name=\"background\" src=\"data/layer0.png\"/></stack></image>\n")));
     oraNoSize.push_back(ora[2]);
     oraNoSize.push_back(ora[3]);
+    std::vector<std::pair<std::string, std::string> > oraHugeCanvas = oraNoSize;
+    oraHugeCanvas[1].second = "<?xml version='1.0' encoding='UTF-8'?>\n<image version=\"0.0.3\" w=\"200000000\" h=\"200000000\"><stack><layer name=\"background\" src=\"data/layer0.png\"/></stack></image>\n";
     // a PNG with only an IHDR (65535x65535, 8-bit RGBA) and an IEND chunk
     std::string bomb = "\x89PNG\r\n\x1a\n";
     {
@@ -363,6 +365,7 @@ int main(int argc, char** argv)
     kraBomb.push_back(std::make_pair(std::string("mergedimage.png"), bomb));
     const std::string corrupt = "PK\x03\x04 this is not a zip file";
     if (!writeZip(dir + "/bad_nosize.kra", kraNoSize) || !writeZip(dir + "/bad_nosize.ora", oraNoSize) ||
+        !writeZip(dir + "/bad_hugecanvas.ora", oraHugeCanvas) ||
         !writeZipWithHugeEntry(dir + "/bad_hugexml.kra", kra, "maindoc.xml", 0x7FFFFFFFFFFFFFFFull) ||
         !writeZipWithHugeEntry(dir + "/bad_hugexml.ora", ora, "stack.xml", 0xFFFFFFFFFFFFFFFFull) ||
         !writeZipWithHugeEntry(dir + "/bad_hugepng.kra", kra, "mergedimage.png", 0x7FFFFFFFFFFFFFFFull) ||
