@@ -42,7 +42,7 @@ macro(render _major _file _dpi)
   set(_prefix "${WORK}/${_file}-v${_major}-${_dpi}")
   native(_nprefix "${_prefix}")
   native(_nfile "${SRC}/${_file}.svg")
-  # each run its own debug log: the default ofxTestLog.txt is opened with "w" by each run
+  # each run its own debug log, so that an ERROR line points at the run that wrote it
   set(ENV{OFX_PLUGIN_LOGFILE} "${_nprefix}.ofxTestLog.txt")
   execute_process(
     COMMAND "${HOSTDEMO}" --quiet --no-std-paths --no-cache -p net.fxarena.openfx.ReadSVG -m ${_major}
