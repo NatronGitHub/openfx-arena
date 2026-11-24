@@ -40,7 +40,7 @@ OFXS_NAMESPACE_ANONYMOUS_ENTER
 #define kParamKernelLabel "Kernel"
 #define kParamKernelHint "The kernel to build and use."
 #define kParamKernelDefault \
-    "const sampler_t sampler = CLK_NORMALIZED_COORDS_FALSE | CLK_ADDRESS_CLAMP_TO_EDGE | CLK_FILTER_LINEAR;\n" \
+    "const sampler_t sampler = CLK_NORMALIZED_COORDS_FALSE | CLK_ADDRESS_CLAMP_TO_EDGE | CLK_FILTER_NEAREST;\n" \
     "void kernel filter(__read_only image2d_t input, __write_only image2d_t output)\n" \
     "{ /* basic image copy: */ \n"\
         "int2 pos = {get_global_id(0), get_global_id(1)};\n" \
