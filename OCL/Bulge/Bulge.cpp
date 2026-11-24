@@ -66,8 +66,11 @@ public:
         _position->getValueAtTime(args.time, x, y);
         _radius->getValueAtTime(args.time, rX, rY);
         _strength->getValueAtTime(args.time, s);
+        // canonical to pixel coordinates (OFX spec: X' = X * SX / PAR); with the PAR (arg 6),
+        // the kernel makes the effect round in canonical coordinates
+        const double par = _dstClip->getPixelAspectRatio();
         double ypos = y*args.renderScale.y;
-        double xpos = x*args.renderScale.x;
+        double xpos = x*args.renderScale.x / par;
         if (_centerFromRenderWindow) {
             // the kernel works in coordinates relative to the render window origin
             // (v1 ignored it, which is wrong when the RoD does not start at (0,0))
@@ -83,6 +86,7 @@ public:
         setKernelArg(kernel, 3, (cl_float)ypos);
         setKernelArg(kernel, 4, (cl_float)r);
         setKernelArg(kernel, 5, (cl_float)s);
+        setKernelArg(kernel, 6, (cl_float)par);
     }
     virtual void changedParam(const OFX::InstanceChangedArgs &args, const std::string &paramName) OVERRIDE FINAL;
     void resetCenter(double time);
