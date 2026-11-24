@@ -36,11 +36,11 @@
 #endif
 
 #include "ofxsMultiThread.h"
-// fast_mutex can be constructed statically, before the host's multithread
+// std::mutex can be constructed statically, before the host's multithread
 // suite is available.
-#include "fast_mutex.h"
-typedef tthread::fast_mutex Mutex;
-typedef OFX::MultiThread::AutoMutexT<tthread::fast_mutex> AutoMutex;
+#include <mutex>
+typedef std::mutex Mutex;
+typedef std::lock_guard<std::mutex> AutoMutex;
 
 using namespace OFX;
 OFXS_NAMESPACE_ANONYMOUS_ENTER

@@ -26,9 +26,7 @@
 #include "GenericOCIO.h"
 #include "ofxsMacros.h"
 #include "ofxsMultiThread.h"
-#ifndef OFX_USE_MULTITHREAD_MUTEX
-#include "fast_mutex.h"
-#endif
+#include <mutex>
 #include "ofxsImageEffect.h"
 #include "ofxsMultiPlane.h"
 #define CMS_NO_REGISTER_KEYWORD
@@ -128,14 +126,8 @@ OFXS_NAMESPACE_ANONYMOUS_ENTER
 
 static bool gHostIsNatron   = false;
 
-// as in GenericOCIO.h
-#ifdef OFX_USE_MULTITHREAD_MUTEX
-typedef OFX::MultiThread::Mutex Mutex;
-typedef OFX::MultiThread::AutoMutex AutoMutex;
-#else
-typedef tthread::fast_mutex Mutex;
-typedef OFX::MultiThread::AutoMutexT<tthread::fast_mutex> AutoMutex;
-#endif
+typedef std::mutex Mutex;
+typedef std::lock_guard<std::mutex> AutoMutex;
 
 // What the frames that ImageMagick reads from a file are: PSD files start with the composite that
 // Photoshop saves (frame 0), followed by the layers; XCF files have no composite, their frames are the

@@ -23,11 +23,8 @@
 #include "ofxsMacros.h"
 #include "ofxsCoords.h"
 #include "ofxsMultiThread.h"
-#ifndef OFX_USE_MULTITHREAD_MUTEX
-// some OFX hosts do not have mutex handling in the MT-Suite (e.g. Sony Catalyst Edit)
-// prefer using the fast mutex by Marcus Geelnard http://tinythreadpp.bitsnbites.eu/
-#include "fast_mutex.h"
-#endif
+// std::mutex rather than the host's: some OFX hosts have no mutexes in the MT-Suite (e.g. Sony Catalyst Edit)
+#include <mutex>
 #include <cstring>
 #include <iostream>
 #include <vector>
@@ -38,13 +35,8 @@
 #include <CL/cl.hpp>
 #endif
 
-#ifdef OFX_USE_MULTITHREAD_MUTEX
-typedef OFX::MultiThread::Mutex OCLMutex;
-typedef OFX::MultiThread::AutoMutex OCLAutoMutex;
-#else
-typedef tthread::fast_mutex OCLMutex;
-typedef OFX::MultiThread::AutoMutexT<tthread::fast_mutex> OCLAutoMutex;
-#endif
+typedef std::mutex OCLMutex;
+typedef std::lock_guard<std::mutex> OCLAutoMutex;
 
 #define kParamOCLDevice "device"
 #define kParamOCLDeviceLabel "OpenCL Device"
