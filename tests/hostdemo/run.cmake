@@ -155,6 +155,8 @@ foreach(_p IN LISTS _plugins)
       string(APPEND _what " ${_joined}")
     endif()
     native(_nprefix "${_prefix}")
+    # each run its own debug log: the default ofxTestLog.txt is opened with "w" by each run
+    set(ENV{OFX_PLUGIN_LOGFILE} "${_nprefix}.ofxTestLog.txt")
     execute_process(
       COMMAND "${HOSTDEMO}" --quiet --no-std-paths --no-cache -p "${_id}" -m "${_major}" -c "${_ctx}"
               --frames 0 -o "${_nprefix}" ${_hostargs} ${_args}
@@ -191,6 +193,17 @@ foreach(_p IN LISTS _plugins)
       list(APPEND _failed "${_id}v${_major}")
     endif()
   endforeach()
+endforeach()
+# a debug build's property validation (Support's ofxsLog.cpp) writes an "ERROR : " line in the
+# log of each run for a host property that is missing or wrong
+file(GLOB _logs "${WORK}/*ofxTestLog.txt")
+foreach(_l IN LISTS _logs)
+  file(STRINGS "${_l}" _errors REGEX "ERROR : ")
+  if(_errors)
+    list(JOIN _errors "\n" _errors)
+    message("FAIL ${_l}:\n${_errors}")
+    list(APPEND _failed "${_l}")
+  endif()
 endforeach()
 string(TIMESTAMP _end "%s")
 math(EXPR _t "${_end} - ${_start}")
