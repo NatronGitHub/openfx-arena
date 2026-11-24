@@ -2,7 +2,9 @@
 
 ## Unreleased
 
- * ``ReadPSD``, ``OpenRaster``, ``ReadSVG``, ``ReadPDF``: with File Premult set to Opaque, only the colour plane gets alpha 1; the other layers keep their own alpha, as in Natron 2.5 (OpenFX-IO update, NatronGitHub/Natron#1632).
+ * Readers: with File Premult set to Opaque, the colour plane has alpha 1 and is not premultiplied by the decoded alpha; the layers of ``ReadPSD``, ``OpenRaster`` and ``ReadSVG`` and the pages of ``ReadPDF`` keep their own alpha, as in Natron 2.5 (OpenFX-IO update, NatronGitHub/Natron#1632).
+ * Readers: in Natron, after picking a new file sequence, the Time Offset follows the Starting Time instead of holding the first frame (OpenFX-IO update).
+ * Readers: changing the OCIO config file while frames render no longer crashes the renders (OpenFX-IO update).
  * ``ReadKrita``, ``OpenRaster``: a canvas over 4 GiB of RGBA in ``maindoc.xml`` or ``stack.xml`` is an error (#214).
  * ``ReadPSD``: clearing the file clears the layer menu (#162).
  * ``ReadPSD``: the ICC profile scan no longer follows linked folders, which could loop forever (#176).
