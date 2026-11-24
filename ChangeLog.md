@@ -2,8 +2,8 @@
 
 ## Unreleased
 
- * Readers: file sequences are detected more reliably: UTF-8 file names, frame 0 and no missing number with ``%d``, negative frames, numbers in the extension, and frames with another padding (OpenFX-IO update).
- * ``Text`` (TextOFX), ``ReadSVG``: dragging the transform overlay sets center, scale, rotate and skew together, so animated ones all get a key, as in Nuke; the highlighted handle is the one a click grabs, and the scale circle stays within the Scale range (SupportExt update).
+ * Readers, in hosts other than Natron: the frame range guessed from the file name handles UTF-8 names, negative frames, numbers in the extension and other paddings, and ``%d`` matches frame 0 but not a missing number (OpenFX-IO update).
+ * ``Text`` (TextOFX), ``ReadSVG``: dragging the transform overlay sets all its parameters together (Text has no translate, and a center drag in relative position mode still sets only the center), as in Nuke; the highlighted handle is the one a click grabs, and the scale circle stays within the Scale range (SupportExt update).
  * ``Text`` (Magick): the overlay label of the position stays just above its point at every zoom level (SupportExt update).
  * Readers: with File Premult set to Opaque, the colour plane has alpha 1 and is not premultiplied by the decoded alpha; the layers of ``ReadPSD``, ``OpenRaster`` and ``ReadSVG`` and the pages of ``ReadPDF`` keep their own alpha, as in Natron 2.5 (OpenFX-IO update, NatronGitHub/Natron#1632).
  * Readers: in Natron, after picking a new file sequence, the Time Offset follows the new Starting Time, so the frames no longer hold on the first one (OpenFX-IO update).
