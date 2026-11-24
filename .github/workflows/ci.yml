@@ -4,8 +4,9 @@ name: Continuous Integration tests
 # Pushes run CI only on master, RB-* and tags; feature branches run through their
 # pull request (not on every push, and not twice). Draft pull requests run Linux and
 # Windows; macOS waits until the PR is marked ready for review. Superseded runs are
-# cancelled, except for tags. The C++20 builds run weekly in extended.yml. macOS starts only
-# once Linux and Windows pass, and is not required for merging (scarce runners).
+# cancelled, except for tags. The C++20 builds run weekly in extended.yml. macOS
+# starts only once Linux and Windows pass, and is not required for merging (scarce
+# runners).
 # Use [skip ci] for comment- or doc-only commits.
 
 on:
@@ -35,8 +36,6 @@ jobs:
   build:
     uses: ./.github/workflows/platforms.yml
     with:
-      # macOS runners are scarce: no macOS build for draft pull requests
-      skip-macos: ${{ github.event_name == 'pull_request' && github.event.pull_request.draft }}
       # C++ standard policy: C++17 per push/PR (Natron RB-2.6 Qt5), C++20 in extended.yml
       cxxstd: c++17
       # artifacts only on demand or for tags

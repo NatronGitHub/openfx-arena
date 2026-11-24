@@ -21,10 +21,6 @@ on:
         description: Build only on macOS (weekly C++17 macOS build)
         type: boolean
         default: false
-      skip-macos:
-        description: No macOS build (draft pull requests)
-        type: boolean
-        default: false
       linux-only:
         description: Build only on Linux (weekly Make build)
         type: boolean
@@ -222,10 +218,11 @@ jobs:
           path: ${{ env.BUNDLE }}
 
   macos:
-    # macOS arm64 runners are scarce: start only once Linux and Windows have passed. Merging
-    # only requires Linux and Windows; macOS is also built weekly (extended.yml).
+    # macOS arm64 runners are scarce: start only once Linux and Windows have passed, and not
+    # for draft pull requests (github is the caller's context). Merging only requires Linux
+    # and Windows; macOS is also built weekly (extended.yml).
     needs: [linux, windows]
-    if: ${{ !cancelled() && !inputs.linux-only && !inputs.skip-macos && (inputs.macos-only || (needs.linux.result == 'success' && needs.windows.result == 'success')) }}
+    if: ${{ !cancelled() && !inputs.linux-only && !(github.event_name == 'pull_request' && github.event.pull_request.draft) && (inputs.macos-only || (needs.linux.result == 'success' && needs.windows.result == 'success')) }}
     # System (Xcode) clang with MacPorts libraries, as for Natron's macOS SDK.
     name: macOS 15 arm64 (Xcode clang, MacPorts)
     runs-on: macos-15
