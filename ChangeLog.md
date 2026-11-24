@@ -7,6 +7,7 @@
  * ``ReadMisc``, ``ReadPSD``, ``Texture``: an ImageMagick warning no longer fails a read or leaves ``Texture`` half generated (#174).
  * Build: the hand-maintained ``Arena.xcodeproj`` is removed; CMake generates an Xcode project (``cmake -G Xcode``) when one is needed.
  * ``Text`` (Magick) 5: the output honours the destination's bounds and row bytes (#142).
+ * ``HaldCLUT``: a preset download that stalls fails the render after at most 2 minutes with an error that says why, instead of hanging every render (#175).
  * ``HaldCLUT``: a custom CLUT that can't be read is an error, instead of applying the previous or a black CLUT (#143).
  * ``ReadPSD``: no uninitialized read for an ICC profile without a description (#144).
  * ``Text`` (Magick) 5: the drop shadow is no longer applied twice when ImageMagick warns (#145).
