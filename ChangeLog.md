@@ -2,6 +2,7 @@
 
 ## Unreleased
 
+ * ``ReadPSD``, ``OpenRaster``, ``ReadSVG``, ``ReadPDF``: with File Premult set to Opaque, only the colour plane gets alpha 1; the other layers keep their own alpha, as in Natron 2.5 (OpenFX-IO update, NatronGitHub/Natron#1632).
  * ``ReadKrita``, ``OpenRaster``: a canvas over 4 GiB of RGBA in ``maindoc.xml`` or ``stack.xml`` is an error (#214).
  * ``ReadPSD``: clearing the file clears the layer menu (#162).
  * ``ReadPSD``: the ICC profile scan no longer follows linked folders, which could loop forever (#176).
