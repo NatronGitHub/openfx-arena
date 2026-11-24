@@ -52,6 +52,8 @@ macro(fails _id _major _file _regex)
   set(_prefix "${WORK}/run${_n_run}")
   native(_nfile "${SAMPLES}/${_file}")
   native(_nprefix "${_prefix}")
+  # each run its own debug log: the default ofxTestLog.txt is opened with "w" by each run
+  set(ENV{OFX_PLUGIN_LOGFILE} "${_nprefix}.ofxTestLog.txt")
   execute_process(
     COMMAND "${HOSTDEMO}" --quiet --no-std-paths --no-cache -p ${_id} -m ${_major} -c general
             --frames 0 -o "${_nprefix}" -s "filename=${_nfile}"
@@ -104,6 +106,17 @@ if(READPDF)
   fails(fr.inria.openfx.ReadPDF 1 missing.pdf "Cannot load frame|No filename")
 endif()
 
+# a debug build's property validation (Support's ofxsLog.cpp) writes an "ERROR : " line in the
+# log of each run for a host property that is missing or wrong
+file(GLOB _logs "${WORK}/*ofxTestLog.txt")
+foreach(_l IN LISTS _logs)
+  file(STRINGS "${_l}" _errors REGEX "ERROR : ")
+  if(_errors)
+    list(JOIN _errors "\n" _errors)
+    message("FAIL ${_l}:\n${_errors}")
+    list(APPEND _failed "${_l}")
+  endif()
+endforeach()
 message("${_ok} passed, ${_n_run} run")
 if(_failed)
   message(FATAL_ERROR "malformed reader test failed: ${_failed}")

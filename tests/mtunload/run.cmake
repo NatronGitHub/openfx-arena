@@ -78,6 +78,7 @@ set(ENV{KMP_BLOCKTIME} infinite)  # libomp (macOS)
 
 set(_ok 0)
 set(_failed "")
+set(_n_run 0)
 # the minimum number of threads in the process after the render (mt_unload --min-threads): 2 for
 # the plug-ins that leave OpenMP pool threads behind, so that the test fails instead of silently
 # testing nothing if ImageMagick has no OpenMP, or a parameter stops enabling it
@@ -91,6 +92,10 @@ macro(check _id _major _ctx)
     list(APPEND _args "${_a}")
   endforeach()
   foreach(_i RANGE 1 ${REPEAT})
+    # each run its own debug log: the default ofxTestLog.txt is opened with "w" by each run
+    math(EXPR _n_run "${_n_run} + 1")
+    native(_nlog "${WORK}/run${_n_run}.ofxTestLog.txt")
+    set(ENV{OFX_PLUGIN_LOGFILE} "${_nlog}")
     execute_process(
       COMMAND "${MT_UNLOAD}" --threads ${THREADS} --min-threads ${_min} ${_id} ${_major} ${_ctx} ${_args}
       WORKING_DIRECTORY "${WORK}"
@@ -137,6 +142,17 @@ if(READPDF)
 endif()
 check(net.fxarena.openfx.ReadPSD 2 general filename=@SAMPLES@/sample.psd)
 
+# a debug build's property validation (Support's ofxsLog.cpp) writes an "ERROR : " line in the
+# log of each run for a host property that is missing or wrong
+file(GLOB _logs "${WORK}/*ofxTestLog.txt")
+foreach(_l IN LISTS _logs)
+  file(STRINGS "${_l}" _errors REGEX "ERROR : ")
+  if(_errors)
+    list(JOIN _errors "\n" _errors)
+    message("FAIL ${_l}:\n${_errors}")
+    list(APPEND _failed "${_l}")
+  endif()
+endforeach()
 list(LENGTH _failed _nf)
 message("${_ok} multi-threaded renders (${THREADS} threads) followed by an unload: ${_nf} failed")
 if(_failed)
