@@ -234,11 +234,6 @@ jobs:
       # py313-numpy, and python3 selected: for ctest's readpsd_layers (tests/readpsd)
       # expat: for openfx's HostSupport (hostDemo, ctest's render_Arena), which no longer bundles it
       PORTS: cmake pkgconfig gsed libomp py313-numpy ImageMagick opencolorio lcms2 fontconfig pango librsvg poppler libxml2 libzip librevenge libcdr-0.1 sox curl expat
-      # every macOS plug-in bundle targets macOS 14.0: CMake takes CMAKE_OSX_DEPLOYMENT_TARGET from it,
-      # and openfx's Makefile.master passes it to -mmacosx-version-min (openfx#149). Both default to
-      # 14.0 already (CMakeLists.txt, openfx#160): kept to make the target explicit. The MacPorts
-      # libraries are built for the runner's macOS, so deploying them warns (OFX_DEPLOY_STRICT_MINOS off)
-      MACOSX_DEPLOYMENT_TARGET: "14.0"
     steps:
       - uses: actions/checkout@v4
         with:
@@ -252,6 +247,11 @@ jobs:
           sudo port select --set python3 python313
           # same fix as in Natron's INSTALL_MACOS.md
           sudo sed -i '' -e 's/Zstd::Zstd/zstd/' /opt/local/lib/pkgconfig/libzip.pc
+      - name: Target the runner's macOS
+        # CI builds aren't shipped: target the runner's macOS, whose MacPorts libraries the
+        # bundles link. Set after the MacPorts install, so that MacPorts installs the runner's
+        # binary archives as is. Release bundles target 14.0 and are built on a macOS 14 machine.
+        run: echo "MACOSX_DEPLOYMENT_TARGET=$(sw_vers -productVersion | cut -d. -f1).0" >> "$GITHUB_ENV"
       - name: Build (release, CMake)
         if: inputs.build-system == 'cmake'
         run: |
