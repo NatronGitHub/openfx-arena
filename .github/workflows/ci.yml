@@ -2,11 +2,11 @@ name: Continuous Integration tests
 
 # Frugal CI (NatronGitHub runners are shared by all repos): one run per change.
 # Pushes run CI only on master, RB-* and tags; feature branches run through their
-# pull request (not on every push, and not twice). Draft pull requests run Linux and
-# Windows; macOS waits until the PR is marked ready for review. Superseded runs are
-# cancelled, except for tags. The C++20 builds run weekly in extended.yml. macOS
-# starts only once Linux and Windows pass, and is not required for merging (scarce
-# runners).
+# pull request (not on every push, and not twice). Draft pull requests don't run
+# CI, since a draft is rebased before it is marked ready and an earlier run would be
+# redone: mark the PR ready for review to run it. Superseded runs are cancelled,
+# except for tags. The C++20 builds run weekly in extended.yml. macOS starts only
+# once Linux and Windows pass, and is not required for merging (scarce runners).
 # Use [skip ci] for comment- or doc-only commits.
 
 on:
@@ -34,6 +34,8 @@ concurrency:
 
 jobs:
   build:
+    # no CI for draft pull requests
+    if: github.event_name != 'pull_request' || !github.event.pull_request.draft
     uses: ./.github/workflows/platforms.yml
     with:
       # C++ standard policy: C++17 per push/PR (Natron RB-2.6 Qt5), C++20 in extended.yml
