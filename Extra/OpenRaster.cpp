@@ -447,8 +447,9 @@ OpenRasterPlugin::decodePlane(const std::string& filename, OfxTime /*time*/, int
     // file that the PNG comes from. A layer PNG may be smaller than the canvas, at an x,y offset
     // from the top-left corner of the canvas (GIMP and MyPaint crop the layers on save); the
     // merged image has no offset. OpenRaster's y goes down from the top, OFX's goes up from the
-    // bottom, so the PNG covers (x, H-y-h)-(x+w, H-y), clamped to the canvas, and the rest is
-    // transparent black.
+    // bottom, so the PNG covers (x, H-y-h)-(x+w, H-y): only the canvas height H is needed, as x
+    // has the same origin, and the render window is inside the canvas (the frame bounds). The
+    // rest of the window is transparent black.
     if (canvasHeight <= 0) {
         canvasHeight = height; // no size in stack.xml: the PNG is the canvas
     }
