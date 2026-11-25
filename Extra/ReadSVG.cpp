@@ -175,6 +175,7 @@ private:
     void resetCenter(double time, bool keepImageFixed);
     void autoCenter(double time);
     void getCanvasSize(RsvgHandle* handle, int dpi, SVGCanvas* canvas) const;
+    Arena::GObjectPtr<RsvgHandle> openSVG(const std::string& filename);
     const bool _v4; // version 4 or later: the DPI fix and the transform (see the history)
     OFX::IntParam *_dpi;
     // the transform params: NULL in version 3, which doesn't have them
@@ -625,6 +626,20 @@ ReadSVGPlugin::getCanvasSize(RsvgHandle* handle, int dpi, SVGCanvas* canvas) con
     canvas->exactViewport = false;
 }
 
+// An rsvg handle on the SVG file filename. Throws, with a persistent message, if it can't be read.
+Arena::GObjectPtr<RsvgHandle>
+ReadSVGPlugin::openSVG(const std::string& filename)
+{
+    GError* e = NULL;
+    Arena::GObjectPtr<RsvgHandle> handle(rsvg_handle_new_from_file(filename.c_str(), &e));
+    const Arena::GErrorPtr error(e);
+    if (error || !handle) {
+        setPersistentMessage(OFX::Message::eMessageError, "", "Failed to read SVG");
+        OFX::throwSuiteStatusException(kOfxStatErrFormat);
+    }
+    return handle;
+}
+
 void
 ReadSVGPlugin::decodePlane(const std::string& filename, OfxTime time, int /*view*/, const OfxRectI& renderWindow, const OfxPointD& renderScale, float *pixelData, const OfxRectI& bounds,
                                  OFX::PixelComponentEnum /*pixelComponents*/, OFX::PixelComponentEnum remappedComponents, int pixelComponentCount, const std::string& rawComponents, int rowBytes)
@@ -661,13 +676,7 @@ ReadSVGPlugin::decodePlane(const std::string& filename, OfxTime time, int /*view
     int dpi, width, height;
     _dpi->getValueAtTime(time, dpi);
 
-    GError* e = NULL;
-    const Arena::GObjectPtr<RsvgHandle> handle(rsvg_handle_new_from_file(filename.c_str(), &e));
-    const Arena::GErrorPtr error(e);
-    if (error || !handle) {
-        setPersistentMessage(OFX::Message::eMessageError, "", "Failed to read SVG");
-        OFX::throwSuiteStatusException(kOfxStatErrFormat);
-    }
+    const Arena::GObjectPtr<RsvgHandle> handle = openSVG(filename);
 
     SVGCanvas canvas;
     getCanvasSize(handle.get(), dpi, &canvas);
@@ -822,13 +831,7 @@ bool ReadSVGPlugin::getFrameBounds(const std::string& filename,
         }
     }
     if (!cached) {
-        GError* e = NULL;
-        const Arena::GObjectPtr<RsvgHandle> handle(rsvg_handle_new_from_file(filename.c_str(), &e));
-        const Arena::GErrorPtr error(e); // was leaked (#132)
-        if (error || !handle) {
-            setPersistentMessage(OFX::Message::eMessageError, "", "Failed to read SVG");
-            OFX::throwSuiteStatusException(kOfxStatErrFormat);
-        }
+        const Arena::GObjectPtr<RsvgHandle> handle = openSVG(filename);
 
         SVGCanvas canvas;
         getCanvasSize(handle.get(), dpi, &canvas);
@@ -890,13 +893,7 @@ bool ReadSVGPlugin::guessParamsFromFilename(const std::string& /*newFile*/,
 
     setImageLayers(filename);
 
-    GError* e = NULL;
-    const Arena::GObjectPtr<RsvgHandle> handle(rsvg_handle_new_from_file(filename.c_str(), &e));
-    const Arena::GErrorPtr error(e); // was leaked (#132)
-    if (error || !handle) {
-        setPersistentMessage(OFX::Message::eMessageError, "", "Failed to read SVG");
-        OFX::throwSuiteStatusException(kOfxStatErrFormat);
-    }
+    openSVG(filename); // throws if it can't be read
 
     *components = OFX::ePixelComponentRGBA;
     // the output of rsvg is premultiplied, see premulttest.svg check above
