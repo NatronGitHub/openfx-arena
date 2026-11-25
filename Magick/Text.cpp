@@ -20,6 +20,7 @@
 #include "PackedImage.h"
 
 #include "ofxsPositionInteract.h"
+#include "ofxsNormalisedDefaults.h"
 #include "ofxsMacros.h"
 #include "ofxsMultiThread.h"
 #include "ofxsImageEffect.h"
@@ -308,6 +309,10 @@ TextPlugin::TextPlugin(OfxImageEffectHandle handle)
             }
         }
     }
+
+    // hosts that ignore normalised defaults (e.g. Resolve, VEGAS): the default position is the
+    // project centre
+    ofxsDenormaliseUntouchedDefault(*this, *position_, /*isPosition=*/true);
 }
 
 TextPlugin::~TextPlugin()
@@ -731,7 +736,7 @@ void TextPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, Cont
         param->setLabel(kParamPositionLabel);
         param->setHint(kParamPositionHint);
         param->setDoubleType(eDoubleTypeXYAbsolute);
-        param->setDefaultCoordinateSystem(eCoordinatesNormalised);
+        ofxsSetDefaultCoordinateSystemNormalised(*param); // OFX 1.1 hosts: see the constructor
         param->setDefault(0.5, 0.5);
         param->setAnimates(true);
         if (param->getHostHasNativeOverlayHandle())

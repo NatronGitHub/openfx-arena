@@ -28,6 +28,7 @@
 #include "ofxsImageEffect.h"
 #include "ofxsMacros.h"
 #include "ofxsOverlayDraw.h"
+#include "ofxsNormalisedDefaults.h"
 
 #define kParamTransformTranslate "transformTranslate"
 #define kParamTransformTranslateLabel "Translate"
