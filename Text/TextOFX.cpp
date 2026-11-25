@@ -466,8 +466,8 @@ public:
     void resetCenter(double time);
     void setFontDesc(int stretch, int weight, PangoFontDescription* desc);
 
-    /** @brief a new layout for cr with the text params at time, at the render scale; *markup:
-        the text is drawn as markup (autoSize: as in getRelativeFrame()) */
+    /** @brief a new layout for cr with the text params at time, at the render scale (autoSize:
+        as in getRelativeFrame()); markup: out, the Markup param, or false if the text didn't parse */
     std::unique_ptr<PangoLayout, PangoLayoutDeleter> makeLayout(cairo_t* cr, double time, bool autoSize, const OfxPointD& renderScale, LayoutUseEnum use, bool* markup);
 
     /** @brief The frame that relative font sizes and positions refer to, in canonical coordinates. */
