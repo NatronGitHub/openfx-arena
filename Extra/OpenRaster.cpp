@@ -462,14 +462,7 @@ OpenRasterPlugin::decodePlane(const std::string& filename, OfxTime /*time*/, int
     image.y2 = canvasHeight - offsetY;
     image.y1 = image.y2 - height;
 
-    // buffer is lodepng's RGBA, 8 bits per component, packed and top-down, and covers image. Copy
-    // the part of renderWindow inside the image (clamped, so that a window larger than the image
-    // or outside of it doesn't read out of buffer), and clear the rest of the window. pixelData
-    // has the given bounds and rowBytes, which may differ from renderWindow, be padded, or be
-    // negative.
-    // GenericReader's clipToFile() does both (copied is empty if the window is not in the
-    // image), and tells render() that only copied comes from the file: call it once per decode(),
-    // with decode()'s renderWindow (see GenericReader.h)
+    // buffer (lodepng's RGBA, 8 bits, packed, top-down) covers image: copy renderWindow as ReadSVG.cpp does
     OfxRectI copied;
     if (clipToFile(renderWindow, image, pixelData, bounds, pixelComponentCount, OFX::eBitDepthFloat, rowBytes, &copied)) {
         // GenericReader's conversion reads the top-down buffer directly (no transposed copy), with the
