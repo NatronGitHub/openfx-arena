@@ -51,7 +51,7 @@
 #define kParamTransformInteractCustomiveLabel "Interactive Update"
 #define kParamTransformInteractCustomiveHint "If checked, update the parameter values during interaction with the image viewer, else update the values when pen is released."
 
-// old parameter names (Transform DirBlur and GodRays only)
+// old parameter names (Bulge and Twirl)
 #define kParamTransformTranslateOld "translate"
 #define kParamTransformRotateOld "rotate"
 #define kParamTransformScaleOld "scale"

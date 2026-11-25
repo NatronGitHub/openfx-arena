@@ -471,8 +471,8 @@ if(OCL)
     set(OFX_PLUGIN_BUILD_DIR "${OFX_PLUGIN_BUILD_DIR}-OCL")
     add_ofx_plugin(OCL INFO_PLIST OCL/Info.plist SOURCES ${_ocl_sources})
     unset(OFX_PLUGIN_BUILD_DIR) # back to the cache variable
-    # SupportExt's include directories only: the plug-ins use the kParamTransform3x3Invert
-    # macro of ofxsTransform3x3.h, not its code (as OCL/Makefile)
+    # SupportExt's include directories only: ofxsTransformInteractCustom.cpp uses the
+    # kParamTransform3x3Invert macro of ofxsTransform3x3.h, not its code (as OCL/Makefile)
     supportext_add_sources(OCL)
     target_include_directories(OCL PRIVATE "${CMAKE_CURRENT_SOURCE_DIR}/OCL")
     target_link_libraries(OCL PRIVATE openfx::Support OpenCL::OpenCL)
