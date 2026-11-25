@@ -728,6 +728,12 @@ TextFXPlugin::TextFXPlugin(OfxImageEffectHandle handle, bool v7)
             updatePositionIncrement(true);
         }
     }
+
+    // hosts that ignore normalised defaults (e.g. Resolve, VEGAS): the default Center is the
+    // project centre. Not in relative mode, where a Center of (0.5, 0.5) is the frame centre.
+    if ( !_v7 || !_positionRelativeState->getValue() ) {
+        ofxsTransformDenormaliseDefaults(*this, /*oldParams=*/true);
+    }
 }
 
 TextFXPlugin::~TextFXPlugin()

@@ -58,6 +58,9 @@ public:
         _radius = fetchDouble2DParam(kParamTransformScaleOld);
         _strength = fetchDoubleParam(kParamTransformRotateOld);
         assert(_position && _radius && _strength);
+        // hosts that ignore normalised defaults (e.g. Resolve, VEGAS): the default center is the
+        // project centre
+        ofxsDenormaliseUntouchedDefault(*this, *_position, /*isPosition=*/true);
     }
 
     virtual void render(const OFX::RenderArguments &args, cl::Kernel kernel) OVERRIDE FINAL
