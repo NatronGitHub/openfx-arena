@@ -108,6 +108,8 @@ endif
 # mingw
 ifeq ($(MINGW),1)
   MAGICK_LINKFLAGS += -lgdi32 -lfreetype -lexpat -lz -lws2_32
+  # a static ImageMagick without modules needs urlmon (coders/url.c), which MagickCore.pc doesn't list
+  MAGICK_LINKFLAGS += -lurlmon
   ifeq ($(IM), 7)
     MAGICK_LINKFLAGS += -loleaut32
   endif
