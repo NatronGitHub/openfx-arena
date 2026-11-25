@@ -102,7 +102,7 @@ jobs:
         # which these tests fail on; Linux only (the other jobs build no debug tests)
         if: inputs.build-system == 'cmake'
         run: |
-          ctest --test-dir build-debug --output-on-failure \
+          ctest --test-dir build-debug --output-on-failure --no-tests=error \
             -R '^(load_Arena|render_Arena|reader_window|reader_malformed|render_Arena_mt_unload|readsvg_dpi)$'
       - name: Build (release, Make)
         if: inputs.build-system == 'make'
