@@ -38,7 +38,6 @@
 #include "ofxsImageEffect.h"
 #include "ofxsMatrix2D.h"
 #include "ofxsTransformInteract.h"
-#include "ofxsMultiThread.h"
 #include "ReadHandles.h"
 #include <mutex>
 
@@ -123,9 +122,6 @@ statCtimeNsec(const struct stat& st)
 #endif
 }
 
-typedef std::mutex Mutex;
-typedef std::lock_guard<std::mutex> AutoMutex;
-
 // The size of the SVG canvas, and how to render it into an output image of width x height pixels
 struct SVGCanvas {
     double imageWidth, imageHeight; // the document size, in pixels at the DPI of the handle
@@ -195,7 +191,7 @@ private:
     // The layers (the ids of the groups and paths) of the file: set on the main thread, read by
     // getClipComponents(), which the host may call from any thread, so only accessed with the
     // mutex held (#130)
-    Mutex _imageLayersMutex;
+    std::mutex _imageLayersMutex;
     std::vector<std::string> _imageLayers;
     // The canvas size from the last getFrameBounds(), so that it doesn't parse the whole SVG each
     // time: GenericReader calls it from getClipPreferences(), which the host calls again at each
@@ -228,7 +224,7 @@ private:
                    mtimeNsec == statMtimeNsec(st) && ctimeNsec == statCtimeNsec(st) && size == st.st_size;
         }
     };
-    Mutex _canvasSizeMutex; // getFrameBounds() is also called from render(), possibly concurrently
+    std::mutex _canvasSizeMutex; // getFrameBounds() is also called from render(), possibly concurrently
     CanvasSize _canvasSize;
 };
 
@@ -506,7 +502,7 @@ ReadSVGPlugin::setImageLayers(const std::string& filename)
         getLayers(xmlDocGetRootElement(doc), &layers);
         xmlFreeDoc(doc);
     }
-    AutoMutex lock(_imageLayersMutex);
+    std::lock_guard<std::mutex> lock(_imageLayersMutex);
     _imageLayers.swap(layers);
 }
 
@@ -517,7 +513,7 @@ ReadSVGPlugin::getClipComponents(const OFX::ClipComponentsArguments& args, OFX::
     clipComponents.setPassThroughClip(NULL, args.time, args.view);
     std::vector<std::string> imageLayers; // a copy, which the main thread can't change
     {
-        AutoMutex lock(_imageLayersMutex);
+        std::lock_guard<std::mutex> lock(_imageLayersMutex);
         imageLayers = _imageLayers;
     }
     if (imageLayers.size()>0 && gHostIsNatron) {
@@ -818,7 +814,7 @@ bool ReadSVGPlugin::getFrameBounds(const std::string& filename,
     const bool statOK = (stat(filename.c_str(), &st) == 0);
     bool cached = false;
     if (statOK) {
-        AutoMutex lock(_canvasSizeMutex);
+        std::lock_guard<std::mutex> lock(_canvasSizeMutex);
         if (_canvasSize.filename == filename && _canvasSize.dpi == dpi && _canvasSize.sameFile(st)) {
             width = _canvasSize.width;
             height = _canvasSize.height;
@@ -840,7 +836,7 @@ bool ReadSVGPlugin::getFrameBounds(const std::string& filename,
         height = canvas.height;
 
         if (statOK) {
-            AutoMutex lock(_canvasSizeMutex);
+            std::lock_guard<std::mutex> lock(_canvasSizeMutex);
             _canvasSize.filename = filename;
             _canvasSize.dpi = dpi;
             _canvasSize.setFile(st);
@@ -871,7 +867,7 @@ bool ReadSVGPlugin::getFrameBounds(const std::string& filename,
 void
 ReadSVGPlugin::clearAnyCache()
 {
-    AutoMutex lock(_canvasSizeMutex);
+    std::lock_guard<std::mutex> lock(_canvasSizeMutex);
     _canvasSize = CanvasSize();
 }
 

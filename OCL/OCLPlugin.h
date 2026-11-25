@@ -22,7 +22,6 @@
 #include "ofxsImageEffect.h"
 #include "ofxsMacros.h"
 #include "ofxsCoords.h"
-#include "ofxsMultiThread.h"
 // std::mutex rather than the host's: some OFX hosts have no mutexes in the MT-Suite (e.g. Sony Catalyst Edit)
 #include <mutex>
 #include <cstring>
@@ -34,9 +33,6 @@
 #else
 #include <CL/cl.hpp>
 #endif
-
-typedef std::mutex OCLMutex;
-typedef std::lock_guard<std::mutex> OCLAutoMutex;
 
 #define kParamOCLDevice "device"
 #define kParamOCLDeviceLabel "OpenCL Device"
@@ -71,7 +67,7 @@ protected:
 
     // Set up by setupContext(), possibly while renders run: only access them
     // with _setupMutex held (render() copies the handles at start).
-    OCLMutex _setupMutex;
+    std::mutex _setupMutex;
     cl::Device _clDevice;
     cl::Context _context;
     cl::Program _program;
@@ -177,7 +173,7 @@ void OCLPluginHelper<SupportsRenderScale>::render(const OFX::RenderArguments &ar
     cl::Program program;
     std::string setupError;
     {
-        OCLAutoMutex lock(_setupMutex);
+        std::lock_guard<std::mutex> lock(_setupMutex);
         device = _clDevice;
         context = _context;
         program = _program;
