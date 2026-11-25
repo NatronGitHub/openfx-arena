@@ -627,18 +627,19 @@ endif()
                 "${_hd}/hostDemoHostDescriptor.cpp" "${_hd}/hostDemoParamInstance.cpp")
             target_include_directories(reader_window PRIVATE "${_hd}")
             target_link_libraries(reader_window PRIVATE OfxHost)
+            # the bundle has ReadPDF only with OFX_LICENSE=GPL
+            set(_readpdf OFF)
+            if(OFX_LICENSE STREQUAL "GPL")
+                set(_readpdf ON)
+            endif()
             add_test(NAME reader_window COMMAND "${CMAKE_COMMAND}"
-                -DREADER_WINDOW=$<TARGET_FILE:reader_window> -DPLUGIN_PATH=${OFX_PLUGIN_BUILD_DIR}
+                -DREADER_WINDOW=$<TARGET_FILE:reader_window> -DPLUGIN_PATH=${OFX_PLUGIN_BUILD_DIR} -DREADPDF=${_readpdf}
                 -DSAMPLES=${_samples} -DOCIO=${CMAKE_CURRENT_SOURCE_DIR}/tests/hostdemo/config.ocio
                 -DWORK=${CMAKE_CURRENT_BINARY_DIR}/reader-window
                 -P "${CMAKE_CURRENT_SOURCE_DIR}/tests/readerwindow/run.cmake")
 
             # the readers on malformed and missing files (tests/readermalformed, #128, #129): each
             # must fail cleanly, with an error and its message, without crashing
-            set(_readpdf OFF)
-            if(OFX_LICENSE STREQUAL "GPL")
-                set(_readpdf ON)
-            endif()
             add_test(NAME reader_malformed COMMAND "${CMAKE_COMMAND}"
                 -DHOSTDEMO=$<TARGET_FILE:hostDemo> -DPLUGIN_PATH=${OFX_PLUGIN_BUILD_DIR} -DREADPDF=${_readpdf}
                 -DSAMPLES=${_samples} -DOCIO=${CMAKE_CURRENT_SOURCE_DIR}/tests/hostdemo/config.ocio
