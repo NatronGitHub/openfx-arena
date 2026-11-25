@@ -57,13 +57,13 @@ namespace OCIO = OCIO_NAMESPACE;
 
 OFXS_NAMESPACE_ANONYMOUS_ENTER
 
-// The canvas size (the image element's w and h) of a parsed copy of stack.xml, and the x,y offset
+// The canvas height (the image element's h) of a parsed copy of stack.xml, and the x,y offset
 // (from the top-left corner of the canvas) of the layer whose src is layerFile (0,0 if there is
-// none, e.g. mergedimage.png).
+// none, e.g. mergedimage.png). OFX's y goes up: only the height is needed to place the layer.
 static void
-getLayerGeometry(const std::string& xml, const std::string& layerFile, int* canvasWidth, int* canvasHeight, int* x, int* y)
+getLayerGeometry(const std::string& xml, const std::string& layerFile, int* canvasHeight, int* x, int* y)
 {
-    *canvasWidth = *canvasHeight = *x = *y = 0;
+    *canvasHeight = *x = *y = 0;
     if (xml.empty()) {
         return;
     }
@@ -86,11 +86,8 @@ getLayerGeometry(const std::string& xml, const std::string& layerFile, int* canv
                 continue;
             }
             if (node == root && !xmlStrcmp(node->name, (const xmlChar*)"image")) {
-                xmlChar* w = xmlGetProp(node, (const xmlChar*)"w");
                 xmlChar* h = xmlGetProp(node, (const xmlChar*)"h");
-                *canvasWidth = ArenaZip::parseInt(w);
                 *canvasHeight = ArenaZip::parseInt(h);
-                xmlFree(w);
                 xmlFree(h);
             } else if (!layerFound && !xmlStrcmp(node->name, (const xmlChar*)"layer")) {
                 xmlChar* src = xmlGetProp(node, (const xmlChar*)"src");
@@ -412,9 +409,8 @@ OpenRasterPlugin::decodePlane(const std::string& filename, OfxTime /*time*/, int
 
     int width = 0;
     int height = 0;
-    // the canvas size and the layer offset in stack.xml, read from the archive that the layer is
+    // the canvas height and the layer offset in stack.xml, read from the archive that the layer is
     // decoded from
-    int canvasWidth = 0;
     int canvasHeight = 0;
     int offsetX = 0;
     int offsetY = 0;
@@ -436,7 +432,7 @@ OpenRasterPlugin::decodePlane(const std::string& filename, OfxTime /*time*/, int
             }
         }
         if (buffer) {
-            getLayerGeometry(ArenaZip::readEntry(archive.get(), "stack.xml", ArenaZip::kMaxXMLSize), imageLayers[layer][1], &canvasWidth, &canvasHeight, &offsetX, &offsetY);
+            getLayerGeometry(ArenaZip::readEntry(archive.get(), "stack.xml", ArenaZip::kMaxXMLSize), imageLayers[layer][1], &canvasHeight, &offsetX, &offsetY);
         }
     }
 
