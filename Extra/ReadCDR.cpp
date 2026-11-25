@@ -122,7 +122,6 @@ ReadCDRPlugin::readSVG(const std::string& filename)
 }
 
 // An rsvg handle on the SVG document svg. Throws, with a persistent message, if it can't be read.
-// The GError is freed (it was leaked, #132).
 Arena::GObjectPtr<RsvgHandle>
 ReadCDRPlugin::openSVG(const std::string& svg)
 {
@@ -188,8 +187,7 @@ ReadCDRPlugin::decode(const std::string& filename,
 
     // The whole drawing is rendered, at (0,0,width,height) as in getFrameBounds(), and only the
     // part of renderWindow that it covers is copied: a host may ask for a render window smaller
-    // than the image, even without tiles (#105). This used to fail unless renderWindow was the
-    // drawing.
+    // than the image, even without tiles (#105).
     OfxRectI image;
     image.x1 = 0;
     image.y1 = 0;
@@ -198,7 +196,6 @@ ReadCDRPlugin::decode(const std::string& filename,
 
     // An empty canvas (a zero width or height) gave 0 / 0 = NaN scales below, which only
     // cairo's check of the matrix turned into the "Render failed" error: fail here instead.
-    // (width or height 0 used to fail as "Image don't match RenderWindow")
     if (imageWidth <= 0. || imageHeight <= 0. || width <= 0 || height <= 0) {
         setPersistentMessage(OFX::Message::eMessageError, "", "Render failed");
         OFX::throwSuiteStatusException(kOfxStatErrFormat);

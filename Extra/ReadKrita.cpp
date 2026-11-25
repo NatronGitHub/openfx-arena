@@ -192,7 +192,7 @@ ReadKritaPlugin::decode(const std::string& filename,
     // read from the same open archive (#108): no second zip_open, and the size is the one of the
     // file that the PNG comes from. Krita's y goes down from the top, OFX's goes up from the
     // bottom, so the PNG is anchored at the top-left corner: a PNG of another size than the image
-    // is clamped, with transparent black around it (it used to fail with "Unable to read image").
+    // is clamped, with transparent black around it.
     if (docHeight <= 0) {
         docHeight = height; // no size in maindoc.xml: the PNG is the image
     }
@@ -205,8 +205,7 @@ ReadKritaPlugin::decode(const std::string& filename,
     // buffer (lodepng's RGBA, 8 bits, packed, top-down) covers image: copy renderWindow as ReadSVG.cpp does
     OfxRectI copied;
     if (clipToFile(renderWindow, image, pixelData, bounds, pixelComponentCount, OFX::eBitDepthFloat, rowBytes, &copied)) {
-        // GenericReader's conversion reads the top-down buffer directly (no transposed copy), with the
-        // formula of the copy that it replaces (x * (1.f / 255)), so the output is the same
+        // GenericReader's conversion reads the top-down 8-bit buffer directly (x * (1.f / 255))
         convertDepthAndComponents(buffer.get(), copied, renderScale, image, OFX::ePixelComponentRGBA, OFX::eBitDepthUByte, width * 4,
                                   pixelData, bounds, pixelComponents, rowBytes);
     }

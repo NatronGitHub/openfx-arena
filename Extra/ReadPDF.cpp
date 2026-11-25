@@ -215,7 +215,6 @@ void ReadPDFPlugin::restoreStateFromParams()
     int startingTime = getStartingTime();
     std::string filename;
     OfxStatus st = getFilenameAtTime(startingTime, &filename);
-    // && (was ||): with no file set, this tried to open "" and reported an error
     if ( st == kOfxStatOK && !filename.empty() ) {
         const Arena::GObjectPtr<PopplerDocument> document = openDocument(filename);
         if (!document) {
@@ -384,8 +383,7 @@ ReadPDFPlugin::decodePlane(const std::string& filename, OfxTime time, int /*view
 
     // The whole page is rendered, at (0,0,width,height) as in getFrameBounds(), and only the part
     // of renderWindow that it covers is copied: a host may ask for a render window smaller than
-    // the image, even without tiles (#105). This used to fail unless renderWindow was the page.
-    // (an empty page used to fail as "Image don't match RenderWindow")
+    // the image, even without tiles (#105).
     if (width <= 0 || height <= 0) {
         setPersistentMessage(OFX::Message::eMessageError, "", "Render failed");
         OFX::throwSuiteStatusException(kOfxStatErrFormat);
@@ -487,7 +485,7 @@ bool ReadPDFPlugin::getFrameBounds(const std::string& filename,
         const Arena::GObjectPtr<PopplerPage> page(poppler_document_get_page(document.get(), i));
         if (!page) {
             if (i == 0) {
-                break; // no page 0 fails, as before
+                break; // no page 0 fails
             }
             continue;
         }
@@ -497,7 +495,7 @@ bool ReadPDFPlugin::getFrameBounds(const std::string& filename,
         if (i == 0) {
             hasPage = true;
             if (w <= 0 || h <= 0) {
-                break; // an empty or too large page 0 fails, as before
+                break; // an empty or too large page 0 fails
             }
         }
         width = std::max(width, w);

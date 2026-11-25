@@ -277,7 +277,7 @@ void ReadSVGPlugin::restoreStateFromParams()
     int startingTime = getStartingTime();
     std::string filename;
     OfxStatus st = getFilenameAtTime(startingTime, &filename);
-    // always, so that clearing the file also clears its layers (it used to parse "")
+    // always, so that clearing the file also clears its layers
     setImageLayers(st == kOfxStatOK ? filename : std::string());
 
     // The file may already be set at instance creation, without a later instanceChanged: on project
@@ -684,7 +684,7 @@ ReadSVGPlugin::decodePlane(const std::string& filename, OfxTime time, int /*view
     height = canvas.height;
     // The whole canvas is rendered, at (0,0,width,height) as in getFrameBounds(), and only the part
     // of renderWindow that it covers is copied: a host may ask for a render window smaller than
-    // the image, even without tiles (#105). This used to fail unless renderWindow was the canvas.
+    // the image, even without tiles (#105).
     OfxRectI image;
     image.x1 = 0;
     image.y1 = 0;
@@ -693,7 +693,6 @@ ReadSVGPlugin::decodePlane(const std::string& filename, OfxTime time, int /*view
 
     // An empty canvas (a zero width or height) gave 0 / 0 = NaN scales below, which only
     // cairo's check of the matrix turned into the "Cairo Render failed" error: fail here instead.
-    // (width or height 0 used to fail as "Image don't match RenderWindow")
     if (canvas.imageWidth <= 0. || canvas.imageHeight <= 0. || width <= 0 || height <= 0) {
         setPersistentMessage(OFX::Message::eMessageError, "", "Cairo Render failed");
         OFX::throwSuiteStatusException(kOfxStatErrFormat);
@@ -976,7 +975,7 @@ ReadSVGPluginFactory<majorVersion>::describe(OFX::ImageEffectDescriptor &desc)
     // Natron runs readers inside its Read node, which forwards the overlay actions (hasOverlay, draw,
     // pen and key) to the reader from Natron#1284 (RB-2.6); released Natron 2.5 doesn't, so it
     // doesn't show this overlay. The params work everywhere.
-    // V2 (OFX 1.5 DrawSuite) on hosts with the DrawSuite, else V1 (OpenGL), as before.
+    // V2 (OFX 1.5 DrawSuite) on hosts with the DrawSuite, else V1 (OpenGL).
     // ReadSVG 3 returns above, without an overlay.
     ofxsSetOverlayInteractDescriptorV2(desc, new TransformOverlayDescriptorV2);
 }

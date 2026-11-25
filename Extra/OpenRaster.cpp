@@ -452,7 +452,7 @@ OpenRasterPlugin::decodePlane(const std::string& filename, OfxTime /*time*/, int
     // from the top-left corner of the canvas (GIMP and MyPaint crop the layers on save); the
     // merged image has no offset. OpenRaster's y goes down from the top, OFX's goes up from the
     // bottom, so the PNG covers (x, H-y-h)-(x+w, H-y), clamped to the canvas, and the rest is
-    // transparent black (such layers used to fail with "Unable to read image").
+    // transparent black.
     if (canvasHeight <= 0) {
         canvasHeight = height; // no size in stack.xml: the PNG is the canvas
     }
@@ -465,8 +465,7 @@ OpenRasterPlugin::decodePlane(const std::string& filename, OfxTime /*time*/, int
     // buffer (lodepng's RGBA, 8 bits, packed, top-down) covers image: copy renderWindow as ReadSVG.cpp does
     OfxRectI copied;
     if (clipToFile(renderWindow, image, pixelData, bounds, pixelComponentCount, OFX::eBitDepthFloat, rowBytes, &copied)) {
-        // GenericReader's conversion reads the top-down buffer directly (no transposed copy), with the
-        // formula of the copy that it replaces (x * (1.f / 255)), so the output is the same
+        // GenericReader's conversion reads the top-down 8-bit buffer directly (x * (1.f / 255))
         convertDepthAndComponents(buffer.get(), copied, renderScale, image, OFX::ePixelComponentRGBA, OFX::eBitDepthUByte, width * 4,
                                   pixelData, bounds, remappedComponents, rowBytes);
     }
@@ -550,7 +549,7 @@ void OpenRasterPlugin::restoreStateFromParams()
     std::string filename;
     OfxStatus st = getFilenameAtTime(startingTime, &filename);
     // always, so that clearing the file also clears its layers: readLayers() returns no layers
-    // for "" (it used to open it)
+    // for ""
     setImageLayers(st == kOfxStatOK ? filename : std::string());
 }
 
