@@ -88,12 +88,20 @@ jobs:
       - name: Build (debug, CMake)
         if: inputs.build-system == 'cmake'
         run: |
-          cmake -S . -B build-debug -DCMAKE_BUILD_TYPE=Debug -DOFX_CXX_STANDARD="${CXXSTD#c++}"
+          # BUILD_TESTING: for the debug-only checks below
+          cmake -S . -B build-debug -DCMAKE_BUILD_TYPE=Debug -DOFX_CXX_STANDARD="${CXXSTD#c++}" -DBUILD_TESTING=ON
           cmake --build build-debug --parallel 4
       - name: Load and render tests (ctest, hostDemo)
         # -V: print every test's output (the per-plug-in load and render results), not only on failure
         if: inputs.build-system == 'cmake'
         run: ctest --test-dir build -V --output-on-failure
+      - name: Debug load and render tests (ctest)
+        # only a debug build's Support library validates the properties and logs "ERROR : " lines,
+        # which these tests fail on; Linux only (the other jobs build no debug tests)
+        if: inputs.build-system == 'cmake'
+        run: |
+          ctest --test-dir build-debug --output-on-failure \
+            -R '^(load_Arena|render_Arena|reader_window|reader_malformed|render_Arena_mt_unload|readsvg_dpi)$'
       - name: Build (release, Make)
         if: inputs.build-system == 'make'
         run: make -j4 CONFIG=release CXX="g++ -std=$CXXSTD"
