@@ -70,7 +70,7 @@
 #define kPluginVersionMinorV6 17
 
 #define kSupportsTiles 0
-#define kSupportsMultiResolution 0
+#define kSupportsMultiResolution 1 // as Transform3x3Describe() sets anyway: the RoD may not be the project extent (Auto size, Canvas size), and render() takes the output image at any size and offset
 #define kSupportsRenderScale 1
 #define kRenderThreadSafety eRenderFullySafe
 

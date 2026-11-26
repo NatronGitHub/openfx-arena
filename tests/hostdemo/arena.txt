@@ -26,7 +26,8 @@ net.fxarena.openfx.Polaroid 2 filter
 net.fxarena.openfx.Polaroid 1 filter
 net.fxarena.openfx.Edges 3 filter
 net.fxarena.openfx.Edges 2 filter
-# infinite RoD with the default size (0x0, "project format"): give it a size
+# the default size (0x0, "project format") gives an infinite RoD (#256); then a custom size
+net.fxarena.openfx.Texture 3 general
 net.fxarena.openfx.Texture 3 general width=320 height=240
 net.fxarena.openfx.Tile 4 filter
 net.fxarena.openfx.Tile 3 filter
