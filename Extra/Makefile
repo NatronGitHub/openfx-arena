@@ -65,14 +65,6 @@ CXXFLAGS += $(POPPLER_CXXFLAGS)
 LINKFLAGS += $(POPPLER_LINKFLAGS)
 endif
 
-#PNGVERSION = a70c086077c0eaecbae3845e4da4424de5f43361
-
-#lodepng.cpp:
-#	curl -o $@ https://raw.githubusercontent.com/lvandeve/lodepng/$(PNGVERSION)/lodepng.cpp
-
-#lodepng.h:
-#	curl -o $@ https://raw.githubusercontent.com/lvandeve/lodepng/$(PNGVERSION)/lodepng.h
-
 $(OBJECTPATH)/lodepng.o: lodepng.cpp lodepng.h
 $(OBJECTPATH)/ReadKrita.o: ReadKrita.cpp lodepng.h
 $(OBJECTPATH)/OpenRaster.o: OpenRaster.cpp lodepng.h
