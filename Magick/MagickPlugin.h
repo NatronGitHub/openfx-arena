@@ -23,8 +23,6 @@
 
 #include <string>
 
-#include <string>
-
 #include "ofxsImageEffect.h"
 #include "ofxsMacros.h"
 #include "ofxsMultiThread.h"
@@ -43,8 +41,6 @@
 #define kParamVPixelLabel "Virtual Pixel"
 #define kParamVPixelHint "Virtual Pixel Method."
 #define kParamVPixelDefault 12
-
-#define MagickMemoryLimit 4200000000
 
 // A "static bool" defined in this header gave each translation unit its own
 // copy, and only MagickPlugin.cpp's copy was ever set, so plugins whose
@@ -92,8 +88,6 @@ public:
 
         // set ImageMagick resources
         magickInitialize();
-        //Magick::ResourceLimits::memory(MagickMemoryLimit);
-        //Magick::ResourceLimits::map(MagickMemoryLimit);
     }
 
     virtual void render(const OFX::RenderArguments &args) OVERRIDE FINAL;
