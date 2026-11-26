@@ -71,6 +71,9 @@
 #define kParamOpenMPDefault false
 
 using namespace OFX;
+
+OFXS_NAMESPACE_ANONYMOUS_ENTER
+
 static bool _hasOpenMP = false;
 
 class TilePlugin : public OFX::ImageEffect
@@ -477,3 +480,5 @@ mRegisterPluginFactoryInstance(p)
 // version 3, kept so that existing projects render as before
 static TilePluginFactory<3> p3(kPluginIdentifier, 2);
 mRegisterPluginFactoryInstance(p3)
+
+OFXS_NAMESPACE_ANONYMOUS_EXIT

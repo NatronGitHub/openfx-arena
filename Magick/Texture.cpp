@@ -78,6 +78,9 @@
 #define kParamGeneratorRangeHint "Time domain."
 
 using namespace OFX;
+
+OFXS_NAMESPACE_ANONYMOUS_ENTER
+
 static bool gHostIsNatron = false;
 static bool _hasOpenMP = false;
 
@@ -542,3 +545,5 @@ ImageEffect* TexturePluginFactory::createInstance(OfxImageEffectHandle handle, C
 
 static TexturePluginFactory p(kPluginIdentifier, kPluginVersionMajor, kPluginVersionMinor);
 mRegisterPluginFactoryInstance(p)
+
+OFXS_NAMESPACE_ANONYMOUS_EXIT

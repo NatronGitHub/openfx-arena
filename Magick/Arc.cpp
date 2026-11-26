@@ -80,6 +80,8 @@
 
 using namespace OFX;
 
+OFXS_NAMESPACE_ANONYMOUS_ENTER
+
 static bool _hasOpenMP = false;
 
 class ArcPlugin : public OFX::ImageEffect
@@ -508,3 +510,5 @@ mRegisterPluginFactoryInstance(p)
 // version 4, kept so that existing projects render as before
 static ArcPluginFactory<4> p4(kPluginIdentifier, 2);
 mRegisterPluginFactoryInstance(p4)
+
+OFXS_NAMESPACE_ANONYMOUS_EXIT

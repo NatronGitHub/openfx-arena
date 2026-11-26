@@ -160,6 +160,9 @@
 #define kParamOpenMPDefault false
 
 using namespace OFX;
+
+OFXS_NAMESPACE_ANONYMOUS_ENTER
+
 static bool gHostIsNatron = false;
 static bool _hasOpenMP = false;
 
@@ -1043,3 +1046,5 @@ ImageEffect* TextPluginFactory::createInstance(OfxImageEffectHandle handle, Cont
 
 static TextPluginFactory p(kPluginIdentifier, kPluginVersionMajor, kPluginVersionMinor);
 mRegisterPluginFactoryInstance(p)
+
+OFXS_NAMESPACE_ANONYMOUS_EXIT
