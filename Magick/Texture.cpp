@@ -196,7 +196,8 @@ void TexturePlugin::render(const OFX::RenderArguments &args)
     checkBadRenderScaleOrField(dstImg, args);
 
     OFX::BitDepthEnum dstBitDepth = dstImg->getPixelDepth();
-    if (dstBitDepth != OFX::eBitDepthFloat && dstBitDepth != OFX::eBitDepthUShort && dstBitDepth != OFX::eBitDepthUByte) {
+    // only Float is declared, and the image is written as floats below
+    if (dstBitDepth != OFX::eBitDepthFloat) {
         OFX::throwSuiteStatusException(kOfxStatErrFormat);
         return;
     }
