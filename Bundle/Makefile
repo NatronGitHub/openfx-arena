@@ -126,9 +126,6 @@ RESOURCES += \
     ../Magick/Morphology/net.fxarena.openfx.Morphology.png \
     ../Magick/Morphology/net.fxarena.openfx.Morphology.svg
 
-    #../Magick/net.fxarena.openfx.Text.png \
-    #../Magick/net.fxarena.openfx.Text.svg
-
 ifneq ($(LEGACYIM),1)
 RESOURCES += \
     ../Magick/net.fxarena.openfx.Sketch.png \
@@ -154,11 +151,6 @@ VPATH += \
 ifeq ($(AUDIO), ON)
     VPATH += $(SRCDIR)/Audio
 endif
-
-CXXFLAGS += \
-    -I$(SRCDIR)/Extra \
-    -I$(SRCDIR)/Magick \
-    -I$(SRCDIR)/lodepng
 
 include $(SRCDIR)/Makefile.master
 include $(SRCDIR)/Makefile.io
@@ -204,19 +196,6 @@ ifeq ($(IM),68)
 CXXFLAGS += -DNOMAGICKSEED
 endif
 
-
-# lodepng version, see https://github.com/lvandeve/lodepng
-# a70c086077c0eaecbae3845e4da4424de5f43361 is Apr 21, 2016
-# c7bb19ad54a53f0d9917da37de7288b1aadf6d0f is Oct 23, 2017
-# d03d7df9888aafb9c7f615895c34b05acf033908 is Mar 26, 2018
-# bd8f274fb51ef18b6d26b5f106ae4bef2150622e is Jun 24, 2018
-#PNGVERSION = bd8f274fb51ef18b6d26b5f106ae4bef2150622e
-
-#lodepng.cpp:
-#	curl -o $@ https://raw.githubusercontent.com/lvandeve/lodepng/$(PNGVERSION)/lodepng.cpp
-
-#lodepng.h:
-#	curl -o $@ https://raw.githubusercontent.com/lvandeve/lodepng/$(PNGVERSION)/lodepng.h
 
 $(OBJECTPATH)/lodepng.o: lodepng.cpp lodepng.h
 $(OBJECTPATH)/ReadKrita.o: ReadKrita.cpp lodepng.h

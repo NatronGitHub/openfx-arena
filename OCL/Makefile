@@ -47,16 +47,6 @@ VPATH += \
     Twirl \
     CLFilter
 
-CXXFLAGS += \
-    -IBulge \
-    -ICartoon \
-    -IDuotone \
-    -IEdge \
-    -IRipple \
-    -ISharpen \
-    -ITwirl \
-    -ICLFilter
-
 SRCDIR = ..
 include $(SRCDIR)/Makefile.master
 
