@@ -861,37 +861,6 @@ double TextFXPlugin::getFontSize(double time, bool autoSize) const
     return _fontSize->getValueAtTime(time);
 }
 
-// An edit block that does nothing if the host does not support them
-// (paramEditBegin/paramEditEnd are optional in the parameter suite).
-class OptionalEditBlock
-{
-public:
-    OptionalEditBlock(OFX::ParamSet& paramSet, const std::string& name)
-        : _paramSet(paramSet)
-        , _open(false)
-    {
-        try {
-            _paramSet.beginEditBlock(name);
-            _open = true;
-        } catch (const std::exception&) {
-        }
-    }
-
-    ~OptionalEditBlock()
-    {
-        if (_open) {
-            try {
-                _paramSet.endEditBlock();
-            } catch (const std::exception&) {
-            }
-        }
-    }
-
-private:
-    OFX::ParamSet& _paramSet;
-    bool _open;
-};
-
 // Number of keyframes, 0 if the host cannot tell (the keyframe functions of the parameter
 // suite are optional).
 static int
@@ -1920,7 +1889,7 @@ void TextFXPlugin::changedParam(const OFX::InstanceChangedArgs &args, const std:
     } else if (paramName == kParamSizeUnit) {
         const int sizeUnit = _sizeUnit->getValueAtTime(args.time);
         if ( sizeUnit != _sizeUnitState->getValue() ) {
-            OptionalEditBlock eb(*this, "Convert font size");
+            EditBlock eb(*this, "Convert font size", EditBlock::eBeginNow, EditBlock::eHostErrorsIgnore);
             convertSizeUnit(args.time, sizeUnit);
             // The size and the relative size are separate params, so the new unit applies
             // even if the size could not be converted (e.g. animated).
@@ -1930,7 +1899,7 @@ void TextFXPlugin::changedParam(const OFX::InstanceChangedArgs &args, const std:
     } else if (paramName == kParamPositionRelative) {
         const bool relative = _positionRelative->getValueAtTime(args.time);
         if ( relative != _positionRelativeState->getValue() ) {
-            OptionalEditBlock eb(*this, "Convert position");
+            EditBlock eb(*this, "Convert position", EditBlock::eBeginNow, EditBlock::eHostErrorsIgnore);
             // Keep the state consistent with the Center: change it only if the Center was
             // converted (it is not if the frame is empty).
             if ( convertPositionRelative(args.time, relative) ) {
