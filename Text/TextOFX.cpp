@@ -27,13 +27,12 @@
 #include "ofxsTransformInteract.h"
 
 #include <climits>
-#include <iostream>
 #include <cmath>
-#include <cstring>
 #include <algorithm>
 #include <fstream>
 #include <memory>
 #include <mutex>
+#include <sstream>
 
 #ifdef __APPLE__
 #ifndef GL_SILENCE_DEPRECATION
@@ -53,7 +52,7 @@
 
 #include "fx.h"
 #include "PackedImage.h"
-#include "RichText.h" // common text related functions (will be renamed to CommonText in the future)
+#include "RichText.h" // common text related functions
 
 #define kPluginName "TextOFX"
 #define kPluginGrouping "Draw"
@@ -1956,7 +1955,6 @@ bool TextFXPlugin::getRegionOfDefinition(const OFX::RegionOfDefinitionArguments 
                 width += 2 * margin;
                 height += 2 * margin;
             } else {
-                /// WIP (v6)
                 width = width+(strokeWidth*2);
                 height = height+(strokeWidth/2);
             }
@@ -1971,8 +1969,6 @@ bool TextFXPlugin::getRegionOfDefinition(const OFX::RegionOfDefinitionArguments 
         rod.y2 = height;
     }
     else {
-        //rod.x1 = rod.y1 = kOfxFlagInfiniteMin;
-        //rod.x2 = rod.y2 = kOfxFlagInfiniteMax;
         return false;
     }
 
@@ -1984,9 +1980,6 @@ bool TextFXPlugin::getTimeDomain(OfxRangeD &range)
     // this should only be called in the general context, ever!
     if (getContext() == eContextGeneral) {
         assert(_range);
-        // how many frames on the input clip
-        //OfxRangeD srcRange = _srcClip->getFrameRange();
-
         int min, max;
         _range->getValue(min, max);
         range.min = min;
