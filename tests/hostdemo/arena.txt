@@ -11,6 +11,8 @@ net.fxarena.openfx.Text 6 filter
 # Auto size with a stroke, which the version 7 RoD fits (#135)
 net.fxarena.openfx.Text 7 filter -s autoSize=1 -s strokeSize=4
 net.fxarena.openfx.Text 6 filter -s autoSize=1 -s strokeSize=4
+# Style Bold with the default Weight renders bold in version 7 (#247)
+net.fxarena.openfx.Text 7 filter -s style=1
 skip fr.inria.openfx.ReadCDR 1 no CorelDRAW sample: libcdr only reads them, and a hand-written .cdr is not simple
 net.fxarena.openfx.ReadSVG 4 general -s filename=@SAMPLES@/sample.svg
 net.fxarena.openfx.ReadSVG 3 general -s filename=@SAMPLES@/sample.svg

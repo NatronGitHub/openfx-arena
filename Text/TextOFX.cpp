@@ -1277,8 +1277,11 @@ TextFXPlugin::makeLayout(cairo_t* cr, double time, bool autoSize, const OfxPoint
         desc = pango_font_description_new();
         pango_font_description_set_family( desc, font.c_str() );
         if (style == 1) {
-            // as "bold" in v6's string; setFontDesc() replaces it with the Weight param
-            pango_font_description_set_weight(desc, PANGO_WEIGHT_BOLD);
+            // Style Bold applies when Weight is at its default (Normal); another Weight wins.
+            // (v6's "bold" in its font string is always replaced by the Weight in setFontDesc().)
+            if (weight == kParamWeightDefault) {
+                weight = 8; // Bold
+            }
         } else if (style == 2) {
             pango_font_description_set_style(desc, PANGO_STYLE_ITALIC);
         }
