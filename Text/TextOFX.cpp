@@ -1127,19 +1127,6 @@ TextFXPlugin::makeLayout(cairo_t* cr, double time, bool autoSize, const OfxPoint
         font = kParamFontNameDefault;
     }
 
-    std::ostringstream pangoFont;
-    pangoFont << font;
-    switch(style) {
-    case 0:
-        pangoFont << " " << "normal";
-        break;
-    case 1:
-        pangoFont << " " << "bold";
-        break;
-    case 2:
-        pangoFont << " " << "italic";
-        break;
-    }
     double size; // in points, an integer
     if (getSizeUnit(time) == eSizeUnitPixels) {
         // unchanged, for compatibility
@@ -1148,7 +1135,6 @@ TextFXPlugin::makeLayout(cairo_t* cr, double time, bool autoSize, const OfxPoint
         // Pango treats a size of 0 as unset
         size = (std::max)(1., std::floor(getFontSize(time, autoSize) * renderScale.x + 0.5));
     }
-    pangoFont << " " << size;
 
     // the layout's context takes the transform and the font options of cr now
     std::unique_ptr<PangoLayout, PangoLayoutDeleter> layoutOwner( pango_cairo_create_layout(cr) );
@@ -1252,7 +1238,21 @@ TextFXPlugin::makeLayout(cairo_t* cr, double time, bool autoSize, const OfxPoint
         }
         pango_font_description_set_size( desc, static_cast<int>(size * PANGO_SCALE) );
     } else {
-        // v6
+        // v6: "family style size"
+        std::ostringstream pangoFont;
+        pangoFont << font;
+        switch(style) {
+        case 0:
+            pangoFont << " " << "normal";
+            break;
+        case 1:
+            pangoFont << " " << "bold";
+            break;
+        case 2:
+            pangoFont << " " << "italic";
+            break;
+        }
+        pangoFont << " " << size;
         desc = pango_font_description_from_string( pangoFont.str().c_str() );
     }
     setFontDesc(stretch, weight, desc);
