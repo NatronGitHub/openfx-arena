@@ -319,7 +319,7 @@ bool stringCompare(const std::string & l, const std::string & r) {
 }
 
 static
-std::list<std::string> _genFonts(OFX::ChoiceParam *fontName, OFX::StringParam *fontOverride, bool fontOverrideDir, FcConfig *fontConfig, bool properMenu, std::string fontNameDefault, std::string fontNameAltDefault)
+std::list<std::string> _genFonts(OFX::ChoiceParam *fontName, OFX::StringParam *fontOverride, FcConfig *fontConfig, bool properMenu, const std::string& fontNameDefault, const std::string& fontNameAltDefault)
 {
     int defaultFont = -1; // -1: not found
     int altFont = -1;
@@ -336,11 +336,7 @@ std::list<std::string> _genFonts(OFX::ChoiceParam *fontName, OFX::StringParam *f
         fontOverride->getValue(fontCustom);
         if (!fontCustom.empty()) {
             const FcChar8 * fileCustom = (const FcChar8 *)fontCustom.c_str();
-            if (!fontOverrideDir) {
-                FcConfigAppFontAddFile(fontConfig,fileCustom);
-            } else {
-                FcConfigAppFontAddDir(fontConfig, fileCustom);
-            }
+            FcConfigAppFontAddFile(fontConfig,fileCustom);
         }
     }
 
@@ -685,7 +681,7 @@ TextFXPlugin::TextFXPlugin(OfxImageEffectHandle handle, bool v7)
 
     _fcConfig = FcInitLoadConfigAndFonts();
 
-    _genFonts(_fontName, _fontOverride, false, _fcConfig, gHostIsNatron, kParamFontNameDefault, kParamFontNameAltDefault);
+    _genFonts(_fontName, _fontOverride, _fcConfig, gHostIsNatron, kParamFontNameDefault, kParamFontNameAltDefault);
 
     // Setup selected font
     std::string font, fontName;
@@ -1871,7 +1867,7 @@ void TextFXPlugin::changedParam(const OFX::InstanceChangedArgs &args, const std:
         // only the current custom font (_genFonts() adds it), as the constructor, and swap it in.
         FcConfig* newConfig = FcInitLoadConfigAndFonts();
         if (newConfig) {
-            _genFonts(_fontName, _fontOverride, false, newConfig, gHostIsNatron, font, kParamFontNameAltDefault);
+            _genFonts(_fontName, _fontOverride, newConfig, gHostIsNatron, font, kParamFontNameAltDefault);
             FcConfig* oldConfig;
             {
                 std::lock_guard<std::mutex> lock(_fcConfigMutex);
@@ -2502,7 +2498,7 @@ TextFXPluginFactory<majorVersion>::describeInContext(OFX::ImageEffectDescriptor 
             param->setCascading(OFX::getImageEffectHostDescription()->supportsCascadingChoices);
         }
         std::list<std::string>::const_iterator font;
-        std::list<std::string> fonts = _genFonts(NULL, NULL, false, NULL, false, kParamFontNameDefault, kParamFontNameAltDefault);
+        std::list<std::string> fonts = _genFonts(NULL, NULL, NULL, false, kParamFontNameDefault, kParamFontNameAltDefault);
         int defaultFont = -1; // -1: not found
         int altFont = -1;
         int fontIndex = 0; // the index of the next option
