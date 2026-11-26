@@ -136,6 +136,7 @@ enum SizeUnitEnum
 #define kParamStyle "style"
 #define kParamStyleLabel "Style"
 #define kParamStyleHint "Font style."
+#define kParamStyleHintV7 "Font style. Bold applies when Weight is at its default (Normal); another Weight wins."
 #define kParamStyleDefault 0
 
 #define kParamTextColor "color"
@@ -185,6 +186,7 @@ enum SizeUnitEnum
 #define kParamWeightLabel "Weight"
 #define kParamWeightHint "The weight field specifies how bold or light the font should be."
 #define kParamWeightDefault 5
+#define kParamWeightBold 8 // the "Bold" option of the Weight menu
 
 #define kParamStrokeColor "strokeColor"
 #define kParamStrokeColorLabel "Stroke color"
@@ -1221,7 +1223,7 @@ TextFXPlugin::makeLayout(cairo_t* cr, double time, bool autoSize, const OfxPoint
             // Style Bold applies when Weight is at its default (Normal); another Weight wins.
             // (v6's "bold" in its font string is always replaced by the Weight in setFontDesc().)
             if (weight == kParamWeightDefault) {
-                weight = 8; // Bold
+                weight = kParamWeightBold;
             }
         } else if (style == 2) {
             pango_font_description_set_style(desc, PANGO_STYLE_ITALIC);
@@ -2700,7 +2702,7 @@ TextFXPluginFactory<majorVersion>::describeInContext(OFX::ImageEffectDescriptor 
     {
         ChoiceParamDescriptor *param = desc.defineChoiceParam(kParamStyle);
         param->setLabel(kParamStyleLabel);
-        param->setHint(kParamStyleHint);
+        param->setHint(majorVersion >= 7 ? kParamStyleHintV7 : kParamStyleHint);
         param->appendOption("Normal");
         param->appendOption("Bold");
         param->appendOption("Italic");
