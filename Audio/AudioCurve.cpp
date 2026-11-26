@@ -370,8 +370,9 @@ void AudioCurvePlugin::setCurveLength()
             setPersistentMessage(Message::eMessageWarning, "", "Unknown audio length");
         } else {
             uint64_t ws = audio->signal.length/audio->signal.channels;
-            // ws and rate come from the file header: clamp to int
-            _srcFrames->setValue(startFrame, static_cast<int>(std::min(std::floor((double)ws/audio->signal.rate) * fps, double(INT_MAX))));
+            // ws and rate come from the file header: clamp to int.
+            // Multiply by fps before flooring, so the range is not rounded down to whole seconds.
+            _srcFrames->setValue(startFrame, static_cast<int>(std::min(std::floor((double)ws * fps / audio->signal.rate), double(INT_MAX))));
         }
     } else {
         setPersistentMessage(Message::eMessageWarning, "", "Failed to read the file");
