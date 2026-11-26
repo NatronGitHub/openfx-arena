@@ -1090,13 +1090,9 @@ TextFXPlugin::makeLayout(cairo_t* cr, double time, bool autoSize, const OfxPoint
         int fontCount = _fontName->getNOptions();
         if (fontID < fontCount) {
             _fontName->getOption(fontID, font);
-            // cascade menu
-            if (font.length() > 2 && font[1] == '/' && gHostIsNatron) {
-                font.erase(0,2);
-            }
        }
     }
-    // cascade menu
+    // cascade menu (the Font family string or the menu option)
     if (font.length() > 2 && font[1] == '/' && gHostIsNatron) {
         font.erase(0,2);
     }
