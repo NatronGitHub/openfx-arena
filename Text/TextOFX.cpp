@@ -314,11 +314,6 @@ struct PangoLayoutDeleter { void operator()(PangoLayout* p) const { g_object_unr
 struct PangoAttrListDeleter { void operator()(PangoAttrList* p) const { pango_attr_list_unref(p); } };
 
 static
-bool stringCompare(const std::string & l, const std::string & r) {
-    return (l==r);
-}
-
-static
 std::list<std::string> _genFonts(OFX::ChoiceParam *fontName, OFX::StringParam *fontOverride, FcConfig *fontConfig, bool properMenu, const std::string& fontNameDefault, const std::string& fontNameAltDefault)
 {
     int defaultFont = -1; // -1: not found
@@ -367,7 +362,7 @@ std::list<std::string> _genFonts(OFX::ChoiceParam *fontName, OFX::StringParam *f
     }
 
     fonts.sort();
-    fonts.erase(unique(fonts.begin(), fonts.end(), stringCompare), fonts.end());
+    fonts.unique();
 
     if (fontName) {
         fontName->resetOptions();
