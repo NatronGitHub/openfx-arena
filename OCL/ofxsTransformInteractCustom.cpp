@@ -27,7 +27,7 @@
 
 #include <memory>
 #include <cmath>
-#include <cfloat> // DBL_MAX
+#include <limits>
 #include <algorithm>
 
 #include "ofxsMatrix2D.h"
@@ -62,7 +62,7 @@ ofxsTransformDescribeParams(OFX::ImageEffectDescriptor &desc,
         ofxsSetDefaultCoordinateSystemNormalised(*param); // OFX 1.1 hosts: see the plug-in constructors
         //param->setDimensionLabels("x","y");
         param->setDefault(0, 0);
-        param->setRange(-DBL_MAX, -DBL_MAX, DBL_MAX, DBL_MAX); // Resolve requires range and display range or values are clamped to (-1,1)
+        param->setRange(-std::numeric_limits<double>::max(), -std::numeric_limits<double>::max(), std::numeric_limits<double>::max(), std::numeric_limits<double>::max()); // Resolve requires range and display range or values are clamped to (-1,1)
         param->setDisplayRange(-10000, -10000, 10000, 10000); // Resolve requires display range or values are clamped to (-1,1)
         param->setIncrement(10.);
         if (group) {
@@ -79,7 +79,7 @@ ofxsTransformDescribeParams(OFX::ImageEffectDescriptor &desc,
         param->setLabel(kParamTransformRotateLabel);
         param->setDoubleType(eDoubleTypeAngle);
         param->setDefault(rotateDefault);
-        param->setRange(-DBL_MAX, DBL_MAX); // Resolve requires range and display range or values are clamped to (-1,1)
+        param->setRange(-std::numeric_limits<double>::max(), std::numeric_limits<double>::max()); // Resolve requires range and display range or values are clamped to (-1,1)
         param->setDisplayRange(-180, 180);
         param->setIncrement(0.1);
         if (group) {
@@ -133,7 +133,7 @@ ofxsTransformDescribeParams(OFX::ImageEffectDescriptor &desc,
         param->setDoubleType(eDoubleTypeXYAbsolute);
         ofxsSetDefaultCoordinateSystemNormalised(*param); // OFX 1.1 hosts: see the plug-in constructors
         param->setDefault(0.5, 0.5);
-        param->setRange(-DBL_MAX, -DBL_MAX, DBL_MAX, DBL_MAX); // Resolve requires range and display range or values are clamped to (-1,1)
+        param->setRange(-std::numeric_limits<double>::max(), -std::numeric_limits<double>::max(), std::numeric_limits<double>::max(), std::numeric_limits<double>::max()); // Resolve requires range and display range or values are clamped to (-1,1)
         param->setDisplayRange(-10000, -10000, 10000, 10000); // Resolve requires display range or values are clamped to (-1,1)
         param->setIncrement(1.);
         param->setLayoutHint(eLayoutHintNoNewLine, 1);
