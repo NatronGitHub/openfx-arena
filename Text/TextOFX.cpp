@@ -27,13 +27,12 @@
 #include "ofxsTransformInteract.h"
 
 #include <climits>
-#include <iostream>
 #include <cmath>
-#include <cstring>
 #include <algorithm>
 #include <fstream>
 #include <memory>
 #include <mutex>
+#include <sstream>
 
 #ifdef __APPLE__
 #ifndef GL_SILENCE_DEPRECATION
@@ -53,7 +52,7 @@
 
 #include "fx.h"
 #include "PackedImage.h"
-#include "RichText.h" // common text related functions (will be renamed to CommonText in the future)
+#include "RichText.h" // common text related functions
 
 #define kPluginName "TextOFX"
 #define kPluginGrouping "Draw"
@@ -137,6 +136,7 @@ enum SizeUnitEnum
 #define kParamStyle "style"
 #define kParamStyleLabel "Style"
 #define kParamStyleHint "Font style."
+#define kParamStyleHintV7 "Font style. Bold applies when Weight is at its default (Normal); another Weight wins."
 #define kParamStyleDefault 0
 
 #define kParamTextColor "color"
@@ -154,22 +154,22 @@ enum SizeUnitEnum
 
 #define kParamWrap "wrap"
 #define kParamWrapLabel "Wrap"
-#define kParamWrapHint "Word wrap. Disabled if auto size and/or custom position is enabled."
+#define kParamWrapHint "Word wrap. Disabled if auto size and/or Transform is enabled."
 #define kParamWrapDefault 0
 
 #define kParamAlign "align"
 #define kParamAlignLabel "Horizontal align"
-#define kParamAlignHint "Horizontal text align. Custom position and auto size must be disabled and word wrap must be enabled (any option except none) to get anything else than left align."
+#define kParamAlignHint "Horizontal text align. Transform and auto size must be disabled and word wrap must be enabled (any option except none) to get anything else than left align."
 #define kParamAlignDefault 0
 
 #define kParamVAlign "valign"
 #define kParamVAlignLabel "Vertical align"
-#define kParamVAlignHint "Vertical text align. Disabled if custom position and/or auto size is enabled."
+#define kParamVAlignHint "Vertical text align. Disabled if Transform and/or auto size is enabled."
 #define kParamVAlignDefault 0
 
 #define kParamMarkup "markup"
 #define kParamMarkupLabel "Markup"
-#define kParamMarkupHint "Pango Text Attribute Markup Language, https://developer.gnome.org/pango/stable/PangoMarkupFormat.html . Colors don't work if Circle/Arc effect is used."
+#define kParamMarkupHint "Pango Text Attribute Markup Language, https://docs.gtk.org/Pango/pango_markup.html . Colors don't work if Circle/Arc effect is used."
 #define kParamMarkupDefault false
 
 #define kParamAutoSize "autoSize"
@@ -186,6 +186,7 @@ enum SizeUnitEnum
 #define kParamWeightLabel "Weight"
 #define kParamWeightHint "The weight field specifies how bold or light the font should be."
 #define kParamWeightDefault 5
+#define kParamWeightBold 8 // the "Bold" option of the Weight menu
 
 #define kParamStrokeColor "strokeColor"
 #define kParamStrokeColorLabel "Stroke color"
@@ -314,12 +315,7 @@ struct PangoLayoutDeleter { void operator()(PangoLayout* p) const { g_object_unr
 struct PangoAttrListDeleter { void operator()(PangoAttrList* p) const { pango_attr_list_unref(p); } };
 
 static
-bool stringCompare(const std::string & l, const std::string & r) {
-    return (l==r);
-}
-
-static
-std::list<std::string> _genFonts(OFX::ChoiceParam *fontName, OFX::StringParam *fontOverride, bool fontOverrideDir, FcConfig *fontConfig, bool properMenu, std::string fontNameDefault, std::string fontNameAltDefault)
+std::list<std::string> _genFonts(OFX::ChoiceParam *fontName, OFX::StringParam *fontOverride, FcConfig *fontConfig, bool properMenu, const std::string& fontNameDefault, const std::string& fontNameAltDefault)
 {
     int defaultFont = -1; // -1: not found
     int altFont = -1;
@@ -336,11 +332,7 @@ std::list<std::string> _genFonts(OFX::ChoiceParam *fontName, OFX::StringParam *f
         fontOverride->getValue(fontCustom);
         if (!fontCustom.empty()) {
             const FcChar8 * fileCustom = (const FcChar8 *)fontCustom.c_str();
-            if (!fontOverrideDir) {
-                FcConfigAppFontAddFile(fontConfig,fileCustom);
-            } else {
-                FcConfigAppFontAddDir(fontConfig, fileCustom);
-            }
+            FcConfigAppFontAddFile(fontConfig,fileCustom);
         }
     }
 
@@ -371,7 +363,7 @@ std::list<std::string> _genFonts(OFX::ChoiceParam *fontName, OFX::StringParam *f
     }
 
     fonts.sort();
-    fonts.erase(unique(fonts.begin(), fonts.end(), stringCompare), fonts.end());
+    fonts.unique();
 
     if (fontName) {
         fontName->resetOptions();
@@ -685,7 +677,7 @@ TextFXPlugin::TextFXPlugin(OfxImageEffectHandle handle, bool v7)
 
     _fcConfig = FcInitLoadConfigAndFonts();
 
-    _genFonts(_fontName, _fontOverride, false, _fcConfig, gHostIsNatron, kParamFontNameDefault, kParamFontNameAltDefault);
+    _genFonts(_fontName, _fontOverride, _fcConfig, gHostIsNatron, kParamFontNameDefault, kParamFontNameAltDefault);
 
     // Setup selected font
     std::string font, fontName;
@@ -860,37 +852,6 @@ double TextFXPlugin::getFontSize(double time, bool autoSize) const
     }
     return _fontSize->getValueAtTime(time);
 }
-
-// An edit block that does nothing if the host does not support them
-// (paramEditBegin/paramEditEnd are optional in the parameter suite).
-class OptionalEditBlock
-{
-public:
-    OptionalEditBlock(OFX::ParamSet& paramSet, const std::string& name)
-        : _paramSet(paramSet)
-        , _open(false)
-    {
-        try {
-            _paramSet.beginEditBlock(name);
-            _open = true;
-        } catch (const std::exception&) {
-        }
-    }
-
-    ~OptionalEditBlock()
-    {
-        if (_open) {
-            try {
-                _paramSet.endEditBlock();
-            } catch (const std::exception&) {
-            }
-        }
-    }
-
-private:
-    OFX::ParamSet& _paramSet;
-    bool _open;
-};
 
 // Number of keyframes, 0 if the host cannot tell (the keyframe functions of the parameter
 // suite are optional).
@@ -1125,13 +1086,9 @@ TextFXPlugin::makeLayout(cairo_t* cr, double time, bool autoSize, const OfxPoint
         int fontCount = _fontName->getNOptions();
         if (fontID < fontCount) {
             _fontName->getOption(fontID, font);
-            // cascade menu
-            if (font.length() > 2 && font[1] == '/' && gHostIsNatron) {
-                font.erase(0,2);
-            }
        }
     }
-    // cascade menu
+    // cascade menu (the Font family string or the menu option)
     if (font.length() > 2 && font[1] == '/' && gHostIsNatron) {
         font.erase(0,2);
     }
@@ -1162,19 +1119,6 @@ TextFXPlugin::makeLayout(cairo_t* cr, double time, bool autoSize, const OfxPoint
         font = kParamFontNameDefault;
     }
 
-    std::ostringstream pangoFont;
-    pangoFont << font;
-    switch(style) {
-    case 0:
-        pangoFont << " " << "normal";
-        break;
-    case 1:
-        pangoFont << " " << "bold";
-        break;
-    case 2:
-        pangoFont << " " << "italic";
-        break;
-    }
     double size; // in points, an integer
     if (getSizeUnit(time) == eSizeUnitPixels) {
         // unchanged, for compatibility
@@ -1183,7 +1127,6 @@ TextFXPlugin::makeLayout(cairo_t* cr, double time, bool autoSize, const OfxPoint
         // Pango treats a size of 0 as unset
         size = (std::max)(1., std::floor(getFontSize(time, autoSize) * renderScale.x + 0.5));
     }
-    pangoFont << " " << size;
 
     // the layout's context takes the transform and the font options of cr now
     std::unique_ptr<PangoLayout, PangoLayoutDeleter> layoutOwner( pango_cairo_create_layout(cr) );
@@ -1277,14 +1220,31 @@ TextFXPlugin::makeLayout(cairo_t* cr, double time, bool autoSize, const OfxPoint
         desc = pango_font_description_new();
         pango_font_description_set_family( desc, font.c_str() );
         if (style == 1) {
-            // as "bold" in v6's string; setFontDesc() replaces it with the Weight param
-            pango_font_description_set_weight(desc, PANGO_WEIGHT_BOLD);
+            // Style Bold applies when Weight is at its default (Normal); another Weight wins.
+            // (v6's "bold" in its font string is always replaced by the Weight in setFontDesc().)
+            if (weight == kParamWeightDefault) {
+                weight = kParamWeightBold;
+            }
         } else if (style == 2) {
             pango_font_description_set_style(desc, PANGO_STYLE_ITALIC);
         }
         pango_font_description_set_size( desc, static_cast<int>(size * PANGO_SCALE) );
     } else {
-        // v6
+        // v6: "family style size"
+        std::ostringstream pangoFont;
+        pangoFont << font;
+        switch(style) {
+        case 0:
+            pangoFont << " " << "normal";
+            break;
+        case 1:
+            pangoFont << " " << "bold";
+            break;
+        case 2:
+            pangoFont << " " << "italic";
+            break;
+        }
+        pangoFont << " " << size;
         desc = pango_font_description_from_string( pangoFont.str().c_str() );
     }
     setFontDesc(stretch, weight, desc);
@@ -1899,7 +1859,7 @@ void TextFXPlugin::changedParam(const OFX::InstanceChangedArgs &args, const std:
         // only the current custom font (_genFonts() adds it), as the constructor, and swap it in.
         FcConfig* newConfig = FcInitLoadConfigAndFonts();
         if (newConfig) {
-            _genFonts(_fontName, _fontOverride, false, newConfig, gHostIsNatron, font, kParamFontNameAltDefault);
+            _genFonts(_fontName, _fontOverride, newConfig, gHostIsNatron, font, kParamFontNameAltDefault);
             FcConfig* oldConfig;
             {
                 std::lock_guard<std::mutex> lock(_fcConfigMutex);
@@ -1917,7 +1877,7 @@ void TextFXPlugin::changedParam(const OFX::InstanceChangedArgs &args, const std:
     } else if (paramName == kParamSizeUnit) {
         const int sizeUnit = _sizeUnit->getValueAtTime(args.time);
         if ( sizeUnit != _sizeUnitState->getValue() ) {
-            OptionalEditBlock eb(*this, "Convert font size");
+            EditBlock eb(*this, "Convert font size", EditBlock::eBeginNow, EditBlock::eHostErrorsIgnore);
             convertSizeUnit(args.time, sizeUnit);
             // The size and the relative size are separate params, so the new unit applies
             // even if the size could not be converted (e.g. animated).
@@ -1927,7 +1887,7 @@ void TextFXPlugin::changedParam(const OFX::InstanceChangedArgs &args, const std:
     } else if (paramName == kParamPositionRelative) {
         const bool relative = _positionRelative->getValueAtTime(args.time);
         if ( relative != _positionRelativeState->getValue() ) {
-            OptionalEditBlock eb(*this, "Convert position");
+            EditBlock eb(*this, "Convert position", EditBlock::eBeginNow, EditBlock::eHostErrorsIgnore);
             // Keep the state consistent with the Center: change it only if the Center was
             // converted (it is not if the frame is empty).
             if ( convertPositionRelative(args.time, relative) ) {
@@ -1997,7 +1957,6 @@ bool TextFXPlugin::getRegionOfDefinition(const OFX::RegionOfDefinitionArguments 
                 width += 2 * margin;
                 height += 2 * margin;
             } else {
-                /// WIP (v6)
                 width = width+(strokeWidth*2);
                 height = height+(strokeWidth/2);
             }
@@ -2012,8 +1971,6 @@ bool TextFXPlugin::getRegionOfDefinition(const OFX::RegionOfDefinitionArguments 
         rod.y2 = height;
     }
     else {
-        //rod.x1 = rod.y1 = kOfxFlagInfiniteMin;
-        //rod.x2 = rod.y2 = kOfxFlagInfiniteMax;
         return false;
     }
 
@@ -2025,9 +1982,6 @@ bool TextFXPlugin::getTimeDomain(OfxRangeD &range)
     // this should only be called in the general context, ever!
     if (getContext() == eContextGeneral) {
         assert(_range);
-        // how many frames on the input clip
-        //OfxRangeD srcRange = _srcClip->getFrameRange();
-
         int min, max;
         _range->getValue(min, max);
         range.min = min;
@@ -2530,7 +2484,7 @@ TextFXPluginFactory<majorVersion>::describeInContext(OFX::ImageEffectDescriptor 
             param->setCascading(OFX::getImageEffectHostDescription()->supportsCascadingChoices);
         }
         std::list<std::string>::const_iterator font;
-        std::list<std::string> fonts = _genFonts(NULL, NULL, false, NULL, false, kParamFontNameDefault, kParamFontNameAltDefault);
+        std::list<std::string> fonts = _genFonts(NULL, NULL, NULL, false, kParamFontNameDefault, kParamFontNameAltDefault);
         int defaultFont = -1; // -1: not found
         int altFont = -1;
         int fontIndex = 0; // the index of the next option
@@ -2748,7 +2702,7 @@ TextFXPluginFactory<majorVersion>::describeInContext(OFX::ImageEffectDescriptor 
     {
         ChoiceParamDescriptor *param = desc.defineChoiceParam(kParamStyle);
         param->setLabel(kParamStyleLabel);
-        param->setHint(kParamStyleHint);
+        param->setHint(majorVersion >= 7 ? kParamStyleHintV7 : kParamStyleHint);
         param->appendOption("Normal");
         param->appendOption("Bold");
         param->appendOption("Italic");

@@ -233,6 +233,7 @@ void RichTextPlugin::render(const RenderArguments &args)
     _srcText->getValueAtTime(args.time, html);
     _srcAlign->getValueAtTime(args.time, align);
     _srcWrap->getValueAtTime(args.time, wrap);
+    wrap += RichText::RichTextWrapWord; // the menu starts at Word (RichTextWrap starts at None)
     _srcJustify->getValueAtTime(args.time, justify);
 
     // render image
@@ -313,6 +314,7 @@ bool RichTextPlugin::getRegionOfDefinition(const RegionOfDefinitionArguments &ar
         _srcText->getValueAtTime(args.time, html);
         _srcAlign->getValueAtTime(args.time, align);
         _srcWrap->getValueAtTime(args.time, wrap);
+        wrap += RichText::RichTextWrapWord; // the menu starts at Word (RichTextWrap starts at None)
         _srcJustify->getValueAtTime(args.time, justify);
 
         // render layout
@@ -415,7 +417,7 @@ void RichTextPluginFactory::describeInContext(ImageEffectDescriptor &desc,
         param->appendOption("Word"); // RichTextWrapWord
         param->appendOption("Char"); // RichTextWrapChar
         param->appendOption("Word-Char"); // RichTextWrapWordChar
-        param->setDefault(RichText::RichTextWrapWord);
+        param->setDefault(0); // Word
         param->setAnimates(false);
         param->setLayoutHint(eLayoutHintNoNewLine, 1);
         if (page) {
