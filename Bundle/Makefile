@@ -152,11 +152,6 @@ ifeq ($(AUDIO), ON)
     VPATH += $(SRCDIR)/Audio
 endif
 
-CXXFLAGS += \
-    -I$(SRCDIR)/Extra \
-    -I$(SRCDIR)/Magick \
-    -I$(SRCDIR)/lodepng
-
 include $(SRCDIR)/Makefile.master
 include $(SRCDIR)/Makefile.io
 
@@ -186,7 +181,7 @@ CXXFLAGS += $(SOX_CXXFLAGS)
 LINKFLAGS += $(SOX_LINKFLAGS)
 endif
 
-CXXFLAGS += -I. -I$(SRCDIR)/Text
+CXXFLAGS += -I. -I$(SRCDIR)/Magick -I$(SRCDIR)/Text -I$(SRCDIR)/lodepng
 
 ifneq ($(LICENSE),COMMERCIAL)
 CXXFLAGS += $(POPPLER_CXXFLAGS)
