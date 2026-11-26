@@ -338,29 +338,15 @@ void ReflectionPlugin::render(const OFX::RenderArguments &args)
         if (offset>=mirrorHeight)
             offset=mirrorHeight-1;
         if (offset<0) {
-            if ((offset-offset*2)>=mirrorHeight)
-                offset = (mirrorHeight*-1)+1;
-            image0.crop(Magick::Geometry(srcWidth,mirrorHeight-offset,0,offset-offset));
+            if (-offset>=mirrorHeight)
+                offset = -mirrorHeight+1;
+            image0.crop(Magick::Geometry(srcWidth,mirrorHeight-offset,0,0));
             image.crop(Magick::Geometry(srcWidth,mirrorHeight+offset,0,mirrorHeight+offset));
         }
         else {
-            image0.crop(Magick::Geometry(srcWidth,mirrorHeight-offset,0,offset+offset));
+            image0.crop(Magick::Geometry(srcWidth,mirrorHeight-offset,0,2*offset));
             image.crop(Magick::Geometry(srcWidth,mirrorHeight+offset,0,mirrorHeight-offset));
         }
-        /*if (maskImg.get()) {
-            int maskWidth = maskRod.x2-maskRod.x1;
-            int maskHeight = maskRod.y2-maskRod.y1;
-            if (maskWidth>0&&maskHeight>0) {
-                Magick::Image mask(maskWidth,maskHeight,"A",Magick::FloatPixel,(float*)maskImg->getPixelData());
-                int offsetX = 0;
-                int offsetY = 0;
-                if (maskRod.x1!=0)
-                    offsetX = maskRod.x1;
-                if (maskRod.y1!=0)
-                    offsetY = maskRod.y1;
-                image0.composite(mask,offsetX,offsetY,Magick::CopyOpacityCompositeOp);
-            }
-        }*/
         container.composite(image0,0,-spacing,Magick::OverCompositeOp);
         container.composite(image,0,mirrorHeight-offset,Magick::OverCompositeOp);
     }
