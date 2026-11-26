@@ -23,6 +23,7 @@
 #include "ofxsMultiThread.h"
 #include "ofxsImageEffect.h"
 #include "ofxNatron.h"
+#include "ofxsCoords.h"
 #include <iostream>
 #include <cstring>
 #include <mutex>
@@ -34,7 +35,7 @@
 #define kPluginVersionMinor 8
 
 #define kSupportsTiles 0
-#define kSupportsMultiResolution 0
+#define kSupportsMultiResolution 1 // the RoD may not be the project extent (Width, Height): render() takes the output image at any size and offset
 #define kSupportsRenderScale 0
 #define kRenderThreadSafety eRenderFullySafe
 #define kHostFrameThreading false
@@ -207,6 +208,9 @@ void TexturePlugin::render(const OFX::RenderArguments &args)
     // are we in the image bounds
     OfxRectI dstBounds = dstImg->getBounds();
     OfxRectI dstRod = dstImg->getRegionOfDefinition();
+    // The default size gives an infinite RoD, of which a host gives only the bounds (multiple
+    // resolutions): draw the texture there, not on a RoD-sized image, whose size overflows
+    OFX::Coords::rectIntersection(dstRod, dstBounds, &dstRod);
     if(args.renderWindow.x1 < dstBounds.x1 || args.renderWindow.x1 >= dstBounds.x2 || args.renderWindow.y1 < dstBounds.y1 || args.renderWindow.y1 >= dstBounds.y2 ||
        args.renderWindow.x2 <= dstBounds.x1 || args.renderWindow.x2 > dstBounds.x2 || args.renderWindow.y2 <= dstBounds.y1 || args.renderWindow.y2 > dstBounds.y2) {
         OFX::throwSuiteStatusException(kOfxStatErrValue);

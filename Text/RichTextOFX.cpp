@@ -31,7 +31,7 @@
 #define kPluginDescription "OpenFX Rich Text Generator for Natron.\n\nUnder development, require changes in Natron to work as intended."
 
 #define kSupportsTiles 0
-#define kSupportsMultiResolution 0
+#define kSupportsMultiResolution 1 // the RoD may not be the project extent (Auto size, Custom size): render() takes the output image at any size and offset
 #define kSupportsRenderScale 1
 #define kRenderThreadSafety eRenderFullySafe
 
