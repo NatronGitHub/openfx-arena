@@ -36,11 +36,13 @@
 #define kParamRowsLabel "Rows"
 #define kParamRowsHint "Rows in grid"
 #define kParamRowsDefault 2
+#define kParamRowsMax 100
 
 #define kParamCols "cols"
 #define kParamColsLabel "Columns"
 #define kParamColsHint "Columns in grid"
 #define kParamColsDefault 2
+#define kParamColsMax 100
 
 #define kParamTileTimeOffset "offset"
 #define kParamTileTimeOffsetLabel "Time Offset"
@@ -127,8 +129,8 @@ void TilePlugin::getFramesNeeded(const OFX::FramesNeededArguments &args, OFX::Fr
     const int offset = offset_->getValueAtTime(args.time);
     if (offset != 0) {
         // as in render()
-        const int rows = std::min(std::max(rows_->getValueAtTime(args.time), 1), 100);
-        const int cols = std::min(std::max(cols_->getValueAtTime(args.time), 1), 100);
+        const int rows = std::min(std::max(rows_->getValueAtTime(args.time), 1), kParamRowsMax);
+        const int cols = std::min(std::max(cols_->getValueAtTime(args.time), 1), kParamColsMax);
         const int counter = firstFrame_->getValueAtTime(args.time) ? rows * cols - 1 : rows * cols;
         if (counter > 0) {
             range.min = std::floor(args.time) + offset;
@@ -213,8 +215,8 @@ void TilePlugin::render(const OFX::RenderArguments &args)
     // the OFX spec doesn't make the host clamp to the params' range (1..100): a script or a
     // project may still give 0 or less, and the divisions below would then crash (SIGFPE), or a
     // huge value, which would overflow rows*cols
-    rows = std::min(std::max(rows, 1), 100);
-    cols = std::min(std::max(cols, 1), 100);
+    rows = std::min(std::max(rows, 1), kParamRowsMax);
+    cols = std::min(std::max(cols, 1), kParamColsMax);
 
     // setup
     int srcWidth = srcRod.x2-srcRod.x1;
@@ -419,7 +421,7 @@ void TilePluginFactory<majorVersion>::describeInContext(OFX::ImageEffectDescript
         IntParamDescriptor *param = desc.defineIntParam(kParamRows);
         param->setLabel(kParamRowsLabel);
         param->setHint(kParamRowsHint);
-        param->setRange(1, 100);
+        param->setRange(1, kParamRowsMax);
         param->setDisplayRange(1, 10);
         param->setDefault(kParamRowsDefault);
         page->addChild(*param);
@@ -428,7 +430,7 @@ void TilePluginFactory<majorVersion>::describeInContext(OFX::ImageEffectDescript
         IntParamDescriptor *param = desc.defineIntParam(kParamCols);
         param->setLabel(kParamColsLabel);
         param->setHint(kParamColsHint);
-        param->setRange(1, 100);
+        param->setRange(1, kParamColsMax);
         param->setDisplayRange(1, 10);
         param->setDefault(kParamColsDefault);
         page->addChild(*param);

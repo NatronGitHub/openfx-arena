@@ -43,6 +43,8 @@ OFXS_NAMESPACE_ANONYMOUS_ENTER
 #define kHostMixing true
 
 #define kParamTwirlDefault 15
+// render()'s r at scale 1, in pixels, which the overlay circle is drawn from
+#define kKernelRadiusScale 100
 
 class TwirlCLPlugin
     : public OCLPluginHelper<kSupportsRenderScale>
@@ -81,7 +83,7 @@ public:
             ypos -= args.renderWindow.y1;
             xpos -= args.renderWindow.x1;
         }
-        r = (rX*100)*args.renderScale.x;
+        r = (rX*kKernelRadiusScale)*args.renderScale.x;
         if (s != 0) {
             s = s/10;
         }
@@ -163,8 +165,8 @@ TwirlCLPluginFactory<majorVersion>::describe(ImageEffectDescriptor &desc)
 #endif
     // OFX 1.5: V2 (DrawSuite) overlay on hosts that have it, also keeping the OpenGL (V1) one;
     // overlays don't change what renders, so both major versions get it.
-    // The circle is the kernel radius, 100 * scale (render() passes it): the twirl angle is 1/e of its maximum there
-    ofxsSetOverlayInteractDescriptorV2(desc, new TransformCustomOverlayDescriptorOldParamsV2<100>);
+    // The circle is the kernel radius, kKernelRadiusScale * scale (render() passes it): the twirl angle is 1/e of its maximum there
+    ofxsSetOverlayInteractDescriptorV2(desc, new TransformCustomOverlayDescriptorOldParamsV2<kKernelRadiusScale>);
 }
 
 template<unsigned int majorVersion>

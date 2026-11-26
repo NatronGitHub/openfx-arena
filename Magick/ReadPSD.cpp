@@ -25,7 +25,6 @@
 #include "GenericReader.h"
 #include "GenericOCIO.h"
 #include "ofxsMacros.h"
-#include "ofxsMultiThread.h"
 #include <mutex>
 #include "ofxsImageEffect.h"
 #include "ofxsMultiPlane.h"
@@ -125,9 +124,6 @@ namespace OCIO = OCIO_NAMESPACE;
 OFXS_NAMESPACE_ANONYMOUS_ENTER
 
 static bool gHostIsNatron   = false;
-
-typedef std::mutex Mutex;
-typedef std::lock_guard<std::mutex> AutoMutex;
 
 // What the frames that ImageMagick reads from a file are: PSD files start with the composite that
 // Photoshop saves (frame 0), followed by the layers; XCF files have no composite, their frames are the
@@ -334,7 +330,7 @@ private:
     // _psd and _filename are written on the instanceChanged path (readFrames()) while renders read them:
     // they are only accessed under _psdMutex, and the render actions work on a copy (Magick::Image is
     // reference counted, so copying the vector is cheap)
-    Mutex _psdMutex;
+    std::mutex _psdMutex;
     std::string _filename; // the file that _psd was read from, empty if none
     int _xcfWidth, _xcfHeight; // its canvas size if it is an XCF file (read from its header), else 0
     bool _hasLCMS;
@@ -441,7 +437,7 @@ void ReadPSDPlugin::readFrames(const std::string& filename)
         xcfWidth = xcfHeight = 0;
     }
     {
-        AutoMutex lock(_psdMutex);
+        std::lock_guard<std::mutex> lock(_psdMutex);
         if (ok) {
             _psd.swap(frames);
             _filename = filename;
@@ -476,7 +472,7 @@ void ReadPSDPlugin::readFrames(const std::string& filename)
 // a copy of _psd, and the file it was read from and its XCF canvas size
 void ReadPSDPlugin::getFrames(std::vector<Magick::Image>* frames, std::string* filename, int* xcfWidth, int* xcfHeight)
 {
-    AutoMutex lock(_psdMutex);
+    std::lock_guard<std::mutex> lock(_psdMutex);
     *frames = _psd;
     if (filename) {
         *filename = _filename;

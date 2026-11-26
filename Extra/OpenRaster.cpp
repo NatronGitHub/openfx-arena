@@ -57,13 +57,13 @@ namespace OCIO = OCIO_NAMESPACE;
 
 OFXS_NAMESPACE_ANONYMOUS_ENTER
 
-// The canvas size (the image element's w and h) of a parsed copy of stack.xml, and the x,y offset
+// The canvas height (the image element's h) of a parsed copy of stack.xml, and the x,y offset
 // (from the top-left corner of the canvas) of the layer whose src is layerFile (0,0 if there is
-// none, e.g. mergedimage.png).
+// none, e.g. mergedimage.png). OFX's y goes up: only the height is needed to place the layer.
 static void
-getLayerGeometry(const std::string& xml, const std::string& layerFile, int* canvasWidth, int* canvasHeight, int* x, int* y)
+getLayerGeometry(const std::string& xml, const std::string& layerFile, int* canvasHeight, int* x, int* y)
 {
-    *canvasWidth = *canvasHeight = *x = *y = 0;
+    *canvasHeight = *x = *y = 0;
     if (xml.empty()) {
         return;
     }
@@ -86,11 +86,8 @@ getLayerGeometry(const std::string& xml, const std::string& layerFile, int* canv
                 continue;
             }
             if (node == root && !xmlStrcmp(node->name, (const xmlChar*)"image")) {
-                xmlChar* w = xmlGetProp(node, (const xmlChar*)"w");
                 xmlChar* h = xmlGetProp(node, (const xmlChar*)"h");
-                *canvasWidth = ArenaZip::parseInt(w);
                 *canvasHeight = ArenaZip::parseInt(h);
-                xmlFree(w);
                 xmlFree(h);
             } else if (!layerFound && !xmlStrcmp(node->name, (const xmlChar*)"layer")) {
                 xmlChar* src = xmlGetProp(node, (const xmlChar*)"src");
@@ -412,9 +409,8 @@ OpenRasterPlugin::decodePlane(const std::string& filename, OfxTime /*time*/, int
 
     int width = 0;
     int height = 0;
-    // the canvas size and the layer offset in stack.xml, read from the archive that the layer is
+    // the canvas height and the layer offset in stack.xml, read from the archive that the layer is
     // decoded from
-    int canvasWidth = 0;
     int canvasHeight = 0;
     int offsetX = 0;
     int offsetY = 0;
@@ -436,7 +432,7 @@ OpenRasterPlugin::decodePlane(const std::string& filename, OfxTime /*time*/, int
             }
         }
         if (buffer) {
-            getLayerGeometry(ArenaZip::readEntry(archive.get(), "stack.xml", ArenaZip::kMaxXMLSize), imageLayers[layer][1], &canvasWidth, &canvasHeight, &offsetX, &offsetY);
+            getLayerGeometry(ArenaZip::readEntry(archive.get(), "stack.xml", ArenaZip::kMaxXMLSize), imageLayers[layer][1], &canvasHeight, &offsetX, &offsetY);
         }
     }
 
@@ -451,8 +447,9 @@ OpenRasterPlugin::decodePlane(const std::string& filename, OfxTime /*time*/, int
     // file that the PNG comes from. A layer PNG may be smaller than the canvas, at an x,y offset
     // from the top-left corner of the canvas (GIMP and MyPaint crop the layers on save); the
     // merged image has no offset. OpenRaster's y goes down from the top, OFX's goes up from the
-    // bottom, so the PNG covers (x, H-y-h)-(x+w, H-y), clamped to the canvas, and the rest is
-    // transparent black (such layers used to fail with "Unable to read image").
+    // bottom, so the PNG covers (x, H-y-h)-(x+w, H-y): only the canvas height H is needed, as x
+    // has the same origin, and the render window is inside the canvas (the frame bounds). The
+    // rest of the window is transparent black.
     if (canvasHeight <= 0) {
         canvasHeight = height; // no size in stack.xml: the PNG is the canvas
     }
@@ -462,18 +459,10 @@ OpenRasterPlugin::decodePlane(const std::string& filename, OfxTime /*time*/, int
     image.y2 = canvasHeight - offsetY;
     image.y1 = image.y2 - height;
 
-    // buffer is lodepng's RGBA, 8 bits per component, packed and top-down, and covers image. Copy
-    // the part of renderWindow inside the image (clamped, so that a window larger than the image
-    // or outside of it doesn't read out of buffer), and clear the rest of the window. pixelData
-    // has the given bounds and rowBytes, which may differ from renderWindow, be padded, or be
-    // negative.
-    // GenericReader's clipToFile() does both (copied is empty if the window is not in the
-    // image), and tells render() that only copied comes from the file: call it once per decode(),
-    // with decode()'s renderWindow (see GenericReader.h)
+    // buffer (lodepng's RGBA, 8 bits, packed, top-down) covers image: copy renderWindow as ReadSVG.cpp does
     OfxRectI copied;
     if (clipToFile(renderWindow, image, pixelData, bounds, pixelComponentCount, OFX::eBitDepthFloat, rowBytes, &copied)) {
-        // GenericReader's conversion reads the top-down buffer directly (no transposed copy), with the
-        // formula of the copy that it replaces (x * (1.f / 255)), so the output is the same
+        // GenericReader's conversion reads the top-down 8-bit buffer directly (x * (1.f / 255))
         convertDepthAndComponents(buffer.get(), copied, renderScale, image, OFX::ePixelComponentRGBA, OFX::eBitDepthUByte, width * 4,
                                   pixelData, bounds, remappedComponents, rowBytes);
     }
@@ -557,7 +546,7 @@ void OpenRasterPlugin::restoreStateFromParams()
     std::string filename;
     OfxStatus st = getFilenameAtTime(startingTime, &filename);
     // always, so that clearing the file also clears its layers: readLayers() returns no layers
-    // for "" (it used to open it)
+    // for ""
     setImageLayers(st == kOfxStatOK ? filename : std::string());
 }
 

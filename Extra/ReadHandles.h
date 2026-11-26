@@ -36,7 +36,7 @@ namespace Arena {
 struct FreeDeleter { void operator()(void* p) const { std::free(p); } };
 template<typename T> using MallocPtr = std::unique_ptr<T, FreeDeleter>;
 
-// ReadSVG, ReadCDR
+// ReadSVG, ReadCDR, ReadPDF
 struct CairoDeleter
 {
     void operator()(cairo_t* p) const { if (p) { cairo_destroy(p); } }
@@ -46,7 +46,7 @@ using CairoPtr = std::unique_ptr<cairo_t, CairoDeleter>;
 using CairoSurfacePtr = std::unique_ptr<cairo_surface_t, CairoDeleter>;
 
 // a GObject with a reference that we own, e.g. GObjectPtr<RsvgHandle>; the GError that a failed
-// call sets (ReadSVG, ReadCDR)
+// call sets (ReadSVG, ReadCDR, ReadPDF)
 struct GObjectDeleter { void operator()(gpointer p) const { if (p) { g_object_unref(p); } } };
 template<typename T> using GObjectPtr = std::unique_ptr<T, GObjectDeleter>;
 struct GErrorDeleter { void operator()(GError* p) const { if (p) { g_error_free(p); } } };

@@ -466,8 +466,8 @@ public:
     void resetCenter(double time);
     void setFontDesc(int stretch, int weight, PangoFontDescription* desc);
 
-    /** @brief a new layout for cr with the text params at time, at the render scale; *markup:
-        the text is drawn as markup (autoSize: as in getRelativeFrame()) */
+    /** @brief a new layout for cr with the text params at time, at the render scale (autoSize:
+        as in getRelativeFrame()); markup: out, the Markup param, or false if the text didn't parse */
     std::unique_ptr<PangoLayout, PangoLayoutDeleter> makeLayout(cairo_t* cr, double time, bool autoSize, const OfxPointD& renderScale, LayoutUseEnum use, bool* markup);
 
     /** @brief The frame that relative font sizes and positions refer to, in canonical coordinates. */
@@ -1706,13 +1706,11 @@ void TextFXPlugin::render(const OFX::RenderArguments &args)
             if (_v7 && autoSize) {
                 // within the margin, at any render scale
                 cairo_set_line_width( cr, autoSizeMargin * (std::min)(args.renderScale.x, args.renderScale.y) );
-            } else {
-                cairo_set_line_width(cr, std::floor(strokeWidth * args.renderScale.x + 0.5));
-            }
-            if (_v7 && autoSize) {
                 // bevel the joins sharper than 60 degrees, so that the stroke stays within one
                 // line width of the outlines: the margin of getRegionOfDefinition()
                 cairo_set_miter_limit(cr, 2.);
+            } else {
+                cairo_set_line_width(cr, std::floor(strokeWidth * args.renderScale.x + 0.5));
             }
             cairo_set_source_rgba(cr, s_r, s_g, s_b, s_a);
             cairo_stroke_preserve(cr);

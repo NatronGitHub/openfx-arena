@@ -86,53 +86,26 @@ OFXS_NAMESPACE_ANONYMOUS_ENTER
 
 static bool gHostIsNatron = false;
 
-// Open a PDF file: NULL if it can't be read. The URI, the GError and the copy of the
-// filename are freed here, on every path (they leaked, and the copy was free()d although
-// g_strdup() memory must be g_free()d).
-static PopplerDocument*
+// Open a PDF file: null if it can't be read. The URI (g_filename_to_uri() memory, which must
+// be g_free()d) is freed here.
+static Arena::GObjectPtr<PopplerDocument>
 openDocument(const std::string& filename)
 {
-    GError *error = NULL;
-    gchar *uri = g_filename_to_uri(filename.c_str(), NULL, &error);
-    if (uri == NULL) {
-        if (error) {
-            g_error_free(error);
-        }
-        return NULL;
+    GError* e = nullptr;
+    gchar* uri = g_filename_to_uri(filename.c_str(), nullptr, &e);
+    const Arena::GErrorPtr uriError(e);
+    if (uri == nullptr) {
+        return nullptr;
     }
-    PopplerDocument *document = poppler_document_new_from_file(uri, NULL, &error);
+    e = nullptr;
+    Arena::GObjectPtr<PopplerDocument> document(poppler_document_new_from_file(uri, nullptr, &e));
     g_free(uri);
+    const Arena::GErrorPtr error(e);
     if (error) {
-        g_error_free(error);
-        if (document) {
-            g_object_unref(document);
-        }
-        return NULL;
+        return nullptr;
     }
     return document;
 }
-
-// Unrefs the poppler objects and destroys the cairo objects it holds when it goes out of
-// scope, so that the error paths, which throw, release them too.
-struct PDFResources
-{
-    PopplerDocument *document;
-    PopplerPage *page;
-    cairo_surface_t *surface;
-    cairo_t *cr;
-
-    PDFResources() : document(NULL), page(NULL), surface(NULL), cr(NULL) {}
-    ~PDFResources()
-    {
-        if (cr) { cairo_destroy(cr); }
-        if (surface) { cairo_surface_destroy(surface); }
-        if (page) { g_object_unref(page); }
-        if (document) { g_object_unref(document); }
-    }
-private:
-    PDFResources(const PDFResources&);
-    PDFResources& operator=(const PDFResources&);
-};
 
 // the page names ("0", "1", ...) of a document, empty if it is NULL
 static std::vector<std::string>
@@ -242,16 +215,12 @@ void ReadPDFPlugin::restoreStateFromParams()
     int startingTime = getStartingTime();
     std::string filename;
     OfxStatus st = getFilenameAtTime(startingTime, &filename);
-    // && (was ||): with no file set, this tried to open "" and reported an error
     if ( st == kOfxStatOK && !filename.empty() ) {
-        PopplerDocument *document = openDocument(filename);
-        if (document == NULL) {
+        const Arena::GObjectPtr<PopplerDocument> document = openDocument(filename);
+        if (!document) {
             setPersistentMessage(OFX::Message::eMessageError, "", "Failed to read PDF");
         }
-        setImageLayers(document);
-        if (document) {
-            g_object_unref(document);
-        }
+        setImageLayers(document.get());
     } else {
         setImageLayers(NULL); // no file: no pages (#210)
     }
@@ -373,7 +342,7 @@ ReadPDFPlugin::decodePlane(const std::string& filename, OfxTime time, int /*view
         OFX::throwSuiteStatusException(kOfxStatErrFormat);
     }
 
-    PDFResources r; // released on every path, including the throws below
+    // the handles are released on every path, including the throws below
     cairo_status_t status;
     double dpi, imageWidth, imageHeight, scaleWidth, scaleHeight;
     int width, height;
@@ -389,32 +358,32 @@ ReadPDFPlugin::decodePlane(const std::string& filename, OfxTime time, int /*view
         }
     }
 
-    r.document = openDocument(filename);
-    if (r.document == NULL) {
+    const Arena::GObjectPtr<PopplerDocument> document = openDocument(filename);
+    if (!document) {
         setPersistentMessage(OFX::Message::eMessageError, "", "Failed to read PDF");
         OFX::throwSuiteStatusException(kOfxStatErrFormat);
     }
 
     // poppler reports a page index out of range as a GLib critical: check it first
-    const int nPages = poppler_document_get_n_pages(r.document);
+    const int nPages = poppler_document_get_n_pages(document.get());
+    Arena::GObjectPtr<PopplerPage> page;
     if (layer >= 0 && layer < nPages) {
-        r.page = poppler_document_get_page(r.document, layer);
+        page.reset(poppler_document_get_page(document.get(), layer));
     }
-    if (r.page == NULL) {
+    if (!page) {
         setPersistentMessage(OFX::Message::eMessageError, "", "Failed to read page");
         OFX::throwSuiteStatusException(kOfxStatErrFormat);
     }
 
     // the size of this page, not of page 0, which cropped larger pages (#193)
-    poppler_page_get_size(r.page, &imageWidth, &imageHeight);
+    poppler_page_get_size(page.get(), &imageWidth, &imageHeight);
 
     width = Arena::toPixels(dpi * imageWidth / kPluginDPI);
     height = Arena::toPixels(dpi * imageHeight / kPluginDPI);
 
     // The whole page is rendered, at (0,0,width,height) as in getFrameBounds(), and only the part
     // of renderWindow that it covers is copied: a host may ask for a render window smaller than
-    // the image, even without tiles (#105). This used to fail unless renderWindow was the page.
-    // (an empty page used to fail as "Image don't match RenderWindow")
+    // the image, even without tiles (#105).
     if (width <= 0 || height <= 0) {
         setPersistentMessage(OFX::Message::eMessageError, "", "Render failed");
         OFX::throwSuiteStatusException(kOfxStatErrFormat);
@@ -425,16 +394,17 @@ ReadPDFPlugin::decodePlane(const std::string& filename, OfxTime time, int /*view
     image.x2 = width;
     image.y2 = height;
 
-    r.surface = cairo_image_surface_create(CAIRO_FORMAT_ARGB32, width, height);
-    r.cr = cairo_create(r.surface);
-    cairo_t *cr = r.cr;
+    const Arena::CairoSurfacePtr surfacePtr(cairo_image_surface_create(CAIRO_FORMAT_ARGB32, width, height));
+    const Arena::CairoPtr crPtr(cairo_create(surfacePtr.get()));
+    cairo_surface_t* const surface = surfacePtr.get();
+    cairo_t* const cr = crPtr.get();
 
     scaleWidth = dpi/kPluginDPI;
     scaleHeight = dpi/kPluginDPI;
 
     cairo_scale(cr, scaleWidth, scaleHeight);
 
-    poppler_page_render(r.page, cr);
+    poppler_page_render(page.get(), cr);
 
     cairo_set_operator(cr, CAIRO_OPERATOR_DEST_OVER);
     cairo_set_source_rgb(cr, 1, 1, 1);
@@ -447,9 +417,9 @@ ReadPDFPlugin::decodePlane(const std::string& filename, OfxTime time, int /*view
         OFX::throwSuiteStatusException(kOfxStatErrFormat);
     }
 
-    cairo_surface_flush(r.surface);
+    cairo_surface_flush(surface);
 
-    unsigned char* cdata = cairo_image_surface_get_data(r.surface);
+    unsigned char* cdata = cairo_image_surface_get_data(surface);
     std::vector<unsigned char> pixels((size_t)width * height * pixelComponentCount);
     // size_t: width * height * 4 may not fit in an int (#158)
     for (int i = 0; i < width; ++i) {
@@ -459,13 +429,7 @@ ReadPDFPlugin::decodePlane(const std::string& filename, OfxTime time, int /*view
         }
     }
 
-    // pixels is packed, bottom-up, and covers image. Copy the part of renderWindow inside the
-    // image (clamped, so that a window larger than the image or outside of it doesn't read out of
-    // pixels), and clear the rest of the window. pixelData has the given bounds and rowBytes,
-    // which may differ from renderWindow, be padded, or be negative.
-    // GenericReader's clipToFile() does both (copied is empty if the window is not in the
-    // image), and tells render() that only copied comes from the file: call it once per decode(),
-    // with decode()'s renderWindow (see GenericReader.h)
+    // pixels is packed, bottom-up, and covers image: copy renderWindow as ReadSVG.cpp does (clipToFile())
     OfxRectI copied;
     clipToFile(renderWindow, image, pixelData, bounds, pixelComponentCount, OFX::eBitDepthFloat, rowBytes, &copied);
     for (int y = copied.y1; y < copied.y2; y++) {
@@ -504,42 +468,39 @@ bool ReadPDFPlugin::getFrameBounds(const std::string& filename,
     int width = 0;
     int height = 0;
 
-    PopplerDocument *document = openDocument(filename);
-    if (document == NULL) {
+    const Arena::GObjectPtr<PopplerDocument> document = openDocument(filename);
+    if (!document) {
         setPersistentMessage(OFX::Message::eMessageError, "", "Failed to read PDF");
         OFX::throwSuiteStatusException(kOfxStatErrFormat);
     }
 
     // a document without pages has no page 0: check it before reading its size (and before
     // asking for it, which poppler reports as a critical error)
-    const int nPages = poppler_document_get_n_pages(document);
+    const int nPages = poppler_document_get_n_pages(document.get());
     // Natron gets each page as a plane (decodePlane()), and all the planes of a clip share one RoD
     // (the RoD action has no plane argument): the bounds and the format cover every page, each at
     // (0,0) (#193). Other hosts only get page 0.
     const int sizedPages = gHostIsNatron ? nPages : std::min(nPages, 1);
     for (int i = 0; i < sizedPages; ++i) {
-        PopplerPage *page = poppler_document_get_page(document, i);
-        if (page == NULL) {
+        const Arena::GObjectPtr<PopplerPage> page(poppler_document_get_page(document.get(), i));
+        if (!page) {
             if (i == 0) {
-                break; // no page 0 fails, as before
+                break; // no page 0 fails
             }
             continue;
         }
-        poppler_page_get_size(page, &imageWidth, &imageHeight);
-        g_object_unref(page);
+        poppler_page_get_size(page.get(), &imageWidth, &imageHeight);
         const int w = Arena::toPixels(dpi * imageWidth / kPluginDPI);
         const int h = Arena::toPixels(dpi * imageHeight / kPluginDPI);
         if (i == 0) {
             hasPage = true;
             if (w <= 0 || h <= 0) {
-                break; // an empty or too large page 0 fails, as before
+                break; // an empty or too large page 0 fails
             }
         }
         width = std::max(width, w);
         height = std::max(height, h);
     }
-
-    g_object_unref(document);
 
     if (width <= 0 || height <= 0) {
         // bounds and format were not set: report failure instead of returning garbage
@@ -577,14 +538,11 @@ bool ReadPDFPlugin::guessParamsFromFilename(const std::string& /*newFile*/,
         return false;
     }
 
-    PopplerDocument *document = openDocument(filename);
-    if (document == NULL) {
+    const Arena::GObjectPtr<PopplerDocument> document = openDocument(filename);
+    if (!document) {
         setPersistentMessage(OFX::Message::eMessageError, "", "Failed to read PDF");
     }
-    setImageLayers(document);
-    if (document) {
-        g_object_unref(document);
-    }
+    setImageLayers(document.get());
 
     *components = OFX::ePixelComponentRGBA;
     *filePremult = OFX::eImageUnPreMultiplied;
@@ -604,14 +562,11 @@ void ReadPDFPlugin::changedFilename(const OFX::InstanceChangedArgs &args)
         OFX::throwSuiteStatusException(kOfxStatErrFormat);
     }
 
-    PopplerDocument *document = openDocument(filename);
-    if (document == NULL) {
+    const Arena::GObjectPtr<PopplerDocument> document = openDocument(filename);
+    if (!document) {
         setPersistentMessage(OFX::Message::eMessageError, "", "Failed to read PDF");
     }
-    setImageLayers(document);
-    if (document) {
-        g_object_unref(document);
-    }
+    setImageLayers(document.get());
 }
 
 using namespace OFX;

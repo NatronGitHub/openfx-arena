@@ -289,8 +289,9 @@ getTargetRadius(const OfxPointD& scale,
                 OfxPointD* targetRadius)
 {
     // the circle shows the effect's radius, circleRadius * scale in canonical coordinates (the
-    // kernel's radius), at any zoom: it was 30 * scale screen pixels. The clamp below is in screen
-    // pixels; it has no maximum, which would hide the real radius
+    // kernel's radius), at any zoom. The clamp below is in screen pixels: a minimum size, and no
+    // maximum, which would hide the real radius, except that when one axis is zero the other is
+    // drawn at CIRCLE_RADIUS_MAX
     double meanPixelScale = (pixelScale.x + pixelScale.y) / 2.;
     targetRadius->x = scale.x * circleRadius / meanPixelScale;
     targetRadius->y = scale.y * circleRadius / meanPixelScale;
@@ -957,7 +958,7 @@ TransformInteractCustomHelper::penMotion(const OFX::PenArgs &args)
             dxrot = dx;
             dyrot = dy;
         } else {
-            // if there is a _translate param (i.e. this is Transform/DirBlur and not GodRays),
+            // if there is a _translate param (neither Bulge nor Twirl has one),
             // compensate the rotation, because the
             // interact is visualized on the transformed image
             OFX::Point3D dRot;

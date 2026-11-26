@@ -38,6 +38,8 @@ env:
   UPLOAD_ARTIFACTS: ${{ inputs.artifacts }}
   # the CMake install: Arena.ofx.bundle in install/OFX/Plugins
   CMAKE_BUNDLE: install/OFX/Plugins/Arena.ofx.bundle
+  # the plug-ins of Arena.ofx (with AudioCurve and ReadPDF, without RichText; see CMakeLists.txt's _n_Arena)
+  ARENA_PLUGIN_COUNT: 43
 
 jobs:
   linux:
@@ -88,12 +90,20 @@ jobs:
       - name: Build (debug, CMake)
         if: inputs.build-system == 'cmake'
         run: |
-          cmake -S . -B build-debug -DCMAKE_BUILD_TYPE=Debug -DOFX_CXX_STANDARD="${CXXSTD#c++}"
+          # BUILD_TESTING: for the debug-only checks below
+          cmake -S . -B build-debug -DCMAKE_BUILD_TYPE=Debug -DOFX_CXX_STANDARD="${CXXSTD#c++}" -DBUILD_TESTING=ON
           cmake --build build-debug --parallel 4
       - name: Load and render tests (ctest, hostDemo)
         # -V: print every test's output (the per-plug-in load and render results), not only on failure
         if: inputs.build-system == 'cmake'
         run: ctest --test-dir build -V --output-on-failure
+      - name: Debug load and render tests (ctest)
+        # only a debug build's Support library validates the properties and logs "ERROR : " lines,
+        # which these tests fail on; Linux only (the other jobs build no debug tests)
+        if: inputs.build-system == 'cmake'
+        run: |
+          ctest --test-dir build-debug --output-on-failure --no-tests=error \
+            -R '^(load_Arena|render_Arena|reader_window|reader_malformed|render_Arena_mt_unload|readsvg_dpi)$'
       - name: Build (release, Make)
         if: inputs.build-system == 'make'
         run: make -j4 CONFIG=release CXX="g++ -std=$CXXSTD"
@@ -109,7 +119,7 @@ jobs:
           g++ -o verify_plugin_loads OpenFX-IO/tests/verify_plugin_loads.cpp ofxhBinaryStrict.cpp \
             -I OpenFX/HostSupport/include/ -I OpenFX/include/
           ./verify_plugin_loads "$BUNDLE/Contents/Linux-x86-64/Arena.ofx" | tee load.txt
-          grep -q "^Num_plugins: 43$" load.txt
+          grep -q "^Num_plugins: ${ARENA_PLUGIN_COUNT}$" load.txt
       - name: Upload artifacts
         if: env.UPLOAD_ARTIFACTS == 'true'
         uses: actions/upload-artifact@v4
@@ -184,7 +194,7 @@ jobs:
           g++ -o verify_plugin_loads OpenFX-IO/tests/verify_plugin_loads.cpp OpenFX/HostSupport/src/ofxhBinary.cpp \
             OpenFX/HostSupport/src/ofxhUtilities.cpp -I OpenFX/HostSupport/include/ -I OpenFX/include/
           ./verify_plugin_loads "$BUNDLE/Contents/Win64/Arena.ofx" | tee load.txt
-          grep -q "^Num_plugins: 43.\?$" load.txt
+          grep -q "^Num_plugins: ${ARENA_PLUGIN_COUNT}.\?$" load.txt
       - name: Diagnose plugin load failure
         if: failure()
         run: |
@@ -296,7 +306,7 @@ jobs:
             -I OpenFX/HostSupport/include/ -I OpenFX/include/
           # the installed (deployed) bundle, with its own copies of the MacPorts libraries
           ./verify_plugin_loads "$BUNDLE/Contents/MacOS/Arena.ofx" | tee load.txt
-          grep -q "^Num_plugins: 43$" load.txt
+          grep -q "^Num_plugins: ${ARENA_PLUGIN_COUNT}$" load.txt
       - name: Upload artifacts
         if: env.UPLOAD_ARTIFACTS == 'true'
         uses: actions/upload-artifact@v4

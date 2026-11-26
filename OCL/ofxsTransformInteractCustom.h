@@ -51,7 +51,7 @@
 #define kParamTransformInteractCustomiveLabel "Interactive Update"
 #define kParamTransformInteractCustomiveHint "If checked, update the parameter values during interaction with the image viewer, else update the values when pen is released."
 
-// old parameter names (Transform DirBlur and GodRays only)
+// old parameter names (Bulge and Twirl)
 #define kParamTransformTranslateOld "translate"
 #define kParamTransformRotateOld "rotate"
 #define kParamTransformScaleOld "scale"
@@ -145,7 +145,7 @@ protected:
 
 public:
     /// circleRadius: the effect's radius at scale 1, in canonical coordinates
-    TransformInteractCustomHelper(OFX::ImageEffect* effect, OFX::Interact* interact, bool oldParams = false, double circleRadius = 30.);
+    TransformInteractCustomHelper(OFX::ImageEffect* effect, OFX::Interact* interact, bool oldParams, double circleRadius);
 
     /** @brief virtual destructor */
     virtual ~TransformInteractCustomHelper()
@@ -184,22 +184,6 @@ private:
     double _circleRadius;
 };
 
-typedef OverlayInteractFromHelper<TransformInteractCustomHelper> TransformInteractCustom;
-
-class TransformOverlayDescriptor
-    : public DefaultEffectOverlayDescriptor<TransformOverlayDescriptor, TransformInteractCustom>
-{
-};
-
-/// Draws with the DrawSuite when the host provides it; register with
-/// ofxsSetOverlayInteractDescriptorV2(desc, new TransformCustomOverlayDescriptorV2).
-/// Not named TransformOverlayDescriptorV2, which SupportExt's ofxsTransformInteract.h
-/// defines in the same namespace for another interact (ODR if both are linked together).
-class TransformCustomOverlayDescriptorV2
-    : public DefaultEffectOverlayDescriptorV2<TransformCustomOverlayDescriptorV2, TransformInteractCustom>
-{
-};
-
 /// kCircleRadius: the effect's radius at scale 1 (canonical coordinates), drawn as the circle
 template<int kCircleRadius>
 class TransformInteractCustomHelperOldParams
@@ -211,14 +195,10 @@ public:
         : TransformInteractCustomHelper(effect, interact, true, kCircleRadius) {}
 };
 
-template<int kCircleRadius>
-class TransformOverlayDescriptorOldParams
-    : public DefaultEffectOverlayDescriptor<TransformOverlayDescriptorOldParams<kCircleRadius>, OverlayInteractFromHelper<TransformInteractCustomHelperOldParams<kCircleRadius> > >
-{
-};
-
 /// Draws with the DrawSuite when the host provides it; register with
-/// ofxsSetOverlayInteractDescriptorV2(desc, new TransformCustomOverlayDescriptorOldParamsV2<kCircleRadius>)
+/// ofxsSetOverlayInteractDescriptorV2(desc, new TransformCustomOverlayDescriptorOldParamsV2<kCircleRadius>).
+/// Not named TransformOverlayDescriptorOldParamsV2, which SupportExt's ofxsTransformInteract.h
+/// defines in the same namespace for another interact (ODR if both are linked together).
 template<int kCircleRadius>
 class TransformCustomOverlayDescriptorOldParamsV2
     : public DefaultEffectOverlayDescriptorV2<TransformCustomOverlayDescriptorOldParamsV2<kCircleRadius>, OverlayInteractFromHelper<TransformInteractCustomHelperOldParams<kCircleRadius> > >

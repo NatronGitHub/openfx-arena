@@ -42,6 +42,8 @@ OFXS_NAMESPACE_ANONYMOUS_ENTER
 #define kHostMixing true
 
 #define kParamStrengthDefault 4.0
+// render()'s r at scale 1, in pixels, which the overlay circle is drawn from
+#define kKernelRadiusScale 100
 
 class BulgeCLPlugin
     : public OCLPluginHelper<kSupportsRenderScale>
@@ -80,7 +82,7 @@ public:
             ypos -= args.renderWindow.y1;
             xpos -= args.renderWindow.x1;
         }
-        r = (rX*100)*args.renderScale.x;
+        r = (rX*kKernelRadiusScale)*args.renderScale.x;
         if (s!=0) {
             s = s/10;
         }
@@ -162,8 +164,8 @@ BulgeCLPluginFactory<majorVersion>::describe(ImageEffectDescriptor &desc)
 #endif
     // OFX 1.5: V2 (DrawSuite) overlay on hosts that have it, also keeping the OpenGL (V1) one;
     // overlays don't change what renders, so both major versions get it.
-    // The circle is the kernel radius, r / 2 = 50 * scale (render() passes r = scale * 100)
-    ofxsSetOverlayInteractDescriptorV2(desc, new TransformCustomOverlayDescriptorOldParamsV2<50>);
+    // The circle is the kernel radius, r / 2 (render() passes r = scale * kKernelRadiusScale)
+    ofxsSetOverlayInteractDescriptorV2(desc, new TransformCustomOverlayDescriptorOldParamsV2<kKernelRadiusScale / 2>);
 }
 
 template<unsigned int majorVersion>

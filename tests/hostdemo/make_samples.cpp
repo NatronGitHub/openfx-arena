@@ -325,13 +325,7 @@ int main(int argc, char** argv)
         std::cerr << "could not write the samples in " << dir << std::endl;
         return 1;
     }
-    // malformed files (tests/readermalformed), which the readers must reject cleanly:
-    // - bad_nosize: no image size in maindoc.xml or stack.xml (#129: getFrameBounds() returned
-    //   true with the bounds unset)
-    // - bad_hugexml, bad_hugepng: an entry whose size in the archive is far larger than its
-    //   contents (#128): 2^64-1 (which wrapped around to new char[0]) and 2^63-1 (an
-    //   unbounded allocation)
-    // - bad_corrupt: not a zip file at all; bad_empty.svg: an empty canvas
+    // malformed files, which the readers must reject cleanly: see tests/readermalformed/run.cmake
     std::vector<std::pair<std::string, std::string> > kraNoSize;
     kraNoSize.push_back(kra[0]);
     kraNoSize.push_back(std::make_pair(std::string("maindoc.xml"),

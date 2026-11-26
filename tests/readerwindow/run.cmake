@@ -4,8 +4,9 @@
 # the reader must write only the window.
 #
 #   cmake -DREADER_WINDOW=<reader_window> -DPLUGIN_PATH=<dir with Arena.ofx.bundle>
-#         -DSAMPLES=<dir> -DOCIO=<config.ocio> -DWORK=<dir> -P run.cmake
+#         -DSAMPLES=<dir> -DOCIO=<config.ocio> -DWORK=<dir> [-DREADPDF=ON] -P run.cmake
 #
+# READPDF: the bundle has ReadPDF (not with OFX_LICENSE=COMMERCIAL).
 # SAMPLES has the files of tests/hostdemo (make_samples.cpp, sample.svg), including the sample_xy
 # files. There is no CorelDRAW sample (see tests/hostdemo/arena.txt), so ReadCDR is not tested
 # here.
@@ -78,10 +79,12 @@ check(net.fxarena.openfx.ReadSVG 3 sample.svg)
 check(net.fxarena.openfx.ReadSVG 3 sample.svg filePremult=2)
 check(net.fxarena.openfx.ReadSVG 3 sample.svg dpi=150)
 # the sample_xy files differ along x and y (the other samples are a vertical gradient)
-check(fr.inria.openfx.ReadPDF 1 sample.pdf)
-check(fr.inria.openfx.ReadPDF 1 sample_xy.pdf)
-check(fr.inria.openfx.ReadPDF 1 sample_xy.pdf filePremult=1)
-check(fr.inria.openfx.ReadPDF 1 sample_xy.pdf dpi=100)
+if(READPDF)
+  check(fr.inria.openfx.ReadPDF 1 sample.pdf)
+  check(fr.inria.openfx.ReadPDF 1 sample_xy.pdf)
+  check(fr.inria.openfx.ReadPDF 1 sample_xy.pdf filePremult=1)
+  check(fr.inria.openfx.ReadPDF 1 sample_xy.pdf dpi=100)
+endif()
 check(fr.inria.openfx.ReadKrita 2 sample.kra)
 check(fr.inria.openfx.ReadKrita 2 sample_xy.kra)
 check(fr.inria.openfx.ReadKrita 2 sample_xy.kra filePremult=1)
@@ -106,8 +109,10 @@ check(fr.inria.openfx.ReadMisc 1 sample.bmp)
 check(net.fxarena.openfx.ReadSVG 4 sample.svg --scale 0.5)
 check(net.fxarena.openfx.ReadSVG 4 sample.svg filePremult=2 --scale 0.5)
 check(net.fxarena.openfx.ReadSVG 3 sample.svg --scale 0.5)
-check(fr.inria.openfx.ReadPDF 1 sample_xy.pdf --scale 0.5)
-check(fr.inria.openfx.ReadPDF 1 sample_xy.pdf filePremult=1 --scale 0.5)
+if(READPDF)
+  check(fr.inria.openfx.ReadPDF 1 sample_xy.pdf --scale 0.5)
+  check(fr.inria.openfx.ReadPDF 1 sample_xy.pdf filePremult=1 --scale 0.5)
+endif()
 check(fr.inria.openfx.ReadKrita 2 sample_xy.kra --scale 0.5)
 check(fr.inria.openfx.ReadKrita 2 sample_xy.kra filePremult=1 --scale 0.5)
 check(fr.inria.openfx.OpenRaster 2 sample_xy.ora --scale 0.5)

@@ -58,12 +58,12 @@ OCLPluginHelperBase::setupContext(bool context, std::string kernelString)
     cl::Context clContext;
     cl::Program program;
     if (!context) {
-        OCLAutoMutex lock(_setupMutex);
+        std::lock_guard<std::mutex> lock(_setupMutex);
         clContext = _context;
     }
     std::string error = buildProgram(context, kernelString, &device, &clContext, &program);
     {
-        OCLAutoMutex lock(_setupMutex);
+        std::lock_guard<std::mutex> lock(_setupMutex);
         _clDevice = device;
         _context = clContext;
         _program = program;

@@ -35,12 +35,9 @@
 #include <unistd.h>
 #endif
 
-#include "ofxsMultiThread.h"
 // std::mutex can be constructed statically, before the host's multithread
 // suite is available.
 #include <mutex>
-typedef std::mutex Mutex;
-typedef std::lock_guard<std::mutex> AutoMutex;
 
 using namespace OFX;
 OFXS_NAMESPACE_ANONYMOUS_ENTER
@@ -109,7 +106,7 @@ OFXS_NAMESPACE_ANONYMOUS_ENTER
 static bool gHostIsNatron = false;
 
 // Shared by all instances, since they download to the same preset directory.
-static Mutex gDownloadMutex;
+static std::mutex gDownloadMutex;
 
 static int
 currentProcessId()
@@ -332,7 +329,7 @@ public:
         // so a later update of _lut does not modify lut).
         Magick::Image lut;
         {
-            AutoMutex lock(_lutMutex);
+            std::lock_guard<std::mutex> lock(_lutMutex);
             if (_lut.comment() != presetFile) {
                 try {
                     _lut.read(presetFile.c_str());
@@ -411,7 +408,7 @@ public:
         // Serialise downloads: concurrent render threads (or instances) would
         // otherwise fetch and write the same file at the same time, and
         // curl_easy_init() may run the non-thread-safe curl_global_init().
-        AutoMutex lock(gDownloadMutex);
+        std::lock_guard<std::mutex> lock(gDownloadMutex);
 
         if (onlyIfMissing && existsFile(destination)) {
             return true;
@@ -519,7 +516,7 @@ private:
     std::vector<HaldCLUTPreset> _presets;
     ChoiceParam *_preset;
     Magick::Image _lut; // protected by _lutMutex
-    Mutex _lutMutex;
+    std::mutex _lutMutex;
     StringParam *_custom;
     StringParam *_path;
 };
@@ -532,7 +529,7 @@ HaldCLUTPlugin::changedParam(const OFX::InstanceChangedArgs &args, const std::st
         return;
     }
     if (paramName == kParamCustom) {
-        AutoMutex lock(_lutMutex);
+        std::lock_guard<std::mutex> lock(_lutMutex);
         _lut.comment("N/A");
     }
     clearPersistentMessage();
