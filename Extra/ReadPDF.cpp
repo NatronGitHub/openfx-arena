@@ -417,34 +417,10 @@ ReadPDFPlugin::decodePlane(const std::string& filename, OfxTime time, int /*view
         OFX::throwSuiteStatusException(kOfxStatErrFormat);
     }
 
-    cairo_surface_flush(surface);
-
-    unsigned char* cdata = cairo_image_surface_get_data(surface);
-    std::vector<unsigned char> pixels((size_t)width * height * pixelComponentCount);
-    // size_t: width * height * 4 may not fit in an int (#158)
-    for (int i = 0; i < width; ++i) {
-        for (int j = 0; j < height; ++j) {
-            for (int k = 0; k < pixelComponentCount; ++k)
-                pixels[((size_t)i + (size_t)j * width) * pixelComponentCount + k] = cdata[((size_t)i + (size_t)(height - 1 - j) * width) * pixelComponentCount + k];
-        }
-    }
-
-    // pixels is packed, bottom-up, and covers image: copy renderWindow as ReadSVG.cpp does (clipToFile())
+    // copy the part of renderWindow inside the image, and clear the rest (see ReadSVG.cpp)
     OfxRectI copied;
     clipToFile(renderWindow, image, pixelData, bounds, pixelComponentCount, OFX::eBitDepthFloat, rowBytes, &copied);
-    for (int y = copied.y1; y < copied.y2; y++) {
-        size_t offset = ((size_t)y * width + copied.x1) * pixelComponentCount;
-        float* dst = PackedImage::pixelAddress(pixelData, bounds, rowBytes, pixelComponentCount, copied.x1, y);
-        for (int x = copied.x1; x < copied.x2; x++) {
-            dst[0] = pixels[offset + 2] * (1.f / 255);
-            dst[1] = pixels[offset + 1] * (1.f / 255);
-            dst[2] = pixels[offset + 0] * (1.f / 255);
-            dst[3] = pixels[offset + 3] * (1.f / 255);
-            dst += pixelComponentCount;
-            offset += pixelComponentCount;
-        }
-    }
-
+    Arena::copyCairoSurface(surface, copied, pixelData, bounds, rowBytes);
 }
 
 bool ReadPDFPlugin::getFrameBounds(const std::string& filename,

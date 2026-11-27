@@ -18,17 +18,20 @@
 
 // Owning handles for the C objects of the readers (#132, #185), so that they are released on every
 // path, including the throws of the OFX Support library. The deleters accept NULL. Also the size
-// conversion of the vector readers.
+// conversion and the cairo surface copy of the vector readers.
 
 #ifndef Arena_ReadHandles_h
 #define Arena_ReadHandles_h
 
+#include <cstddef>
 #include <cstdlib>
 #include <memory>
 
 #include <cairo.h>
 #include <glib-object.h>
 #include <zip.h>
+
+#include "PackedImage.h"
 
 namespace Arena {
 
@@ -69,6 +72,34 @@ inline int
 toPixels(double v)
 {
     return (v >= 0. && v <= 32767.) ? static_cast<int>(v) : 0;
+}
+
+// Copies the window copied of surface, a CAIRO_FORMAT_ARGB32 image surface that covers the image
+// (0, 0, width, height) top-down, to the RGBA float pixelData (bounds, rowBytes) (ReadSVG, ReadCDR,
+// ReadPDF): the OFX row y is the surface row height - 1 - y. copied is the window that
+// GenericReaderPlugin::clipToFile() returned for that image, so it is inside the surface. The cairo
+// data is premultiplied, and is copied as is.
+inline void
+copyCairoSurface(cairo_surface_t* surface, const OfxRectI& copied, float* pixelData, const OfxRectI& bounds, int rowBytes)
+{
+    cairo_surface_flush(surface);
+    const unsigned char* const cdata = cairo_image_surface_get_data(surface);
+    const int height = cairo_image_surface_get_height(surface);
+    const int cstride = cairo_image_surface_get_stride(surface);
+    for (int y = copied.y1; y < copied.y2; ++y) {
+        // size_t: the offset may not fit in an int (#158)
+        const unsigned char* src = cdata + (std::size_t)(height - 1 - y) * cstride + (std::size_t)copied.x1 * 4;
+        float* dst = PackedImage::pixelAddress(pixelData, bounds, rowBytes, 4, copied.x1, y);
+        for (int x = copied.x1; x < copied.x2; ++x) {
+            // each pixel is a native-endian 32-bit ARGB: B, G, R, A bytes on a little-endian CPU
+            dst[0] = src[2] * (1.f / 255);
+            dst[1] = src[1] * (1.f / 255);
+            dst[2] = src[0] * (1.f / 255);
+            dst[3] = src[3] * (1.f / 255);
+            dst += 4;
+            src += 4;
+        }
+    }
 }
 
 } // namespace Arena
