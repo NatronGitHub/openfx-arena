@@ -135,6 +135,28 @@ ReadCDRPlugin::openSVG(const std::string& svg)
     return handle;
 }
 
+// The page size of handle at dpi, as rsvg reports it (imageWidth, imageHeight) and in pixels (0 if
+// empty or too large, see toPixels()): decode() renders the size that getFrameBounds() reported.
+static void
+getPageSize(RsvgHandle* handle, int dpi, double* imageWidth, double* imageHeight, int* width, int* height)
+{
+    rsvg_handle_set_dpi_x_y(handle, dpi, dpi);
+
+    RsvgDimensionData dimension;
+    rsvg_handle_get_dimensions(handle, &dimension);
+
+    *imageWidth = dimension.width;
+    *imageHeight = dimension.height;
+
+    if (dpi != kParamDpiDefault) {
+        *width = Arena::toPixels(*imageWidth * dpi / kParamDpiDefault);
+        *height = Arena::toPixels(*imageHeight * dpi / kParamDpiDefault);
+    } else {
+        *width = Arena::toPixels(*imageWidth);
+        *height = Arena::toPixels(*imageHeight);
+    }
+}
+
 void
 ReadCDRPlugin::decode(const std::string& filename,
                       OfxTime time,
@@ -162,28 +184,13 @@ ReadCDRPlugin::decode(const std::string& filename,
     const std::string svg = readSVG(filename);
 
     // the handles are released on every path, including the throws below (#132)
-    RsvgDimensionData dimension;
     cairo_status_t status;
     double imageWidth, imageHeight, scaleWidth, scaleHeight;
     int dpi, width, height;
     _dpi->getValueAtTime(time, dpi);
 
     const Arena::GObjectPtr<RsvgHandle> handle = openSVG(svg);
-    rsvg_handle_set_dpi_x_y(handle.get(), dpi, dpi);
-
-    rsvg_handle_get_dimensions(handle.get(), &dimension);
-
-    imageWidth = dimension.width;
-    imageHeight = dimension.height;
-
-    if (dpi != kParamDpiDefault) {
-        width = Arena::toPixels(imageWidth * dpi / kParamDpiDefault);
-        height = Arena::toPixels(imageHeight * dpi / kParamDpiDefault);
-    }
-    else {
-        width = Arena::toPixels(imageWidth);
-        height = Arena::toPixels(imageHeight);
-    }
+    getPageSize(handle.get(), dpi, &imageWidth, &imageHeight, &width, &height);
 
     // The whole drawing is rendered, at (0,0,width,height) as in getFrameBounds(), and only the
     // part of renderWindow that it covers is copied: a host may ask for a render window smaller
@@ -243,25 +250,11 @@ bool ReadCDRPlugin::getFrameBounds(const std::string& filename,
     int dpi;
     _dpi->getValueAtTime(time, dpi);
 
-    RsvgDimensionData dimension;
     double imageWidth, imageHeight;
     int width, height;
 
     const Arena::GObjectPtr<RsvgHandle> handle = openSVG(svg);
-    rsvg_handle_set_dpi_x_y(handle.get(), dpi, dpi);
-
-    rsvg_handle_get_dimensions(handle.get(), &dimension);
-
-    imageWidth = dimension.width;
-    imageHeight = dimension.height;
-
-    if (dpi != kParamDpiDefault) {
-        width = Arena::toPixels(imageWidth * dpi / kParamDpiDefault);
-        height = Arena::toPixels(imageHeight * dpi / kParamDpiDefault);
-    } else {
-        width = Arena::toPixels(imageWidth);
-        height = Arena::toPixels(imageHeight);
-    }
+    getPageSize(handle.get(), dpi, &imageWidth, &imageHeight, &width, &height);
 
     if (width <= 0 || height <= 0) {
         // an empty drawing: report it, instead of returning true with the bounds unset, from
