@@ -279,17 +279,9 @@ OpenRasterPlugin::getClipComponents(const OFX::ClipComponentsArguments& args, OF
     clipComponents.setPassThroughClip(NULL, args.time, args.view);
     const std::vector<Layer> imageLayers = getImageLayers();
     if (imageLayers.size()>0 && gHostIsNatron) {
+        // every layer has a name: getLayersInfo() drops the unnamed ones
         for (int i = 0; i < (int)imageLayers.size(); i++) {
-            std::string layerName;
-            {
-                std::ostringstream ss;
-                if (!imageLayers[i].name.empty()) {
-                    ss << imageLayers[i].name;
-                } else {
-                    ss << "Image Layer #" << i; // if layer name is empty
-                }
-                layerName = ss.str();
-            }
+            const std::string& layerName = imageLayers[i].name;
             const char* components[4] = {"R","G","B", "A"};
             OFX::MultiPlane::ImagePlaneDesc plane(layerName, layerName, "", components, 4);
             clipComponents.addClipPlane(*_outputClip, OFX::MultiPlane::ImagePlaneDesc::mapPlaneToOFXPlaneString(plane));
@@ -326,14 +318,7 @@ OpenRasterPlugin::decodePlane(const std::string& filename, OfxTime /*time*/, int
 
         if (!plane.isColorPlane()) {
             for (int i = 0; i < (int)imageLayers.size(); i++) {
-                bool foundLayer = false;
-                std::ostringstream nonameLayer;
-                nonameLayer << "Image Layer #" << i; // if layer name is empty
-                if (imageLayers[i].name==plane.getPlaneLabel())
-                    foundLayer = true;
-                if (nonameLayer.str()==plane.getPlaneLabel() && !foundLayer)
-                    foundLayer = true;
-                if (foundLayer) {
+                if (imageLayers[i].name==plane.getPlaneLabel()) {
                     layer = i;
                     break;
                 }
