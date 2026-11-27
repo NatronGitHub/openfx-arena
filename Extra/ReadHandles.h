@@ -18,17 +18,22 @@
 
 // Owning handles for the C objects of the readers (#132, #185), so that they are released on every
 // path, including the throws of the OFX Support library. The deleters accept NULL. Also the size
-// conversion of the vector readers.
+// conversion and the cairo surface copy of the vector readers.
 
 #ifndef Arena_ReadHandles_h
 #define Arena_ReadHandles_h
 
+#include <cassert>
+#include <cstddef>
 #include <cstdlib>
 #include <memory>
 
 #include <cairo.h>
 #include <glib-object.h>
 #include <zip.h>
+
+#include "IOUtility.h" // OFX::IO::intToFloat
+#include "PackedImage.h"
 
 namespace Arena {
 
@@ -69,6 +74,36 @@ inline int
 toPixels(double v)
 {
     return (v >= 0. && v <= 32767.) ? static_cast<int>(v) : 0;
+}
+
+// Copies the window copied of surface, a CAIRO_FORMAT_ARGB32 image surface that covers the image
+// (0, 0, width, height) top-down, to the RGBA float pixelData (bounds, rowBytes) (ReadSVG, ReadCDR,
+// ReadPDF): the OFX row y is the surface row height - 1 - y. copied is the window that
+// GenericReaderPlugin::clipToFile() returned for that image, so it is inside the surface. The cairo
+// data is premultiplied, and is copied as is.
+inline void
+copyCairoSurface(cairo_surface_t* surface, const OfxRectI& copied, float* pixelData, const OfxRectI& bounds, int rowBytes)
+{
+    assert(cairo_image_surface_get_format(surface) == CAIRO_FORMAT_ARGB32);
+    cairo_surface_flush(surface);
+    const unsigned char* const cdata = cairo_image_surface_get_data(surface);
+    const int height = cairo_image_surface_get_height(surface);
+    const int cstride = cairo_image_surface_get_stride(surface);
+    for (int y = copied.y1; y < copied.y2; ++y) {
+        // size_t: the offset may not fit in an int (#158)
+        const unsigned char* src = cdata + static_cast<std::size_t>(height - 1 - y) * cstride + static_cast<std::size_t>(copied.x1) * 4;
+        float* dst = PackedImage::pixelAddress(pixelData, bounds, rowBytes, 4, copied.x1, y);
+        for (int x = copied.x1; x < copied.x2; ++x) {
+            // each pixel is a native-endian 32-bit ARGB: B, G, R, A bytes on a little-endian CPU
+            // v / 255.f, as GenericReader (and the old ReadSVG); v * (1.f / 255) differs by 1 ulp
+            dst[0] = OFX::IO::intToFloat<256>(src[2]);
+            dst[1] = OFX::IO::intToFloat<256>(src[1]);
+            dst[2] = OFX::IO::intToFloat<256>(src[0]);
+            dst[3] = OFX::IO::intToFloat<256>(src[3]);
+            dst += 4;
+            src += 4;
+        }
+    }
 }
 
 } // namespace Arena

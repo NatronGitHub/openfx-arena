@@ -765,10 +765,6 @@ ReadSVGPlugin::decodePlane(const std::string& filename, OfxTime time, int /*view
         OFX::throwSuiteStatusException(kOfxStatErrFormat);
     }
 
-    cairo_surface_flush(surface);
-
-    unsigned char* cdata = cairo_image_surface_get_data(surface);
-    const int cstride = cairo_image_surface_get_stride(surface);
     // The surface covers image, top-down: the OFX row y is the surface row height - 1 - y.
     // Copy the part of renderWindow inside the image (clamped, so that a window larger than the
     // image or outside of it doesn't read out of the surface), and clear the rest of the window.
@@ -779,25 +775,7 @@ ReadSVGPlugin::decodePlane(const std::string& filename, OfxTime time, int /*view
     // with decode()'s renderWindow (see GenericReader.h)
     OfxRectI copied;
     clipToFile(renderWindow, image, pixelData, bounds, 4, OFX::eBitDepthFloat, rowBytes, &copied);
-    for (int y = copied.y1; y < copied.y2; ++y) {
-        size_t cdataOffset = (size_t)(height - 1 - y) * cstride + (size_t)copied.x1 * 4;
-        float* dst = PackedImage::pixelAddress(pixelData, bounds, rowBytes, 4, copied.x1, y);
-        for (int x = copied.x1; x < copied.x2; ++x) {
-#if 0
-            // check on premulttest.svg that the raw data is premultiplied
-            // See also TestImageSVGPremult in Natron-Tests github repository.
-            if (x == 200 && ((y % 50) == 25)) {
-                printf("x=%d y=%d r=%d g=%d b=%d a=%d\n", x, y, cdata[cdataOffset + 2], cdata[cdataOffset + 1], cdata[cdataOffset + 0], cdata[cdataOffset + 3]);
-            }
-#endif
-            dst[0] = intToFloat<256>(cdata[cdataOffset + 2]);
-            dst[1] = intToFloat<256>(cdata[cdataOffset + 1]);
-            dst[2] = intToFloat<256>(cdata[cdataOffset + 0]);
-            dst[3] = intToFloat<256>(cdata[cdataOffset + 3]);
-            dst += 4;
-            cdataOffset += 4;
-        }
-    }
+    Arena::copyCairoSurface(surface, copied, pixelData, bounds, rowBytes);
 }
 
 bool ReadSVGPlugin::getFrameBounds(const std::string& filename,
