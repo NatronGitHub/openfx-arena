@@ -998,6 +998,8 @@ ReadSVGPluginFactory<majorVersion>::describeInContext(OFX::ImageEffectDescriptor
         param->setAnimates(false);
         param->setLayoutHint(OFX::eLayoutHintDivider);
         page->addChild(*param);
+        // the format, set in getClipPreferences(), depends on the DPI
+        desc.addClipPreferencesSlaveParam(*param);
     }
     if (majorVersion < 4) {
         // version 3 has no transform (it was added in 3.4, which was never released, and is now 4.0)

@@ -604,6 +604,8 @@ void ReadPDFPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, C
         param->setDefault(kParamDpiDefault);
         param->setAnimates(false);
         page->addChild(*param);
+        // the format, set in getClipPreferences(), depends on the DPI
+        desc.addClipPreferencesSlaveParam(*param);
     }
 
     GenericReaderDescribeInContextEnd(desc, context, page, "reference", "scene_linear");
