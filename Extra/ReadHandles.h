@@ -32,6 +32,7 @@
 #include <glib-object.h>
 #include <zip.h>
 
+#include "IOUtility.h" // OFX::IO::intToFloat
 #include "PackedImage.h"
 
 namespace Arena {
@@ -94,10 +95,11 @@ copyCairoSurface(cairo_surface_t* surface, const OfxRectI& copied, float* pixelD
         float* dst = PackedImage::pixelAddress(pixelData, bounds, rowBytes, 4, copied.x1, y);
         for (int x = copied.x1; x < copied.x2; ++x) {
             // each pixel is a native-endian 32-bit ARGB: B, G, R, A bytes on a little-endian CPU
-            dst[0] = src[2] * (1.f / 255);
-            dst[1] = src[1] * (1.f / 255);
-            dst[2] = src[0] * (1.f / 255);
-            dst[3] = src[3] * (1.f / 255);
+            // v / 255.f, as GenericReader (and the old ReadSVG); v * (1.f / 255) differs by 1 ulp
+            dst[0] = OFX::IO::intToFloat<256>(src[2]);
+            dst[1] = OFX::IO::intToFloat<256>(src[1]);
+            dst[2] = OFX::IO::intToFloat<256>(src[0]);
+            dst[3] = OFX::IO::intToFloat<256>(src[3]);
             dst += 4;
             src += 4;
         }
