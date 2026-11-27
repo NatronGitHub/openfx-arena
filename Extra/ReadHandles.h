@@ -23,6 +23,7 @@
 #ifndef Arena_ReadHandles_h
 #define Arena_ReadHandles_h
 
+#include <cassert>
 #include <cstddef>
 #include <cstdlib>
 #include <memory>
@@ -82,13 +83,14 @@ toPixels(double v)
 inline void
 copyCairoSurface(cairo_surface_t* surface, const OfxRectI& copied, float* pixelData, const OfxRectI& bounds, int rowBytes)
 {
+    assert(cairo_image_surface_get_format(surface) == CAIRO_FORMAT_ARGB32);
     cairo_surface_flush(surface);
     const unsigned char* const cdata = cairo_image_surface_get_data(surface);
     const int height = cairo_image_surface_get_height(surface);
     const int cstride = cairo_image_surface_get_stride(surface);
     for (int y = copied.y1; y < copied.y2; ++y) {
         // size_t: the offset may not fit in an int (#158)
-        const unsigned char* src = cdata + (std::size_t)(height - 1 - y) * cstride + (std::size_t)copied.x1 * 4;
+        const unsigned char* src = cdata + static_cast<std::size_t>(height - 1 - y) * cstride + static_cast<std::size_t>(copied.x1) * 4;
         float* dst = PackedImage::pixelAddress(pixelData, bounds, rowBytes, 4, copied.x1, y);
         for (int x = copied.x1; x < copied.x2; ++x) {
             // each pixel is a native-endian 32-bit ARGB: B, G, R, A bytes on a little-endian CPU
