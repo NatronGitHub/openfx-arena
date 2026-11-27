@@ -55,7 +55,7 @@
 
 #define kParamOpenMP "openmp"
 #define kParamOpenMPLabel "OpenMP"
-#define kParamOpenMPHint "Enable/Disable OpenMP support. This will enable the plugin to use as many threads as allowed by host."
+#define kParamOpenMPHint "Kept for old projects; ImageMagick runs on one thread unless the MAGICK_THREAD_LIMIT environment variable is set."
 #define kParamOpenMPDefault false
 
 using namespace OFX;
@@ -84,7 +84,7 @@ ImplodePlugin::ImplodePlugin(OfxImageEffectHandle handle, bool unpremultSrc)
 , dstClip_(NULL)
 , srcClip_(NULL)
 {
-    Magick::InitializeMagick(NULL);
+    magickInitialize();
     dstClip_ = fetchClip(kOfxImageEffectOutputClipName);
     assert(dstClip_ && dstClip_->getPixelComponents() == OFX::ePixelComponentRGBA);
     srcClip_ = fetchClip(kOfxImageEffectSimpleSourceClipName);
@@ -164,24 +164,13 @@ void ImplodePlugin::render(const OFX::RenderArguments &args)
     // get params
     double implode,swirl;
     bool matte = false;
-    bool enableOpenMP = false;
     implode_->getValueAtTime(args.time, implode);
     matte_->getValueAtTime(args.time, matte);
     swirl_->getValueAtTime(args.time, swirl);
-    enableOpenMP_->getValueAtTime(args.time, enableOpenMP);
 
     // setup
     int width = srcRod.x2-srcRod.x1;
     int height = srcRod.y2-srcRod.y1;
-
-    // OpenMP
-#ifndef LEGACYIM
-    unsigned int threads = 1;
-    if (_hasOpenMP && enableOpenMP)
-        threads = OFX::MultiThread::getNumCPUs();
-
-    Magick::ResourceLimits::thread(threads);
-#endif
 
     // read image
     Magick::Image image(Magick::Geometry(width,height),Magick::Color("rgba(0,0,0,0)"));
@@ -324,6 +313,7 @@ void ImplodePluginFactory<majorVersion>::describeInContext(OFX::ImageEffectDescr
         param->setLabel(kParamOpenMPLabel);
         param->setHint(kParamOpenMPHint);
         param->setDefault(kParamOpenMPDefault);
+        param->setIsSecret(true);
         param->setAnimates(false);
         if (!_hasOpenMP)
             param->setEnabled(false);

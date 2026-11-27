@@ -60,7 +60,7 @@ Experimental:
  * librevenge *(ReadCDR)*
  * poppler-glib 0.83+ *(ReadPDF)*
  * lcms 2.x *(ReadPSD)*
- * ImageMagick (Magick++) 7, or 6.9.2 or later (older ImageMagick 6 with ``IM=68`` or ``LEGACYIM=1``, below), Q16 or Q32, with HDRI, lcms2, zlib, freetype, libpng. HDRI is required, since the plug-ins pass floating-point pixels to ImageMagick (the build doesn't check it). Natron 2.6 targets ImageMagick 7, static, Q32, HDRI, with OpenMP; ImageMagick 6 HDRI still builds.
+ * ImageMagick (Magick++) 7, or 6.9.2 or later (older ImageMagick 6 with ``IM=68`` or ``LEGACYIM=1``, below), Q16 or Q32, with HDRI, lcms2, zlib, freetype, libpng. HDRI is required, since the plug-ins pass floating-point pixels to ImageMagick (the build doesn't check it). Natron 2.6 targets ImageMagick 7, static, Q32, HDRI, with OpenMP; ImageMagick 6 HDRI still builds. The plug-ins run ImageMagick on one thread, unless the ``MAGICK_THREAD_LIMIT`` environment variable is set.
  * OpenCL 1.2 compatible hardware and drivers *(for optional OCL plugins)*
  * libcurl *(for optional HaldCLUT plugin)*
  * libsox *(AudioCurve)*
@@ -86,7 +86,7 @@ Optional build options:
   * ``AUDIO=ON``: Enable ``AudioCurve`` (the default when pkg-config finds sox; ``AUDIO=OFF`` leaves it out)
   * ``RICHTEXT=ON``: Enable ``RichText`` *(WIP, only for developers)*
   * ``LICENSE=COMMERCIAL``: leave out ``ReadPDF`` and poppler (GPL)
-  * ``LEGACYIM=1``: old ImageMagick: leave out ``Sketch``, ``Polaroid`` and ``Edges``, and build without the code that needs a newer ImageMagick (OpenMP thread count, delegate checks, some Text and ReadPSD options, Modulate's OpenCL, Texture's random seed)
+  * ``LEGACYIM=1``: old ImageMagick: leave out ``Sketch``, ``Polaroid`` and ``Edges``, and build without the code that needs a newer ImageMagick (delegate checks, some Text and ReadPSD options, Texture's random seed)
   * ``IM=68``: ImageMagick 6.8: build ``Texture`` without the random seed
   * ``IM=7``: with ``MINGW=1``, also link ``oleaut32`` for ImageMagick 7. Elsewhere it has no effect: the ImageMagick version is detected at compile time
   * ``MINGW=1``: MinGW (MSYS2): add the libraries a static ImageMagick needs (gdi32, freetype, expat, z, ws2_32)

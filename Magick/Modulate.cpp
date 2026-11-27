@@ -47,12 +47,12 @@
 
 #define kParamOpenMP "openmp"
 #define kParamOpenMPLabel "OpenMP"
-#define kParamOpenMPHint "Enable/Disable OpenMP support. This will enable the plugin to use as many threads as allowed by host."
+#define kParamOpenMPHint "Kept for old projects; ImageMagick runs on one thread unless the MAGICK_THREAD_LIMIT environment variable is set."
 #define kParamOpenMPDefault true
 
 #define kParamOpenCL "opencl"
 #define kParamOpenCLLabel "OpenCL"
-#define kParamOpenCLHint "Enable/Disable OpenCL. This will enable the plugin to use supported GPU(s) for better performance."
+#define kParamOpenCLHint "Kept for old projects; ImageMagick's OpenCL is off unless the MAGICK_OCL_DEVICE environment variable is set."
 #define kParamOpenCLDefault false
 
 #define kSupportsTiles 0
@@ -90,7 +90,7 @@ ModulatePlugin::ModulatePlugin(OfxImageEffectHandle handle, bool unpremultSrc)
 , dstClip_(NULL)
 , srcClip_(NULL)
 {
-    Magick::InitializeMagick(NULL);
+    magickInitialize();
     dstClip_ = fetchClip(kOfxImageEffectOutputClipName);
     assert(dstClip_ && dstClip_->getPixelComponents() == OFX::ePixelComponentRGBA);
     srcClip_ = fetchClip(kOfxImageEffectSimpleSourceClipName);
@@ -170,39 +170,13 @@ void ModulatePlugin::render(const OFX::RenderArguments &args)
 
     // get params
     double brightness, hue, saturation;
-    bool enableOpenMP = false;
-    bool enableOpenCL = false;
     brightness_->getValueAtTime(args.time, brightness);
     hue_->getValueAtTime(args.time, hue);
     saturation_->getValueAtTime(args.time, saturation);
-    enableOpenMP_->getValueAtTime(args.time, enableOpenMP);
-    enableOpenCL_->getValueAtTime(args.time, enableOpenCL);
 
     // setup
     int width = srcRod.x2-srcRod.x1;
     int height = srcRod.y2-srcRod.y1;
-
-    // OpenMP
-#ifndef LEGACYIM
-    unsigned int threads = 1;
-    if (_hasOpenMP && enableOpenMP)
-        threads = OFX::MultiThread::getNumCPUs();
-
-    Magick::ResourceLimits::thread(threads);
-#endif
-
-    // OpenCL
-#ifndef LEGACYIM
-    if (_hasOpenCL && enableOpenCL) {
-#if MagickLibVersion >= 0x700
-        Magick::EnableOpenCL();
-#else
-        Magick::EnableOpenCL(true);
-#endif
-    }
-    else if (_hasOpenCL && !enableOpenCL)
-        Magick::DisableOpenCL();
-#endif
 
     // read image
     Magick::Image image(Magick::Geometry(width,height),Magick::Color("rgba(0,0,0,0)"));
@@ -332,6 +306,7 @@ void ModulatePluginFactory<majorVersion>::describeInContext(OFX::ImageEffectDesc
         param->setLabel(kParamOpenMPLabel);
         param->setHint(kParamOpenMPHint);
         param->setDefault(kParamOpenMPDefault);
+        param->setIsSecret(true);
         param->setAnimates(false);
         if (!_hasOpenMP)
             param->setEnabled(false);
@@ -342,6 +317,7 @@ void ModulatePluginFactory<majorVersion>::describeInContext(OFX::ImageEffectDesc
         param->setLabel(kParamOpenCLLabel);
         param->setHint(kParamOpenCLHint);
         param->setDefault(kParamOpenCLDefault);
+        param->setIsSecret(true);
         param->setAnimates(false);
         if (!_hasOpenCL)
             param->setEnabled(false);

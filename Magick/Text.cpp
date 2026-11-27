@@ -156,7 +156,7 @@
 
 #define kParamOpenMP "openmp"
 #define kParamOpenMPLabel "OpenMP"
-#define kParamOpenMPHint "Enable/Disable OpenMP support. This will enable the plugin to use as many threads as allowed by host."
+#define kParamOpenMPHint "Kept for old projects; ImageMagick runs on one thread unless the MAGICK_THREAD_LIMIT environment variable is set."
 #define kParamOpenMPDefault false
 
 using namespace OFX;
@@ -236,7 +236,7 @@ TextPlugin::TextPlugin(OfxImageEffectHandle handle)
 , enableOpenMP_(NULL)
 {
     try {
-        Magick::InitializeMagick(NULL);
+        magickInitialize();
     } catch (const std::exception& e) {
         std::cerr << "Failure when calling InitializeMagick: " << e.what() << std::endl;
     }
@@ -379,7 +379,6 @@ void TextPlugin::render(const OFX::RenderArguments &args)
     double x, y, r, g, b, a, r_s, g_s, b_s, a_s, strokeWidth, shadowOpacity, shadowSigma, interlineSpacing, interwordSpacing, textSpacing, shadowR, shadowG, shadowB, shadowBlur;
     int fontSize, shadowX, shadowY, gravity,cwidth,cheight;
     std::string text, fontOverride, font;
-    bool enableOpenMP = false;
 
     position_->getValueAtTime(args.time, x, y);
     text_->getValueAtTime(args.time, text);
@@ -417,21 +416,11 @@ void TextPlugin::render(const OFX::RenderArguments &args)
     if (font.length() > 2 && font[1] == '/' && gHostIsNatron) {
         font.erase(0,2);
     }
-    enableOpenMP_->getValueAtTime(args.time, enableOpenMP);
 
     // use custom font
     if (!fontOverride.empty()) {
         font = fontOverride;
     }
-    // OpenMP
-#ifndef LEGACYIM
-    unsigned int threads = 1;
-    if (_hasOpenMP && enableOpenMP)
-        threads = OFX::MultiThread::getNumCPUs();
-
-    Magick::ResourceLimits::thread(threads);
-#endif
-
     // Generate empty image
     int width = dstRod.x2-dstRod.x1;
     int height = dstRod.y2-dstRod.y1;
@@ -748,6 +737,7 @@ void TextPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, Cont
         param->setLabel(kParamOpenMPLabel);
         param->setHint(kParamOpenMPHint);
         param->setDefault(kParamOpenMPDefault);
+        param->setIsSecret(true);
         param->setAnimates(false);
         if (!_hasOpenMP)
             param->setEnabled(false);

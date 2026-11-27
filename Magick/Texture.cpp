@@ -70,7 +70,7 @@
 
 #define kParamOpenMP "openmp"
 #define kParamOpenMPLabel "OpenMP"
-#define kParamOpenMPHint "Enable/Disable OpenMP support. This will enable the plugin to use as many threads as allowed by host."
+#define kParamOpenMPHint "Kept for old projects; ImageMagick runs on one thread unless the MAGICK_THREAD_LIMIT environment variable is set."
 #define kParamOpenMPDefault false
 
 #define kParamGeneratorRange "frameRange"
@@ -141,7 +141,7 @@ TexturePlugin::TexturePlugin(OfxImageEffectHandle handle)
 , enableOpenMP_(NULL)
 , _range(NULL)
 {
-    Magick::InitializeMagick(NULL);
+    magickInitialize();
 
     dstClip_ = fetchClip(kOfxImageEffectOutputClipName);
     assert(dstClip_ && (dstClip_->getPixelComponents() == OFX::ePixelComponentRGBA || dstClip_->getPixelComponents() == OFX::ePixelComponentRGB));
@@ -219,22 +219,11 @@ void TexturePlugin::render(const OFX::RenderArguments &args)
 
     // Get params
     int effect,seed;
-    bool enableOpenMP = false;
     std::string fromColor, toColor;
     effect_->getValueAtTime(args.time, effect);
     seed_->getValueAtTime(args.time, seed);
     fromColor_->getValueAtTime(args.time, fromColor);
     toColor_->getValueAtTime(args.time, toColor);
-    enableOpenMP_->getValueAtTime(args.time, enableOpenMP);
-
-    // OpenMP
-#ifndef LEGACYIM
-    unsigned int threads = 1;
-    if (_hasOpenMP && enableOpenMP)
-        threads = OFX::MultiThread::getNumCPUs();
-
-    Magick::ResourceLimits::thread(threads);
-#endif
 
     // Generate empty image
     int width = dstRod.x2-dstRod.x1;
@@ -524,6 +513,7 @@ void TexturePluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, C
         param->setLabel(kParamOpenMPLabel);
         param->setHint(kParamOpenMPHint);
         param->setDefault(kParamOpenMPDefault);
+        param->setIsSecret(true);
         param->setAnimates(false);
         if (!_hasOpenMP)
             param->setEnabled(false);

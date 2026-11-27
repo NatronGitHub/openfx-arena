@@ -8,7 +8,7 @@
 # openfx-gmic crashed after a successful render when the host unloaded its binary: worker threads
 # of a runtime that it links were still running, or were torn down by a static destructor of the
 # unloaded binary. The plug-ins below start such threads: the Magick ones run ImageMagick on
-# OFX::MultiThread::getNumCPUs() OpenMP threads (with openmp=1; their default is one thread), the
+# MAGICK_THREAD_LIMIT=THREADS OpenMP threads (without it, Arena gives ImageMagick one thread), the
 # Text, SVG and PDF ones use pango, cairo, librsvg, poppler and glib. Each one gets its own process,
 # in hostDemo's default load mode (the binary is unloaded after the scan, loaded again for the
 # render, and unloaded before exit). OMP_NUM_THREADS is THREADS, so that the OpenMP runtime has
@@ -67,6 +67,8 @@ endif()
 # hostDemo's default load mode, whatever the caller's environment says
 unset(ENV{OFX_HOSTDEMO_KEEP_LOADED})
 set(ENV{OMP_NUM_THREADS} "${THREADS}")
+# ImageMagick's thread limit: Arena sets it to 1 unless this is set
+set(ENV{MAGICK_THREAD_LIMIT} "${THREADS}")
 # keep the idle OpenMP pool threads spinning inside the runtime after the render, instead of
 # blocking in a kernel wait after a short spin (libgomp's default spin count, libomp's 200 ms
 # KMP_BLOCKTIME): a blocked thread is killed at exit without running any more code, so the test
@@ -120,19 +122,18 @@ if(MAGICK_OPENMP)
 else()
   message("note: ImageMagick has no OpenMP: the Magick plug-ins start no OpenMP thread, so their thread check is skipped (only the unload is tested)")
 endif()
-check(net.fxarena.openfx.Charcoal 3 filter openmp=1)
-check(net.fxarena.openfx.Sketch 3 filter openmp=1)
-check(net.fxarena.openfx.Morphology 2 filter openmp=1)
-check(net.fxarena.openfx.Swirl 3 filter openmp=1)
-check(net.fxarena.openfx.Implode 3 filter openmp=1)
-check(net.fxarena.openfx.Arc 5 filter openmp=1)
-check(net.fxarena.openfx.Polar 5 filter openmp=1)
+check(net.fxarena.openfx.Charcoal 3 filter)
+check(net.fxarena.openfx.Sketch 3 filter)
+check(net.fxarena.openfx.Morphology 2 filter)
+check(net.fxarena.openfx.Swirl 3 filter)
+check(net.fxarena.openfx.Implode 3 filter)
+check(net.fxarena.openfx.Arc 5 filter)
+check(net.fxarena.openfx.Polar 5 filter)
 set(_min 1)
-# infinite RoD with the default size: give them a size (as tests/hostdemo/arena.txt). They have
-# openmp=1, but leave no pool thread behind (1 thread after the render on macOS), so no thread
-# check
-check(net.fxarena.openfx.Texture 3 general width=320 height=240 openmp=1)
-check(net.fxarena.openfx.Text 5 general width=320 height=240 openmp=1)
+# infinite RoD with the default size: give them a size (as tests/hostdemo/arena.txt). They leave
+# no pool thread behind (1 thread after the render on macOS), so no thread check
+check(net.fxarena.openfx.Texture 3 general width=320 height=240)
+check(net.fxarena.openfx.Text 5 general width=320 height=240)
 # TextOFX (pango, cairo, fontconfig), and the readers that use glib-based libraries or
 # ImageMagick
 check(net.fxarena.openfx.Text 7 filter)

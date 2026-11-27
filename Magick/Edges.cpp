@@ -65,7 +65,7 @@
 
 #define kParamOpenMP "openmp"
 #define kParamOpenMPLabel "OpenMP"
-#define kParamOpenMPHint "Enable/Disable OpenMP support. This will enable the plugin to use as many threads as allowed by host."
+#define kParamOpenMPHint "Kept for old projects; ImageMagick runs on one thread unless the MAGICK_THREAD_LIMIT environment variable is set."
 #define kParamOpenMPDefault false
 
 using namespace OFX;
@@ -96,7 +96,7 @@ EdgesPlugin::EdgesPlugin(OfxImageEffectHandle handle, bool unpremultSrc)
 , dstClip_(NULL)
 , srcClip_(NULL)
 {
-    Magick::InitializeMagick(NULL);
+    magickInitialize();
     dstClip_ = fetchClip(kOfxImageEffectOutputClipName);
     assert(dstClip_ && dstClip_->getPixelComponents() == OFX::ePixelComponentRGBA);
     srcClip_ = fetchClip(kOfxImageEffectSimpleSourceClipName);
@@ -180,26 +180,15 @@ void EdgesPlugin::render(const OFX::RenderArguments &args)
     double edge;
     int kernel;
     bool gray = false;
-    bool enableOpenMP = false;
     brightness_->getValueAtTime(args.time, brightness);
     smoothing_->getValueAtTime(args.time, smoothing);
     width_->getValueAtTime(args.time, edge);
     gray_->getValueAtTime(args.time, gray);
-    enableOpenMP_->getValueAtTime(args.time, enableOpenMP);
     kernel_->getValueAtTime(args.time, kernel);
 
     // setup
     int width = srcRod.x2-srcRod.x1;
     int height = srcRod.y2-srcRod.y1;
-
-    // OpenMP
-#ifndef LEGACYIM
-    unsigned int threads = 1;
-    if (_hasOpenMP && enableOpenMP)
-        threads = OFX::MultiThread::getNumCPUs();
-
-    Magick::ResourceLimits::thread(threads);
-#endif
 
     // read image
     Magick::Image image(Magick::Geometry(width,height),Magick::Color("rgba(0,0,0,0)"));
@@ -499,6 +488,7 @@ void EdgesPluginFactory<majorVersion>::describeInContext(OFX::ImageEffectDescrip
         param->setLabel(kParamOpenMPLabel);
         param->setHint(kParamOpenMPHint);
         param->setDefault(kParamOpenMPDefault);
+        param->setIsSecret(true);
         param->setAnimates(false);
         if (!_hasOpenMP)
             param->setEnabled(false);

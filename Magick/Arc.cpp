@@ -70,7 +70,7 @@
 
 #define kParamOpenMP "openmp"
 #define kParamOpenMPLabel "OpenMP"
-#define kParamOpenMPHint "Enable/Disable OpenMP support. This will enable the plugin to use as many threads as allowed by host."
+#define kParamOpenMPHint "Kept for old projects; ImageMagick runs on one thread unless the MAGICK_THREAD_LIMIT environment variable is set."
 #define kParamOpenMPDefault false
 
 #define kParamFlip "flip"
@@ -109,7 +109,7 @@ ArcPlugin::ArcPlugin(OfxImageEffectHandle handle, bool unpremultSrc)
 , dstClip_(NULL)
 , srcClip_(NULL)
 {
-    Magick::InitializeMagick(NULL);
+    magickInitialize();
     dstClip_ = fetchClip(kOfxImageEffectOutputClipName);
     assert(dstClip_ && dstClip_->getPixelComponents() == OFX::ePixelComponentRGBA);
     srcClip_ = fetchClip(kOfxImageEffectSimpleSourceClipName);
@@ -194,7 +194,6 @@ void ArcPlugin::render(const OFX::RenderArguments &args)
     int vpixel;
     double arcAngle,arcRotate,arcTopRadius,arcBottomRadius;
     bool matte = false;
-    bool enableOpenMP = false;
     bool flip = false;
     vpixel_->getValueAtTime(args.time, vpixel);
     arcAngle_->getValueAtTime(args.time, arcAngle);
@@ -202,21 +201,11 @@ void ArcPlugin::render(const OFX::RenderArguments &args)
     arcTopRadius_->getValueAtTime(args.time, arcTopRadius);
     arcBottomRadius_->getValueAtTime(args.time, arcBottomRadius);
     matte_->getValueAtTime(args.time, matte);
-    enableOpenMP_->getValueAtTime(args.time, enableOpenMP);
     flip_->getValueAtTime(args.time, flip);
 
     // setup
     int width = srcRod.x2-srcRod.x1;
     int height = srcRod.y2-srcRod.y1;
-
-    // OpenMP
-#ifndef LEGACYIM
-    unsigned int threads = 1;
-    if (_hasOpenMP && enableOpenMP)
-        threads = OFX::MultiThread::getNumCPUs();
-
-    Magick::ResourceLimits::thread(threads);
-#endif
 
     // read image
     Magick::Image image(Magick::Geometry(width,height),Magick::Color("rgba(0,0,0,0)"));
@@ -497,6 +486,7 @@ void ArcPluginFactory<majorVersion>::describeInContext(OFX::ImageEffectDescripto
         param->setLabel(kParamOpenMPLabel);
         param->setHint(kParamOpenMPHint);
         param->setDefault(kParamOpenMPDefault);
+        param->setIsSecret(true);
         param->setAnimates(false);
         if (!_hasOpenMP)
             param->setEnabled(false);
