@@ -29,7 +29,7 @@
 
 #define kParamOpenMP "openmp"
 #define kParamOpenMPLabel "OpenMP"
-#define kParamOpenMPHint "Kept for old projects; ImageMagick runs on one thread unless the MAGICK_THREAD_LIMIT environment variable is set."
+#define kParamOpenMPHint "Kept for old projects, and ignored: ImageMagick runs on several threads for interactive renders and usually on one thread otherwise, unless the MAGICK_THREAD_LIMIT environment variable is set."
 #define kParamOpenMPDefault false
 
 #define kParamMatte "matte"
@@ -102,6 +102,7 @@ public:
 template <int SupportsRenderScale>
 void MagickPluginHelper<SupportsRenderScale>::render(const OFX::RenderArguments &args)
 {
+    MagickThreads threads(args);
     // render scale
     if (!SupportsRenderScale && (args.renderScale.x != 1. || args.renderScale.y != 1.)) {
         OFX::throwSuiteStatusException(kOfxStatFailed);

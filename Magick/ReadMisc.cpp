@@ -90,6 +90,7 @@ ReadMiscPlugin::decode(const std::string& filename,
     std::cout << "decode ..." << std::endl;
     #endif
 
+    MagickThreads threads;
     Magick::Image image;
     try {
         image.backgroundColor("none"); // must be set to avoid bg
@@ -151,6 +152,7 @@ bool ReadMiscPlugin::getFrameBounds(const std::string& filename,
     std::cout << "getFrameBounds ..." << std::endl;
     #endif
 
+    MagickThreads threads;
     Magick::Image image;
     if (!filename.empty())
         image.ping(filename);
@@ -189,6 +191,7 @@ bool ReadMiscPlugin::guessParamsFromFilename(const std::string& /*newFile*/,
         return false;
     }
 
+    MagickThreads threads;
     Magick::Image image;
     try {
         image.ping(filename);
