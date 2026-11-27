@@ -37,6 +37,8 @@
 #include <ofxNatron.h>
 #include <cstring>
 #include <fstream>
+#include <limits>
+#include <vector>
 
 #define kPluginName "ReadPSD"
 #define kPluginGrouping "Image/Readers"
@@ -216,7 +218,45 @@ void _setupChoice(OFX::ChoiceParam *visible, OFX::StringParam *hidden) {
     }
 }
 
-void _getProFiles(std::vector<std::string> &files, bool desc, std::string filter, int colorspace) {
+// The profile scan opens every file with lcms, and decodePlane() asks for up to three profiles per
+// render, so the scan is cached (descriptions only, no lcms handles), shared by all instances and
+// redone when a scanned directory's mtime changes or one appears or disappears: that catches
+// profiles added, removed or renamed, but not a profile rewritten in place.
+struct ProFile {
+    std::size_t dir; // index of its directory: a filtered lookup takes the first match of each directory
+    std::string path;
+    std::string name;
+    std::string desc;
+    int colorspace;
+};
+struct ProDir {
+    std::string path;
+    bool exists;
+    time_t mtime;
+};
+static std::mutex gProFilesMutex;
+static std::vector<ProDir> gProDirs; // empty: not scanned yet
+static std::vector<ProFile> gProFiles;
+
+// Called with gProFilesMutex held.
+static bool
+_proDirsChanged()
+{
+    if (gProDirs.empty())
+        return true;
+    for (const ProDir& d : gProDirs) {
+        struct stat sb;
+        const bool exists = stat(d.path.c_str(), &sb) == 0;
+        if (exists != d.exists || (exists && sb.st_mtime != d.mtime))
+            return true;
+    }
+    return false;
+}
+
+// Called with gProFilesMutex held.
+static void
+_scanProFiles()
+{
     std::vector<std::string> paths;
     paths.push_back("/usr/share/color/icc/");
     paths.push_back("\\Windows\\system32\\spool\\drivers\\color\\");
@@ -224,7 +264,19 @@ void _getProFiles(std::vector<std::string> &files, bool desc, std::string filter
     // TODO also add homedirs
 
     // get subfolders
+    // built in locals and swapped in at the end, so that an exception leaves the cache stale, not a
+    // partial list marked up to date
+    std::vector<ProDir> proDirs;
     for (unsigned int i = 0; i < paths.size(); i++) {
+        // stat before the first read: a change during the scan then makes the next call rescan,
+        // unless it happens within the same second as the stat (st_mtime is in seconds)
+        ProDir proDir = { paths[i], false, 0 };
+        struct stat sb;
+        if (stat(paths[i].c_str(), &sb) == 0) {
+            proDir.exists = true;
+            proDir.mtime = sb.st_mtime;
+        }
+        proDirs.push_back(proDir);
         DIR *dp;
         struct dirent *dirp;
         if ((dp=opendir(paths[i].c_str())) != NULL) {
@@ -244,6 +296,7 @@ void _getProFiles(std::vector<std::string> &files, bool desc, std::string filter
     }
 
     // get profiles from paths
+    std::vector<ProFile> proFiles;
     for (unsigned int i = 0; i < paths.size(); i++) {
         DIR *dp;
         struct dirent *dirp;
@@ -270,24 +323,35 @@ void _getProFiles(std::vector<std::string> &files, bool desc, std::string filter
                             iccColorspace = 3;
                     }
                     cmsCloseProfile(lcmsProfile);
-                    if (!profileDesc.str().empty() && (colorspace==iccColorspace||colorspace>3)) {
-                        if (!filter.empty()) {
-                            if (profileDesc.str()==filter) {
-                                files.push_back(path.str());
-                                break;
-                            }
-                        }
-                        else {
-                            if (desc)
-                                files.push_back(profileDesc.str());
-                            else
-                                files.push_back(proFile);
-                        }
+                    if (!profileDesc.str().empty()) {
+                        proFiles.push_back({ i, path.str(), proFile, profileDesc.str(), iccColorspace });
                     }
             }
         }
         if (dp)
             closedir(dp);
+    }
+    gProDirs.swap(proDirs);
+    gProFiles.swap(proFiles);
+}
+
+void _getProFiles(std::vector<std::string> &files, bool desc, std::string filter, int colorspace) {
+    std::lock_guard<std::mutex> lock(gProFilesMutex);
+    if (_proDirsChanged())
+        _scanProFiles();
+    std::size_t matchedDir = std::numeric_limits<std::size_t>::max();
+    for (const ProFile& p : gProFiles) {
+        if (p.dir == matchedDir || !(colorspace == p.colorspace || colorspace > 3))
+            continue;
+        if (!filter.empty()) {
+            if (p.desc == filter) {
+                files.push_back(p.path);
+                matchedDir = p.dir;
+            }
+        }
+        else {
+            files.push_back(desc ? p.desc : p.name);
+        }
     }
 }
 
