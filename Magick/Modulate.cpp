@@ -63,6 +63,8 @@
 
 using namespace OFX;
 
+OFXS_NAMESPACE_ANONYMOUS_ENTER
+
 static bool _hasOpenMP = false;
 static bool _hasOpenCL = false;
 
@@ -339,3 +341,5 @@ mRegisterPluginFactoryInstance(p)
 // version 1, kept so that existing projects render as before
 static ModulatePluginFactory<1> p1(kPluginIdentifier, 2);
 mRegisterPluginFactoryInstance(p1)
+
+OFXS_NAMESPACE_ANONYMOUS_EXIT

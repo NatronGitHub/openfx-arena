@@ -78,6 +78,9 @@
 #define kParamGeneratorRangeHint "Time domain."
 
 using namespace OFX;
+
+OFXS_NAMESPACE_ANONYMOUS_ENTER
+
 static bool gHostIsNatron = false;
 static bool _hasOpenMP = false;
 
@@ -193,7 +196,8 @@ void TexturePlugin::render(const OFX::RenderArguments &args)
     checkBadRenderScaleOrField(dstImg, args);
 
     OFX::BitDepthEnum dstBitDepth = dstImg->getPixelDepth();
-    if (dstBitDepth != OFX::eBitDepthFloat && dstBitDepth != OFX::eBitDepthUShort && dstBitDepth != OFX::eBitDepthUByte) {
+    // only Float is declared, and the image is written as floats below
+    if (dstBitDepth != OFX::eBitDepthFloat) {
         OFX::throwSuiteStatusException(kOfxStatErrFormat);
         return;
     }
@@ -542,3 +546,5 @@ ImageEffect* TexturePluginFactory::createInstance(OfxImageEffectHandle handle, C
 
 static TexturePluginFactory p(kPluginIdentifier, kPluginVersionMajor, kPluginVersionMinor);
 mRegisterPluginFactoryInstance(p)
+
+OFXS_NAMESPACE_ANONYMOUS_EXIT

@@ -54,6 +54,9 @@
 #define kParamOpenMPDefault false
 
 using namespace OFX;
+
+OFXS_NAMESPACE_ANONYMOUS_ENTER
+
 static bool _hasOpenMP = false;
 
 class CharcoalPlugin : public OFX::ImageEffect
@@ -327,3 +330,5 @@ mRegisterPluginFactoryInstance(p)
 // version 2, kept so that existing projects render as before
 static CharcoalPluginFactory<2> p2(kPluginIdentifier, 2);
 mRegisterPluginFactoryInstance(p2)
+
+OFXS_NAMESPACE_ANONYMOUS_EXIT

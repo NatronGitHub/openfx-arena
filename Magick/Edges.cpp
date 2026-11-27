@@ -69,6 +69,9 @@
 #define kParamOpenMPDefault false
 
 using namespace OFX;
+
+OFXS_NAMESPACE_ANONYMOUS_ENTER
+
 static bool _hasOpenMP = false;
 
 class EdgesPlugin : public OFX::ImageEffect
@@ -510,3 +513,5 @@ mRegisterPluginFactoryInstance(p)
 // version 2, kept so that existing projects render as before
 static EdgesPluginFactory<2> p2(kPluginIdentifier, 0);
 mRegisterPluginFactoryInstance(p2)
+
+OFXS_NAMESPACE_ANONYMOUS_EXIT

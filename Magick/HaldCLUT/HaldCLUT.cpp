@@ -247,26 +247,6 @@ public:
         xml.append(".xml");
         parseXML(xml, &_presets);
 
-        if (_presets.size() > 0) {
-            std::string presetSelected;
-            int pid;
-            int opts = _preset->getNOptions();
-            _preset->getValue(pid);
-            _preset->getOption(pid,presetSelected);
-            if (!presetSelected.empty()) {
-                for(int x = 0; x < opts; x++) {
-                    std::string presetFound;
-                    _preset->getOption(x, presetFound);
-                    if (!presetFound.empty()) {
-                        if (presetFound == presetSelected) {
-                             _preset->setValue(x);
-                            break;
-                        }
-                     }
-                }
-            }
-        }
-
         _lut = Magick::Image(Magick::Geometry(512, 512), Magick::Color("rgb(0,0,0)"));
         _lut.comment("N/A");
 

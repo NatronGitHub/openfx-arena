@@ -70,6 +70,8 @@
 
 using namespace OFX;
 
+OFXS_NAMESPACE_ANONYMOUS_ENTER
+
 static bool _hasOpenMP = false;
 
 class PolarPlugin : public OFX::ImageEffect
@@ -476,3 +478,5 @@ mRegisterPluginFactoryInstance(p)
 // version 4, kept so that existing projects render as before
 static PolarPluginFactory<4> p4(kPluginIdentifier, 3);
 mRegisterPluginFactoryInstance(p4)
+
+OFXS_NAMESPACE_ANONYMOUS_EXIT

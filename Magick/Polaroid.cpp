@@ -75,6 +75,9 @@
 #define kParamOpenMPDefault false
 
 using namespace OFX;
+
+OFXS_NAMESPACE_ANONYMOUS_ENTER
+
 static bool gHostIsNatron = false;
 static bool _hasOpenMP = false;
 
@@ -536,3 +539,5 @@ mRegisterPluginFactoryInstance(p)
 // version 1, kept so that existing projects render as before
 static PolaroidPluginFactory<1> p1(kPluginIdentifier, 4);
 mRegisterPluginFactoryInstance(p1)
+
+OFXS_NAMESPACE_ANONYMOUS_EXIT

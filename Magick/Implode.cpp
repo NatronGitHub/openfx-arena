@@ -59,6 +59,9 @@
 #define kParamOpenMPDefault false
 
 using namespace OFX;
+
+OFXS_NAMESPACE_ANONYMOUS_ENTER
+
 static bool _hasOpenMP = false;
 
 class ImplodePlugin : public OFX::ImageEffect
@@ -335,3 +338,5 @@ mRegisterPluginFactoryInstance(p)
 // version 2, kept so that existing projects render as before
 static ImplodePluginFactory<2> p2(kPluginIdentifier, 3);
 mRegisterPluginFactoryInstance(p2)
+
+OFXS_NAMESPACE_ANONYMOUS_EXIT

@@ -609,8 +609,6 @@ void ReadPSDPlugin::decodePlane(const std::string& filename, OfxTime time, int /
 {
     assert(renderScale.x == 1. && renderScale.y == 1.);
     unused(renderScale);
-    assert(renderScale.x == 1. && renderScale.y == 1.);
-    unused(renderScale);
 
     #ifdef DEBUG
     std::cout << "decodePlane ..." << std::endl;
