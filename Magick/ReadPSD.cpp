@@ -238,6 +238,7 @@ static std::mutex gProFilesMutex;
 static std::vector<ProDir> gProDirs; // empty: not scanned yet
 static std::vector<ProFile> gProFiles;
 
+// Called with gProFilesMutex held.
 static bool
 _proDirsChanged()
 {
@@ -252,6 +253,7 @@ _proDirsChanged()
     return false;
 }
 
+// Called with gProFilesMutex held.
 static void
 _scanProFiles()
 {
@@ -262,16 +264,19 @@ _scanProFiles()
     // TODO also add homedirs
 
     // get subfolders
-    gProDirs.clear();
+    // built in locals and swapped in at the end, so that an exception leaves the cache stale, not a
+    // partial list marked up to date
+    std::vector<ProDir> proDirs;
     for (unsigned int i = 0; i < paths.size(); i++) {
-        // stat before the first read, so that a change during the scan makes the next call rescan
+        // stat before the first read: a change during the scan then makes the next call rescan,
+        // unless it happens within the same second as the stat (st_mtime is in seconds)
         ProDir proDir = { paths[i], false, 0 };
         struct stat sb;
         if (stat(paths[i].c_str(), &sb) == 0) {
             proDir.exists = true;
             proDir.mtime = sb.st_mtime;
         }
-        gProDirs.push_back(proDir);
+        proDirs.push_back(proDir);
         DIR *dp;
         struct dirent *dirp;
         if ((dp=opendir(paths[i].c_str())) != NULL) {
@@ -291,7 +296,7 @@ _scanProFiles()
     }
 
     // get profiles from paths
-    gProFiles.clear();
+    std::vector<ProFile> proFiles;
     for (unsigned int i = 0; i < paths.size(); i++) {
         DIR *dp;
         struct dirent *dirp;
@@ -319,13 +324,15 @@ _scanProFiles()
                     }
                     cmsCloseProfile(lcmsProfile);
                     if (!profileDesc.str().empty()) {
-                        gProFiles.push_back({ i, path.str(), proFile, profileDesc.str(), iccColorspace });
+                        proFiles.push_back({ i, path.str(), proFile, profileDesc.str(), iccColorspace });
                     }
             }
         }
         if (dp)
             closedir(dp);
     }
+    gProDirs.swap(proDirs);
+    gProFiles.swap(proFiles);
 }
 
 void _getProFiles(std::vector<std::string> &files, bool desc, std::string filter, int colorspace) {
