@@ -57,13 +57,13 @@ namespace OCIO = OCIO_NAMESPACE;
 
 OFXS_NAMESPACE_ANONYMOUS_ENTER
 
-// The canvas height (the image element's h) of a parsed copy of stack.xml, and the x,y offset
+// The canvas size (the image element's w and h) of a parsed copy of stack.xml, and the x,y offset
 // (from the top-left corner of the canvas) of the layer whose src is layerFile (0,0 if there is
 // none, e.g. mergedimage.png). OFX's y goes up: only the height is needed to place the layer.
 static void
-getLayerGeometry(const std::string& xml, const std::string& layerFile, int* canvasHeight, int* x, int* y)
+getLayerGeometry(const std::string& xml, const std::string& layerFile, int* canvasWidth, int* canvasHeight, int* x, int* y)
 {
-    *canvasHeight = *x = *y = 0;
+    *canvasWidth = *canvasHeight = *x = *y = 0;
     if (xml.empty()) {
         return;
     }
@@ -86,8 +86,11 @@ getLayerGeometry(const std::string& xml, const std::string& layerFile, int* canv
                 continue;
             }
             if (node == root && !xmlStrcmp(node->name, (const xmlChar*)"image")) {
+                xmlChar* w = xmlGetProp(node, (const xmlChar*)"w");
                 xmlChar* h = xmlGetProp(node, (const xmlChar*)"h");
+                *canvasWidth = ArenaZip::parseInt(w);
                 *canvasHeight = ArenaZip::parseInt(h);
+                xmlFree(w);
                 xmlFree(h);
             } else if (!layerFound && !xmlStrcmp(node->name, (const xmlChar*)"layer")) {
                 xmlChar* src = xmlGetProp(node, (const xmlChar*)"src");
@@ -178,36 +181,13 @@ OpenRasterPlugin::~OpenRasterPlugin()
 void
 OpenRasterPlugin::getImageSize(int *width, int *height, std::string filename)
 {
-    const std::string xml = ArenaZip::readEntry(filename, "stack.xml", ArenaZip::kMaxXMLSize);
-    if (!xml.empty()) {
-        int imgW = 0;
-        int imgH = 0;
-        xmlDocPtr doc;
-        doc = ArenaZip::parseXML(xml);
-        xmlNode *root_element = NULL;
-        xmlNode *cur_node = NULL;
-        root_element = xmlDocGetRootElement(doc);
-        for (cur_node = root_element; cur_node; cur_node = cur_node->next) {
-            if (cur_node->type == XML_ELEMENT_NODE) {
-                if ((!xmlStrcmp(cur_node->name,(const xmlChar*)"image"))) {
-                    xmlChar *imgWchar;
-                    xmlChar *imgHchar;
-                    imgWchar = xmlGetProp(cur_node,(const xmlChar*)"w");
-                    imgHchar = xmlGetProp(cur_node,(const xmlChar*)"h");
-                    // xmlGetProp returns NULL if the attribute is missing
-                    imgW = ArenaZip::parseInt(imgWchar);
-                    imgH = ArenaZip::parseInt(imgHchar);
-                    xmlFree(imgWchar);
-                    xmlFree(imgHchar);
-                    // no larger canvas than decodePNG() decodes: the host would allocate it (#214)
-                    if (imgW>0 && imgH>0 && std::uint64_t(imgW) * imgH * 4 <= ArenaZip::kMaxDecodedSize) {
-                        (*width)=imgW;
-                        (*height)=imgH;
-                    }
-                }
-            }
-        }
-        xmlFreeDoc(doc);
+    int imgW, imgH, x, y;
+    // no layer: only the canvas size is used
+    getLayerGeometry(ArenaZip::readEntry(filename, "stack.xml", ArenaZip::kMaxXMLSize), std::string(), &imgW, &imgH, &x, &y);
+    // no larger canvas than decodePNG() decodes: the host would allocate it (#214)
+    if (imgW>0 && imgH>0 && std::uint64_t(imgW) * imgH * 4 <= ArenaZip::kMaxDecodedSize) {
+        (*width)=imgW;
+        (*height)=imgH;
     }
 }
 
@@ -366,8 +346,9 @@ OpenRasterPlugin::decodePlane(const std::string& filename, OfxTime /*time*/, int
 
     int width = 0;
     int height = 0;
-    // the canvas height and the layer offset in stack.xml, read from the archive that the layer is
+    // the canvas size and the layer offset in stack.xml, read from the archive that the layer is
     // decoded from
+    int canvasWidth = 0;
     int canvasHeight = 0;
     int offsetX = 0;
     int offsetY = 0;
@@ -389,7 +370,7 @@ OpenRasterPlugin::decodePlane(const std::string& filename, OfxTime /*time*/, int
             }
         }
         if (buffer) {
-            getLayerGeometry(ArenaZip::readEntry(archive.get(), "stack.xml", ArenaZip::kMaxXMLSize), imageLayers[layer].src, &canvasHeight, &offsetX, &offsetY);
+            getLayerGeometry(ArenaZip::readEntry(archive.get(), "stack.xml", ArenaZip::kMaxXMLSize), imageLayers[layer].src, &canvasWidth, &canvasHeight, &offsetX, &offsetY);
         }
     }
 
