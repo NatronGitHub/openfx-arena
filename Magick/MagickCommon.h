@@ -13,14 +13,17 @@
 // instance or per render raced (#251). A thread limit raised during another render even
 // overflows ImageMagick's per-thread arrays, sized before its parallel loops read the limit
 // again. One thread, because the random-number operations (Texture's noise) give
-// thread-count-dependent pixels; ImageMagick reads MAGICK_THREAD_LIMIT itself, so leave the
-// limit to it when that is set. No disk cache: an image over the memory limit fails to render.
+// thread-count-dependent pixels. No disk cache: an image over the memory limit fails to render.
+// ImageMagick reads MAGICK_THREAD_LIMIT and MAGICK_DISK_LIMIT itself: leave each limit to it
+// when its variable is set.
 inline void magickInitialize()
 {
     static const bool initialized = [] {
-        Magick::InitializeMagick(NULL);
-        Magick::ResourceLimits::disk(0);
-        if (std::getenv("MAGICK_THREAD_LIMIT") == NULL) {
+        Magick::InitializeMagick(nullptr);
+        if (std::getenv("MAGICK_DISK_LIMIT") == nullptr) {
+            Magick::ResourceLimits::disk(0);
+        }
+        if (std::getenv("MAGICK_THREAD_LIMIT") == nullptr) {
             Magick::ResourceLimits::thread(1);
         }
         return true;
