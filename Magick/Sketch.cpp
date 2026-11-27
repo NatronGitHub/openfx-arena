@@ -54,7 +54,7 @@
 
 #define kParamOpenMP "openmp"
 #define kParamOpenMPLabel "OpenMP"
-#define kParamOpenMPHint "Enable/Disable OpenMP support. This will enable the plugin to use as many threads as allowed by host."
+#define kParamOpenMPHint "Kept for old projects; ImageMagick runs on one thread."
 #define kParamOpenMPDefault false
 
 using namespace OFX;
@@ -87,7 +87,7 @@ SketchPlugin::SketchPlugin(OfxImageEffectHandle handle, bool unpremultSrc)
 , angle_(NULL)
 , enableOpenMP_(NULL)
 {
-    Magick::InitializeMagick(NULL);
+    magickInitialize();
     dstClip_ = fetchClip(kOfxImageEffectOutputClipName);
     assert(dstClip_ && dstClip_->getPixelComponents() == OFX::ePixelComponentRGBA);
     srcClip_ = fetchClip(kOfxImageEffectSimpleSourceClipName);
@@ -166,24 +166,13 @@ void SketchPlugin::render(const OFX::RenderArguments &args)
 
     // get params
     double radius, sigma, angle;
-    bool enableOpenMP = false;
     radius_->getValueAtTime(args.time, radius);
     sigma_->getValueAtTime(args.time, sigma);
     angle_->getValueAtTime(args.time, angle);
-    enableOpenMP_->getValueAtTime(args.time, enableOpenMP);
 
     // setup
     int width = srcRod.x2-srcRod.x1;
     int height = srcRod.y2-srcRod.y1;
-
-    // OpenMP
-#ifndef LEGACYIM
-    unsigned int threads = 1;
-    if (_hasOpenMP && enableOpenMP)
-        threads = OFX::MultiThread::getNumCPUs();
-
-    Magick::ResourceLimits::thread(threads);
-#endif
 
     // read image
     Magick::Image image(Magick::Geometry(width,height),Magick::Color("rgba(0,0,0,0)"));
@@ -321,6 +310,7 @@ void SketchPluginFactory<majorVersion>::describeInContext(OFX::ImageEffectDescri
         param->setLabel(kParamOpenMPLabel);
         param->setHint(kParamOpenMPHint);
         param->setDefault(kParamOpenMPDefault);
+        param->setIsSecret(true);
         param->setAnimates(false);
         if (!_hasOpenMP)
             param->setEnabled(false);

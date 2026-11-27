@@ -13,13 +13,13 @@
  * poppler).
  *
  * hostDemo can't do this: its multi-thread suite (HostSupport without OFX_SUPPORTS_MULTITHREAD)
- * runs everything on the calling thread and says there is one CPU, so the Magick plug-ins, which
- * give ImageMagick OFX::MultiThread::getNumCPUs() threads, never start an OpenMP thread. This
+ * runs everything on the calling thread and says there is one CPU. This
  * host is hostDemo's host classes with a real OfxMultiThreadSuiteV1 (N CPUs, N threads per
  * multiThread call), so that
  *   - the plug-ins' OFX::MultiThread::Processor code runs on N threads,
- *   - the Magick plug-ins (with openmp=1) run ImageMagick on N OpenMP threads, which stay in the
- *     OpenMP runtime's pool after the render.
+ *   - the Magick plug-ins run ImageMagick on OpenMP threads (with MAGICK_THREAD_LIMIT set, see
+ *     run.cmake; without it ImageMagick runs on one thread), which stay in the OpenMP runtime's
+ *     pool after the render.
  * It scans the plug-ins in hostDemo's default mode (the binary is unloaded after the scan and
  * loaded again at the first use, unless OFX_HOSTDEMO_KEEP_LOADED=1), creates the instance,
  * renders frames 0..N-1 (the RoD, clipped to the project), destroys the instance, unloads every

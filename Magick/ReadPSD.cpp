@@ -364,7 +364,7 @@ false
 ,_xcfHeight(0)
 ,_hasLCMS(false)
 {
-    Magick::InitializeMagick(NULL);
+    magickInitialize();
 
 #ifndef LEGACYIM
     std::string delegates = MagickCore::GetMagickDelegates();

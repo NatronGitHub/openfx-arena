@@ -50,7 +50,7 @@
 
 #define kParamOpenMP "openmp"
 #define kParamOpenMPLabel "OpenMP"
-#define kParamOpenMPHint "Enable/Disable OpenMP support. This will enable the plugin to use as many threads as allowed by host."
+#define kParamOpenMPHint "Kept for old projects; ImageMagick runs on one thread."
 #define kParamOpenMPDefault false
 
 using namespace OFX;
@@ -78,7 +78,7 @@ CharcoalPlugin::CharcoalPlugin(OfxImageEffectHandle handle, bool unpremultSrc)
 , dstClip_(NULL)
 , srcClip_(NULL)
 {
-    Magick::InitializeMagick(NULL);
+    magickInitialize();
     dstClip_ = fetchClip(kOfxImageEffectOutputClipName);
     assert(dstClip_ && dstClip_->getPixelComponents() == OFX::ePixelComponentRGBA);
     srcClip_ = fetchClip(kOfxImageEffectSimpleSourceClipName);
@@ -156,26 +156,15 @@ void CharcoalPlugin::render(const OFX::RenderArguments &args)
 
     // get params
     double radius, sigma;
-    bool enableOpenMP = false;
     radius_->getValueAtTime(args.time, radius);
     sigma_->getValueAtTime(args.time, sigma);
     // the params are in full-resolution pixels; not rounded, so scale 1 is unchanged
     radius *= args.renderScale.x;
     sigma *= args.renderScale.x;
-    enableOpenMP_->getValueAtTime(args.time, enableOpenMP);
 
     // setup
     int width = srcRod.x2-srcRod.x1;
     int height = srcRod.y2-srcRod.y1;
-
-    // OpenMP
-#ifndef LEGACYIM
-    unsigned int threads = 1;
-    if (_hasOpenMP && enableOpenMP)
-        threads = OFX::MultiThread::getNumCPUs();
-
-    Magick::ResourceLimits::thread(threads);
-#endif
 
     // read image
     Magick::Image image(Magick::Geometry(width,height),Magick::Color("rgba(0,0,0,0)"));
@@ -316,6 +305,7 @@ void CharcoalPluginFactory<majorVersion>::describeInContext(OFX::ImageEffectDesc
         param->setLabel(kParamOpenMPLabel);
         param->setHint(kParamOpenMPHint);
         param->setDefault(kParamOpenMPDefault);
+        param->setIsSecret(true);
         param->setAnimates(false);
         if (!_hasOpenMP)
             param->setEnabled(false);

@@ -70,6 +70,7 @@ MagickPluginHelperBase::describeInContextBegin(OFX::ImageEffectDescriptor &desc,
         param->setLabel(kParamOpenMPLabel);
         param->setHint(kParamOpenMPHint);
         param->setDefault(kParamOpenMPDefault);
+        param->setIsSecret(true);
         param->setAnimates(false);
         if (!magickHasOpenMP()) {
             param->setEnabled(false);

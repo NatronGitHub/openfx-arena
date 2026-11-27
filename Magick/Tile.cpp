@@ -67,7 +67,7 @@
 
 #define kParamOpenMP "openmp"
 #define kParamOpenMPLabel "OpenMP"
-#define kParamOpenMPHint "Enable/Disable OpenMP support. This will enable the plugin to use as many threads as allowed by host."
+#define kParamOpenMPHint "Kept for old projects; ImageMagick runs on one thread."
 #define kParamOpenMPDefault false
 
 using namespace OFX;
@@ -99,7 +99,7 @@ TilePlugin::TilePlugin(OfxImageEffectHandle handle, bool unpremultSrc)
 , dstClip_(NULL)
 , srcClip_(NULL)
 {
-    Magick::InitializeMagick(NULL);
+    magickInitialize();
     dstClip_ = fetchClip(kOfxImageEffectOutputClipName);
     assert(dstClip_ && dstClip_->getPixelComponents() == OFX::ePixelComponentRGBA);
     srcClip_ = fetchClip(kOfxImageEffectSimpleSourceClipName);
@@ -205,13 +205,11 @@ void TilePlugin::render(const OFX::RenderArguments &args)
     int offset = 0;
     bool firstFrame = false;
     bool matte = false;
-    bool enableOpenMP = false;
     rows_->getValueAtTime(args.time, rows);
     cols_->getValueAtTime(args.time, cols);
     offset_->getValueAtTime(args.time, offset);
     firstFrame_->getValueAtTime(args.time, firstFrame);
     matte_->getValueAtTime(args.time, matte);
-    enableOpenMP_->getValueAtTime(args.time, enableOpenMP);
     // the OFX spec doesn't make the host clamp to the params' range (1..100): a script or a
     // project may still give 0 or less, and the divisions below would then crash (SIGFPE), or a
     // huge value, which would overflow rows*cols
@@ -238,15 +236,6 @@ void TilePlugin::render(const OFX::RenderArguments &args)
     std::list<Magick::Image> imageList;
     Magick::Image image;
     Magick::Montage montage;
-
-    // OpenMP
-#ifndef LEGACYIM
-    unsigned int threads = 1;
-    if (_hasOpenMP && enableOpenMP)
-        threads = OFX::MultiThread::getNumCPUs();
-
-    Magick::ResourceLimits::thread(threads);
-#endif
 
     // read source image
     Magick::Image container(Magick::Geometry(srcWidth,srcHeight),Magick::Color("rgba(0,0,0,0)"));
@@ -466,6 +455,7 @@ void TilePluginFactory<majorVersion>::describeInContext(OFX::ImageEffectDescript
         param->setLabel(kParamOpenMPLabel);
         param->setHint(kParamOpenMPHint);
         param->setDefault(kParamOpenMPDefault);
+        param->setIsSecret(true);
         param->setAnimates(false);
         if (!_hasOpenMP)
             param->setEnabled(false);

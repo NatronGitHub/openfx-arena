@@ -59,7 +59,7 @@
 
 #define kParamOpenMP "openmp"
 #define kParamOpenMPLabel "OpenMP"
-#define kParamOpenMPHint "Enable/Disable OpenMP support. This will enable the plugin to use as many threads as allowed by host. Note that this plugin is known to be unstable with this settings enabled, use at own risk."
+#define kParamOpenMPHint "Kept for old projects; ImageMagick runs on one thread."
 #define kParamOpenMPDefault false
 
 #define kSupportsTiles 0
@@ -97,7 +97,7 @@ PolarPlugin::PolarPlugin(OfxImageEffectHandle handle, bool unpremultSrc)
 , dstClip_(NULL)
 , srcClip_(NULL)
 {
-    Magick::InitializeMagick(NULL);
+    magickInitialize();
     dstClip_ = fetchClip(kOfxImageEffectOutputClipName);
     assert(dstClip_ && dstClip_->getPixelComponents() == OFX::ePixelComponentRGBA);
     srcClip_ = fetchClip(kOfxImageEffectSimpleSourceClipName);
@@ -182,26 +182,15 @@ void PolarPlugin::render(const OFX::RenderArguments &args)
     bool polarFlip = false;
     bool dePolar = false;
     bool matte = false;
-    bool enableOpenMP = false;
     vpixel_->getValueAtTime(args.time, vpixel);
     polarFlip_->getValueAtTime(args.time, polarFlip);
     dePolar_->getValueAtTime(args.time, dePolar);
     matte_->getValueAtTime(args.time, matte);
     polarRotate_->getValueAtTime(args.time, polarRotate);
-    enableOpenMP_->getValueAtTime(args.time, enableOpenMP);
 
     // setup
     int width = srcRod.x2-srcRod.x1;
     int height = srcRod.y2-srcRod.y1;
-
-    // OpenMP
-#ifndef LEGACYIM
-    unsigned int threads = 1;
-    if (_hasOpenMP && enableOpenMP)
-        threads = OFX::MultiThread::getNumCPUs();
-
-    Magick::ResourceLimits::thread(threads);
-#endif
 
     // read image
     Magick::Image image(Magick::Geometry(width,height),Magick::Color("rgba(0,0,0,0)"));
@@ -465,6 +454,7 @@ void PolarPluginFactory<majorVersion>::describeInContext(OFX::ImageEffectDescrip
         param->setLabel(kParamOpenMPLabel);
         param->setHint(kParamOpenMPHint);
         param->setDefault(kParamOpenMPDefault);
+        param->setIsSecret(true);
         param->setAnimates(false);
         if (!_hasOpenMP)
             param->setEnabled(false);

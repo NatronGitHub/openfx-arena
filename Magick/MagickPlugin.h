@@ -31,7 +31,7 @@
 
 #define kParamOpenMP "openmp"
 #define kParamOpenMPLabel "OpenMP"
-#define kParamOpenMPHint "Enable/Disable OpenMP support. This will enable the plugin to use as many threads as allowed by host."
+#define kParamOpenMPHint "Kept for old projects; ImageMagick runs on one thread."
 #define kParamOpenMPDefault false
 
 #define kParamMatte "matte"
@@ -91,8 +91,7 @@ public:
         _unpremultSrc = unpremultSrc;
 
         // set ImageMagick resources
-        Magick::InitializeMagick(NULL);
-        Magick::ResourceLimits::disk(0);
+        magickInitialize();
         //Magick::ResourceLimits::memory(MagickMemoryLimit);
         //Magick::ResourceLimits::map(MagickMemoryLimit);
     }
@@ -172,20 +171,10 @@ void MagickPluginHelper<SupportsRenderScale>::render(const OFX::RenderArguments 
     int height = args.renderWindow.y2 - args.renderWindow.y1;
 
     // params
-    bool enableMP, matte;
+    bool matte;
     int vpixel;
-    _enableMP->getValueAtTime(args.time, enableMP);
     _matte->getValueAtTime(args.time, matte);
     _vpixel->getValueAtTime(args.time, vpixel);
-
-    // OpenMP
-#ifndef DISABLE_OPENMP
-    unsigned int threads = 1;
-    if (magickHasOpenMP() && enableMP) {
-        threads = OFX::MultiThread::getNumCPUs();
-    }
-    Magick::ResourceLimits::thread(threads);
-#endif
 
     // render
     Magick::Image image(Magick::Geometry(width, height), Magick::Color("rgba(0,0,0,0)"));

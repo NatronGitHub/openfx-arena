@@ -86,7 +86,7 @@ Optional build options:
   * ``AUDIO=ON``: Enable ``AudioCurve`` (the default when pkg-config finds sox; ``AUDIO=OFF`` leaves it out)
   * ``RICHTEXT=ON``: Enable ``RichText`` *(WIP, only for developers)*
   * ``LICENSE=COMMERCIAL``: leave out ``ReadPDF`` and poppler (GPL)
-  * ``LEGACYIM=1``: old ImageMagick: leave out ``Sketch``, ``Polaroid`` and ``Edges``, and build without the code that needs a newer ImageMagick (OpenMP thread count, delegate checks, some Text and ReadPSD options, Modulate's OpenCL, Texture's random seed)
+  * ``LEGACYIM=1``: old ImageMagick: leave out ``Sketch``, ``Polaroid`` and ``Edges``, and build without the code that needs a newer ImageMagick (delegate checks, some Text and ReadPSD options, Texture's random seed)
   * ``IM=68``: ImageMagick 6.8: build ``Texture`` without the random seed
   * ``IM=7``: with ``MINGW=1``, also link ``oleaut32`` for ImageMagick 7. Elsewhere it has no effect: the ImageMagick version is detected at compile time
   * ``MINGW=1``: MinGW (MSYS2): add the libraries a static ImageMagick needs (gdi32, freetype, expat, z, ws2_32)

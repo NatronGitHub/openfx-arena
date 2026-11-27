@@ -71,7 +71,7 @@
 
 #define kParamOpenMP "openmp"
 #define kParamOpenMPLabel "OpenMP"
-#define kParamOpenMPHint "Enable/Disable OpenMP support. This will enable the plugin to use as many threads as allowed by host."
+#define kParamOpenMPHint "Kept for old projects; ImageMagick runs on one thread."
 #define kParamOpenMPDefault false
 
 using namespace OFX;
@@ -112,7 +112,7 @@ PolaroidPlugin::PolaroidPlugin(OfxImageEffectHandle handle, bool unpremultSrc)
 , has_freetype(false)
 , enableOpenMP_(NULL)
 {
-    Magick::InitializeMagick(NULL);
+    magickInitialize();
 
     std::string delegates = MagickCore::GetMagickDelegates();
     if (delegates.find("freetype") != std::string::npos)
@@ -239,7 +239,6 @@ void PolaroidPlugin::render(const OFX::RenderArguments &args)
     std::string text, font;
     double angle;
     int fontSize;
-    bool enableOpenMP = false;
     text_->getValueAtTime(args.time, text);
     angle_->getValueAtTime(args.time, angle);
     fontSize_->getValueAtTime(args.time, fontSize);
@@ -260,20 +259,10 @@ void PolaroidPlugin::render(const OFX::RenderArguments &args)
     if (font.length() > 2 && font[1] == '/' && gHostIsNatron) {
         font.erase(0,2);
     }
-    enableOpenMP_->getValueAtTime(args.time, enableOpenMP);
 
     // setup
     int width = srcRod.x2-srcRod.x1;
     int height = srcRod.y2-srcRod.y1;
-
-    // OpenMP
-#ifndef LEGACYIM
-    unsigned int threads = 1;
-    if (_hasOpenMP && enableOpenMP)
-        threads = OFX::MultiThread::getNumCPUs();
-
-    Magick::ResourceLimits::thread(threads);
-#endif
 
     // read image
     Magick::Image image(Magick::Geometry(width,height),Magick::Color("rgba(0,0,0,0)"));
@@ -525,6 +514,7 @@ void PolaroidPluginFactory<majorVersion>::describeInContext(OFX::ImageEffectDesc
         param->setLabel(kParamOpenMPLabel);
         param->setHint(kParamOpenMPHint);
         param->setDefault(kParamOpenMPDefault);
+        param->setIsSecret(true);
         param->setAnimates(false);
         if (!_hasOpenMP)
             param->setEnabled(false);
