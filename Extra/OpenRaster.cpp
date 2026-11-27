@@ -113,6 +113,12 @@ getLayerGeometry(const std::string& xml, const std::string& layerFile, int* canv
 
 static bool gHostIsNatron = false;
 
+// a layer of stack.xml, or the merged image: its plane name, and its PNG file in the archive
+struct Layer
+{
+    std::string name, src;
+};
+
 class OpenRasterPlugin : public GenericReaderPlugin
 {
 public:
@@ -147,11 +153,11 @@ private:
     virtual void changedFilename(const OFX::InstanceChangedArgs &args) OVERRIDE FINAL;
     void getImageSize(int *width, int *height, std::string filename);
     bool setImageLayers(const std::string& filename);
-    std::vector<std::vector<std::string> > getImageLayers();
+    std::vector<Layer> getImageLayers();
     // The layers of the file: set on the main thread, read by getClipComponents() and decodePlane()
     // on any thread, so only accessed with the mutex held, through set/getImageLayers() (#130)
     std::mutex _imageLayersMutex;
-    std::vector<std::vector<std::string> > _imageLayers;
+    std::vector<Layer> _imageLayers;
 };
 
 OpenRasterPlugin::OpenRasterPlugin(OfxImageEffectHandle handle, const std::vector<std::string>& extensions)
@@ -206,77 +212,28 @@ OpenRasterPlugin::getImageSize(int *width, int *height, std::string filename)
 }
 
 static void
-getLayersInfo(xmlNode *node, std::vector<std::vector<std::string> > *layers)
+getLayersInfo(xmlNode *node, std::vector<Layer> *layers)
 {
     xmlNode *cur_node = NULL;
     for (cur_node = node; cur_node; cur_node = cur_node->next) {
         if (cur_node->type == XML_ELEMENT_NODE) {
             if ((!xmlStrcmp(cur_node->name, (const xmlChar *)"layer"))) {
-                std::vector<std::string> layerInfo;
                 xmlChar *xmlLayerName;
-                xmlChar *xmlOpacity;
-                xmlChar *xmlVisibility;
-                xmlChar *xmlComposite;
                 xmlChar *xmlPng;
-                xmlChar *xmlOffsetX;
-                xmlChar *xmlOffsetY;
                 xmlLayerName = xmlGetProp(cur_node, (const xmlChar *)"name");
-                xmlOpacity = xmlGetProp(cur_node, (const xmlChar *)"opacity"); // not used
-                xmlVisibility = xmlGetProp(cur_node, (const xmlChar *)"visibility"); // not used
-                xmlComposite = xmlGetProp(cur_node, (const xmlChar *)"composite-op"); // not used
                 xmlPng = xmlGetProp(cur_node, (const xmlChar *)"src");
-                xmlOffsetX = xmlGetProp(cur_node, (const xmlChar *)"x"); // a bit pointless since all layers are cropped in gfx app on save
-                xmlOffsetY = xmlGetProp(cur_node, (const xmlChar *)"y"); // a bit pointless since all layers are cropped in gfx app on save
-                std::string layerName,layerOpacity,layerVisibility,layerComposite,layerFile,layerOffsetX,layerOffsetY;
+                Layer layer;
 
                 if (xmlLayerName!=NULL)
-                    layerName=(reinterpret_cast<char*>(xmlLayerName));
-                if (xmlOpacity!=NULL)
-                    layerOpacity=(reinterpret_cast<char*>(xmlOpacity));
-                if (xmlVisibility!=NULL)
-                    layerVisibility=(reinterpret_cast<char*>(xmlVisibility));
-                if (xmlComposite!=NULL)
-                    layerComposite=(reinterpret_cast<char*>(xmlComposite));
+                    layer.name=(reinterpret_cast<char*>(xmlLayerName));
                 if (xmlPng!=NULL)
-                    layerFile=(reinterpret_cast<char*>(xmlPng));
-                if (xmlOffsetX!=NULL)
-                    layerOffsetX=(reinterpret_cast<char*>(xmlOffsetX));
-                if (xmlOffsetY!=NULL)
-                    layerOffsetY=(reinterpret_cast<char*>(xmlOffsetY));
+                    layer.src=(reinterpret_cast<char*>(xmlPng));
 
                 xmlFree(xmlLayerName);
-                xmlFree(xmlOpacity);
-                xmlFree(xmlVisibility);
-                xmlFree(xmlComposite);
                 xmlFree(xmlPng);
-                xmlFree(xmlOffsetX);
-                xmlFree(xmlOffsetY);
 
-                if (layerOpacity.empty())
-                    layerOpacity = "1";
-                if (layerVisibility.empty())
-                    layerVisibility = "1";
-                else {
-                    if (layerVisibility=="hidden")
-                        layerVisibility = "0";
-                    else
-                        layerVisibility = "1";
-                }
-                if (layerComposite.empty())
-                    layerComposite = "svg:src-over";
-                if (layerOffsetX.empty())
-                    layerOffsetX = "0";
-                if (layerOffsetY.empty())
-                    layerOffsetY = "0";
-                if (!layerFile.empty() && !layerName.empty()) {
-                    layerInfo.push_back(layerName);
-                    layerInfo.push_back(layerFile);
-                    layerInfo.push_back(layerOpacity);
-                    layerInfo.push_back(layerVisibility);
-                    layerInfo.push_back(layerComposite);
-                    layerInfo.push_back(layerOffsetX);
-                    layerInfo.push_back(layerOffsetY);
-                    layers->push_back(layerInfo);
+                if (!layer.src.empty() && !layer.name.empty()) {
+                    layers->push_back(layer);
                 }
             }
         }
@@ -286,10 +243,10 @@ getLayersInfo(xmlNode *node, std::vector<std::vector<std::string> > *layers)
 
 // The layers of the archive file filename: those of stack.xml, and the merged image if there is
 // one, the merged image first. Empty if the file is missing or corrupt, or has no stack.xml.
-static std::vector<std::vector<std::string> >
+static std::vector<Layer>
 readLayers(const std::string& filename)
 {
-    std::vector<std::vector<std::string> > layers;
+    std::vector<Layer> layers;
     if (filename.empty()) {
         return layers;
     }
@@ -307,10 +264,10 @@ readLayers(const std::string& filename)
     getLayersInfo(xmlDocGetRootElement(doc), &layers); // xmlDocGetRootElement(NULL) is NULL
     xmlFreeDoc(doc);
     if (hasMergedImage) {
-        std::vector<std::string> layerInfo;
-        layerInfo.push_back(kFnOfxImagePlaneColour);
-        layerInfo.push_back("mergedimage.png");
-        layers.push_back(layerInfo);
+        Layer merged;
+        merged.name = kFnOfxImagePlaneColour;
+        merged.src = "mergedimage.png";
+        layers.push_back(merged);
     }
     std::reverse(layers.begin(), layers.end());
     return layers;
@@ -320,7 +277,7 @@ readLayers(const std::string& filename)
 bool
 OpenRasterPlugin::setImageLayers(const std::string& filename)
 {
-    std::vector<std::vector<std::string> > layers = readLayers(filename);
+    std::vector<Layer> layers = readLayers(filename);
     const bool hasLayers = !layers.empty();
     std::lock_guard<std::mutex> lock(_imageLayersMutex);
     _imageLayers.swap(layers);
@@ -328,7 +285,7 @@ OpenRasterPlugin::setImageLayers(const std::string& filename)
 }
 
 // a copy of _imageLayers, which the main thread can't change
-std::vector<std::vector<std::string> >
+std::vector<Layer>
 OpenRasterPlugin::getImageLayers()
 {
     std::lock_guard<std::mutex> lock(_imageLayersMutex);
@@ -340,14 +297,14 @@ OpenRasterPlugin::getClipComponents(const OFX::ClipComponentsArguments& args, OF
 {
     assert(isMultiPlanar());
     clipComponents.setPassThroughClip(NULL, args.time, args.view);
-    const std::vector<std::vector<std::string> > imageLayers = getImageLayers();
+    const std::vector<Layer> imageLayers = getImageLayers();
     if (imageLayers.size()>0 && gHostIsNatron) {
         for (int i = 0; i < (int)imageLayers.size(); i++) {
             std::string layerName;
             {
                 std::ostringstream ss;
-                if (!imageLayers[i][0].empty()) {
-                    ss << imageLayers[i][0];
+                if (!imageLayers[i].name.empty()) {
+                    ss << imageLayers[i].name;
                 } else {
                     ss << "Image Layer #" << i; // if layer name is empty
                 }
@@ -375,7 +332,7 @@ OpenRasterPlugin::decodePlane(const std::string& filename, OfxTime /*time*/, int
         OFX::throwSuiteStatusException(kOfxStatErrFormat);
     }
 
-    const std::vector<std::vector<std::string> > imageLayers = getImageLayers();
+    const std::vector<Layer> imageLayers = getImageLayers();
     if (imageLayers.size() == 0) {
         setPersistentMessage(OFX::Message::eMessageError, "", "No layers");
         OFX::throwSuiteStatusException(kOfxStatErrFormat);
@@ -392,7 +349,7 @@ OpenRasterPlugin::decodePlane(const std::string& filename, OfxTime /*time*/, int
                 bool foundLayer = false;
                 std::ostringstream nonameLayer;
                 nonameLayer << "Image Layer #" << i; // if layer name is empty
-                if (imageLayers[i][0]==plane.getPlaneLabel())
+                if (imageLayers[i].name==plane.getPlaneLabel())
                     foundLayer = true;
                 if (nonameLayer.str()==plane.getPlaneLabel() && !foundLayer)
                     foundLayer = true;
@@ -422,7 +379,7 @@ OpenRasterPlugin::decodePlane(const std::string& filename, OfxTime /*time*/, int
     const Arena::ZipPtr archive = ArenaZip::openArchive(filename);
     if (archive) {
         // the size in the archive is checked and capped (#128)
-        const std::string layerData = ArenaZip::readEntry(archive.get(), imageLayers[layer][1].c_str(), ArenaZip::kMaxImageSize);
+        const std::string layerData = ArenaZip::readEntry(archive.get(), imageLayers[layer].src.c_str(), ArenaZip::kMaxImageSize);
         if (!layerData.empty()) {
             unsigned w = 0, h = 0;
             buffer = ArenaZip::decodePNG(layerData, &w, &h); // capped (#159)
@@ -432,7 +389,7 @@ OpenRasterPlugin::decodePlane(const std::string& filename, OfxTime /*time*/, int
             }
         }
         if (buffer) {
-            getLayerGeometry(ArenaZip::readEntry(archive.get(), "stack.xml", ArenaZip::kMaxXMLSize), imageLayers[layer][1], &canvasHeight, &offsetX, &offsetY);
+            getLayerGeometry(ArenaZip::readEntry(archive.get(), "stack.xml", ArenaZip::kMaxXMLSize), imageLayers[layer].src, &canvasHeight, &offsetX, &offsetY);
         }
     }
 
