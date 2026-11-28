@@ -2096,8 +2096,9 @@ public:
         bool ret = TransformInteractHelperOldParams::penMotion(shiftedArgs);
         _interactiveDrag = interactiveDrag;
         if (centerDrag && interactiveDrag && ret) {
-            // _tpDrag is unrounded (so that rounding errors don't add up): write the rounded copy
-            const OfxPointD center = toRelative(roundedDragParams(args.pixelScale).center, args.pixelScale);
+            // the unrounded Center: toRelative() rounds the relative value (rounding it in the
+            // helper's space first, with roundedDragParams(), would move an unmoved Center)
+            const OfxPointD center = toRelative(_tpDrag.center, args.pixelScale);
             OfxPointD current;
             _center->getValueAtTime(args.time, current.x, current.y);
             if ( (current.x != center.x) || (current.y != center.y) ) {
@@ -2118,7 +2119,7 @@ public:
         if ( (_mouseState != eReleased) && !_interactiveDrag && _dragMoved ) {
             // Set the params as the helper would, but with the Center converted. A click without
             // a motion sets nothing, as in the helper's penUp.
-            const TransformParams tp = roundedDragParams(args.pixelScale);
+            const TransformParams& tp = _tpDrag; // unrounded: toRelative() rounds the Center
             OfxPointD scale;
             ofxsTransformGetScale(tp.scale, tp.scaleUniform, &scale);
             const OfxPointD center = toRelative(tp.center, args.pixelScale);
