@@ -93,17 +93,31 @@ jobs:
           # BUILD_TESTING: for the debug-only checks below
           cmake -S . -B build-debug -DCMAKE_BUILD_TYPE=Debug -DOFX_CXX_STANDARD="${CXXSTD#c++}" -DBUILD_TESTING=ON
           cmake --build build-debug --parallel 4
-      - name: Load and render tests (ctest, hostDemo)
-        # -V: print every test's output (the per-plug-in load and render results), not only on failure
+      - name: Functional tests (ctest -L functional, hostDemo)
+        id: ctest_functional
+        # -V: print every test's output (the per-plug-in load and render results), not only on failure.
+        # The labels are the tests' directories, tests/functional and tests/regression
         if: inputs.build-system == 'cmake'
-        run: ctest --test-dir build -V --output-on-failure
-      - name: Debug load and render tests (ctest)
+        run: ctest --test-dir build -V --output-on-failure --no-tests=error -L functional
+      - name: Regression tests (ctest -L regression, hostDemo)
+        # also when the functional tests failed: both kinds are required, each in its own step
+        if: ${{ !cancelled() && (steps.ctest_functional.outcome == 'success' || steps.ctest_functional.outcome == 'failure') }}
+        run: ctest --test-dir build -V --output-on-failure --no-tests=error -L regression
+      - name: Debug functional tests (ctest -L functional)
+        id: ctest_debug_functional
         # only a debug build's Support library validates the properties and logs "ERROR : " lines,
-        # which these tests fail on; Linux only (the other jobs build no debug tests)
-        if: inputs.build-system == 'cmake'
+        # which these tests fail on; Linux only (the other jobs build no debug tests). All the
+        # render modes, the OFX 1.4 host's included, since that is where the host properties of an
+        # OFX 1.4 host are validated
+        if: ${{ !cancelled() && (steps.ctest_functional.outcome == 'success' || steps.ctest_functional.outcome == 'failure') }}
         run: |
-          ctest --test-dir build-debug --output-on-failure --no-tests=error \
-            -R '^(load_Arena|render_Arena|reader_window|reader_malformed|render_Arena_mt_unload|readsvg_dpi)$'
+          ctest --test-dir build-debug --output-on-failure --no-tests=error -L functional \
+            -R '^(load_Arena|render_Arena|render_Arena_ofx14|render_Arena_keep_loaded|reader_window|render_Arena_mt_unload)$'
+      - name: Debug regression tests (ctest -L regression)
+        if: ${{ !cancelled() && (steps.ctest_debug_functional.outcome == 'success' || steps.ctest_debug_functional.outcome == 'failure') }}
+        run: |
+          ctest --test-dir build-debug --output-on-failure --no-tests=error -L regression \
+            -R '^(regression_render_Arena|regression_render_Arena_ofx14|regression_render_Arena_keep_loaded|regression_reader_window|reader_malformed|readsvg_dpi)$'
       - name: Build (release, Make)
         if: inputs.build-system == 'make'
         run: make -j4 CONFIG=release CXX="g++ -std=$CXXSTD"
@@ -164,12 +178,20 @@ jobs:
           set -eo pipefail
           cmake -S . -B build-debug -G Ninja -DCMAKE_BUILD_TYPE=Debug -DOFX_CXX_STANDARD="${CXXSTD#c++}" -DIM=7
           cmake --build build-debug --parallel 4
-      - name: Load and render tests (ctest, hostDemo)
-        # -V: print every test's output (the per-plug-in load and render results), not only on failure
+      - name: Functional tests (ctest -L functional, hostDemo)
+        id: ctest_functional
+        # -V: print every test's output (the per-plug-in load and render results), not only on failure.
+        # The labels are the tests' directories, tests/functional and tests/regression
         if: inputs.build-system == 'cmake'
         run: |
           set -eo pipefail
-          ctest --test-dir build -V --output-on-failure
+          ctest --test-dir build -V --output-on-failure --no-tests=error -L functional
+      - name: Regression tests (ctest -L regression, hostDemo)
+        # also when the functional tests failed: both kinds are required, each in its own step
+        if: ${{ !cancelled() && (steps.ctest_functional.outcome == 'success' || steps.ctest_functional.outcome == 'failure') }}
+        run: |
+          set -eo pipefail
+          ctest --test-dir build -V --output-on-failure --no-tests=error -L regression
       - name: Build (release, Make)
         if: inputs.build-system == 'make'
         run: |
@@ -280,12 +302,20 @@ jobs:
           export PATH=/opt/local/bin:/opt/local/sbin:$PATH
           cmake -S . -B build-debug -DCMAKE_BUILD_TYPE=Debug -DOFX_CXX_STANDARD="${CXXSTD#c++}"
           cmake --build build-debug --parallel 4
-      - name: Load and render tests (ctest, hostDemo)
-        # -V: print every test's output (the per-plug-in load and render results), not only on failure
+      - name: Functional tests (ctest -L functional, hostDemo)
+        id: ctest_functional
+        # -V: print every test's output (the per-plug-in load and render results), not only on failure.
+        # The labels are the tests' directories, tests/functional and tests/regression
         if: inputs.build-system == 'cmake'
         run: |
           export PATH=/opt/local/bin:/opt/local/sbin:$PATH
-          ctest --test-dir build -V --output-on-failure
+          ctest --test-dir build -V --output-on-failure --no-tests=error -L functional
+      - name: Regression tests (ctest -L regression, hostDemo)
+        # also when the functional tests failed: both kinds are required, each in its own step
+        if: ${{ !cancelled() && (steps.ctest_functional.outcome == 'success' || steps.ctest_functional.outcome == 'failure') }}
+        run: |
+          export PATH=/opt/local/bin:/opt/local/sbin:$PATH
+          ctest --test-dir build -V --output-on-failure --no-tests=error -L regression
       - name: Build (release, Make)
         if: inputs.build-system == 'make'
         run: |
