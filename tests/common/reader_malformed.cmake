@@ -25,23 +25,11 @@ foreach(_v HOSTDEMO PLUGIN_PATH SAMPLES OCIO WORK)
   get_filename_component(${_v} "${${_v}}" ABSOLUTE)
 endforeach()
 
-macro(native _out _path)
-  if(CMAKE_HOST_WIN32)
-    file(TO_NATIVE_PATH "${_path}" ${_out})
-  else()
-    set(${_out} "${_path}")
-  endif()
-endmacro()
+include("${CMAKE_CURRENT_LIST_DIR}/testenv.cmake") # native(), test_env(), check_error_logs()
 
-file(REMOVE_RECURSE "${WORK}")
-file(MAKE_DIRECTORY "${WORK}")
-native(_n "${PLUGIN_PATH}")
-set(ENV{OFX_PLUGIN_PATH} "${_n}")
-native(_n "${OCIO}")
-set(ENV{OCIO} "${_n}")
+test_env("${WORK}" "${PLUGIN_PATH}" "${OCIO}")
+# the caches in the work directory, which is wiped at each run
 native(_n "${WORK}")
-set(ENV{HOME} "${_n}")
-set(ENV{USERPROFILE} "${_n}")
 set(ENV{XDG_CACHE_HOME} "${_n}")
 
 set(_ok 0)
@@ -108,21 +96,12 @@ if(READPDF)
   fails(fr.inria.openfx.ReadPDF 1 missing.pdf "Cannot load frame|No filename")
 endif()
 
-# a debug build's property validation (Support's ofxsLog.cpp) writes an "ERROR : " line in the
-# log of each run for a host property that is missing or wrong
-file(GLOB _logs "${WORK}/*ofxTestLog.txt")
-foreach(_l IN LISTS _logs)
-  file(STRINGS "${_l}" _errors REGEX "ERROR : ")
-  # every run here fails on purpose, and Support's mainEntry logs the exception that makes the
-  # action fail as "ERROR : Caught ..." (an OFX::Exception::Suite, or ImageMagick's exception
-  # for ReadMisc); the other ERROR lines are still checked
-  list(FILTER _errors EXCLUDE REGEX "ERROR : Caught ")
-  if(_errors)
-    list(JOIN _errors "\n" _errors)
-    message("FAIL ${_l}:\n${_errors}")
-    list(APPEND _failed "${_l}")
-  endif()
-endforeach()
+# the ERROR lines of a debug build's property validation; but every run here fails on purpose,
+# and Support's mainEntry logs the exception that makes the action fail as "ERROR : Caught ..."
+# (an OFX::Exception::Suite, or ImageMagick's exception for ReadMisc): the other ERROR lines are
+# still checked
+check_error_logs("${WORK}" _bad "ERROR : Caught ")
+list(APPEND _failed ${_bad})
 message("${_ok} passed, ${_n_run} run")
 if(_failed)
   message(FATAL_ERROR "malformed reader test failed: ${_failed}")

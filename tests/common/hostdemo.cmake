@@ -62,34 +62,16 @@ foreach(_l IN LISTS _lines)
   list(APPEND _entries "${_l}")
 endforeach()
 
-# native paths for hostDemo: backslashes on Windows (file(TO_NATIVE_PATH) would also escape
-# the spaces elsewhere)
-macro(native _out _path)
-  if(CMAKE_HOST_WIN32)
-    file(TO_NATIVE_PATH "${_path}" ${_out})
-  else()
-    set(${_out} "${_path}")
-  endif()
-endmacro()
+include("${CMAKE_CURRENT_LIST_DIR}/testenv.cmake") # native(), test_env(), check_error_logs()
 
 # the bundle directory: OFX_PLUGIN_PATH is its parent
 get_filename_component(_bundle "${BINARY}" DIRECTORY) # Contents/<arch>
 get_filename_component(_bundle "${_bundle}" DIRECTORY) # Contents
 get_filename_component(_bundle "${_bundle}" DIRECTORY) # <name>.ofx.bundle
 get_filename_component(_pluginpath "${_bundle}" DIRECTORY)
-native(_pluginpath "${_pluginpath}")
-# the readers need an OpenColorIO config: a minimal one, next to this script
-native(_ocio "${CMAKE_CURRENT_LIST_DIR}/config.ocio")
-file(REMOVE_RECURSE "${WORK}")
-file(MAKE_DIRECTORY "${WORK}")
-# hostDemo's environment (it is run directly, so that a crash is reported as such): the
-# bundle, the OCIO config, and HOME in the work directory, so that the plug-ins' files in
-# the home directory (e.g. HaldCLUT's ~/.clut) stay in the build tree
-native(_nwork "${WORK}")
-set(ENV{OFX_PLUGIN_PATH} "${_pluginpath}")
-set(ENV{OCIO} "${_ocio}")
-set(ENV{HOME} "${_nwork}")
-set(ENV{USERPROFILE} "${_nwork}")
+# hostDemo's environment: the bundle, and the readers need an OpenColorIO config: a minimal
+# one, next to this script
+test_env("${WORK}" "${_pluginpath}" "${CMAKE_CURRENT_LIST_DIR}/config.ocio")
 # the load mode, whatever the caller's environment says: the default (unload after the scan)
 # unless KEEP_LOADED
 if(KEEP_LOADED)
@@ -194,17 +176,9 @@ foreach(_p IN LISTS _plugins)
     endif()
   endforeach()
 endforeach()
-# a debug build's property validation (Support's ofxsLog.cpp) writes an "ERROR : " line in the
-# log of each run for a host property that is missing or wrong
-file(GLOB _logs "${WORK}/*ofxTestLog.txt")
-foreach(_l IN LISTS _logs)
-  file(STRINGS "${_l}" _errors REGEX "ERROR : ")
-  if(_errors)
-    list(JOIN _errors "\n" _errors)
-    message("FAIL ${_l}:\n${_errors}")
-    list(APPEND _failed "${_l}")
-  endif()
-endforeach()
+# the ERROR lines of a debug build's property validation
+check_error_logs("${WORK}" _bad)
+list(APPEND _failed ${_bad})
 string(TIMESTAMP _end "%s")
 math(EXPR _t "${_end} - ${_start}")
 list(LENGTH _plugins _n)
