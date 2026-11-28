@@ -709,9 +709,9 @@ endif()
             set_tests_properties(render_Arena_mt_unload PROPERTIES LABELS functional)
         endif()
 
-        # ReadPSD's layer menu (tests/functional/readpsd, also "make -C tests check"): needs Python 3 with
-        # NumPy, and ImageMagick's magick or convert for the layered PSD (mklayers.py finds it)
-        # (python3 from the PATH, as "make -C tests check": FindPython3 may pick another one)
+        # ReadPSD's layer menu (tests/functional/readpsd): needs Python 3 with NumPy, and
+        # ImageMagick's magick or convert for the layered PSD (mklayers.py finds it)
+        # (python3 from the PATH: FindPython3 may pick another one)
         find_program(ARENA_PYTHON3 python3)
         set(_numpy FALSE)
         if(ARENA_PYTHON3)

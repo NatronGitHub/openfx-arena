@@ -138,7 +138,7 @@ Options (the Makefile equivalents are in parentheses):
   * ``-DHALDCLUT=ON``, ``-DOCL=ON``: also build ``HaldCLUT.ofx.bundle`` and ``OCL.ofx.bundle`` (``make -C Magick/HaldCLUT``, ``make -C OCL``), assembled in ``build/Plugins-HaldCLUT`` and ``build/Plugins-OCL``
   * ``-DBUNDLE_FONTS_CONF=ON``: Bundle fonts.conf *(If not using Natron and on Windows/macOS)*
   * ``-DOLD_POPPLER=ON``: poppler < 0.83
-  * ``-DBUILD_TESTING=ON``: ``ctest`` loads the bundles
+  * ``-DBUILD_TESTING=ON``: ``ctest`` loads the bundles and renders the plug-ins (the tests of ``tests/``); ``ctest -L functional`` and ``ctest -L regression`` run the tests of ``tests/functional`` and ``tests/regression``
 
 ## License
 
