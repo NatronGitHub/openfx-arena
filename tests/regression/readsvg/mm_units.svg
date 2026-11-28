@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<!-- ReadSVG DPI test (tests/readsvg/dpi.cmake): mm.svg without a viewBox, the rectangle in millimetres -->
+<!-- ReadSVG DPI test (tests/common/readsvg_dpi.cmake): mm.svg without a viewBox, the rectangle in millimetres -->
 <svg xmlns="http://www.w3.org/2000/svg" width="100mm" height="50mm">
   <rect x="10mm" y="10mm" width="80mm" height="30mm" fill="red"/>
 </svg>

@@ -2,9 +2,9 @@
 # with an error status and the reader's message, not crash, hang, or render garbage.
 #
 #   cmake -DHOSTDEMO=<hostDemo> -DPLUGIN_PATH=<dir with Arena.ofx.bundle> -DSAMPLES=<dir>
-#         -DOCIO=<config.ocio> -DWORK=<dir> -P run.cmake
+#         -DOCIO=<config.ocio> -DWORK=<dir> -P reader_malformed.cmake
 #
-# SAMPLES has the files of tests/hostdemo, including the bad_ files that make_samples.cpp writes:
+# SAMPLES has the files of make_samples.cpp, including the bad_ files that make_samples.cpp writes:
 # - bad_nosize.kra/.ora: no image size in the XML. getFrameBounds() returned true with the bounds
 #   unset, and GenericReader made the RoD from an uninitialized rectangle (#129).
 # - bad_hugexml, bad_hugepng: an XML or PNG entry whose size in the archive (2^64-1 or 2^63-1) is
@@ -20,7 +20,7 @@
 cmake_minimum_required(VERSION 3.21...3.31) # as CMakeLists.txt
 foreach(_v HOSTDEMO PLUGIN_PATH SAMPLES OCIO WORK)
   if(NOT DEFINED ${_v})
-    message(FATAL_ERROR "run.cmake: ${_v} is not set")
+    message(FATAL_ERROR "reader_malformed.cmake: ${_v} is not set")
   endif()
   get_filename_component(${_v} "${${_v}}" ABSOLUTE)
 endforeach()

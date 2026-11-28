@@ -2,8 +2,8 @@
 # rendered with openfx's hostDemo at several DPIs, by both major versions. Version 4 applies the
 # DPI once; version 3 (Natron 2.5.0) applied it twice to physical units, and old projects keep that.
 #
-#   cmake -DHOSTDEMO=<hostDemo> -DPLUGIN_PATH=<dir with Arena.ofx.bundle> -DSRC=<tests/readsvg>
-#         -DOCIO=<config.ocio> -DWORK=<dir> [-DEXACT=ON] -P dpi.cmake
+#   cmake -DHOSTDEMO=<hostDemo> -DPLUGIN_PATH=<dir with Arena.ofx.bundle> -DSRC=<tests/regression/readsvg>
+#         -DOCIO=<config.ocio> -DWORK=<dir> [-DEXACT=ON] -P readsvg_dpi.cmake
 #
 # EXACT (librsvg 2.52 or later): ReadSVG 4 then has the exact sizes and renders a document in
 # millimetres exactly as the same document with a viewBox in user units. With older versions of
@@ -13,7 +13,7 @@
 cmake_minimum_required(VERSION 3.21...3.31) # as CMakeLists.txt (string(JSON) needs 3.19)
 foreach(_v HOSTDEMO PLUGIN_PATH SRC OCIO WORK)
   if(NOT DEFINED ${_v})
-    message(FATAL_ERROR "dpi.cmake: ${_v} is not set")
+    message(FATAL_ERROR "readsvg_dpi.cmake: ${_v} is not set")
   endif()
   get_filename_component(${_v} "${${_v}}" ABSOLUTE)
 endforeach()

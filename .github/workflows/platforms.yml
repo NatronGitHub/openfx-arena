@@ -61,7 +61,7 @@ jobs:
           # the -dev packages of ImageMagick's own dependencies are needed too, since
           # Makefile.master and CMakeLists.txt link with pkg-config --static (libssl-dev and
           # libzstd-dev: for libzip and curl). python3-numpy and imagemagick (convert): for ctest's
-          # readpsd_layers (tests/readpsd). libexpat1-dev: for openfx's HostSupport (hostDemo, ctest's
+          # readpsd_layers (tests/functional/readpsd). libexpat1-dev: for openfx's HostSupport (hostDemo, ctest's
           # render_Arena), which no longer bundles expat
           sudo apt-get install -y cmake libssl-dev libzstd-dev python3-numpy imagemagick libopencolorio-dev libgl-dev libglu1-mesa-dev libexpat1-dev libmagick++-dev zlib1g-dev libwebp-dev \
             liblcms2-dev libfontconfig1-dev libpango1.0-dev libxml2-dev libzip-dev librsvg2-dev libglib2.0-dev libfftw3-dev \
@@ -241,7 +241,7 @@ jobs:
         shell: bash -eo pipefail {0}
     env:
       # libomp: Apple clang has no OpenMP runtime; Natron builds with -Xpreprocessor -fopenmp
-      # py313-numpy, and python3 selected: for ctest's readpsd_layers (tests/readpsd)
+      # py313-numpy, and python3 selected: for ctest's readpsd_layers (tests/functional/readpsd)
       # expat: for openfx's HostSupport (hostDemo, ctest's render_Arena), which no longer bundles it
       PORTS: cmake pkgconfig gsed libomp py313-numpy ImageMagick opencolorio lcms2 fontconfig pango librsvg poppler libxml2 libzip librevenge libcdr-0.1 sox curl expat
     steps:

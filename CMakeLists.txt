@@ -103,7 +103,7 @@ include(OpenFX-IO/IOSupport/cmake/IOSupport.cmake)
 # OFX_CXX_STANDARD, OFX_USE_OPENMP, OFX_DEPLOY_BUNDLES and PLUGIN_INSTALLDIR (default
 # OFX/Plugins, relative to CMAKE_INSTALL_PREFIX) cache variables. EXCLUDE_FROM_ALL: build
 # only what Arena links. With BUILD_TESTING, also openfx's hostDemo, for the render test
-# (tests/hostdemo); normal builds don't build it.
+# (tests/common/hostdemo.cmake); normal builds don't build it.
 if(BUILD_TESTING)
   set(BUILD_EXAMPLE_HOSTS ON)
 endif()
@@ -193,7 +193,7 @@ list(APPEND ARENA_LIBRARIES PkgConfig::OCIO)
 # ofx_target_openmp() puts libomp's directory on the link path (or see after
 # ofx_target_openmp(Arena) below).
 # ARENA_MAGICK_OPENMP: whether this ImageMagick was built with OpenMP (-fopenmp, or its
-# runtime, in its .pc), for the thread check of tests/mtunload (e.g. MacPorts' default
+# runtime, in its .pc), for the thread check of tests/common/mt_unload.cmake (e.g. MacPorts' default
 # ImageMagick variant is built with --disable-openmp, its +natron variant with OpenMP)
 set(ARENA_MAGICK_OPENMP OFF)
 foreach(_prop INTERFACE_COMPILE_OPTIONS INTERFACE_LINK_LIBRARIES)
@@ -551,11 +551,11 @@ endif()
         endif()
     endforeach()
 
-    # render test: every plug-in rendered once with openfx's hostDemo (tests/hostdemo), the
+    # render test: every plug-in rendered once with openfx's hostDemo (tests/functional/hostdemo), the
     # readers on samples written by make_samples (ImageMagick, libzip) and sample.svg
     if(TARGET hostDemo)
         set(_samples "${CMAKE_CURRENT_BINARY_DIR}/hostdemo-samples")
-        add_executable(make_samples tests/hostdemo/make_samples.cpp)
+        add_executable(make_samples tests/common/make_samples.cpp)
         target_link_libraries(make_samples PRIVATE PkgConfig::MAGICK PkgConfig::ZIP)
         ofx_target_openmp(make_samples)
         set(_sample_files sample.png sample.psd sample.bmp sample.ora sample.kra sample.pdf sample.svg sample_hald.png
@@ -566,8 +566,8 @@ endif()
         add_custom_command(OUTPUT ${_sample_files}
             COMMAND "${CMAKE_COMMAND}" -E make_directory "${_samples}"
             COMMAND make_samples "${_samples}"
-            COMMAND "${CMAKE_COMMAND}" -E copy "${CMAKE_CURRENT_SOURCE_DIR}/tests/hostdemo/sample.svg" "${_samples}"
-            DEPENDS make_samples tests/hostdemo/sample.svg
+            COMMAND "${CMAKE_COMMAND}" -E copy "${CMAKE_CURRENT_SOURCE_DIR}/tests/common/sample.svg" "${_samples}"
+            DEPENDS make_samples tests/common/sample.svg
             VERBATIM)
         # hostDemo is in openfx's EXCLUDE_FROM_ALL directory: build it with the tests
         add_custom_target(hostdemo_test ALL DEPENDS ${_sample_files} hostDemo)
@@ -576,18 +576,18 @@ endif()
                 string(TOLOWER "${_t}" _list)
                 add_test(NAME render_${_t} COMMAND "${CMAKE_COMMAND}"
                     -DHOSTDEMO=$<TARGET_FILE:hostDemo> -DVERIFY=$<TARGET_FILE:verify_plugin_loads>
-                    -DBINARY=$<TARGET_FILE:${_t}> -DLIST=${CMAKE_CURRENT_SOURCE_DIR}/tests/hostdemo/${_list}.txt
+                    -DBINARY=$<TARGET_FILE:${_t}> -DLIST=${CMAKE_CURRENT_SOURCE_DIR}/tests/functional/hostdemo/${_list}.txt
                     -DSAMPLES=${_samples} -DWORK=${CMAKE_CURRENT_BINARY_DIR}/hostdemo-${_t}
                     -DCACHE=${CMAKE_CURRENT_BINARY_DIR}/hostdemo-cache
-                    -P "${CMAKE_CURRENT_SOURCE_DIR}/tests/hostdemo/run.cmake")
+                    -P "${CMAKE_CURRENT_SOURCE_DIR}/tests/common/hostdemo.cmake")
                 # the same, with hostDemo as an OFX 1.4 host (--ofx14): every plug-in must also
                 # work in a host that has neither OFX 1.5 nor the extensions
                 add_test(NAME render_${_t}_ofx14 COMMAND "${CMAKE_COMMAND}"
                     -DHOSTDEMO=$<TARGET_FILE:hostDemo> -DVERIFY=$<TARGET_FILE:verify_plugin_loads>
-                    -DBINARY=$<TARGET_FILE:${_t}> -DLIST=${CMAKE_CURRENT_SOURCE_DIR}/tests/hostdemo/${_list}.txt
+                    -DBINARY=$<TARGET_FILE:${_t}> -DLIST=${CMAKE_CURRENT_SOURCE_DIR}/tests/functional/hostdemo/${_list}.txt
                     -DSAMPLES=${_samples} -DWORK=${CMAKE_CURRENT_BINARY_DIR}/hostdemo-${_t}-ofx14
                     -DCACHE=${CMAKE_CURRENT_BINARY_DIR}/hostdemo-cache -DOFX14=ON
-                    -P "${CMAKE_CURRENT_SOURCE_DIR}/tests/hostdemo/run.cmake")
+                    -P "${CMAKE_CURRENT_SOURCE_DIR}/tests/common/hostdemo.cmake")
             endif()
         endforeach()
         if(TARGET Arena)
@@ -596,14 +596,14 @@ endif()
             # this pass keeps it loaded (OFX_HOSTDEMO_KEEP_LOADED=1), as Natron 2.6 will
             add_test(NAME render_Arena_keep_loaded COMMAND "${CMAKE_COMMAND}"
                 -DHOSTDEMO=$<TARGET_FILE:hostDemo> -DVERIFY=$<TARGET_FILE:verify_plugin_loads>
-                -DBINARY=$<TARGET_FILE:Arena> -DLIST=${CMAKE_CURRENT_SOURCE_DIR}/tests/hostdemo/arena.txt
+                -DBINARY=$<TARGET_FILE:Arena> -DLIST=${CMAKE_CURRENT_SOURCE_DIR}/tests/functional/hostdemo/arena.txt
                 -DSAMPLES=${_samples} -DWORK=${CMAKE_CURRENT_BINARY_DIR}/hostdemo-Arena-keep-loaded
                 -DCACHE=${CMAKE_CURRENT_BINARY_DIR}/hostdemo-cache -DKEEP_LOADED=ON
-                -P "${CMAKE_CURRENT_SOURCE_DIR}/tests/hostdemo/run.cmake")
+                -P "${CMAKE_CURRENT_SOURCE_DIR}/tests/common/hostdemo.cmake")
         endif()
 
         # ReadSVG's output size at several DPIs, in physical and user units, for both major
-        # versions (tests/readsvg)
+        # versions (tests/regression/readsvg)
         if(TARGET Arena)
             set(_exact OFF)
             if(NOT SVG_VERSION VERSION_LESS 2.52)
@@ -611,18 +611,18 @@ endif()
             endif()
             add_test(NAME readsvg_dpi COMMAND "${CMAKE_COMMAND}"
                 -DHOSTDEMO=$<TARGET_FILE:hostDemo> -DPLUGIN_PATH=${OFX_PLUGIN_BUILD_DIR}
-                -DSRC=${CMAKE_CURRENT_SOURCE_DIR}/tests/readsvg
-                -DOCIO=${CMAKE_CURRENT_SOURCE_DIR}/tests/hostdemo/config.ocio
+                -DSRC=${CMAKE_CURRENT_SOURCE_DIR}/tests/regression/readsvg
+                -DOCIO=${CMAKE_CURRENT_SOURCE_DIR}/tests/common/config.ocio
                 -DWORK=${CMAKE_CURRENT_BINARY_DIR}/readsvg-dpi -DEXACT=${_exact}
-                -P "${CMAKE_CURRENT_SOURCE_DIR}/tests/readsvg/dpi.cmake")
+                -P "${CMAKE_CURRENT_SOURCE_DIR}/tests/common/readsvg_dpi.cmake")
         endif()
 
-        # the readers with render windows smaller than the image (#105, tests/readerwindow):
+        # the readers with render windows smaller than the image (#105, tests/common/reader_window.cmake):
         # reader_window is a small host built from hostDemo's host classes, since hostDemo
         # renders the whole RoD of a plug-in without tiles, whatever --window
         if(TARGET Arena)
             set(_hd "${CMAKE_CURRENT_SOURCE_DIR}/OpenFX/HostSupport/examples")
-            add_executable(reader_window tests/readerwindow/reader_window.cpp
+            add_executable(reader_window tests/common/reader_window.cpp
                 "${_hd}/hostDemoClipInstance.cpp" "${_hd}/hostDemoEffectInstance.cpp"
                 "${_hd}/hostDemoHostDescriptor.cpp" "${_hd}/hostDemoParamInstance.cpp")
             target_include_directories(reader_window PRIVATE "${_hd}")
@@ -634,23 +634,23 @@ endif()
             endif()
             add_test(NAME reader_window COMMAND "${CMAKE_COMMAND}"
                 -DREADER_WINDOW=$<TARGET_FILE:reader_window> -DPLUGIN_PATH=${OFX_PLUGIN_BUILD_DIR} -DREADPDF=${_readpdf}
-                -DSAMPLES=${_samples} -DOCIO=${CMAKE_CURRENT_SOURCE_DIR}/tests/hostdemo/config.ocio
+                -DSAMPLES=${_samples} -DOCIO=${CMAKE_CURRENT_SOURCE_DIR}/tests/common/config.ocio
                 -DWORK=${CMAKE_CURRENT_BINARY_DIR}/reader-window
-                -P "${CMAKE_CURRENT_SOURCE_DIR}/tests/readerwindow/run.cmake")
+                -P "${CMAKE_CURRENT_SOURCE_DIR}/tests/common/reader_window.cmake")
 
-            # the readers on malformed and missing files (tests/readermalformed, #128, #129): each
+            # the readers on malformed and missing files (tests/common/reader_malformed.cmake, #128, #129): each
             # must fail cleanly, with an error and its message, without crashing
             add_test(NAME reader_malformed COMMAND "${CMAKE_COMMAND}"
                 -DHOSTDEMO=$<TARGET_FILE:hostDemo> -DPLUGIN_PATH=${OFX_PLUGIN_BUILD_DIR} -DREADPDF=${_readpdf}
-                -DSAMPLES=${_samples} -DOCIO=${CMAKE_CURRENT_SOURCE_DIR}/tests/hostdemo/config.ocio
+                -DSAMPLES=${_samples} -DOCIO=${CMAKE_CURRENT_SOURCE_DIR}/tests/common/config.ocio
                 -DWORK=${CMAKE_CURRENT_BINARY_DIR}/reader-malformed
-                -P "${CMAKE_CURRENT_SOURCE_DIR}/tests/readermalformed/run.cmake")
+                -P "${CMAKE_CURRENT_SOURCE_DIR}/tests/common/reader_malformed.cmake")
 
             # a few plug-ins rendered with several threads (the OFX multi-thread suite and
-            # ImageMagick's OpenMP), then the binary unloaded before exit (tests/mtunload): no
+            # ImageMagick's OpenMP), then the binary unloaded before exit (tests/common/mt_unload.cmake): no
             # crash, even at exit. mt_unload is hostDemo's host with a real multi-thread suite,
             # since hostDemo's runs everything on one thread
-            add_executable(mt_unload tests/mtunload/mt_unload.cpp
+            add_executable(mt_unload tests/common/mt_unload.cpp
                 "${_hd}/hostDemoClipInstance.cpp" "${_hd}/hostDemoEffectInstance.cpp"
                 "${_hd}/hostDemoHostDescriptor.cpp" "${_hd}/hostDemoParamInstance.cpp")
             target_include_directories(mt_unload PRIVATE "${_hd}")
@@ -659,13 +659,13 @@ endif()
             add_test(NAME render_Arena_mt_unload COMMAND "${CMAKE_COMMAND}"
                 -DMT_UNLOAD=$<TARGET_FILE:mt_unload> -DPLUGIN_PATH=${OFX_PLUGIN_BUILD_DIR} -DREADPDF=${_readpdf}
                 -DMAGICK_OPENMP=${ARENA_MAGICK_OPENMP}
-                -DSAMPLES=${_samples} -DOCIO=${CMAKE_CURRENT_SOURCE_DIR}/tests/hostdemo/config.ocio
+                -DSAMPLES=${_samples} -DOCIO=${CMAKE_CURRENT_SOURCE_DIR}/tests/common/config.ocio
                 -DWORK=${CMAKE_CURRENT_BINARY_DIR}/mt-unload
                 -DCACHE=${CMAKE_CURRENT_BINARY_DIR}/hostdemo-cache
-                -P "${CMAKE_CURRENT_SOURCE_DIR}/tests/mtunload/run.cmake")
+                -P "${CMAKE_CURRENT_SOURCE_DIR}/tests/common/mt_unload.cmake")
         endif()
 
-        # ReadPSD's layer menu (tests/readpsd, also "make -C tests check"): needs Python 3 with
+        # ReadPSD's layer menu (tests/functional/readpsd, also "make -C tests check"): needs Python 3 with
         # NumPy, and ImageMagick's magick or convert for the layered PSD (mklayers.py finds it)
         # (python3 from the PATH, as "make -C tests check": FindPython3 may pick another one)
         find_program(ARENA_PYTHON3 python3)
@@ -694,11 +694,11 @@ endif()
         endif()
         if(_numpy AND ARENA_MAGICK_TOOL)
             add_test(NAME readpsd_layers COMMAND "${ARENA_PYTHON3}"
-                "${CMAKE_CURRENT_SOURCE_DIR}/tests/readpsd/test_layers.py"
+                "${CMAKE_CURRENT_SOURCE_DIR}/tests/functional/readpsd/test_layers.py"
                 --hostdemo $<TARGET_FILE:hostDemo> "${OFX_PLUGIN_BUILD_DIR}")
             set_tests_properties(readpsd_layers PROPERTIES ENVIRONMENT "MAGICK=${ARENA_MAGICK_TOOL}")
         else()
-            message(STATUS "BUILD_TESTING: no ReadPSD layer test (tests/readpsd needs Python 3.6 or later with NumPy, and ImageMagick's magick or convert)")
+            message(STATUS "BUILD_TESTING: no ReadPSD layer test (tests/functional/readpsd needs Python 3.6 or later with NumPy, and ImageMagick's magick or convert)")
         endif()
     else()
         message(STATUS "BUILD_TESTING: no hostDemo (openfx's HostSupport examples), no render test")

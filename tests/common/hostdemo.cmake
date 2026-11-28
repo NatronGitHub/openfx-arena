@@ -4,7 +4,7 @@
 #
 #   cmake -DHOSTDEMO=<hostDemo> -DVERIFY=<verify_plugin_loads> -DBINARY=<bundle>/Contents/<arch>/<name>.ofx
 #         -DLIST=<list.txt> -DSAMPLES=<dir> -DWORK=<dir> [-DCACHE=<dir>] [-DOFX14=ON]
-#         [-DKEEP_LOADED=ON] -P run.cmake
+#         [-DKEEP_LOADED=ON] -P hostdemo.cmake
 #
 # OFX14=ON runs hostDemo with --ofx14, as an OFX 1.4 host (only the OFX 1.4 host properties
 # and suites, no OfxSetHost, no StrChoice or Bytes params, one view), to check that every
@@ -28,7 +28,7 @@
 cmake_minimum_required(VERSION 3.21...3.31) # as CMakeLists.txt
 foreach(_v HOSTDEMO VERIFY BINARY LIST SAMPLES WORK)
   if(NOT DEFINED ${_v})
-    message(FATAL_ERROR "run.cmake: ${_v} is not set")
+    message(FATAL_ERROR "hostdemo.cmake: ${_v} is not set")
   endif()
   # in script mode, relative to the current directory
   get_filename_component(${_v} "${${_v}}" ABSOLUTE)

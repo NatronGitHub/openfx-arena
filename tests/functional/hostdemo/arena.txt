@@ -1,4 +1,4 @@
-# The plug-ins of Arena.ofx.bundle, rendered by tests/hostdemo/run.cmake with openfx's
+# The plug-ins of Arena.ofx.bundle, rendered by tests/common/hostdemo.cmake with openfx's
 # hostDemo, once (t=0), with their default parameters and hostDemo's default PAL SD inputs.
 # Every plug-in of the bundle, each major version, must have a line (the test fails otherwise):
 #   <identifier> <major version> <context> [hostDemo arguments]

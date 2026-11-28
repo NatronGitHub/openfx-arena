@@ -3,7 +3,7 @@
 #
 #   cmake -DMT_UNLOAD=<mt_unload> -DPLUGIN_PATH=<dir with Arena.ofx.bundle> -DSAMPLES=<dir>
 #         -DOCIO=<config.ocio> -DWORK=<dir> [-DCACHE=<dir>] [-DTHREADS=4] [-DREPEAT=1] [-DREADPDF=ON]
-#         [-DMAGICK_OPENMP=ON] -P run.cmake
+#         [-DMAGICK_OPENMP=ON] -P mt_unload.cmake
 #
 # openfx-gmic crashed after a successful render when the host unloaded its binary: worker threads
 # of a runtime that it links were still running, or were torn down by a static destructor of the
@@ -12,14 +12,14 @@
 # Text, SVG and PDF ones use pango, cairo, librsvg, poppler and glib. Each one gets its own process,
 # in hostDemo's default load mode (the binary is unloaded after the scan, loaded again for the
 # render, and unloaded before exit). OMP_NUM_THREADS is THREADS, so that the OpenMP runtime has
-# that many threads even on a machine with fewer CPUs. SAMPLES has the files of tests/hostdemo.
+# that many threads even on a machine with fewer CPUs. SAMPLES has the files of make_samples.cpp.
 # READPDF=OFF: the bundle has no ReadPDF (OFX_LICENSE=COMMERCIAL).
 # MAGICK_OPENMP=OFF: ImageMagick has no OpenMP (e.g. MacPorts' default variant), so the Magick
 # plug-ins start no thread: the unload is still tested, but not the thread check.
 cmake_minimum_required(VERSION 3.21...3.31) # as CMakeLists.txt
 foreach(_v MT_UNLOAD PLUGIN_PATH SAMPLES OCIO WORK)
   if(NOT DEFINED ${_v})
-    message(FATAL_ERROR "run.cmake: ${_v} is not set")
+    message(FATAL_ERROR "mt_unload.cmake: ${_v} is not set")
   endif()
   get_filename_component(${_v} "${${_v}}" ABSOLUTE)
 endforeach()
@@ -58,7 +58,7 @@ set(ENV{OCIO} "${_n}")
 native(_n "${WORK}")
 set(ENV{HOME} "${_n}")
 set(ENV{USERPROFILE} "${_n}")
-# fontconfig's cache is kept between runs (as tests/hostdemo/run.cmake)
+# fontconfig's cache is kept between runs (as hostdemo.cmake)
 native(_n "${CACHE}")
 set(ENV{XDG_CACHE_HOME} "${_n}")
 if(CMAKE_HOST_WIN32)
@@ -130,7 +130,7 @@ check(net.fxarena.openfx.Implode 3 filter)
 check(net.fxarena.openfx.Arc 5 filter)
 check(net.fxarena.openfx.Polar 5 filter)
 set(_min 1)
-# infinite RoD with the default size: give them a size (as tests/hostdemo/arena.txt). They leave
+# infinite RoD with the default size: give them a size (as tests/functional/hostdemo/arena.txt). They leave
 # no pool thread behind (1 thread after the render on macOS), so no thread check
 check(net.fxarena.openfx.Texture 3 general width=320 height=240)
 check(net.fxarena.openfx.Text 5 general width=320 height=240)

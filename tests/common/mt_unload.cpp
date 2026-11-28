@@ -18,7 +18,7 @@
  * multiThread call), so that
  *   - the plug-ins' OFX::MultiThread::Processor code runs on N threads,
  *   - the Magick plug-ins run ImageMagick on OpenMP threads (with MAGICK_THREAD_LIMIT set, see
- *     run.cmake; without it ImageMagick runs on one thread), which stay in the OpenMP runtime's
+ *     mt_unload.cmake; without it ImageMagick runs on one thread), which stay in the OpenMP runtime's
  *     pool after the render.
  * It scans the plug-ins in hostDemo's default mode (the binary is unloaded after the scan and
  * loaded again at the first use, unless OFX_HOSTDEMO_KEEP_LOADED=1), creates the instance,

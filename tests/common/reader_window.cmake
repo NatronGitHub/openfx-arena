@@ -4,12 +4,12 @@
 # the reader must write only the window.
 #
 #   cmake -DREADER_WINDOW=<reader_window> -DPLUGIN_PATH=<dir with Arena.ofx.bundle>
-#         -DSAMPLES=<dir> -DOCIO=<config.ocio> -DWORK=<dir> [-DREADPDF=ON] -P run.cmake
+#         -DSAMPLES=<dir> -DOCIO=<config.ocio> -DWORK=<dir> [-DREADPDF=ON] -P reader_window.cmake
 #
 # READPDF: the bundle has ReadPDF (not with OFX_LICENSE=COMMERCIAL).
-# SAMPLES has the files of tests/hostdemo (make_samples.cpp, sample.svg), including the sample_xy
-# files. There is no CorelDRAW sample (see tests/hostdemo/arena.txt), so ReadCDR is not tested
-# here.
+# SAMPLES has the files of make_samples.cpp (and sample.svg), including the sample_xy files.
+# There is no CorelDRAW sample (see tests/functional/hostdemo/arena.txt), so ReadCDR is not
+# tested here.
 #
 # Each reader is rendered twice: with its default parameters, and with another filePremult, so
 # that both paths of GenericReader::render() are tested: decode() straight into the output image
@@ -18,7 +18,7 @@
 cmake_minimum_required(VERSION 3.21...3.31) # as CMakeLists.txt
 foreach(_v READER_WINDOW PLUGIN_PATH SAMPLES OCIO WORK)
   if(NOT DEFINED ${_v})
-    message(FATAL_ERROR "run.cmake: ${_v} is not set")
+    message(FATAL_ERROR "reader_window.cmake: ${_v} is not set")
   endif()
   get_filename_component(${_v} "${${_v}}" ABSOLUTE)
 endforeach()
