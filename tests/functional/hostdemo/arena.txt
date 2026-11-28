@@ -1,5 +1,8 @@
-# The plug-ins of Arena.ofx.bundle, rendered by tests/hostdemo/run.cmake with openfx's
-# hostDemo, once (t=0), with their default parameters and hostDemo's default PAL SD inputs.
+# The plug-ins of Arena.ofx.bundle, rendered by tests/common/hostdemo.cmake with openfx's
+# hostDemo, once (t=0), with their default parameters and hostDemo's default PAL SD inputs: each
+# plug-in and major version must load, describe and render (#72; the ctest tests render_Arena,
+# render_Arena_ofx14 and render_Arena_keep_loaded). The edge cases of past bugs are in
+# tests/regression/hostdemo/arena.txt.
 # Every plug-in of the bundle, each major version, must have a line (the test fails otherwise):
 #   <identifier> <major version> <context> [hostDemo arguments]
 #   skip <identifier> <major version> <reason>
@@ -8,11 +11,6 @@
 # hostDemo has filter and general contexts only: readers are rendered in the general context.
 net.fxarena.openfx.Text 7 filter
 net.fxarena.openfx.Text 6 filter
-# Auto size with a stroke, which the version 7 RoD fits (#135)
-net.fxarena.openfx.Text 7 filter -s autoSize=1 -s strokeSize=4
-net.fxarena.openfx.Text 6 filter -s autoSize=1 -s strokeSize=4
-# Style Bold with the default Weight renders bold in version 7 (#247)
-net.fxarena.openfx.Text 7 filter -s style=1
 skip fr.inria.openfx.ReadCDR 1 no CorelDRAW sample: libcdr only reads them, and a hand-written .cdr is not simple
 net.fxarena.openfx.ReadSVG 4 general -s filename=@SAMPLES@/sample.svg
 net.fxarena.openfx.ReadSVG 3 general -s filename=@SAMPLES@/sample.svg
@@ -26,16 +24,10 @@ net.fxarena.openfx.Polaroid 2 filter
 net.fxarena.openfx.Polaroid 1 filter
 net.fxarena.openfx.Edges 3 filter
 net.fxarena.openfx.Edges 2 filter
-# the default size (0x0, "project format") gives an infinite RoD (#256); then a custom size
-net.fxarena.openfx.Texture 3 general
+# a custom size (the default size gives an infinite RoD: see tests/regression/hostdemo/arena.txt)
 net.fxarena.openfx.Texture 3 general width=320 height=240
 net.fxarena.openfx.Tile 4 filter
 net.fxarena.openfx.Tile 3 filter
-# out of the params' range (1..100), which the host doesn't have to enforce (#117): clamped
-net.fxarena.openfx.Tile 4 filter -s rows=0 -s cols=0
-net.fxarena.openfx.Tile 4 filter -s rows=100000 -s cols=100000 -i Source=rod:0,0,64,48
-# a grid larger than the image: tiles of less than a pixel (#117)
-net.fxarena.openfx.Tile 4 filter -s rows=100 -s cols=100 -i Source=rod:0,0,64,48
 net.fxarena.openfx.Reflection 4 filter
 net.fxarena.openfx.Reflection 3 filter
 net.fxarena.openfx.Arc 5 filter
@@ -58,7 +50,7 @@ net.fxarena.openfx.ReadPSD 2 general -s filename=@SAMPLES@/sample.psd
 net.fxarena.openfx.Modulate 2 filter
 net.fxarena.openfx.Modulate 1 filter
 fr.inria.openfx.ReadMisc 1 general -s filename=@SAMPLES@/sample.bmp
-# Magick/Text.cpp: infinite RoD with the default size, as Texture
+# Magick/Text.cpp: an infinite RoD with the default size, as Texture: render it at a size
 net.fxarena.openfx.Text 5 general width=320 height=240
 net.fxarena.openfx.Morphology 2 filter
 net.fxarena.openfx.Morphology 1 filter

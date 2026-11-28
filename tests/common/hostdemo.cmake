@@ -1,10 +1,12 @@
 # Render every plug-in of a bundle once with openfx's hostDemo (the reference is SupportExt's
 # tests/hostdemo/run.sh), and fail on any load, describe, instance or render error, on a
-# crash, on a missing output frame, and on a plug-in that the list doesn't mention.
+# crash, on a missing output frame, and on a plug-in that the list doesn't mention: the bundle's
+# contract that every plug-in loads, describes and renders in a host (#72), in the load modes
+# below (openfx #174, #103) and as an OFX 1.4 host (#101).
 #
 #   cmake -DHOSTDEMO=<hostDemo> -DVERIFY=<verify_plugin_loads> -DBINARY=<bundle>/Contents/<arch>/<name>.ofx
 #         -DLIST=<list.txt> -DSAMPLES=<dir> -DWORK=<dir> [-DCACHE=<dir>] [-DOFX14=ON]
-#         [-DKEEP_LOADED=ON] -P run.cmake
+#         [-DKEEP_LOADED=ON] [-DPARTIAL=ON] -P hostdemo.cmake
 #
 # OFX14=ON runs hostDemo with --ofx14, as an OFX 1.4 host (only the OFX 1.4 host properties
 # and suites, no OfxSetHost, no StrChoice or Bytes params, one view), to check that every
@@ -17,6 +19,9 @@
 # binary in one process (openfx #174). KEEP_LOADED=ON sets OFX_HOSTDEMO_KEEP_LOADED=1 instead
 # (Host::keepPluginsLoadedAfterScan(), as Natron 2.6): one load cycle, the binary stays loaded.
 #
+# PARTIAL=ON renders only the plug-ins that the list mentions (a regression list,
+# tests/regression/hostdemo): the others are not a failure, and each ok line shows its arguments.
+#
 # WORK is wiped at each run; CACHE (default: WORK-cache) is not: it holds the caches that
 # would otherwise go to the home directory, e.g. fontconfig's.
 #
@@ -28,7 +33,7 @@
 cmake_minimum_required(VERSION 3.21...3.31) # as CMakeLists.txt
 foreach(_v HOSTDEMO VERIFY BINARY LIST SAMPLES WORK)
   if(NOT DEFINED ${_v})
-    message(FATAL_ERROR "run.cmake: ${_v} is not set")
+    message(FATAL_ERROR "hostdemo.cmake: ${_v} is not set")
   endif()
   # in script mode, relative to the current directory
   get_filename_component(${_v} "${${_v}}" ABSOLUTE)
@@ -62,34 +67,16 @@ foreach(_l IN LISTS _lines)
   list(APPEND _entries "${_l}")
 endforeach()
 
-# native paths for hostDemo: backslashes on Windows (file(TO_NATIVE_PATH) would also escape
-# the spaces elsewhere)
-macro(native _out _path)
-  if(CMAKE_HOST_WIN32)
-    file(TO_NATIVE_PATH "${_path}" ${_out})
-  else()
-    set(${_out} "${_path}")
-  endif()
-endmacro()
+include("${CMAKE_CURRENT_LIST_DIR}/testenv.cmake") # native(), test_env(), check_error_logs()
 
 # the bundle directory: OFX_PLUGIN_PATH is its parent
 get_filename_component(_bundle "${BINARY}" DIRECTORY) # Contents/<arch>
 get_filename_component(_bundle "${_bundle}" DIRECTORY) # Contents
 get_filename_component(_bundle "${_bundle}" DIRECTORY) # <name>.ofx.bundle
 get_filename_component(_pluginpath "${_bundle}" DIRECTORY)
-native(_pluginpath "${_pluginpath}")
-# the readers need an OpenColorIO config: a minimal one, next to this script
-native(_ocio "${CMAKE_CURRENT_LIST_DIR}/config.ocio")
-file(REMOVE_RECURSE "${WORK}")
-file(MAKE_DIRECTORY "${WORK}")
-# hostDemo's environment (it is run directly, so that a crash is reported as such): the
-# bundle, the OCIO config, and HOME in the work directory, so that the plug-ins' files in
-# the home directory (e.g. HaldCLUT's ~/.clut) stay in the build tree
-native(_nwork "${WORK}")
-set(ENV{OFX_PLUGIN_PATH} "${_pluginpath}")
-set(ENV{OCIO} "${_ocio}")
-set(ENV{HOME} "${_nwork}")
-set(ENV{USERPROFILE} "${_nwork}")
+# hostDemo's environment: the bundle, and the readers need an OpenColorIO config: a minimal
+# one, next to this script
+test_env("${WORK}" "${_pluginpath}" "${CMAKE_CURRENT_LIST_DIR}/config.ocio")
 # the load mode, whatever the caller's environment says: the default (unload after the scan)
 # unless KEEP_LOADED
 if(KEEP_LOADED)
@@ -123,6 +110,9 @@ foreach(_p IN LISTS _plugins)
     endif()
   endforeach()
   if(NOT _matched)
+    if(PARTIAL)
+      continue()
+    endif()
     message("FAIL ${_id} v${_major}: not in ${LIST}")
     list(APPEND _failed "${_id}v${_major}")
     continue()
@@ -150,7 +140,7 @@ foreach(_p IN LISTS _plugins)
       string(APPEND _prefix "_${_n_entry}")
     endif()
     set(_what "${_id} v${_major} (${_ctx})")
-    if(_n_entry GREATER 1)
+    if(_n_entry GREATER 1 OR PARTIAL)
       list(JOIN _args " " _joined)
       string(APPEND _what " ${_joined}")
     endif()
@@ -194,17 +184,9 @@ foreach(_p IN LISTS _plugins)
     endif()
   endforeach()
 endforeach()
-# a debug build's property validation (Support's ofxsLog.cpp) writes an "ERROR : " line in the
-# log of each run for a host property that is missing or wrong
-file(GLOB _logs "${WORK}/*ofxTestLog.txt")
-foreach(_l IN LISTS _logs)
-  file(STRINGS "${_l}" _errors REGEX "ERROR : ")
-  if(_errors)
-    list(JOIN _errors "\n" _errors)
-    message("FAIL ${_l}:\n${_errors}")
-    list(APPEND _failed "${_l}")
-  endif()
-endforeach()
+# the ERROR lines of a debug build's property validation
+check_error_logs("${WORK}" _bad)
+list(APPEND _failed ${_bad})
 string(TIMESTAMP _end "%s")
 math(EXPR _t "${_end} - ${_start}")
 list(LENGTH _plugins _n)

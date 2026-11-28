@@ -5,7 +5,7 @@
  *             [name=value...]
  *
  * Checks that the plug-ins survive a host that unloads the binary after a multi-threaded render,
- * as openfx's hostDemo does at exit (PluginCache::clearPluginCache(), openfx #174). openfx-gmic
+ * as openfx's hostDemo does at exit (PluginCache::clearPluginCache(), openfx #174; PR #114). openfx-gmic
  * crashed there (SIGSEGV, or 0xC0000005 on Windows) after a successful render: worker threads
  * started by a runtime that the binary links (MSVC's OpenMP, FFTW's threads) were still running,
  * or were torn down by a static destructor of the unloaded binary. Arena's plug-ins start such
@@ -18,7 +18,7 @@
  * multiThread call), so that
  *   - the plug-ins' OFX::MultiThread::Processor code runs on N threads,
  *   - the Magick plug-ins run ImageMagick on OpenMP threads (with MAGICK_THREAD_LIMIT set, see
- *     run.cmake; without it ImageMagick runs on one thread), which stay in the OpenMP runtime's
+ *     mt_unload.cmake; without it ImageMagick runs on one thread), which stay in the OpenMP runtime's
  *     pool after the render.
  * It scans the plug-ins in hostDemo's default mode (the binary is unloaded after the scan and
  * loaded again at the first use, unless OFX_HOSTDEMO_KEEP_LOADED=1), creates the instance,

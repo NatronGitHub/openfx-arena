@@ -3,7 +3,8 @@
 # layered XCF files (file versions 0, 3, 11; with layer modes and a hidden layer; with a single layer), of a
 # layered PSD and of a flat PSD, with the OpenFX demo host hostDemo, and check each output against the
 # expected layer (at its offset, negative offsets included, or at 0,0 with offset=0) or merged image.
-# Choices past the last layer must fail cleanly: an error that says "Layer not found in image", not a crash.
+# Choices past the last layer must fail cleanly: an error that says "Layer not found in image", not a crash
+# (#74, fixed by PR #78, which also fixed the XCF layer mapping that the other cases check).
 # Also changes the file, and the layer, during a session (several -s settings in one hostDemo run).
 #
 # hostDemo isn't Natron, so this tests ReadPSD's fixed menu (Default, Layer 1..9): Default is the

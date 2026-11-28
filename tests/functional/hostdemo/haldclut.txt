@@ -1,6 +1,7 @@
-# HaldCLUT.ofx.bundle (HALDCLUT=ON), rendered by tests/hostdemo/run.cmake (see arena.txt).
+# HaldCLUT.ofx.bundle (HALDCLUT=ON), rendered by tests/common/hostdemo.cmake (see arena.txt):
+# render_HaldCLUT and render_HaldCLUT_ofx14 (#72, #119).
 # The default look is downloaded at render time: give it a generated identity CLUT instead.
-# (The plug-in still creates its preset folder, ~/.clut, when it is instantiated: run.cmake
+# (The plug-in still creates its preset folder, ~/.clut, when it is instantiated: hostdemo.cmake
 # sets HOME to its work directory.)
 net.fxarena.openfx.HaldCLUT 3 filter custom=@SAMPLES@/sample_hald.png
 net.fxarena.openfx.HaldCLUT 1 filter custom=@SAMPLES@/sample_hald.png

@@ -1,5 +1,5 @@
-# OCL.ofx.bundle (OCL=ON), rendered by tests/hostdemo/run.cmake (see arena.txt); needs an
-# OpenCL device. Float inputs: Bulge and Twirl only support float images, and hostDemo
+# OCL.ofx.bundle (OCL=ON), rendered by tests/common/hostdemo.cmake (see arena.txt): render_OCL
+# and render_OCL_ofx14 (#72, #119, #227); needs an OpenCL device. Float inputs: Bulge and Twirl only support float images, and hostDemo
 # gives its input depth (-d, byte by default) to the plug-in as is.
 net.fxarena.opencl.Bulge 2 filter -d float
 net.fxarena.opencl.Bulge 1 filter -d float

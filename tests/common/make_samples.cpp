@@ -1,9 +1,9 @@
-// Writes the sample files of the hostDemo render test (tests/hostdemo/run.cmake) into the
+// Writes the sample files of the hostDemo render test (tests/common/hostdemo.cmake) into the
 // directory given as argument, with the libraries Arena links: ImageMagick (PNG, PSD for
 // ReadPSD, BMP for ReadMisc), libzip (OpenRaster and Krita documents around the PNG), and
 // a hand-written one-page PDF for ReadPDF, and an identity Hald CLUT (512x512) for
-// HaldCLUT, which would otherwise download one. The sample_xy files are for tests/readerwindow,
-// the bad_ files for tests/readermalformed.
+// HaldCLUT, which would otherwise download one. The sample_xy files are for tests/common/reader_window.cmake,
+// the bad_ files for tests/common/reader_malformed.cmake.
 #include <Magick++.h>
 #include <zip.h>
 
@@ -79,7 +79,7 @@ static void putLE(std::string* out, uint64_t v, int n)
 // A zip file with the given stored entries, written by hand, since libzip writes only consistent
 // archives: the entry hugeName says that its uncompressed size is hugeSize (with a zip64 extra
 // field in the central directory if it doesn't fit in 32 bits), which a hostile file may say, but
-// holds its real contents (tests/readermalformed, #128).
+// holds its real contents (tests/common/reader_malformed.cmake, #128).
 static bool writeZipWithHugeEntry(const std::string& path, const std::vector<std::pair<std::string, std::string> >& entries,
                                   const std::string& hugeName, uint64_t hugeSize)
 {
@@ -221,7 +221,7 @@ int main(int argc, char** argv)
         std::cerr << "ImageMagick: " << e.what() << std::endl;
         return 1;
     }
-    // the samples of the render window test (tests/readerwindow): their pixels differ along x
+    // the samples of the render window test (tests/common/reader_window.cmake): their pixels differ along x
     // and y, unlike the vertical gradient, so that a window copied at the wrong offset shows;
     // the alpha varies too, for the premultiplication in GenericReader
     try {
@@ -257,7 +257,7 @@ int main(int argc, char** argv)
         "<?xml version='1.0' encoding='UTF-8'?>\n<image version=\"0.0.3\" " + size.str() +
         "><stack><layer name=\"background\" src=\"data/layer0.png\" x=\"0\" y=\"0\" opacity=\"1.0\"/></stack></image>\n"));
     std::vector<std::pair<std::string, std::string> > oraXY = ora;
-    // the _big samples (tests/readerwindow, #108): the XML gives a larger image (80x60) than the
+    // the _big samples (tests/common/reader_window.cmake, #108): the XML gives a larger image (80x60) than the
     // PNG (sample_xy's 64x48); the PNG is anchored at the top-left corner of the image, and the
     // rest of the RoD is black. sample_offset.ora: an 80x60 canvas with one layer, sample_xy's
     // PNG, at x=10, y=5 from the top-left corner, and no merged image (so that the layer is
@@ -310,7 +310,7 @@ int main(int argc, char** argv)
     std::ostringstream content;
     content << "0.2 0.4 0.8 rg 0 0 " << kWidth << " " << kHeight << " re f "
             << "0.9 0.8 0.1 rg 16 12 32 24 re f";
-    // 8 x 6 cells of 8 x 8 points, each of another colour (for tests/readerwindow)
+    // 8 x 6 cells of 8 x 8 points, each of another colour (for tests/common/reader_window.cmake)
     std::ostringstream contentXY;
     for (int j = 0; j < 6; ++j) {
         for (int i = 0; i < 8; ++i) {
@@ -325,7 +325,7 @@ int main(int argc, char** argv)
         std::cerr << "could not write the samples in " << dir << std::endl;
         return 1;
     }
-    // malformed files, which the readers must reject cleanly: see tests/readermalformed/run.cmake
+    // malformed files, which the readers must reject cleanly: see tests/common/reader_malformed.cmake
     std::vector<std::pair<std::string, std::string> > kraNoSize;
     kraNoSize.push_back(kra[0]);
     kraNoSize.push_back(std::make_pair(std::string("maindoc.xml"),

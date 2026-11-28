@@ -1,9 +1,10 @@
 # Render a few plug-ins with several threads, then unload the binary before exit, with mt_unload
-# (mt_unload.cpp): each run must succeed and exit with status 0, without crashing, even at exit.
+# (mt_unload.cpp): each run must succeed and exit with status 0, without crashing, even at exit
+# (PR #114; the cases are in tests/functional/mtunload).
 #
 #   cmake -DMT_UNLOAD=<mt_unload> -DPLUGIN_PATH=<dir with Arena.ofx.bundle> -DSAMPLES=<dir>
 #         -DOCIO=<config.ocio> -DWORK=<dir> [-DCACHE=<dir>] [-DTHREADS=4] [-DREPEAT=1] [-DREADPDF=ON]
-#         [-DMAGICK_OPENMP=ON] -P run.cmake
+#         [-DMAGICK_OPENMP=ON] [-DCASES=<files>] -P mt_unload.cmake
 #
 # openfx-gmic crashed after a successful render when the host unloaded its binary: worker threads
 # of a runtime that it links were still running, or were torn down by a static destructor of the
@@ -12,14 +13,14 @@
 # Text, SVG and PDF ones use pango, cairo, librsvg, poppler and glib. Each one gets its own process,
 # in hostDemo's default load mode (the binary is unloaded after the scan, loaded again for the
 # render, and unloaded before exit). OMP_NUM_THREADS is THREADS, so that the OpenMP runtime has
-# that many threads even on a machine with fewer CPUs. SAMPLES has the files of tests/hostdemo.
+# that many threads even on a machine with fewer CPUs. SAMPLES has the files of make_samples.cpp.
 # READPDF=OFF: the bundle has no ReadPDF (OFX_LICENSE=COMMERCIAL).
 # MAGICK_OPENMP=OFF: ImageMagick has no OpenMP (e.g. MacPorts' default variant), so the Magick
 # plug-ins start no thread: the unload is still tested, but not the thread check.
 cmake_minimum_required(VERSION 3.21...3.31) # as CMakeLists.txt
 foreach(_v MT_UNLOAD PLUGIN_PATH SAMPLES OCIO WORK)
   if(NOT DEFINED ${_v})
-    message(FATAL_ERROR "run.cmake: ${_v} is not set")
+    message(FATAL_ERROR "mt_unload.cmake: ${_v} is not set")
   endif()
   get_filename_component(${_v} "${${_v}}" ABSOLUTE)
 endforeach()
@@ -40,25 +41,11 @@ if(NOT DEFINED MAGICK_OPENMP)
   set(MAGICK_OPENMP ON)
 endif()
 
-macro(native _out _path)
-  if(CMAKE_HOST_WIN32)
-    file(TO_NATIVE_PATH "${_path}" ${_out})
-  else()
-    set(${_out} "${_path}")
-  endif()
-endmacro()
+include("${CMAKE_CURRENT_LIST_DIR}/testenv.cmake") # native(), test_env(), check_error_logs()
 
-file(REMOVE_RECURSE "${WORK}")
-file(MAKE_DIRECTORY "${WORK}")
+test_env("${WORK}" "${PLUGIN_PATH}" "${OCIO}")
 file(MAKE_DIRECTORY "${CACHE}")
-native(_n "${PLUGIN_PATH}")
-set(ENV{OFX_PLUGIN_PATH} "${_n}")
-native(_n "${OCIO}")
-set(ENV{OCIO} "${_n}")
-native(_n "${WORK}")
-set(ENV{HOME} "${_n}")
-set(ENV{USERPROFILE} "${_n}")
-# fontconfig's cache is kept between runs (as tests/hostdemo/run.cmake)
+# fontconfig's cache is kept between runs (as hostdemo.cmake)
 native(_n "${CACHE}")
 set(ENV{XDG_CACHE_HOME} "${_n}")
 if(CMAKE_HOST_WIN32)
@@ -116,44 +103,18 @@ macro(check _id _major _ctx)
   endforeach()
 endmacro()
 
-# the Magick plug-ins with OpenMP: MagickPluginHelper (Morphology, Swirl) and their own render()
-if(MAGICK_OPENMP)
-  set(_min 2)
-else()
-  message("note: ImageMagick has no OpenMP: the Magick plug-ins start no OpenMP thread, so their thread check is skipped (only the unload is tested)")
+# the cases: check() calls, from the case list(s) in CASES (by default functional/)
+if(NOT DEFINED CASES)
+  set(CASES "${CMAKE_CURRENT_LIST_DIR}/../functional/mtunload/cases.cmake")
 endif()
-check(net.fxarena.openfx.Charcoal 3 filter)
-check(net.fxarena.openfx.Sketch 3 filter)
-check(net.fxarena.openfx.Morphology 2 filter)
-check(net.fxarena.openfx.Swirl 3 filter)
-check(net.fxarena.openfx.Implode 3 filter)
-check(net.fxarena.openfx.Arc 5 filter)
-check(net.fxarena.openfx.Polar 5 filter)
-set(_min 1)
-# infinite RoD with the default size: give them a size (as tests/hostdemo/arena.txt). They leave
-# no pool thread behind (1 thread after the render on macOS), so no thread check
-check(net.fxarena.openfx.Texture 3 general width=320 height=240)
-check(net.fxarena.openfx.Text 5 general width=320 height=240)
-# TextOFX (pango, cairo, fontconfig), and the readers that use glib-based libraries or
-# ImageMagick
-check(net.fxarena.openfx.Text 7 filter)
-check(net.fxarena.openfx.ReadSVG 4 general filename=@SAMPLES@/sample.svg)
-if(READPDF)
-  check(fr.inria.openfx.ReadPDF 1 general filename=@SAMPLES@/sample.pdf)
-endif()
-check(net.fxarena.openfx.ReadPSD 2 general filename=@SAMPLES@/sample.psd)
-
-# a debug build's property validation (Support's ofxsLog.cpp) writes an "ERROR : " line in the
-# log of each run for a host property that is missing or wrong
-file(GLOB _logs "${WORK}/*ofxTestLog.txt")
-foreach(_l IN LISTS _logs)
-  file(STRINGS "${_l}" _errors REGEX "ERROR : ")
-  if(_errors)
-    list(JOIN _errors "\n" _errors)
-    message("FAIL ${_l}:\n${_errors}")
-    list(APPEND _failed "${_l}")
-  endif()
+foreach(_c IN LISTS CASES)
+  get_filename_component(_c "${_c}" ABSOLUTE)
+  include("${_c}")
 endforeach()
+
+# the ERROR lines of a debug build's property validation
+check_error_logs("${WORK}" _bad)
+list(APPEND _failed ${_bad})
 list(LENGTH _failed _nf)
 message("${_ok} multi-threaded renders (${THREADS} threads) followed by an unload: ${_nf} failed")
 if(_failed)
