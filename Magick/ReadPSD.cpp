@@ -481,6 +481,7 @@ void ReadPSDPlugin::restoreStateFromParams()
 // layer doesn't unload the file: the user may still pick another layer.
 void ReadPSDPlugin::readFrames(const std::string& filename)
 {
+    MagickThreads threads;
     std::vector<Magick::Image> frames;
     bool readError = false;
     if (!filename.empty()) {
@@ -614,6 +615,7 @@ void ReadPSDPlugin::decodePlane(const std::string& filename, OfxTime time, int /
     std::cout << "decodePlane ..." << std::endl;
     #endif
 
+    MagickThreads threads;
     int offsetX = 0;
     int offsetY = 0;
     int layer = 0;

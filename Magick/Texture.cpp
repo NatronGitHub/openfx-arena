@@ -70,7 +70,7 @@
 
 #define kParamOpenMP "openmp"
 #define kParamOpenMPLabel "OpenMP"
-#define kParamOpenMPHint "Kept for old projects; ImageMagick runs on one thread unless the MAGICK_THREAD_LIMIT environment variable is set."
+#define kParamOpenMPHint "Kept for old projects, and ignored: Texture never raises ImageMagick's thread limit (usually one thread), since its seeded noise depends on the thread count, unless the MAGICK_THREAD_LIMIT environment variable is set."
 #define kParamOpenMPDefault false
 
 #define kParamGeneratorRange "frameRange"
@@ -176,6 +176,9 @@ void TexturePlugin::getClipPreferences(OFX::ClipPreferencesSetter &clipPreferenc
 /* Override the render */
 void TexturePlugin::render(const OFX::RenderArguments &args)
 {
+    // never raise the limit: the seeded noise depends on the thread count. A frame rendered while
+    // another ImageMagick call (e.g. a viewer render) is active keeps its limit, so its noise may differ.
+    MagickThreads threads;
     if (!kSupportsRenderScale && (args.renderScale.x != 1. || args.renderScale.y != 1.)) {
         OFX::throwSuiteStatusException(kOfxStatFailed);
         return;

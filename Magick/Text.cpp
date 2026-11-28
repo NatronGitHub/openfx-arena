@@ -156,7 +156,7 @@
 
 #define kParamOpenMP "openmp"
 #define kParamOpenMPLabel "OpenMP"
-#define kParamOpenMPHint "Kept for old projects; ImageMagick runs on one thread unless the MAGICK_THREAD_LIMIT environment variable is set."
+#define kParamOpenMPHint "Kept for old projects, and ignored: ImageMagick runs on several threads for interactive renders and usually on one thread otherwise, unless the MAGICK_THREAD_LIMIT environment variable is set."
 #define kParamOpenMPDefault false
 
 using namespace OFX;
@@ -325,6 +325,7 @@ TextPlugin::~TextPlugin()
 /* Override the render */
 void TextPlugin::render(const OFX::RenderArguments &args)
 {
+    MagickThreads threads(args);
     // renderscale
     if (!kSupportsRenderScale && (args.renderScale.x != 1. || args.renderScale.y != 1.)) {
         OFX::throwSuiteStatusException(kOfxStatFailed);

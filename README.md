@@ -60,7 +60,7 @@ Experimental:
  * librevenge *(ReadCDR)*
  * poppler-glib 0.83+ *(ReadPDF)*
  * lcms 2.x *(ReadPSD)*
- * ImageMagick (Magick++) 7, or 6.9.2 or later (older ImageMagick 6 with ``IM=68`` or ``LEGACYIM=1``, below), Q16 or Q32, with HDRI, lcms2, zlib, freetype, libpng. HDRI is required, since the plug-ins pass floating-point pixels to ImageMagick (the build doesn't check it). Natron 2.6 targets ImageMagick 7, static, Q32, HDRI, with OpenMP; ImageMagick 6 HDRI still builds. The plug-ins run ImageMagick on one thread, unless the ``MAGICK_THREAD_LIMIT`` environment variable is set.
+ * ImageMagick (Magick++) 7, or 6.9.2 or later (older ImageMagick 6 with ``IM=68`` or ``LEGACYIM=1``, below), Q16 or Q32, with HDRI, lcms2, zlib, freetype, libpng. HDRI is required, since the plug-ins pass floating-point pixels to ImageMagick (the build doesn't check it). Natron 2.6 targets ImageMagick 7, static, Q32, HDRI, with OpenMP; ImageMagick 6 HDRI still builds. The Magick effects run ImageMagick on several threads (as many as the host allows) for interactive renders. The other renders, Texture and the readers keep the current limit, usually one thread: the limit only changes when no other ImageMagick call is running. The ``MAGICK_THREAD_LIMIT`` environment variable, when set, overrides this.
  * OpenCL 1.2 compatible hardware and drivers *(for optional OCL plugins)*
  * libcurl *(for optional HaldCLUT plugin)*
  * libsox *(AudioCurve)*
