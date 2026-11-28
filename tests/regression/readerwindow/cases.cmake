@@ -1,4 +1,5 @@
-# The regression cases of reader_window (tests/common/reader_window.cmake, which defines check()).
+# The regression cases of reader_window (tests/common/reader_window.cmake, which defines check()),
+# the ctest test regression_reader_window: the Krita and OpenRaster placement bugs of #108 (PR #113).
 # check(<identifier> <major> <sample> [name=value...] [reader_window options])
 # a PNG smaller than the image size in the XML: anchored at the top-left corner, black around it
 # (#108; it used to fail). --placement checks where it lands: sample_xy's image, 64x48, at

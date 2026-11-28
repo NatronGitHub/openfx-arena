@@ -5,7 +5,7 @@
  *             [name=value...]
  *
  * Checks that the plug-ins survive a host that unloads the binary after a multi-threaded render,
- * as openfx's hostDemo does at exit (PluginCache::clearPluginCache(), openfx #174). openfx-gmic
+ * as openfx's hostDemo does at exit (PluginCache::clearPluginCache(), openfx #174; PR #114). openfx-gmic
  * crashed there (SIGSEGV, or 0xC0000005 on Windows) after a successful render: worker threads
  * started by a runtime that the binary links (MSVC's OpenMP, FFTW's threads) were still running,
  * or were torn down by a static destructor of the unloaded binary. Arena's plug-ins start such

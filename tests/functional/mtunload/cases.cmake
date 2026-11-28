@@ -1,5 +1,8 @@
 # The cases of render_Arena_mt_unload (tests/common/mt_unload.cmake, which defines check() and
-# _min, the minimum number of threads after the render).
+# _min, the minimum number of threads after the render): the plug-ins that start threads (OpenMP
+# in ImageMagick, glib's pools) must survive the unload of their binary after a multi-threaded
+# render, the openfx-gmic crash that PR #114 describes; and they are the only renders of the
+# plug-ins' OFX::MultiThread code on several threads (#114, #261).
 # check(<identifier> <major> <context> [name=value...]); @SAMPLES@ in a value is SAMPLES
 # the Magick plug-ins with OpenMP: MagickPluginHelper (Morphology, Swirl) and their own render()
 if(MAGICK_OPENMP)

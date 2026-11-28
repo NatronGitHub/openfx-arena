@@ -500,7 +500,8 @@ endforeach()
 
 # ctest: load each bundle with the plug-in load test of the CI (OpenFX-IO's
 # verify_plugin_loads, with RTLD_NOW so that a missing symbol fails), which prints
-# Num_plugins
+# Num_plugins (#72). Each test has the label of the directory of its cases, functional
+# (a contract) or regression (a past bug): tests/functional, tests/regression
 if(BUILD_TESTING)
     enable_testing()
     file(READ "${CMAKE_CURRENT_SOURCE_DIR}/OpenFX/HostSupport/src/ofxhBinary.cpp" _binary)
@@ -630,7 +631,7 @@ endif()
         endforeach()
 
         # ReadSVG's output size at several DPIs, in physical and user units, for both major
-        # versions (tests/regression/readsvg)
+        # versions (#98, tests/regression/readsvg)
         if(TARGET Arena)
             set(_exact OFF)
             if(NOT SVG_VERSION VERSION_LESS 2.52)
@@ -690,7 +691,7 @@ endif()
 
             # a few plug-ins rendered with several threads (the OFX multi-thread suite and
             # ImageMagick's OpenMP), then the binary unloaded before exit (tests/common/mt_unload.cmake): no
-            # crash, even at exit. mt_unload is hostDemo's host with a real multi-thread suite,
+            # crash, even at exit (#114). mt_unload is hostDemo's host with a real multi-thread suite,
             # since hostDemo's runs everything on one thread
             add_executable(mt_unload tests/common/mt_unload.cpp
                 "${_hd}/hostDemoClipInstance.cpp" "${_hd}/hostDemoEffectInstance.cpp"
@@ -709,7 +710,7 @@ endif()
             set_tests_properties(render_Arena_mt_unload PROPERTIES LABELS functional)
         endif()
 
-        # ReadPSD's layer menu (tests/functional/readpsd): needs Python 3 with NumPy, and
+        # ReadPSD's layer menu (#74, #78, tests/functional/readpsd): needs Python 3 with NumPy, and
         # ImageMagick's magick or convert for the layered PSD (mklayers.py finds it)
         # (python3 from the PATH: FindPython3 may pick another one)
         find_program(ARENA_PYTHON3 python3)

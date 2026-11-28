@@ -1,5 +1,6 @@
 # Render the readers on malformed or missing files with openfx's hostDemo: each must fail cleanly,
-# with an error status and the reader's message, not crash, hang, or render garbage.
+# with an error status and the reader's message, not crash, hang, or render garbage (the cases,
+# each with its issue, are in tests/regression/readermalformed).
 #
 #   cmake -DHOSTDEMO=<hostDemo> -DPLUGIN_PATH=<dir with Arena.ofx.bundle> -DSAMPLES=<dir>
 #         -DOCIO=<config.ocio> -DWORK=<dir> [-DREADPDF=ON] [-DCASES=<files>] -P reader_malformed.cmake

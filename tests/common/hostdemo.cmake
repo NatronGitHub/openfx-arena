@@ -1,6 +1,8 @@
 # Render every plug-in of a bundle once with openfx's hostDemo (the reference is SupportExt's
 # tests/hostdemo/run.sh), and fail on any load, describe, instance or render error, on a
-# crash, on a missing output frame, and on a plug-in that the list doesn't mention.
+# crash, on a missing output frame, and on a plug-in that the list doesn't mention: the bundle's
+# contract that every plug-in loads, describes and renders in a host (#72), in the load modes
+# below (openfx #174, #103) and as an OFX 1.4 host (#101).
 #
 #   cmake -DHOSTDEMO=<hostDemo> -DVERIFY=<verify_plugin_loads> -DBINARY=<bundle>/Contents/<arch>/<name>.ofx
 #         -DLIST=<list.txt> -DSAMPLES=<dir> -DWORK=<dir> [-DCACHE=<dir>] [-DOFX14=ON]

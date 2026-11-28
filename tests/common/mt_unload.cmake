@@ -1,5 +1,6 @@
 # Render a few plug-ins with several threads, then unload the binary before exit, with mt_unload
-# (mt_unload.cpp): each run must succeed and exit with status 0, without crashing, even at exit.
+# (mt_unload.cpp): each run must succeed and exit with status 0, without crashing, even at exit
+# (PR #114; the cases are in tests/functional/mtunload).
 #
 #   cmake -DMT_UNLOAD=<mt_unload> -DPLUGIN_PATH=<dir with Arena.ofx.bundle> -DSAMPLES=<dir>
 #         -DOCIO=<config.ocio> -DWORK=<dir> [-DCACHE=<dir>] [-DTHREADS=4] [-DREPEAT=1] [-DREADPDF=ON]

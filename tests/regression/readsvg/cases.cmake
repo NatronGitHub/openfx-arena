@@ -1,5 +1,6 @@
 # The cases of readsvg_dpi (tests/common/readsvg_dpi.cmake, which defines render() and check()),
-# on the documents of this directory (SRC).
+# on the documents of this directory (SRC): ReadSVG 3 applied the DPI twice to physical units, and
+# version 4 fixes it while version 3 keeps it for old projects (#98).
 # check <major> <file> <dpi> <width> <height> <tolerance in pixels>
 if(EXACT)
   set(_tol 0)

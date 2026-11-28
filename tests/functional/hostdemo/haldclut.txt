@@ -1,4 +1,5 @@
-# HaldCLUT.ofx.bundle (HALDCLUT=ON), rendered by tests/common/hostdemo.cmake (see arena.txt).
+# HaldCLUT.ofx.bundle (HALDCLUT=ON), rendered by tests/common/hostdemo.cmake (see arena.txt):
+# render_HaldCLUT and render_HaldCLUT_ofx14 (#72, #119).
 # The default look is downloaded at render time: give it a generated identity CLUT instead.
 # (The plug-in still creates its preset folder, ~/.clut, when it is instantiated: hostdemo.cmake
 # sets HOME to its work directory.)

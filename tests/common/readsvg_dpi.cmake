@@ -1,6 +1,7 @@
 # ReadSVG's DPI: the output size of SVG documents in physical units (mm) and in user units (px),
 # rendered with openfx's hostDemo at several DPIs, by both major versions. Version 4 applies the
-# DPI once; version 3 (Natron 2.5.0) applied it twice to physical units, and old projects keep that.
+# DPI once; version 3 (Natron 2.5.0) applied it twice to physical units, and old projects keep that
+# (#98; the cases are in tests/regression/readsvg).
 #
 #   cmake -DHOSTDEMO=<hostDemo> -DPLUGIN_PATH=<dir with Arena.ofx.bundle> -DSRC=<tests/regression/readsvg>
 #         -DOCIO=<config.ocio> -DWORK=<dir> [-DEXACT=ON] [-DCASES=<files>] -P readsvg_dpi.cmake
