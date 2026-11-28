@@ -4,7 +4,7 @@
 #
 #   cmake -DHOSTDEMO=<hostDemo> -DVERIFY=<verify_plugin_loads> -DBINARY=<bundle>/Contents/<arch>/<name>.ofx
 #         -DLIST=<list.txt> -DSAMPLES=<dir> -DWORK=<dir> [-DCACHE=<dir>] [-DOFX14=ON]
-#         [-DKEEP_LOADED=ON] -P hostdemo.cmake
+#         [-DKEEP_LOADED=ON] [-DPARTIAL=ON] -P hostdemo.cmake
 #
 # OFX14=ON runs hostDemo with --ofx14, as an OFX 1.4 host (only the OFX 1.4 host properties
 # and suites, no OfxSetHost, no StrChoice or Bytes params, one view), to check that every
@@ -16,6 +16,9 @@
 # Describe, then the instance): every run checks that the plug-ins survive two load cycles of the
 # binary in one process (openfx #174). KEEP_LOADED=ON sets OFX_HOSTDEMO_KEEP_LOADED=1 instead
 # (Host::keepPluginsLoadedAfterScan(), as Natron 2.6): one load cycle, the binary stays loaded.
+#
+# PARTIAL=ON renders only the plug-ins that the list mentions (a regression list,
+# tests/regression/hostdemo): the others are not a failure, and each ok line shows its arguments.
 #
 # WORK is wiped at each run; CACHE (default: WORK-cache) is not: it holds the caches that
 # would otherwise go to the home directory, e.g. fontconfig's.
@@ -105,6 +108,9 @@ foreach(_p IN LISTS _plugins)
     endif()
   endforeach()
   if(NOT _matched)
+    if(PARTIAL)
+      continue()
+    endif()
     message("FAIL ${_id} v${_major}: not in ${LIST}")
     list(APPEND _failed "${_id}v${_major}")
     continue()
@@ -132,7 +138,7 @@ foreach(_p IN LISTS _plugins)
       string(APPEND _prefix "_${_n_entry}")
     endif()
     set(_what "${_id} v${_major} (${_ctx})")
-    if(_n_entry GREATER 1)
+    if(_n_entry GREATER 1 OR PARTIAL)
       list(JOIN _args " " _joined)
       string(APPEND _what " ${_joined}")
     endif()

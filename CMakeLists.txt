@@ -548,6 +548,7 @@ endif()
             add_test(NAME load_${_t} COMMAND "${CMAKE_COMMAND}"
                 -DVERIFY=$<TARGET_FILE:verify_plugin_loads> -DPLUGIN=$<TARGET_FILE:${_t}> -DCOUNT=${_n_${_t}}
                 -P "${CMAKE_CURRENT_BINARY_DIR}/verify_plugin_loads.cmake")
+            set_tests_properties(load_${_t} PROPERTIES LABELS functional)
         endif()
     endforeach()
 
@@ -571,36 +572,62 @@ endif()
             VERBATIM)
         # hostDemo is in openfx's EXCLUDE_FROM_ALL directory: build it with the tests
         add_custom_target(hostdemo_test ALL DEPENDS ${_sample_files} hostDemo)
+        # each bundle's list in tests/functional/hostdemo (every plug-in, each major version), and
+        # its regression list in tests/regression/hostdemo if it has one (PARTIAL: only the
+        # plug-ins it lists), each in three modes:
+        # - render_<bundle>: hostDemo's default mode, which unloads the binary after the scan and
+        #   loads it again at the first use (two load cycles per run, openfx #174);
+        # - render_<bundle>_ofx14: hostDemo as an OFX 1.4 host (--ofx14): every plug-in must also
+        #   work in a host that has neither OFX 1.5 nor the extensions (#101);
+        # - render_Arena_keep_loaded: the binary kept loaded (OFX_HOSTDEMO_KEEP_LOADED=1), as
+        #   Natron 2.6 will (#103).
+        # The regression tests are named regression_render_<bundle>[_<mode>].
         foreach(_t Arena HaldCLUT OCL)
             if(TARGET ${_t})
                 string(TOLOWER "${_t}" _list)
-                add_test(NAME render_${_t} COMMAND "${CMAKE_COMMAND}"
-                    -DHOSTDEMO=$<TARGET_FILE:hostDemo> -DVERIFY=$<TARGET_FILE:verify_plugin_loads>
-                    -DBINARY=$<TARGET_FILE:${_t}> -DLIST=${CMAKE_CURRENT_SOURCE_DIR}/tests/functional/hostdemo/${_list}.txt
-                    -DSAMPLES=${_samples} -DWORK=${CMAKE_CURRENT_BINARY_DIR}/hostdemo-${_t}
-                    -DCACHE=${CMAKE_CURRENT_BINARY_DIR}/hostdemo-cache
-                    -P "${CMAKE_CURRENT_SOURCE_DIR}/tests/common/hostdemo.cmake")
-                # the same, with hostDemo as an OFX 1.4 host (--ofx14): every plug-in must also
-                # work in a host that has neither OFX 1.5 nor the extensions
-                add_test(NAME render_${_t}_ofx14 COMMAND "${CMAKE_COMMAND}"
-                    -DHOSTDEMO=$<TARGET_FILE:hostDemo> -DVERIFY=$<TARGET_FILE:verify_plugin_loads>
-                    -DBINARY=$<TARGET_FILE:${_t}> -DLIST=${CMAKE_CURRENT_SOURCE_DIR}/tests/functional/hostdemo/${_list}.txt
-                    -DSAMPLES=${_samples} -DWORK=${CMAKE_CURRENT_BINARY_DIR}/hostdemo-${_t}-ofx14
-                    -DCACHE=${CMAKE_CURRENT_BINARY_DIR}/hostdemo-cache -DOFX14=ON
-                    -P "${CMAKE_CURRENT_SOURCE_DIR}/tests/common/hostdemo.cmake")
+                foreach(_kind functional regression)
+                    set(_file "${CMAKE_CURRENT_SOURCE_DIR}/tests/${_kind}/hostdemo/${_list}.txt")
+                    if(NOT EXISTS "${_file}")
+                        continue()
+                    endif()
+                    set(_name render_${_t})
+                    set(_work "${CMAKE_CURRENT_BINARY_DIR}/hostdemo-${_t}")
+                    set(_partial OFF)
+                    if(_kind STREQUAL "regression")
+                        set(_name regression_render_${_t})
+                        set(_work "${_work}-regression")
+                        set(_partial ON)
+                    endif()
+                    set(_modes default ofx14)
+                    if(_t STREQUAL "Arena")
+                        list(APPEND _modes keep_loaded)
+                    endif()
+                    foreach(_mode IN LISTS _modes)
+                        set(_ofx14 OFF)
+                        set(_keep OFF)
+                        set(_suffix "")
+                        set(_wsuffix "")
+                        if(_mode STREQUAL "ofx14")
+                            set(_ofx14 ON)
+                            set(_suffix _ofx14)
+                            set(_wsuffix -ofx14)
+                        elseif(_mode STREQUAL "keep_loaded")
+                            set(_keep ON)
+                            set(_suffix _keep_loaded)
+                            set(_wsuffix -keep-loaded)
+                        endif()
+                        add_test(NAME ${_name}${_suffix} COMMAND "${CMAKE_COMMAND}"
+                            -DHOSTDEMO=$<TARGET_FILE:hostDemo> -DVERIFY=$<TARGET_FILE:verify_plugin_loads>
+                            -DBINARY=$<TARGET_FILE:${_t}> -DLIST=${_file}
+                            -DSAMPLES=${_samples} -DWORK=${_work}${_wsuffix}
+                            -DCACHE=${CMAKE_CURRENT_BINARY_DIR}/hostdemo-cache
+                            -DOFX14=${_ofx14} -DKEEP_LOADED=${_keep} -DPARTIAL=${_partial}
+                            -P "${CMAKE_CURRENT_SOURCE_DIR}/tests/common/hostdemo.cmake")
+                        set_tests_properties(${_name}${_suffix} PROPERTIES LABELS ${_kind})
+                    endforeach()
+                endforeach()
             endif()
         endforeach()
-        if(TARGET Arena)
-            # render_Arena runs hostDemo in its default mode, which unloads the binary after the
-            # scan and loads it again at the first use (two load cycles per run, openfx #174);
-            # this pass keeps it loaded (OFX_HOSTDEMO_KEEP_LOADED=1), as Natron 2.6 will
-            add_test(NAME render_Arena_keep_loaded COMMAND "${CMAKE_COMMAND}"
-                -DHOSTDEMO=$<TARGET_FILE:hostDemo> -DVERIFY=$<TARGET_FILE:verify_plugin_loads>
-                -DBINARY=$<TARGET_FILE:Arena> -DLIST=${CMAKE_CURRENT_SOURCE_DIR}/tests/functional/hostdemo/arena.txt
-                -DSAMPLES=${_samples} -DWORK=${CMAKE_CURRENT_BINARY_DIR}/hostdemo-Arena-keep-loaded
-                -DCACHE=${CMAKE_CURRENT_BINARY_DIR}/hostdemo-cache -DKEEP_LOADED=ON
-                -P "${CMAKE_CURRENT_SOURCE_DIR}/tests/common/hostdemo.cmake")
-        endif()
 
         # ReadSVG's output size at several DPIs, in physical and user units, for both major
         # versions (tests/regression/readsvg)
@@ -614,7 +641,9 @@ endif()
                 -DSRC=${CMAKE_CURRENT_SOURCE_DIR}/tests/regression/readsvg
                 -DOCIO=${CMAKE_CURRENT_SOURCE_DIR}/tests/common/config.ocio
                 -DWORK=${CMAKE_CURRENT_BINARY_DIR}/readsvg-dpi -DEXACT=${_exact}
+                -DCASES=${CMAKE_CURRENT_SOURCE_DIR}/tests/regression/readsvg/cases.cmake
                 -P "${CMAKE_CURRENT_SOURCE_DIR}/tests/common/readsvg_dpi.cmake")
+            set_tests_properties(readsvg_dpi PROPERTIES LABELS regression)
         endif()
 
         # the readers with render windows smaller than the image (#105, tests/common/reader_window.cmake):
@@ -632,11 +661,22 @@ endif()
             if(OFX_LICENSE STREQUAL "GPL")
                 set(_readpdf ON)
             endif()
-            add_test(NAME reader_window COMMAND "${CMAKE_COMMAND}"
-                -DREADER_WINDOW=$<TARGET_FILE:reader_window> -DPLUGIN_PATH=${OFX_PLUGIN_BUILD_DIR} -DREADPDF=${_readpdf}
-                -DSAMPLES=${_samples} -DOCIO=${CMAKE_CURRENT_SOURCE_DIR}/tests/common/config.ocio
-                -DWORK=${CMAKE_CURRENT_BINARY_DIR}/reader-window
-                -P "${CMAKE_CURRENT_SOURCE_DIR}/tests/common/reader_window.cmake")
+            # reader_window: the cases of tests/functional/readerwindow; regression_reader_window:
+            # those of tests/regression/readerwindow
+            foreach(_kind functional regression)
+                set(_name reader_window)
+                set(_work "${CMAKE_CURRENT_BINARY_DIR}/reader-window")
+                if(_kind STREQUAL "regression")
+                    set(_name regression_reader_window)
+                    set(_work "${_work}-regression")
+                endif()
+                add_test(NAME ${_name} COMMAND "${CMAKE_COMMAND}"
+                    -DREADER_WINDOW=$<TARGET_FILE:reader_window> -DPLUGIN_PATH=${OFX_PLUGIN_BUILD_DIR} -DREADPDF=${_readpdf}
+                    -DSAMPLES=${_samples} -DOCIO=${CMAKE_CURRENT_SOURCE_DIR}/tests/common/config.ocio
+                    -DWORK=${_work} -DCASES=${CMAKE_CURRENT_SOURCE_DIR}/tests/${_kind}/readerwindow/cases.cmake
+                    -P "${CMAKE_CURRENT_SOURCE_DIR}/tests/common/reader_window.cmake")
+                set_tests_properties(${_name} PROPERTIES LABELS ${_kind})
+            endforeach()
 
             # the readers on malformed and missing files (tests/common/reader_malformed.cmake, #128, #129): each
             # must fail cleanly, with an error and its message, without crashing
@@ -644,7 +684,9 @@ endif()
                 -DHOSTDEMO=$<TARGET_FILE:hostDemo> -DPLUGIN_PATH=${OFX_PLUGIN_BUILD_DIR} -DREADPDF=${_readpdf}
                 -DSAMPLES=${_samples} -DOCIO=${CMAKE_CURRENT_SOURCE_DIR}/tests/common/config.ocio
                 -DWORK=${CMAKE_CURRENT_BINARY_DIR}/reader-malformed
+                -DCASES=${CMAKE_CURRENT_SOURCE_DIR}/tests/regression/readermalformed/cases.cmake
                 -P "${CMAKE_CURRENT_SOURCE_DIR}/tests/common/reader_malformed.cmake")
+            set_tests_properties(reader_malformed PROPERTIES LABELS regression)
 
             # a few plug-ins rendered with several threads (the OFX multi-thread suite and
             # ImageMagick's OpenMP), then the binary unloaded before exit (tests/common/mt_unload.cmake): no
@@ -662,7 +704,9 @@ endif()
                 -DSAMPLES=${_samples} -DOCIO=${CMAKE_CURRENT_SOURCE_DIR}/tests/common/config.ocio
                 -DWORK=${CMAKE_CURRENT_BINARY_DIR}/mt-unload
                 -DCACHE=${CMAKE_CURRENT_BINARY_DIR}/hostdemo-cache
+                -DCASES=${CMAKE_CURRENT_SOURCE_DIR}/tests/functional/mtunload/cases.cmake
                 -P "${CMAKE_CURRENT_SOURCE_DIR}/tests/common/mt_unload.cmake")
+            set_tests_properties(render_Arena_mt_unload PROPERTIES LABELS functional)
         endif()
 
         # ReadPSD's layer menu (tests/functional/readpsd, also "make -C tests check"): needs Python 3 with
@@ -696,11 +740,20 @@ endif()
             add_test(NAME readpsd_layers COMMAND "${ARENA_PYTHON3}"
                 "${CMAKE_CURRENT_SOURCE_DIR}/tests/functional/readpsd/test_layers.py"
                 --hostdemo $<TARGET_FILE:hostDemo> "${OFX_PLUGIN_BUILD_DIR}")
-            set_tests_properties(readpsd_layers PROPERTIES ENVIRONMENT "MAGICK=${ARENA_MAGICK_TOOL}")
+            set_tests_properties(readpsd_layers PROPERTIES ENVIRONMENT "MAGICK=${ARENA_MAGICK_TOOL}" LABELS functional)
         else()
             message(STATUS "BUILD_TESTING: no ReadPSD layer test (tests/functional/readpsd needs Python 3.6 or later with NumPy, and ImageMagick's magick or convert)")
         endif()
     else()
         message(STATUS "BUILD_TESTING: no hostDemo (openfx's HostSupport examples), no render test")
     endif()
+    # CI runs "ctest -L functional", then "ctest -L regression": a test without one of these
+    # labels (the directory of its cases) would run in neither
+    get_property(_tests DIRECTORY PROPERTY TESTS)
+    foreach(_test IN LISTS _tests)
+        get_test_property(${_test} LABELS _labels)
+        if(NOT _labels STREQUAL "functional" AND NOT _labels STREQUAL "regression")
+            message(FATAL_ERROR "test ${_test}: LABELS must be functional or regression (tests/<kind>/), not \"${_labels}\"")
+        endif()
+    endforeach()
 endif()

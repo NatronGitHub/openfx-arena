@@ -1,0 +1,16 @@
+# Regression renders of Arena.ofx.bundle: edge-case values that crashed or failed a render
+# before (each line names its issue), rendered by tests/common/hostdemo.cmake with PARTIAL=ON
+# (only the plug-ins listed here), in the same three modes as tests/functional/hostdemo/arena.txt
+# (default, OFX 1.4 host, kept loaded). Same line format as that list.
+# Auto size with a stroke, which the version 7 RoD fits (#135)
+net.fxarena.openfx.Text 7 filter -s autoSize=1 -s strokeSize=4
+net.fxarena.openfx.Text 6 filter -s autoSize=1 -s strokeSize=4
+# Style Bold with the default Weight renders bold in version 7 (#247)
+net.fxarena.openfx.Text 7 filter -s style=1
+# the default size (0x0, "project format") gives an infinite RoD (#256)
+net.fxarena.openfx.Texture 3 general
+# out of the params' range (1..100), which the host doesn't have to enforce (#117): clamped
+net.fxarena.openfx.Tile 4 filter -s rows=0 -s cols=0
+net.fxarena.openfx.Tile 4 filter -s rows=100000 -s cols=100000 -i Source=rod:0,0,64,48
+# a grid larger than the image: tiles of less than a pixel (#117)
+net.fxarena.openfx.Tile 4 filter -s rows=100 -s cols=100 -i Source=rod:0,0,64,48
