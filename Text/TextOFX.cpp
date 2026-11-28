@@ -2117,13 +2117,20 @@ public:
         OFX::PenArgs shiftedArgs = shiftArgs(args, _dragShift);
         bool ret;
         if ( (_mouseState != eReleased) && !_interactiveDrag && _dragMoved ) {
-            // Set the params as the helper would, but with the Center converted. A click without
-            // a motion sets nothing, as in the helper's penUp.
+            // Set the params as the helper would, but with the Center converted. A click, or a
+            // motion that leaves the values those at penDown (a sub-pixel or pressure-only
+            // motion), sets nothing (no keyframe, no undo step), as in the helper's penUp. The
+            // Center is compared after toRelative(), which rounds it in the relative frame:
+            // roundedDragParams() rounds in the helper's space, so it doesn't apply here.
             const TransformParams& tp = _tpDrag; // unrounded: toRelative() rounds the Center
             OfxPointD scale;
             ofxsTransformGetScale(tp.scale, tp.scaleUniform, &scale);
             const OfxPointD center = toRelative(tp.center, args.pixelScale);
-            {
+            const bool changed = (center.x != _dragCenter.x) || (center.y != _dragCenter.y) ||
+                                 (tp.scale.x != _tpWritten.scale.x) || (tp.scale.y != _tpWritten.scale.y) ||
+                                 (tp.rotate != _tpWritten.rotate) ||
+                                 (tp.skewX != _tpWritten.skewX) || (tp.skewY != _tpWritten.skewY);
+            if (changed) {
                 ImageEffect::EditBlock eb(*_effect, "Set Transform");
                 _center->setValue(center.x, center.y);
                 _scale->setValue(scale.x, scale.y);
