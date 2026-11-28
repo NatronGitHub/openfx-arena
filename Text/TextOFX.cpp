@@ -2096,6 +2096,8 @@ public:
         bool ret = TransformInteractHelperOldParams::penMotion(shiftedArgs);
         _interactiveDrag = interactiveDrag;
         if (centerDrag && interactiveDrag && ret) {
+            // the unrounded Center: toRelative() rounds the relative value (rounding it in the
+            // helper's space first, with roundedDragParams(), would move an unmoved Center)
             const OfxPointD center = toRelative(_tpDrag.center, args.pixelScale);
             OfxPointD current;
             _center->getValueAtTime(args.time, current.x, current.y);
@@ -2114,9 +2116,10 @@ public:
         }
         OFX::PenArgs shiftedArgs = shiftArgs(args, _dragShift);
         bool ret;
-        if ( (_mouseState != eReleased) && !_interactiveDrag ) {
-            // Set the params as the helper would, but with the Center converted.
-            const TransformParams& tp = _tpDrag;
+        if ( (_mouseState != eReleased) && !_interactiveDrag && _dragMoved ) {
+            // Set the params as the helper would, but with the Center converted. A click without
+            // a motion sets nothing, as in the helper's penUp.
+            const TransformParams& tp = _tpDrag; // unrounded: toRelative() rounds the Center
             OfxPointD scale;
             ofxsTransformGetScale(tp.scale, tp.scaleUniform, &scale);
             const OfxPointD center = toRelative(tp.center, args.pixelScale);
